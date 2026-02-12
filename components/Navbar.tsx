@@ -101,16 +101,10 @@ export const Navbar: React.FC = () => {
           className="flex items-center gap-2 shrink-0"
         >
           <img
-            src="/logos/oxygy-logo-x.jpeg"
+            src="/logos/oxygy-logo-full.jpeg"
             alt="Oxygy"
-            style={{ height: '30px', width: 'auto' }}
+            style={{ height: '28px', width: 'auto' }}
           />
-          <span
-            className="hidden sm:inline font-bold text-[20px] tracking-tight text-[#1A202C]"
-            style={{ letterSpacing: '-0.02em' }}
-          >
-            OXYGY
-          </span>
         </a>
 
         {/* Center — Desktop Nav */}

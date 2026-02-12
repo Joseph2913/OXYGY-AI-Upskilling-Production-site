@@ -34,11 +34,10 @@ export const Footer: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <img
-              src="/logos/oxygy-logo-x.jpeg"
+              src="/logos/oxygy-logo-full.jpeg"
               alt="Oxygy"
-              style={{ height: '24px', width: 'auto', filter: 'brightness(0) invert(1)' }}
+              style={{ height: '22px', width: 'auto', filter: 'brightness(0) invert(1)' }}
             />
-            <span className="font-bold text-xl" style={{ letterSpacing: '-0.02em' }}>OXYGY</span>
           </div>
           
           <div className="text-gray-400 text-sm">
