@@ -9,6 +9,7 @@ import {
   WHY_JSON_CONTENT, PROMPT_SECTION_COLORS,
 } from '../data/agent-builder-content';
 import type { AgentDesignResult, AgentReadinessCriteria } from '../types';
+import { ArtifactClosing } from './ArtifactClosing';
 
 /* ─── HELPERS ─── */
 
@@ -919,16 +920,21 @@ export const AgentBuilder: React.FC = () => {
 
         {/* ─── FINAL ACTION BAR ─── */}
         {stepsRevealed >= 4 && result && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-8 animate-fade-in-up">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 mb-4 animate-fade-in-up">
             <button onClick={handleStartOver}
               className="px-6 py-2.5 rounded-full text-[14px] font-semibold border border-[#1A202C] text-[#1A202C] hover:bg-[#F7FAFC] transition-colors">
               Start Over
             </button>
-            <a href="#home" className="text-[14px] text-[#5B6DC2] hover:underline flex items-center gap-1">
-              Explore Level 3: Systemic Integration <ArrowRight size={14} />
-            </a>
           </div>
         )}
+
+        {/* ─── PAGE CLOSING ─── */}
+        <ArtifactClosing
+          summaryText="You've designed a reusable AI agent — from readiness assessment to system prompt to built-in accountability. Now see how to connect multiple agents into automated workflows."
+          ctaLabel="Continue to Level 3: Systemic Integration"
+          ctaHref="#workflow-designer"
+          accentColor="#5B6DC2"
+        />
       </div>
 
       {/* Toast */}

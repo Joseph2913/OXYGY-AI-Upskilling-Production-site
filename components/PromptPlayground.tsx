@@ -5,6 +5,7 @@ import { useGeminiApi } from '../hooks/useGeminiApi';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { BuildWizard } from './playground/BuildWizard';
 import type { PromptResult, WizardAnswers } from '../types';
+import { ArtifactClosing } from './ArtifactClosing';
 
 type Mode = 'enhance' | 'build';
 
@@ -186,28 +187,28 @@ export const PromptPlayground: React.FC = () => {
           </h1>
 
           {/* ─── FUN FACT CARD ─── */}
-          <div className="max-w-2xl mx-auto mb-4">
+          <div className="mb-8">
             <div
-              className="relative rounded-2xl px-8 py-6 text-center overflow-hidden"
+              className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
               style={{
-                background: 'linear-gradient(135deg, #F7FAFC 0%, #EDF2F7 50%, #E6FFFA 100%)',
-                border: '1px solid #E2E8F0',
+                background: 'linear-gradient(135deg, rgba(168,240,224,0.15) 0%, rgba(43,168,156,0.08) 50%, rgba(168,240,224,0.12) 100%)',
+                border: '1.5px solid #A8F0E0',
               }}
             >
               {/* Decorative accent dots */}
               <div className="absolute top-3 left-4 flex gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#38B2AC] opacity-40" />
-                <span className="w-2 h-2 rounded-full bg-[#FBE8A6] opacity-60" />
-                <span className="w-2 h-2 rounded-full bg-[#FBCEB1] opacity-40" />
+                <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-40" />
+                <span className="w-2 h-2 rounded-full bg-[#A8F0E0] opacity-60" />
+                <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-30" />
               </div>
 
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#38B2AC] mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#2BA89C] mb-2">
                 Did you know?
               </p>
-              <p className="text-[16px] md:text-[17px] text-[#2D3748] leading-[1.6] font-medium mb-1">
-                A well-structured prompt can improve AI output quality by up to <span className="text-[#38B2AC] font-bold">60%</span>.
+              <p className="text-[17px] md:text-[19px] text-[#2D3748] leading-[1.6] font-medium mb-2">
+                A well-structured prompt can improve AI output quality by up to <span className="text-[#2BA89C] font-bold">60%</span>.
               </p>
-              <p className="text-[14px] text-[#718096] leading-[1.6] mb-5">
+              <p className="text-[15px] text-[#718096] leading-[1.6] max-w-3xl mx-auto mb-5">
                 The difference between a vague ask and a structured 6-part prompt is the difference between a generic draft and an expert-level deliverable.
               </p>
 
@@ -641,6 +642,16 @@ export const PromptPlayground: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ─── PAGE CLOSING ─── */}
+      <div className="max-w-7xl mx-auto px-6 pb-16">
+        <ArtifactClosing
+          summaryText="You've explored the foundations of prompt engineering — the 6-block Prompt Blueprint framework that transforms vague requests into structured, high-quality AI outputs. Ready to go further?"
+          ctaLabel="Continue to Level 2: Applied Capability"
+          ctaHref="#agent-builder"
+          accentColor="#2BA89C"
+        />
       </div>
 
       {/* Toast */}

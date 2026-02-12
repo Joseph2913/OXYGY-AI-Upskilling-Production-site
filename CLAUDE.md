@@ -131,6 +131,11 @@ Every Level artifact page (L1 Playground, L2 Agent Builder, L3 Workflow Designer
 - Example pills are inline flex-wrap, styled with the level's accent border/bg
 - CTA buttons use the level's dark accent color as background with white text
 
+## Cross-Page Standards
+- See `ARTIFACT_PAGE_STANDARDS.md` for mandatory design specifications for all artifact pages
+- All new artifact pages MUST follow these standards
+- Shared closing component: `components/ArtifactClosing.tsx`
+
 ## Reference
 - Full content spec: OXYGY_AI_UPSKILLING_SYSTEM_PROMPT.md
 - PDF content source: OXYGY_AI_Upskilling.pdf

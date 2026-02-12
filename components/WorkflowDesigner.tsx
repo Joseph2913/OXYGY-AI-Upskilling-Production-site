@@ -9,6 +9,7 @@ import {
   INPUT_NODES, PROCESSING_NODES, OUTPUT_NODES, NODE_MAP,
   LAYER_COLORS, WORKFLOW_EXAMPLES, ICON_MAP,
 } from '../data/workflow-designer-content';
+import { ArtifactClosing } from './ArtifactClosing';
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 
@@ -1125,15 +1126,13 @@ export function WorkflowDesigner() {
         {/* Node Library Reference */}
         <NodeLibrarySection />
 
-        {/* Level Progression */}
-        <div className="mx-auto mt-12 mb-4" style={{ maxWidth: 720 }}>
-          <p className="text-[14px] mb-2" style={{ color: '#718096' }}>
-            Your workflow outputs don't have to live in spreadsheets. In Level 4, you'll learn to design interactive dashboards that turn automated data into designed intelligence — built for the people who need it.
-          </p>
-          <a href="#home" className="text-[15px] font-semibold inline-flex items-center gap-1 transition-colors hover:opacity-80" style={{ color: '#38B2AC' }}>
-            Explore Level 4: Interactive Dashboards <ArrowRight size={16} />
-          </a>
-        </div>
+        {/* ─── PAGE CLOSING ─── */}
+        <ArtifactClosing
+          summaryText="Your workflow outputs don't have to live in spreadsheets. In Level 4, you'll learn to design interactive dashboards that turn automated data into designed intelligence — built for the people who need it."
+          ctaLabel="Continue to Level 4: Interactive Dashboards"
+          ctaHref="#dashboard-design"
+          accentColor="#C4A934"
+        />
       </div>
 
       {/* Toast */}
