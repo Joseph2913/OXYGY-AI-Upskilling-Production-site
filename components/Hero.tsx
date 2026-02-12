@@ -259,7 +259,7 @@ const ConcentricCircles: React.FC<DiagramProps> = ({
     <div
       ref={containerRef}
       className={isPaused ? 'hero-diagram-paused' : ''}
-      style={{ position: 'relative', width: '100%', maxWidth: '600px' }}
+      style={{ position: 'relative', width: '100%', maxWidth: '680px' }}
       onMouseEnter={() => {
         if (!isMobile) setIsPaused(true);
       }}
@@ -554,11 +554,11 @@ const ConcentricCircles: React.FC<DiagramProps> = ({
       </svg>
 
       {/* Ring labels (HTML overlays — static, don't rotate) */}
-      {/* "What Your People Bring" — between rings, top center */}
+      {/* "What Your People Bring" — above all rings, top center */}
       <div
         style={{
           position: 'absolute',
-          top: '16%',
+          top: '1%',
           left: '50%',
           transform: 'translateX(-50%)',
         }}
@@ -582,11 +582,11 @@ const ConcentricCircles: React.FC<DiagramProps> = ({
         </span>
       </div>
 
-      {/* "What We Provide" — below outer ring, bottom center */}
+      {/* "What We Provide" — below all rings, bottom center */}
       <div
         style={{
           position: 'absolute',
-          bottom: '3%',
+          bottom: '0%',
           left: '50%',
           transform: 'translateX(-50%)',
         }}
@@ -807,7 +807,7 @@ export const Hero: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               marginTop: isMobile ? '40px' : 0,
-              maxWidth: isMobile ? '400px' : undefined,
+              maxWidth: isMobile ? '440px' : undefined,
               marginLeft: isMobile ? 'auto' : undefined,
               marginRight: isMobile ? 'auto' : undefined,
             }}
