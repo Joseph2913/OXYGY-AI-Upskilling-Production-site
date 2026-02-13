@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, Monitor, Sparkles, FileText, Info, Loader2, Check, RotateCcw,
-  Edit2, Download, Copy, ChevronDown, BarChart3, TrendingUp, Users, DollarSign,
-  PieChart, Activity, Target, X,
+  ArrowLeft, Monitor, Sparkles, FileText, Loader2, Check, RotateCcw,
+  Edit2, Copy, ChevronDown, BarChart3, TrendingUp, Users, DollarSign,
 } from 'lucide-react';
 import { useDashboardDesignApi, type DashboardImageResult, type PRDResult } from '../hooks/useDashboardDesignApi';
 import { ArtifactClosing } from './ArtifactClosing';
@@ -168,6 +167,7 @@ export const DashboardDesigner: React.FC = () => {
   const [targetAudience, setTargetAudience] = useState('');
   const [keyMetrics, setKeyMetrics] = useState('');
   const [dataSources, setDataSources] = useState('');
+  const [inspirationUrl, setInspirationUrl] = useState('');
 
   // Results state
   const [dashboardImage, setDashboardImage] = useState<DashboardImageResult | null>(null);
@@ -175,8 +175,8 @@ export const DashboardDesigner: React.FC = () => {
   const [imagePrompt, setImagePrompt] = useState('');
   const [prdResult, setPrdResult] = useState<PRDResult | null>(null);
   const [showPRD, setShowPRD] = useState(false);
-  const [showPRDTooltip, setShowPRDTooltip] = useState(false);
-  const [showPRDInfoModal, setShowPRDInfoModal] = useState(false);
+  const [showPrdDropdown, setShowPrdDropdown] = useState(false);
+  const [isPrdLoading, setIsPrdLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -239,7 +239,8 @@ export const DashboardDesigner: React.FC = () => {
         dashboard_title: dashboardTitle,
         dashboard_subtitle: dashboardSubtitle,
         editable_metrics: editableMetrics.length > 0 ? editableMetrics : undefined,
-      } as any);
+        inspiration_url: inspirationUrl.trim() || undefined,
+      });
       
       // Log result for debugging
       if (result) {
@@ -309,28 +310,29 @@ export const DashboardDesigner: React.FC = () => {
     setDashboardSvg('');
     setPrdResult(null);
     setShowPRD(false);
+    setShowPrdDropdown(false);
     setIsEditingPrompt(false);
     setIsEditingDashboard(false);
 
     // Try Gemini API first, fallback to simple SVG
     console.log('Attempting to generate dashboard with Gemini API...');
     const geminiResult = await generateDashboardWithGemini();
-    
+
+    let finalPrompt = '';
     if (geminiResult && geminiResult.html_content) {
-      // Use Gemini-generated HTML
       console.log('✅ Using Gemini-generated HTML dashboard');
       setDashboardSvg(geminiResult.html_content);
       setDashboardImage(geminiResult);
       setImagePrompt(geminiResult.image_prompt);
       setEditedPrompt(geminiResult.image_prompt);
+      finalPrompt = geminiResult.image_prompt;
     } else if (geminiResult && geminiResult.image_url && !geminiResult.use_fallback) {
-      // Use Gemini-generated image URL
       console.log('✅ Using Gemini-generated image URL');
       setDashboardImage(geminiResult);
       setImagePrompt(geminiResult.image_prompt);
       setEditedPrompt(geminiResult.image_prompt);
+      finalPrompt = geminiResult.image_prompt;
     } else {
-      // Fallback to simple SVG generator
       if (geminiResult?.use_fallback) {
         console.log('⚠️ Gemini quota exceeded, using SVG fallback');
       } else {
@@ -340,11 +342,35 @@ export const DashboardDesigner: React.FC = () => {
       setDashboardImage(result);
       setImagePrompt(result.image_prompt);
       setEditedPrompt(result.image_prompt);
+      finalPrompt = result.image_prompt;
     }
-    
+
     setTimeout(() => {
       imageSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 500);
+
+    // Auto-generate PRD in background
+    setIsPrdLoading(true);
+    setShowPRD(true);
+    try {
+      const prd = await generatePRD({
+        user_needs: userNeeds.trim(),
+        image_prompt: finalPrompt,
+        target_audience: targetAudience.trim() || undefined,
+        key_metrics: keyMetrics.trim() || undefined,
+        data_sources: dataSources.trim() || undefined,
+      });
+      if (prd) {
+        setPrdResult(prd);
+      } else {
+        // Fallback to simple PRD
+        setPrdResult(generateSimplePRD());
+      }
+    } catch {
+      setPrdResult(generateSimplePRD());
+    } finally {
+      setIsPrdLoading(false);
+    }
   };
 
   const handleEditPrompt = () => {
@@ -400,37 +426,18 @@ export const DashboardDesigner: React.FC = () => {
     };
   };
 
-  const handleGeneratePRD = async () => {
-    if (!dashboardImage) return;
-    clearError();
-    
-    // Show PRD section immediately so it expands
-    if (!showPRD) {
-      setShowPRD(true);
-      setTimeout(() => {
-        prdSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-
-    // Generate simple PRD immediately without API call
-    const simplePRD = generateSimplePRD();
-    setPrdResult(simplePRD);
-    
-    setTimeout(() => {
-      prdSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 300);
-  };
-
   const handleStartOver = () => {
     setUserNeeds('');
     setTargetAudience('');
     setKeyMetrics('');
     setDataSources('');
+    setInspirationUrl('');
     setDashboardImage(null);
     setDashboardSvg('');
     setImagePrompt('');
     setPrdResult(null);
     setShowPRD(false);
+    setShowPrdDropdown(false);
     setIsEditingPrompt(false);
     setIsEditingDashboard(false);
     setEditedPrompt('');
@@ -492,255 +499,281 @@ export const DashboardDesigner: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div
-        style={{
-          background: `linear-gradient(135deg, ${ACCENT_COLOR}15 0%, ${ACCENT_COLOR}05 100%)`,
-          borderBottom: `2px solid ${DARK_ACCENT_COLOR}`,
-        }}
-        className="pt-24 pb-12"
-      >
-        <div className="max-w-4xl mx-auto px-6">
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.hash = '';
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="inline-flex items-center gap-2 text-[14px] font-medium text-[#718096] hover:text-[#D47B5A] transition-colors mb-6"
-            style={{ textDecoration: 'none' }}
-          >
-            <ArrowLeft size={16} />
-            Back to Home
-          </a>
+    <div className="min-h-screen bg-white pt-24 pb-16">
+      <div className="max-w-7xl mx-auto px-6">
 
-          <div className="flex items-center gap-3 mb-4">
+        {/* ─── BREADCRUMB ─── */}
+        <a href="#home" className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] hover:text-[#D47B5A] transition-colors mb-8">
+          <ArrowLeft size={16} /> Back to Level 4
+        </a>
+
+        {/* ─── HERO: Title (centered, matching L2/L3 style) ─── */}
+        <div className="mb-8 text-center">
+          <h1 className="text-[36px] md:text-[48px] font-bold text-[#1A202C] leading-[1.15] mb-6">
+            Dashboard Design
+            <br />
+            <span className="relative inline-block">
+              Thinking
+              <span className="absolute left-0 -bottom-1 w-full h-[4px] bg-[#D47B5A] opacity-80 rounded-full" />
+            </span>
+          </h1>
+
+          {/* ─── FUN FACT CARD ─── */}
+          <div className="mb-4">
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: ACCENT_COLOR }}
-            >
-              <Monitor size={24} color={DARK_ACCENT_COLOR} />
-            </div>
-            <div>
-              <span
-                className="text-[11px] font-bold uppercase tracking-widest"
-                style={{ color: DARK_ACCENT_COLOR }}
-              >
-                Level 4: Interactive Dashboards
-              </span>
-              <h1 className="text-[32px] md:text-[40px] font-bold text-[#1A202C] leading-tight">
-                Dashboard Design Thinking
-              </h1>
-            </div>
-          </div>
-
-          <p className="text-[16px] text-[#4A5568] leading-relaxed max-w-3xl">
-            Work backwards from end-user needs to design an AI-powered dashboard prototype tailored to specific roles and decisions.
-          </p>
-        </div>
-      </div>
-
-      {/* Information Section */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="bg-gradient-to-br from-[#F7FAFC] to-white border border-[#E2E8F0] rounded-2xl p-8 md:p-10 shadow-sm">
-          <div className="flex items-start gap-4 mb-6">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: `${ACCENT_COLOR}30` }}
-            >
-              <Info size={20} style={{ color: DARK_ACCENT_COLOR }} />
-            </div>
-            <div>
-              <h2 className="text-[22px] font-bold text-[#1A202C] mb-2">
-                Why Dashboard Design Thinking Matters
-              </h2>
-              <p className="text-[15px] text-[#4A5568] leading-relaxed">
-                Effective dashboards don't start with data—they start with understanding what decisions users need to make and what insights will drive action.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${ACCENT_COLOR}20` }}
-                >
-                  <Target size={18} style={{ color: DARK_ACCENT_COLOR }} />
-                </div>
-                <h3 className="text-[16px] font-bold text-[#1A202C]">
-                  Working Backwards from User Needs
-                </h3>
-              </div>
-              <p className="text-[14px] text-[#4A5568] leading-relaxed">
-                Instead of building dashboards around available data, we start by identifying the specific questions users need answered and the actions they'll take. This user-centric approach ensures dashboards deliver real value, not just information overload.
-              </p>
-            </div>
-
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${ACCENT_COLOR}20` }}
-                >
-                  <BarChart3 size={18} style={{ color: DARK_ACCENT_COLOR }} />
-                </div>
-                <h3 className="text-[16px] font-bold text-[#1A202C]">
-                  Visualizing AI Workflow Outputs
-                </h3>
-              </div>
-              <p className="text-[14px] text-[#4A5568] leading-relaxed">
-                Dashboards are powerful tools for making AI workflows transparent and actionable. By visualizing AI outputs—from predictions to recommendations—users can understand, trust, and act on AI-driven insights with confidence.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white border-l-4 rounded-r-xl p-6" style={{ borderColor: DARK_ACCENT_COLOR }}>
-            <div className="flex items-start gap-3 mb-3">
-              <Sparkles size={20} style={{ color: DARK_ACCENT_COLOR }} className="mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="text-[16px] font-bold text-[#1A202C] mb-2">
-                  Connecting with Your Target Audience
-                </h3>
-                <p className="text-[14px] text-[#4A5568] leading-relaxed">
-                  AI dashboards can visualize outputs from workflows, data collected through various methods, or insights from any source. Regardless of what they're displaying, dashboards are powerful tools to connect with your target audience. They transform complex information into clear, actionable visualizations that resonate with users and drive meaningful engagement.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        {/* Step 1: Input Form */}
-        <div ref={inputSectionRef} className="mb-16">
-          <div className="flex items-center gap-2 mb-6">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-              style={{ backgroundColor: DARK_ACCENT_COLOR }}
-            >
-              1
-            </div>
-            <h2 className="text-[24px] font-bold text-[#1A202C]">Define User Needs</h2>
-          </div>
-
-          <div className="bg-[#F7FAFC] border border-[#E2E8F0] rounded-xl p-6 md:p-8 mb-6">
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
-                  What does your dashboard need to accomplish? *
-                </label>
-                <textarea
-                  value={userNeeds}
-                  onChange={(e) => setUserNeeds(e.target.value)}
-                  placeholder="Describe the primary purpose of your dashboard. What decisions does it need to support? What insights should users gain?"
-                  className="w-full border border-[#E2E8F0] rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:border-[#D47B5A] focus:ring-[3px] focus:ring-[#D47B5A1a] transition-colors resize-none bg-white"
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
-                  Target Audience (optional)
-                </label>
-                <input
-                  type="text"
-                  value={targetAudience}
-                  onChange={(e) => setTargetAudience(e.target.value)}
-                  placeholder="e.g., Sales managers, HR teams, Executives"
-                  className="w-full border border-[#E2E8F0] rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:border-[#D47B5A] focus:ring-[3px] focus:ring-[#D47B5A1a] transition-colors bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
-                  Key Metrics to Display (optional)
-                </label>
-                <input
-                  type="text"
-                  value={keyMetrics}
-                  onChange={(e) => setKeyMetrics(e.target.value)}
-                  placeholder="e.g., Revenue, Conversion rates, User engagement"
-                  className="w-full border border-[#E2E8F0] rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:border-[#D47B5A] focus:ring-[3px] focus:ring-[#D47B5A1a] transition-colors bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
-                  Data Sources (optional)
-                </label>
-                <input
-                  type="text"
-                  value={dataSources}
-                  onChange={(e) => setDataSources(e.target.value)}
-                  placeholder="e.g., CRM, Analytics platform, Database"
-                  className="w-full border border-[#E2E8F0] rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:border-[#D47B5A] focus:ring-[3px] focus:ring-[#D47B5A1a] transition-colors bg-white"
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={handleGenerateImage}
-              disabled={!userNeeds.trim() || isLoading}
-              className="mt-6 w-full md:w-auto px-8 py-3 text-white font-semibold rounded-full transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
               style={{
-                backgroundColor: DARK_ACCENT_COLOR,
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = '#C06A4A';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = DARK_ACCENT_COLOR;
-                }
+                background: 'linear-gradient(135deg, rgba(245, 184, 160, 0.15) 0%, rgba(212, 123, 90, 0.08) 50%, rgba(245, 184, 160, 0.12) 100%)',
+                border: '1.5px solid #F5B8A0',
               }}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Generating Dashboard...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={18} />
-                  Generate Dashboard Design
-                </>
-              )}
-            </button>
-          </div>
+              <div className="absolute top-3 left-4 flex gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#D47B5A] opacity-40" />
+                <span className="w-2 h-2 rounded-full bg-[#F5B8A0] opacity-60" />
+                <span className="w-2 h-2 rounded-full bg-[#D47B5A] opacity-30" />
+              </div>
 
-          {/* Examples */}
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#D47B5A] mb-2">
+                Did you know?
+              </p>
+              <p className="text-[17px] md:text-[19px] text-[#2D3748] leading-[1.6] font-medium mb-2">
+                Organizations that design dashboards around user decisions see <span className="text-[#D47B5A] font-bold">4x higher adoption rates</span> compared
+                to those built around available data alone.
+              </p>
+              <p className="text-[15px] text-[#718096] leading-[1.6] max-w-3xl mx-auto">
+                Effective dashboards don't start with data — they start with understanding what decisions users need to make and what insights will drive action.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── END-TO-END JOURNEY ─── */}
+        <div className="mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              {
+                num: 1,
+                title: 'Define User Needs',
+                icon: '🎯',
+                desc: 'Start with who will use the dashboard and what decisions they need to make.',
+              },
+              {
+                num: 2,
+                title: 'Generate Dashboard',
+                icon: '✨',
+                desc: 'AI creates a sleek, modern dashboard mockup tailored to your requirements.',
+              },
+              {
+                num: 3,
+                title: 'Review & Refine',
+                icon: '🔍',
+                desc: 'Edit metrics, titles, and layout. Regenerate until the design feels right.',
+              },
+              {
+                num: 4,
+                title: 'Export PRD',
+                icon: '📄',
+                desc: 'Get a structured PRD you can hand to AI coding tools like Lovable or Bolt.',
+              },
+            ].map((step) => (
+              <div key={step.num} className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
+                    style={{ backgroundColor: 'rgba(245, 184, 160, 0.3)', color: DARK_ACCENT_COLOR }}
+                  >
+                    {step.num}
+                  </div>
+                  <span className="text-[15px] font-bold text-[#1A202C]">{step.icon} {step.title}</span>
+                </div>
+                <p className="text-[13px] text-[#718096] leading-[1.5]">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ─── INPUT SECTION (peach-themed card) ─── */}
+        <div
+          className="rounded-2xl p-6 sm:p-8 mb-8"
+          style={{
+            background: 'linear-gradient(135deg, rgba(245, 184, 160, 0.12) 0%, rgba(251, 206, 177, 0.08) 50%, rgba(245, 184, 160, 0.10) 100%)',
+            border: '1.5px solid #F5B8A0',
+          }}
+        >
+          {/* Example pills */}
           <div className="mb-6">
             <p className="text-[13px] font-semibold text-[#A0AEC0] uppercase tracking-wider mb-3">
               Example Use Cases
             </p>
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="flex flex-wrap gap-2">
               {EXAMPLE_NEEDS.map((example, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleExampleClick(example)}
-                  className="text-left p-4 border border-[#E2E8F0] rounded-lg hover:border-[#D47B5A] hover:bg-[#FFF5F0] transition-all duration-150"
+                  className="px-4 py-2 text-[13px] text-[#2D3748] rounded-full transition-all duration-150"
+                  style={{
+                    backgroundColor: 'rgba(245, 184, 160, 0.2)',
+                    border: '1px solid #F5B8A0',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#D47B5A';
+                    e.currentTarget.style.backgroundColor = 'rgba(245, 184, 160, 0.35)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#F5B8A0';
+                    e.currentTarget.style.backgroundColor = 'rgba(245, 184, 160, 0.2)';
+                  }}
                 >
-                  <p className="text-[13px] text-[#4A5568] leading-relaxed line-clamp-3">
-                    {example.user_needs}
-                  </p>
+                  {example.user_needs.length > 60 ? example.user_needs.slice(0, 60) + '...' : example.user_needs}
                 </button>
               ))}
             </div>
           </div>
 
+          <div ref={inputSectionRef} className="space-y-6">
+            <div>
+              <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
+                What does your dashboard need to accomplish? *
+              </label>
+              <textarea
+                value={userNeeds}
+                onChange={(e) => setUserNeeds(e.target.value)}
+                placeholder="Describe the primary purpose of your dashboard. What decisions does it need to support? What insights should users gain?"
+                className="w-full border-2 rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:ring-[3px] transition-colors resize-none bg-white"
+                style={{ borderColor: '#F5B8A0' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#D47B5A'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#F5B8A0'; }}
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
+                Target Audience (optional)
+              </label>
+              <input
+                type="text"
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+                placeholder="e.g., Sales managers, HR teams, Executives"
+                className="w-full border-2 rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:ring-[3px] transition-colors bg-white"
+                style={{ borderColor: '#F5B8A0' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#D47B5A'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#F5B8A0'; }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
+                Key Metrics to Display (optional)
+              </label>
+              <input
+                type="text"
+                value={keyMetrics}
+                onChange={(e) => setKeyMetrics(e.target.value)}
+                placeholder="e.g., Revenue, Conversion rates, User engagement"
+                className="w-full border-2 rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:ring-[3px] transition-colors bg-white"
+                style={{ borderColor: '#F5B8A0' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#D47B5A'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#F5B8A0'; }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
+                Data Sources (optional)
+              </label>
+              <input
+                type="text"
+                value={dataSources}
+                onChange={(e) => setDataSources(e.target.value)}
+                placeholder="e.g., CRM, Analytics platform, Database"
+                className="w-full border-2 rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:ring-[3px] transition-colors bg-white"
+                style={{ borderColor: '#F5B8A0' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#D47B5A'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#F5B8A0'; }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[14px] font-semibold text-[#1A202C] mb-2">
+                Inspiration Link (optional)
+              </label>
+              <input
+                type="url"
+                value={inspirationUrl}
+                onChange={(e) => setInspirationUrl(e.target.value)}
+                placeholder="e.g., https://dribbble.com/shots/... or any website URL for design inspiration"
+                className="w-full border-2 rounded-lg px-4 py-3 text-[15px] text-[#1A202C] placeholder:text-[#A0AEC0] focus:outline-none focus:ring-[3px] transition-colors bg-white"
+                style={{ borderColor: '#F5B8A0' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#D47B5A'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#F5B8A0'; }}
+              />
+              <p className="text-[12px] text-[#A0AEC0] mt-1">Paste a link to a dashboard or website you like — the AI will use it as design inspiration.</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGenerateImage}
+            disabled={!userNeeds.trim() || isLoading}
+            className="mt-6 w-full md:w-auto px-8 py-3 text-white font-semibold rounded-full transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: DARK_ACCENT_COLOR,
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = '#C06A4A';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = DARK_ACCENT_COLOR;
+              }
+            }}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Generating Dashboard...
+              </>
+            ) : (
+              <>
+                <Sparkles size={18} />
+                Generate Dashboard Design
+              </>
+            )}
+          </button>
+
           {error && (
-            <div className="bg-[#FFF5F5] border border-[#FC8181] rounded-lg p-4 text-[14px] text-[#C53030]">
+            <div className="bg-[#FFF5F5] border border-[#FC8181] rounded-lg p-4 text-[14px] text-[#C53030] mt-4">
               {error}
             </div>
           )}
         </div>
+
+        {/* Blank Canvas - shown before dashboard is generated */}
+        {!dashboardImage && (
+          <div ref={imageSectionRef} className="mb-16">
+            <div className="flex items-center gap-2 mb-6">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                style={{ backgroundColor: DARK_ACCENT_COLOR }}
+              >
+                2
+              </div>
+              <h2 className="text-[24px] font-bold text-[#1A202C]">Dashboard Preview</h2>
+            </div>
+            <div className="bg-[#FAFBFC] border-2 border-dashed border-[#E2E8F0] rounded-xl overflow-hidden" style={{ position: 'relative', paddingBottom: '66.67%' }}>
+              <div className="text-center px-8" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                <Monitor size={56} className="mx-auto mb-4" style={{ color: '#CBD5E0' }} />
+                <h3 className="text-[18px] font-semibold text-[#A0AEC0] mb-2">Your dashboard will appear here</h3>
+                <p className="text-[14px] text-[#CBD5E0] max-w-md">
+                  Fill in your requirements above and click "Generate Dashboard Design" to create a sleek, AI-powered dashboard mockup.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Step 2: Dashboard Image */}
         {dashboardImage && (
@@ -880,62 +913,84 @@ export const DashboardDesigner: React.FC = () => {
                 </div>
               )}
 
-              {/* Image */}
+              {/* Dashboard Display - scaled to fit without clipping */}
               <div className="mb-6">
-                <div className="bg-[#F7FAFC] border-2 border-dashed border-[#E2E8F0] rounded-lg p-4 flex items-center justify-center">
+                <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden">
                   {dashboardSvg ? (
-                    <div className="w-full rounded-lg shadow-xl bg-white overflow-hidden" style={{ maxHeight: 'calc(100vh - 300px)', height: '600px' }}>
+                    <>
                       {dashboardImage?.html_content ? (
-                        // Render Gemini-generated HTML
-                        <iframe
-                          srcDoc={dashboardImage.html_content}
-                          className="w-full h-full border-0"
-                          style={{ width: '100%', height: '100%', minHeight: '600px' }}
-                          title="Generated Dashboard"
-                        />
+                        <div style={{ position: 'relative', width: '100%', paddingBottom: '66.67%', overflow: 'hidden' }}>
+                          <iframe
+                            srcDoc={dashboardImage.html_content}
+                            className="border-0"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '1200px',
+                              height: '800px',
+                              transformOrigin: 'top left',
+                            }}
+                            title="Generated Dashboard"
+                            ref={(el) => {
+                              if (el) {
+                                const updateScale = () => {
+                                  const containerWidth = el.parentElement?.clientWidth || 1200;
+                                  const scale = containerWidth / 1200;
+                                  el.style.transform = `scale(${scale})`;
+                                };
+                                updateScale();
+                                window.addEventListener('resize', updateScale);
+                              }
+                            }}
+                          />
+                        </div>
                       ) : (
-                        // Render SVG - scale to fit viewport
-                        <div 
-                          className="w-full h-full overflow-auto"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <div 
-                            className="w-full"
-                            style={{ transform: 'scale(0.8)', transformOrigin: 'top left' }}
-                            dangerouslySetInnerHTML={{ __html: dashboardSvg }}
+                        <div className="w-full p-4">
+                          <div dangerouslySetInnerHTML={{ __html: dashboardSvg }} />
+                        </div>
+                      )}
+                    </>
+                  ) : dashboardImage && dashboardImage.image_url ? (
+                    <>
+                      {dashboardImage.image_url.startsWith('data:text/html') ? (
+                        <div style={{ position: 'relative', width: '100%', paddingBottom: '66.67%', overflow: 'hidden' }}>
+                          <iframe
+                            srcDoc={decodeURIComponent(dashboardImage.image_url.replace('data:text/html;charset=utf-8,', ''))}
+                            className="border-0"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '1200px',
+                              height: '800px',
+                              transformOrigin: 'top left',
+                            }}
+                            title="Generated Dashboard"
+                            ref={(el) => {
+                              if (el) {
+                                const updateScale = () => {
+                                  const containerWidth = el.parentElement?.clientWidth || 1200;
+                                  const scale = containerWidth / 1200;
+                                  el.style.transform = `scale(${scale})`;
+                                };
+                                updateScale();
+                                window.addEventListener('resize', updateScale);
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center bg-[#F8FAFC] p-4">
+                          <img
+                            src={dashboardImage.image_url}
+                            alt="Generated dashboard design"
+                            style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain' }}
                           />
                         </div>
                       )}
-                    </div>
-                  ) : dashboardImage && dashboardImage.image_url ? (
-                    <div className="w-full rounded-lg shadow-xl bg-white overflow-hidden" style={{ maxHeight: 'calc(100vh - 300px)', height: '600px' }}>
-                      {dashboardImage.image_url.startsWith('data:text/html') ? (
-                        <iframe
-                          srcDoc={decodeURIComponent(dashboardImage.image_url.replace('data:text/html;charset=utf-8,', ''))}
-                          className="w-full h-full border-0"
-                          style={{ width: '100%', height: '100%', minHeight: '600px' }}
-                          title="Generated Dashboard"
-                        />
-                      ) : (
-                        <img
-                          src={dashboardImage.image_url}
-                          alt="Generated dashboard design"
-                          className="w-full h-auto"
-                          style={{ display: 'block', maxHeight: '100%', objectFit: 'contain' }}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center w-full">
-                      <div className="bg-white border border-[#E2E8F0] rounded-lg p-12 max-w-2xl mx-auto">
-                        <Monitor size={64} className="mx-auto mb-4" style={{ color: DARK_ACCENT_COLOR }} />
-                        <h3 className="text-[18px] font-bold text-[#1A202C] mb-2">Dashboard Design Preview</h3>
-                        <p className="text-[14px] text-[#718096] mb-4">
-                          Your dashboard design will appear here after generation.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -993,30 +1048,6 @@ export const DashboardDesigner: React.FC = () => {
               {/* Actions */}
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={handleGeneratePRD}
-                  disabled={isLoading || !dashboardImage}
-                  className="px-6 py-3 bg-[#D47B5A] text-white font-semibold rounded-full hover:bg-[#C06A4A] transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Generating PRD...
-                    </>
-                  ) : (
-                    <>
-                      <FileText size={18} />
-                      Generate PRD
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowPRDInfoModal(true)}
-                  className="px-4 py-3 border border-[#E2E8F0] text-[#4A5568] font-semibold rounded-full hover:bg-[#F7FAFC] transition-colors flex items-center gap-2"
-                >
-                  <Info size={18} />
-                  What is a PRD?
-                </button>
-                <button
                   onClick={handleStartOver}
                   className="px-6 py-3 border border-[#E2E8F0] text-[#4A5568] font-semibold rounded-full hover:bg-[#F7FAFC] transition-colors flex items-center gap-2"
                 >
@@ -1025,150 +1056,106 @@ export const DashboardDesigner: React.FC = () => {
                 </button>
               </div>
             </div>
+
           </div>
         )}
 
-        {/* Step 3: PRD Output */}
-        {showPRD && (
-          <div ref={prdSectionRef} className="mb-16">
-            <div className="flex items-center gap-2 mb-6">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-                style={{ backgroundColor: DARK_ACCENT_COLOR }}
-              >
-                3
-              </div>
-              <h2 className="text-[24px] font-bold text-[#1A202C]">Product Requirements Document</h2>
-            </div>
-
-            {prdResult ? (
-              <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 md:p-8 animate-fade-in-up">
-                <div className="flex items-center justify-between mb-6">
-                  <p className="text-[14px] text-[#718096]">
-                    This PRD is formatted for AI coding agents and development teams.
-                  </p>
-                  <button
-                    onClick={handleCopyPRD}
-                    className="px-4 py-2 border border-[#E2E8F0] text-[#4A5568] text-[14px] font-semibold rounded-lg hover:bg-[#F7FAFC] transition-colors flex items-center gap-2"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                    {copied ? 'Copied!' : 'Copy PRD'}
-                  </button>
-                </div>
-
-                <div className="space-y-8">
-                  {Object.entries(prdResult.sections).map(([key, value]) => {
-                    const sectionTitles: Record<string, string> = {
-                      title_and_author: 'Title & Author Information',
-                      purpose_and_scope: 'Purpose and Scope',
-                      stakeholders: 'Stakeholder Identification',
-                      market_assessment: 'Market Assessment and Target Demographics',
-                      product_overview: 'Product Overview and Use Cases',
-                      functional_requirements: 'Functional Requirements',
-                      usability_requirements: 'Usability Requirements',
-                      technical_requirements: 'Technical Requirements',
-                      environmental_requirements: 'Environmental Requirements',
-                      support_requirements: 'Support Requirements',
-                      interaction_requirements: 'Interaction Requirements',
-                      assumptions: 'Assumptions',
-                      constraints: 'Constraints',
-                      dependencies: 'Dependencies',
-                      workflow_timeline: 'High-Level Workflow Plans, Timelines and Milestones',
-                      evaluation_metrics: 'Evaluation Plan and Performance Metrics',
-                    };
-                    
-                    return (
-                      <div key={key} className="animate-fade-in-up" style={{ animationDelay: `${Object.keys(prdResult.sections).indexOf(key) * 0.1}s` }}>
-                        <h3 className="text-[18px] font-bold text-[#1A202C] mb-3">
-                          {sectionTitles[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                        </h3>
-                        <div className="bg-[#F7FAFC] border-l-4 rounded-r-lg px-6 py-4" style={{ borderColor: DARK_ACCENT_COLOR }}>
-                          <p className="text-[15px] text-[#4A5568] leading-relaxed whitespace-pre-wrap">
-                            {value}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center">
-                <Loader2 size={48} className="animate-spin mx-auto mb-4" style={{ color: DARK_ACCENT_COLOR }} />
-                <p className="text-[16px] text-[#718096]">Generating your PRD...</p>
-                <p className="text-[14px] text-[#A0AEC0] mt-2">This may take a few moments</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* PRD Info Modal */}
-        {showPRDInfoModal && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPRDInfoModal(false)}
-          >
-            <div 
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 animate-fade-in-up"
-              onClick={(e) => e.stopPropagation()}
+        {/* PRD Card - Always visible */}
+        <div ref={prdSectionRef} className="bg-white border border-[#E2E8F0] rounded-xl p-6 md:p-8 mb-16">
+          <div className="flex items-start gap-4 mb-4">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: 'rgba(245, 184, 160, 0.25)' }}
             >
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-[28px] font-bold text-[#1A202C] mb-2">What is a PRD?</h3>
-                  <p className="text-[16px] text-[#718096]">Product Requirements Document</p>
-                </div>
+              <FileText size={20} style={{ color: DARK_ACCENT_COLOR }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[18px] font-bold text-[#1A202C] mb-1">Product Requirements Document (PRD)</h3>
+              <p className="text-[14px] text-[#718096] leading-relaxed">
+                A PRD converts your dashboard design into structured specifications that AI coding agents (like <strong>Lovable</strong>, <strong>Bolt.new</strong>, or <strong>V0</strong>) can use to build a fully functional version. It bridges the gap between what you want and what gets built.
+              </p>
+            </div>
+          </div>
+
+          {isPrdLoading ? (
+            <div className="flex items-center gap-3 py-4 px-4 bg-[#F7FAFC] rounded-lg">
+              <Loader2 size={18} className="animate-spin" style={{ color: DARK_ACCENT_COLOR }} />
+              <p className="text-[14px] text-[#718096]">Generating your PRD...</p>
+            </div>
+          ) : prdResult ? (
+            <>
+              <div className="flex items-center gap-3 mb-4">
                 <button
-                  onClick={() => setShowPRDInfoModal(false)}
-                  className="text-[#A0AEC0] hover:text-[#4A5568] transition-colors"
+                  onClick={() => setShowPrdDropdown(!showPrdDropdown)}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-[#E2E8F0] text-[#1A202C] text-[14px] font-semibold rounded-lg hover:bg-[#F7FAFC] transition-colors"
                 >
-                  <X size={24} />
+                  <ChevronDown
+                    size={16}
+                    className="transition-transform duration-200"
+                    style={{ transform: showPrdDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                  />
+                  {showPrdDropdown ? 'Hide PRD' : 'View PRD'}
+                </button>
+                <button
+                  onClick={handleCopyPRD}
+                  className="flex items-center gap-2 px-4 py-2.5 text-white text-[14px] font-semibold rounded-lg transition-colors"
+                  style={{ backgroundColor: DARK_ACCENT_COLOR }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#C06A4A'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = DARK_ACCENT_COLOR; }}
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? 'Copied!' : 'Copy PRD to Clipboard'}
                 </button>
               </div>
 
-              <div className="space-y-6">
-                <div className="bg-[#F7FAFC] border-l-4 rounded-r-lg px-6 py-5" style={{ borderColor: DARK_ACCENT_COLOR }}>
-                  <p className="text-[16px] text-[#4A5568] leading-relaxed mb-4">
-                    A <strong>Product Requirements Document (PRD)</strong> converts your non-technical language into structured specifications that AI coding agents can use to build your dashboard.
-                  </p>
-                  <p className="text-[16px] text-[#4A5568] leading-relaxed">
-                    It translates user needs into technical requirements, data structures, and implementation details that development tools like <strong>Lovable</strong>, <strong>Bolt.new</strong>, or <strong>V0</strong> can understand and execute.
-                  </p>
-                </div>
+              {showPrdDropdown && (
+                <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
+                  <div className="max-h-[600px] overflow-y-auto p-6 space-y-6">
+                    {Object.entries(prdResult.sections).map(([key, value]) => {
+                      const sectionTitles: Record<string, string> = {
+                        title_and_author: 'Title & Author Information',
+                        purpose_and_scope: 'Purpose and Scope',
+                        stakeholders: 'Stakeholder Identification',
+                        market_assessment: 'Market Assessment and Target Demographics',
+                        product_overview: 'Product Overview and Use Cases',
+                        functional_requirements: 'Functional Requirements',
+                        usability_requirements: 'Usability Requirements',
+                        technical_requirements: 'Technical Requirements',
+                        environmental_requirements: 'Environmental Requirements',
+                        support_requirements: 'Support Requirements',
+                        interaction_requirements: 'Interaction Requirements',
+                        assumptions: 'Assumptions',
+                        constraints: 'Constraints',
+                        dependencies: 'Dependencies',
+                        workflow_timeline: 'High-Level Workflow Plans, Timelines and Milestones',
+                        evaluation_metrics: 'Evaluation Plan and Performance Metrics',
+                      };
 
-                <div>
-                  <h4 className="text-[18px] font-bold text-[#1A202C] mb-3">Why use a PRD?</h4>
-                  <ul className="space-y-2 text-[15px] text-[#4A5568]">
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#D47B5A] mt-1">•</span>
-                      <span>Bridges the gap between business requirements and technical implementation</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#D47B5A] mt-1">•</span>
-                      <span>Provides clear, structured specifications for AI coding agents</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#D47B5A] mt-1">•</span>
-                      <span>Ensures consistency and completeness in the development process</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#D47B5A] mt-1">•</span>
-                      <span>Enables faster prototyping and iteration with AI-assisted tools</span>
-                    </li>
-                  </ul>
+                      return (
+                        <div key={key}>
+                          <h4 className="text-[16px] font-bold text-[#1A202C] mb-2">
+                            {sectionTitles[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                          </h4>
+                          <div className="bg-[#F7FAFC] border-l-4 rounded-r-lg px-5 py-3" style={{ borderColor: DARK_ACCENT_COLOR }}>
+                            <p className="text-[14px] text-[#4A5568] leading-relaxed whitespace-pre-wrap">
+                              {value}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-
-                <div className="pt-4 border-t border-[#E2E8F0]">
-                  <button
-                    onClick={() => setShowPRDInfoModal(false)}
-                    className="w-full px-6 py-3 bg-[#D47B5A] text-white font-semibold rounded-full hover:bg-[#C06A4A] transition-colors"
-                  >
-                    Got it, thanks!
-                  </button>
-                </div>
-              </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-[#F7FAFC] border border-[#E2E8F0] rounded-lg px-4 py-3">
+              <p className="text-[14px] text-[#718096]">
+                Generate a dashboard above to automatically create your PRD.
+              </p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Closing */}
         <ArtifactClosing

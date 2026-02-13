@@ -38,6 +38,7 @@ interface DashboardDesignPayload {
   dashboard_title?: string;
   dashboard_subtitle?: string;
   editable_metrics?: Array<{name: string; value: number; change: number}>;
+  inspiration_url?: string;
 }
 
 interface PRDPayload {
