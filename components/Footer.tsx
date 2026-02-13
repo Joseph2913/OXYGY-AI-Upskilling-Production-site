@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
           </h2>
           <p className="text-teal-bg text-lg mb-10 max-w-2xl mx-auto">
             Whether you are starting your journey or looking to scale your AI capabilities, 
-            Oxygy's Center of Excellence is here to guide you.
+            OXYGY's Center of Excellence is here to guide you.
           </p>
           <button className="bg-white text-teal hover:bg-teal-light font-bold py-4 px-10 rounded-full shadow-lg transition-transform hover:scale-105">
             Get in Touch
@@ -34,14 +34,14 @@ export const Footer: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <img
-              src="/logos/oxygy-logo-full.jpeg"
-              alt="Oxygy"
-              style={{ height: '22px', width: 'auto', filter: 'brightness(0) invert(1)' }}
+              src="/logos/oxygy-logo-darkgray-teal.png"
+              alt="OXYGY"
+              style={{ height: '30px', width: 'auto', filter: 'brightness(0) invert(1)' }}
             />
           </div>
           
           <div className="text-gray-400 text-sm">
-            &copy; {new Date().getFullYear()} Oxygy. All rights reserved.
+            &copy; {new Date().getFullYear()} OXYGY. All rights reserved.
           </div>
           
           <div className="flex gap-6 text-sm text-gray-300">
