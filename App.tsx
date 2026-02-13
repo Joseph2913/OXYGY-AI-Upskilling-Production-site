@@ -8,8 +8,9 @@ import { PromptPlayground } from './components/PromptPlayground';
 import { AgentBuilder } from './components/AgentBuilder';
 import { WorkflowDesigner } from './components/WorkflowDesigner';
 import { ProductArchitecture } from './components/ProductArchitecture';
+import { DashboardDesigner } from './components/DashboardDesigner';
 
-type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'product-architecture';
+type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'product-architecture' | 'dashboard-design';
 
 function getPageFromHash(): Page {
   const hash = window.location.hash;
@@ -17,6 +18,7 @@ function getPageFromHash(): Page {
   if (hash === '#agent-builder') return 'agent-builder';
   if (hash === '#workflow-designer') return 'workflow-designer';
   if (hash === '#product-architecture') return 'product-architecture';
+  if (hash === '#dashboard-design') return 'dashboard-design';
   return 'home';
 }
 
@@ -49,6 +51,7 @@ function App() {
       {currentPage === 'agent-builder' && <AgentBuilder />}
       {currentPage === 'workflow-designer' && <WorkflowDesigner />}
       {currentPage === 'product-architecture' && <ProductArchitecture />}
+      {currentPage === 'dashboard-design' && <DashboardDesigner />}
     </div>
   );
 }
