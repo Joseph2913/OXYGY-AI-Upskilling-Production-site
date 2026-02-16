@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronDown, FileSearch, Globe, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileSearch, Globe, Users, Brain } from 'lucide-react';
 
 const LEVEL_COLORS: Record<number, { bg: string; text: string; label: string }> = {
   2: { bg: '#EBF0FE', text: '#5B6DC2', label: 'Level 2 — Applied Capability' },
@@ -100,6 +100,30 @@ const CASE_STUDIES: CaseStudy[] = [
       { level: 3, type: 'primary', description: 'Integrated survey analysis, classification logic, and recommendation engine into one workflow.' },
     ],
   },
+  {
+    id: 4,
+    title: 'Second Brain — AI-Powered Knowledge Network',
+    subtitle: 'Connecting Multiple Knowledge Sources into a Living Neural Map',
+    accentColor: '#2C9A94',
+    icon: Brain,
+    challenge:
+      'Professionals accumulate knowledge across meeting transcripts, documents, articles, videos, and other sources — but insights remain siloed. Without a way to surface connections between projects, ideas, and conversations, valuable patterns go unnoticed and strategic thinking stays fragmented.',
+    approach: [
+      'Multi-Source Ingestion — Integrates meeting transcripts, uploaded documents, videos, web content, and other inputs into a unified knowledge base',
+      'AI Relationship Mapping — Uses AI to identify semantic relationships, recurring themes, and conceptual links across all inputs',
+      'Neural Network Visualisation — Builds a dynamic, interconnected graph that maps how topics, projects, and ideas relate to each other',
+      'Continuous Learning — The network evolves as new inputs are added, surfacing deeper patterns over time',
+    ],
+    outcomes: [
+      'Surfaces hidden connections between projects, ideas, and conversations',
+      'Transforms fragmented knowledge into a structured, navigable intelligence layer',
+      'Enables faster strategic thinking by revealing cross-domain patterns',
+      'Creates a personalised knowledge asset that grows with the user',
+    ],
+    levelTags: [
+      { level: 5, type: 'primary', description: 'A fully AI-powered application that autonomously processes, connects, and visualises knowledge across multiple input sources.' },
+    ],
+  },
 ];
 
 /* ─── Summary card for homepage ─── */
@@ -166,196 +190,6 @@ function CaseStudySummaryCard({ cs }: { cs: CaseStudy }) {
   );
 }
 
-/* ─── Expandable case study card for standalone page ─── */
-function CaseStudyExpandableCard({ cs, isExpanded, onToggle }: { cs: CaseStudy; isExpanded: boolean; onToggle: () => void }) {
-  return (
-    <div
-      className="bg-white border border-slate-200 rounded-xl overflow-hidden transition-all duration-300"
-      style={{ borderColor: isExpanded ? cs.accentColor : undefined }}
-    >
-      <div className="h-[6px] w-full" style={{ backgroundColor: cs.accentColor }} />
-
-      {/* Collapsed header — always visible, clickable */}
-      <div
-        className="p-6 md:p-8 cursor-pointer flex items-start gap-5"
-        onClick={onToggle}
-      >
-        {/* Icon */}
-        <div
-          className="shrink-0 w-[48px] h-[48px] rounded-xl flex items-center justify-center mt-0.5 hidden md:flex"
-          style={{ backgroundColor: `${cs.accentColor}14` }}
-        >
-          <cs.icon size={24} strokeWidth={1.5} style={{ color: cs.accentColor }} />
-        </div>
-
-        <div className="flex-grow">
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {cs.levelTags.map((tag) => {
-              const colors = LEVEL_COLORS[tag.level];
-              return (
-                <span
-                  key={tag.level}
-                  className="text-[11px] font-bold px-2.5 py-1 rounded-md"
-                  style={{ backgroundColor: colors.bg, color: colors.text }}
-                >
-                  Level {tag.level}
-                </span>
-              );
-            })}
-          </div>
-          <h3 className="text-[20px] md:text-[24px] font-bold text-[#1A202C] leading-tight mb-1.5">
-            {cs.title}
-          </h3>
-          <p className="text-[14px] md:text-[15px] text-[#718096] leading-[1.5] italic mb-3">
-            {cs.subtitle}
-          </p>
-
-          {/* Outcome preview chips — visible when collapsed */}
-          {!isExpanded && (
-            <div className="flex flex-wrap gap-2 mt-1">
-              {cs.outcomes.slice(0, 2).map((outcome, idx) => (
-                <span
-                  key={idx}
-                  className="text-[12px] font-medium px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: `${cs.accentColor}12`, color: cs.accentColor }}
-                >
-                  {outcome}
-                </span>
-              ))}
-              {cs.outcomes.length > 2 && (
-                <span
-                  className="text-[12px] font-medium px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: '#F0F2F5', color: '#718096' }}
-                >
-                  +{cs.outcomes.length - 2} more
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <div
-          className="shrink-0 w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-300 mt-1"
-          style={{
-            backgroundColor: isExpanded ? cs.accentColor : '#F0F2F5',
-            color: isExpanded ? '#FFFFFF' : '#718096',
-          }}
-        >
-          <ChevronDown
-            size={18}
-            className="transition-transform duration-300"
-            style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          />
-        </div>
-      </div>
-
-      {/* Expanded content */}
-      <div
-        className="transition-all duration-400 ease-in-out overflow-hidden"
-        style={{
-          maxHeight: isExpanded ? '1200px' : '0px',
-          opacity: isExpanded ? 1 : 0,
-        }}
-      >
-        <div className="px-6 md:px-8 pb-8 md:pb-10">
-          <div className="h-px bg-slate-100 w-full mb-8" />
-
-          {/* Content in two columns on desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-            {/* Left Column */}
-            <div>
-              {/* The Challenge */}
-              <div className="mb-8">
-                <h4
-                  className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
-                  style={{ color: cs.accentColor }}
-                >
-                  The Challenge
-                </h4>
-                <p className="text-[14px] text-[#4A5568] leading-[1.8]">{cs.challenge}</p>
-              </div>
-
-              {/* OXYGY Approach */}
-              <div>
-                <h4
-                  className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
-                  style={{ color: cs.accentColor }}
-                >
-                  OXYGY Approach
-                </h4>
-                <ul className="space-y-2.5">
-                  {cs.approach.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5">
-                      <span
-                        className="w-[6px] h-[6px] rounded-full mt-[7px] shrink-0"
-                        style={{ backgroundColor: cs.accentColor }}
-                      />
-                      <span className="text-[14px] text-[#4A5568] leading-[1.7]">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div>
-              {/* Outcomes */}
-              <div className="mb-8">
-                <h4
-                  className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
-                  style={{ color: cs.accentColor }}
-                >
-                  Outcome
-                </h4>
-                <ul className="space-y-3">
-                  {cs.outcomes.map((outcome, idx) => (
-                    <li key={idx} className="flex items-start gap-3">
-                      <span
-                        className="w-[20px] h-[20px] rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white mt-0.5"
-                        style={{ backgroundColor: cs.accentColor }}
-                      >
-                        {idx + 1}
-                      </span>
-                      <span className="text-[14px] text-[#4A5568] leading-[1.7]">{outcome}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* AI Learning Level Tags */}
-              <div>
-                <h4
-                  className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
-                  style={{ color: cs.accentColor }}
-                >
-                  AI Learning Level
-                </h4>
-                <div className="space-y-3">
-                  {cs.levelTags.map((tag) => {
-                    const colors = LEVEL_COLORS[tag.level];
-                    return (
-                      <div
-                        key={tag.level}
-                        className="rounded-lg p-3"
-                        style={{ backgroundColor: colors.bg, border: `1px solid ${colors.text}20` }}
-                      >
-                        <span className="text-[11px] font-bold uppercase tracking-[0.06em] block mb-1" style={{ color: colors.text }}>
-                          {colors.label}
-                        </span>
-                        <span className="text-[13px] text-[#4A5568] leading-[1.5]">
-                          {tag.description}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** Homepage section — condensed cards */
 export const CaseStudiesSection: React.FC = () => {
@@ -386,13 +220,187 @@ export const CaseStudiesSection: React.FC = () => {
   );
 };
 
-/** Standalone page — expandable case studies */
-export const CaseStudiesPage: React.FC = () => {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+/* ─── Page card — vertical card for standalone page (click to expand detail below) ─── */
+function CaseStudyPageCard({ cs, isSelected, onSelect }: { cs: CaseStudy; isSelected: boolean; onSelect: () => void }) {
+  return (
+    <div
+      className="bg-white border rounded-xl overflow-hidden flex flex-col cursor-pointer transition-all duration-200 hover:shadow-md"
+      style={{ borderColor: isSelected ? cs.accentColor : '#E2E8F0' }}
+      onClick={onSelect}
+    >
+      <div className="h-[6px] w-full" style={{ backgroundColor: cs.accentColor }} />
+      <div className="p-6 flex flex-col flex-grow">
+        {/* Icon + Level Pills row */}
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="shrink-0 w-[40px] h-[40px] rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${cs.accentColor}14` }}
+          >
+            <cs.icon size={20} strokeWidth={1.5} style={{ color: cs.accentColor }} />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {cs.levelTags.map((tag) => {
+              const colors = LEVEL_COLORS[tag.level];
+              return (
+                <span
+                  key={tag.level}
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-md"
+                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                  Level {tag.level}
+                </span>
+              );
+            })}
+          </div>
+        </div>
 
-  const toggleCard = (id: number) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
+        <h3 className="text-[18px] font-bold text-navy-900 leading-tight mb-2">
+          {cs.title}
+        </h3>
+        <p className="text-[14px] text-[#718096] leading-[1.5] mb-4 italic">
+          {cs.subtitle}
+        </p>
+
+        <div className="h-px bg-slate-100 w-full mb-4" />
+
+        <p className="text-[14px] text-[#4A5568] leading-[1.7] mb-5 line-clamp-3">
+          {cs.challenge}
+        </p>
+
+        <div className="mt-auto">
+          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#A0AEC0] mb-2 block">
+            Key Outcomes
+          </span>
+          <ul className="space-y-2">
+            {cs.outcomes.slice(0, 3).map((outcome, idx) => (
+              <li key={idx} className="flex items-start gap-2.5">
+                <span
+                  className="w-[6px] h-[6px] rounded-full mt-[7px] shrink-0"
+                  style={{ backgroundColor: cs.accentColor }}
+                />
+                <span className="text-[13px] text-[#4A5568] leading-[1.6]">{outcome}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div
+          className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold"
+          style={{ color: cs.accentColor }}
+        >
+          {isSelected ? 'Viewing details' : 'View full case study'} <ArrowRight size={13} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Expanded detail panel shown below the grid ─── */
+function CaseStudyDetail({ cs }: { cs: CaseStudy }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="h-[6px] w-full" style={{ backgroundColor: cs.accentColor }} />
+      <div className="p-8 md:p-10">
+        <div className="mb-8">
+          <h3 className="text-[24px] md:text-[28px] font-bold text-[#1A202C] leading-tight mb-2">
+            {cs.title}
+          </h3>
+          <p className="text-[16px] text-[#718096] leading-[1.5] italic">
+            {cs.subtitle}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+          <div>
+            <div className="mb-8">
+              <h4
+                className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
+                style={{ color: cs.accentColor }}
+              >
+                The Challenge
+              </h4>
+              <p className="text-[14px] text-[#4A5568] leading-[1.8]">{cs.challenge}</p>
+            </div>
+            <div>
+              <h4
+                className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
+                style={{ color: cs.accentColor }}
+              >
+                OXYGY Approach
+              </h4>
+              <ul className="space-y-2.5">
+                {cs.approach.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5">
+                    <span
+                      className="w-[6px] h-[6px] rounded-full mt-[7px] shrink-0"
+                      style={{ backgroundColor: cs.accentColor }}
+                    />
+                    <span className="text-[14px] text-[#4A5568] leading-[1.7]">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div className="mb-8">
+              <h4
+                className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
+                style={{ color: cs.accentColor }}
+              >
+                Outcome
+              </h4>
+              <ul className="space-y-3">
+                {cs.outcomes.map((outcome, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <span
+                      className="w-[20px] h-[20px] rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white mt-0.5"
+                      style={{ backgroundColor: cs.accentColor }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <span className="text-[14px] text-[#4A5568] leading-[1.7]">{outcome}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4
+                className="text-[13px] font-bold uppercase tracking-[0.08em] mb-3"
+                style={{ color: cs.accentColor }}
+              >
+                AI Learning Level
+              </h4>
+              <div className="space-y-3">
+                {cs.levelTags.map((tag) => {
+                  const colors = LEVEL_COLORS[tag.level];
+                  return (
+                    <div
+                      key={tag.level}
+                      className="rounded-lg p-3"
+                      style={{ backgroundColor: colors.bg, border: `1px solid ${colors.text}20` }}
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-[0.06em] block mb-1" style={{ color: colors.text }}>
+                        {colors.label}
+                      </span>
+                      <span className="text-[13px] text-[#4A5568] leading-[1.5]">
+                        {tag.description}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Standalone page — vertical card grid */
+export const CaseStudiesPage: React.FC = () => {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selectedCs = CASE_STUDIES.find((cs) => cs.id === selectedId) || null;
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
@@ -422,16 +430,29 @@ export const CaseStudiesPage: React.FC = () => {
           See how we've partnered with organisations across industries to build real AI capability — from multi-agent research workflows to interactive dashboards and tailored front-ends.
         </p>
 
-        {/* Expandable Case Study Cards — stacked */}
-        <div className="space-y-4">
-          {CASE_STUDIES.map((cs) => (
-            <CaseStudyExpandableCard
-              key={cs.id}
-              cs={cs}
-              isExpanded={expandedId === cs.id}
-              onToggle={() => toggleCard(cs.id)}
-            />
-          ))}
+        {/* 2-column card grid with inline detail after each row */}
+        <div className="space-y-6">
+          {Array.from({ length: Math.ceil(CASE_STUDIES.length / 2) }, (_, rowIdx) => {
+            const rowCards = CASE_STUDIES.slice(rowIdx * 2, rowIdx * 2 + 2);
+            const rowHasSelected = rowCards.some((cs) => cs.id === selectedId);
+            return (
+              <React.Fragment key={rowIdx}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {rowCards.map((cs) => (
+                    <CaseStudyPageCard
+                      key={cs.id}
+                      cs={cs}
+                      isSelected={selectedId === cs.id}
+                      onSelect={() => setSelectedId((prev) => (prev === cs.id ? null : cs.id))}
+                    />
+                  ))}
+                </div>
+                {rowHasSelected && selectedCs && (
+                  <CaseStudyDetail cs={selectedCs} />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* Contact CTA */}
