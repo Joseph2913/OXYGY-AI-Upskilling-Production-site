@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, FileSearch, Globe, Users, Brain } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileSearch, Globe, Users, Brain, BookOpen } from 'lucide-react';
 
 const LEVEL_COLORS: Record<number, { bg: string; text: string; label: string }> = {
   2: { bg: '#EBF0FE', text: '#5B6DC2', label: 'Level 2 — Applied Capability' },
@@ -28,6 +28,31 @@ interface CaseStudy {
 
 const CASE_STUDIES: CaseStudy[] = [
   {
+    id: 5,
+    title: 'Persona Learning Card Automation',
+    subtitle: 'Scaling 100+ Role-Based Learning Cards from a Single Gold Standard',
+    accentColor: '#5B6DC2',
+    icon: BookOpen,
+    challenge:
+      'A large global beauty brand needed to automate the creation of standardized persona learning cards for their large-scale transformation program. With 100+ personas, producing high-quality, consistent cards manually was extremely time-consuming and difficult to keep uniform across teams. The goal was to generate cards with a repeatable structure—combining change management and adoption messaging with role-specific training guidance—while keeping content grounded in the training materials in scope.',
+    approach: [
+      'Trained the agent on a gold-standard persona card to replicate structure and tone at scale',
+      'Mapped personas to business roles and roles to relevant trainings; ingested ~300 training decks and user guides into the agent',
+      'Agent identified relevant training content per persona, retrieved and synthesized materials, and generated learning cards in a fixed format',
+      'Standardized card structure combining change management and adoption messaging with role-specific training guidance',
+      'End users could request cards by role (e.g. Supply Planner, Finance Controller) and receive end-to-end generated output automatically',
+    ],
+    outcomes: [
+      'Significantly reduced effort required to scale persona-based learning content',
+      'Improved consistency across 100+ persona cards',
+      'Repeatable structure and tone while staying grounded in in-scope training materials',
+      'Freed teams from manual card production while keeping quality high',
+    ],
+    levelTags: [
+      { level: 2, type: 'primary', description: 'Custom agent built for a specific use case: standardized, scalable generation of persona learning content from existing training materials.' },
+    ],
+  },
+  {
     id: 1,
     title: 'AI-Driven Market Intelligence Workflow',
     subtitle: 'Turning 30+ Industry Reports into Structured Strategic Insight',
@@ -53,13 +78,37 @@ const CASE_STUDIES: CaseStudy[] = [
     ],
   },
   {
+    id: 4,
+    title: 'Second Brain — AI-Powered Knowledge Network',
+    subtitle: 'Connecting Multiple Knowledge Sources into a Living Neural Map',
+    accentColor: '#2C9A94',
+    icon: Brain,
+    challenge:
+      'Professionals accumulate knowledge across meeting transcripts, documents, articles, videos, and other sources — but insights remain siloed. Without a way to surface connections between projects, ideas, and conversations, valuable patterns go unnoticed and strategic thinking stays fragmented.',
+    approach: [
+      'Multi-Source Ingestion — Integrates meeting transcripts, uploaded documents, videos, web content, and other inputs into a unified knowledge base',
+      'AI Relationship Mapping — Uses AI to identify semantic relationships, recurring themes, and conceptual links across all inputs',
+      'Neural Network Visualisation — Builds a dynamic, interconnected graph that maps how topics, projects, and ideas relate to each other',
+      'Continuous Learning — The network evolves as new inputs are added, surfacing deeper patterns over time',
+    ],
+    outcomes: [
+      'Surfaces hidden connections between projects, ideas, and conversations',
+      'Transforms fragmented knowledge into a structured, navigable intelligence layer',
+      'Enables faster strategic thinking by revealing cross-domain patterns',
+      'Creates a personalised knowledge asset that grows with the user',
+    ],
+    levelTags: [
+      { level: 5, type: 'primary', description: 'A fully AI-powered application that autonomously processes, connects, and visualises knowledge across multiple input sources.' },
+    ],
+  },
+  {
     id: 2,
-    title: 'AIFOD Conference Intelligence Dashboard',
+    title: 'AIFOD (AI for Developing Countries Forum) Conference Intelligence Dashboard',
     subtitle: 'Building an Interactive AI Policy Intelligence Tool for a Global Conference',
     accentColor: '#D47B5A',
     icon: Globe,
     challenge:
-      'Before the AIFOD conference, OXYGY wanted an interactive way to engage the audience by showing them synthesized results of research and policy documents. The goal was to present a structural framework for understanding AI policy production across the Global South — moving beyond aggregate rankings to benchmark the unique governance architectures, infrastructure gaps, and human capital strategies of emerging nations. The tool included an interactive map with AI readiness classifications based on studies from the University of Oxford and the World Bank.',
+      'OXYGY wanted an interactive way to engage with the audience at the AI for Developing Countries Forum (AIFOD) by showing them synthesized results of research and policy documents. The goal was to present a structural framework for understanding AI policy production across the Global South — moving beyond aggregate rankings to benchmark the unique governance architectures, infrastructure gaps, and human capital strategies of emerging nations. The tool included an interactive map with AI readiness classifications based on studies from the University of Oxford and the World Bank.',
     approach: [
       'Synthesized research and policy documents into structured, comparable datasets',
       'Built an interactive map with AI readiness classifications by country',
@@ -98,30 +147,6 @@ const CASE_STUDIES: CaseStudy[] = [
     ],
     levelTags: [
       { level: 3, type: 'primary', description: 'Integrated survey analysis, classification logic, and recommendation engine into one workflow.' },
-    ],
-  },
-  {
-    id: 4,
-    title: 'Second Brain — AI-Powered Knowledge Network',
-    subtitle: 'Connecting Multiple Knowledge Sources into a Living Neural Map',
-    accentColor: '#2C9A94',
-    icon: Brain,
-    challenge:
-      'Professionals accumulate knowledge across meeting transcripts, documents, articles, videos, and other sources — but insights remain siloed. Without a way to surface connections between projects, ideas, and conversations, valuable patterns go unnoticed and strategic thinking stays fragmented.',
-    approach: [
-      'Multi-Source Ingestion — Integrates meeting transcripts, uploaded documents, videos, web content, and other inputs into a unified knowledge base',
-      'AI Relationship Mapping — Uses AI to identify semantic relationships, recurring themes, and conceptual links across all inputs',
-      'Neural Network Visualisation — Builds a dynamic, interconnected graph that maps how topics, projects, and ideas relate to each other',
-      'Continuous Learning — The network evolves as new inputs are added, surfacing deeper patterns over time',
-    ],
-    outcomes: [
-      'Surfaces hidden connections between projects, ideas, and conversations',
-      'Transforms fragmented knowledge into a structured, navigable intelligence layer',
-      'Enables faster strategic thinking by revealing cross-domain patterns',
-      'Creates a personalised knowledge asset that grows with the user',
-    ],
-    levelTags: [
-      { level: 5, type: 'primary', description: 'A fully AI-powered application that autonomously processes, connects, and visualises knowledge across multiple input sources.' },
     ],
   },
 ];
@@ -211,7 +236,7 @@ export const CaseStudiesSection: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {CASE_STUDIES.map((cs) => (
+          {CASE_STUDIES.slice(0, 3).map((cs) => (
             <CaseStudySummaryCard key={cs.id} cs={cs} />
           ))}
         </div>
