@@ -10,7 +10,7 @@ const AI_TOOLS = [
   { level: 5, emoji: '\uD83C\uDFD7\uFE0F', label: 'Product Architecture Sprint', href: '#product-architecture' },
 ];
 
-const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#case-studies']);
+const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies']);
 
 /* Thin vertical divider between nav items */
 const Divider = () => (
@@ -50,6 +50,7 @@ export const Navbar: React.FC = () => {
   const isHome = !currentHash || currentHash === '#';
   const isOnAiTool = AI_TOOLS.some((t) => t.href === currentHash);
   const isOnLearningPlan = currentHash === '#learning-pathway';
+  const isOnUserJourney = currentHash === '#user-journey';
 
   const goHome = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -256,6 +257,20 @@ export const Navbar: React.FC = () => {
 
           <Divider />
 
+          {/* Your Journey */}
+          <a
+            href="#user-journey"
+            className={cn(
+              'flex items-center px-4 h-[36px] rounded-full text-[14px] font-medium transition-all duration-150 whitespace-nowrap',
+              isOnUserJourney ? pillActive : pillInactive,
+            )}
+            style={{ textDecoration: 'none' }}
+          >
+            Learning Journey
+          </a>
+
+          <Divider />
+
           {/* Case Studies */}
           <a
             href="#case-studies"
@@ -370,6 +385,20 @@ export const Navbar: React.FC = () => {
               onClick={() => setMobileOpen(false)}
             >
               Learning Plan Generator
+            </a>
+
+            <a
+              href="#user-journey"
+              className={cn(
+                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
+                isOnUserJourney
+                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
+                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
+              )}
+              style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
+              onClick={() => setMobileOpen(false)}
+            >
+              Learning Journey
             </a>
 
             <a

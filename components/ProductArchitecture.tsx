@@ -637,12 +637,6 @@ export function ProductArchitecture() {
 
         {/* Centered Title */}
         <div className="mb-8 text-center">
-          <div
-            className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
-            style={{ backgroundColor: LIGHT_TEAL_BG, color: ACCENT_DARK, border: `1px solid ${ACCENT}` }}
-          >
-            Level 05 &mdash; Interactive Tool
-          </div>
           <h1 className="text-[36px] md:text-[48px] font-bold text-[#1A202C] leading-[1.15]">
             Build Your First AI-Powered
             <br />

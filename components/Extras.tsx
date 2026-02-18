@@ -352,6 +352,29 @@ export const LearningModel: React.FC = () => {
           })}
         </div>
 
+        {/* CTA to Learning Journey */}
+        <div className="text-center mt-14">
+          <a
+            href="#user-journey"
+            className="inline-flex items-center gap-2 text-white font-semibold rounded-full transition-all duration-200 hover:-translate-y-0.5"
+            style={{
+              backgroundColor: '#38B2AC',
+              padding: '14px 32px',
+              fontSize: '15px',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#2C9A94';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#38B2AC';
+            }}
+          >
+            Explore Your Learning Journey
+            <ArrowRight size={16} />
+          </a>
+        </div>
+
       </div>
     </section>
   );
