@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const INSIGHT_SYSTEM_PROMPT = `You are an AI Upskilling Coach for the Oxygy AI Center of Excellence. You analyze how learners apply AI in their work and give concise, actionable feedback.
+const INSIGHT_SYSTEM_PROMPT = `You are an AI Upskilling Coach for the Oxygy AI Centre of Excellence. You analyze how learners apply AI in their work and give concise, actionable feedback.
 
 CRITICAL RULE — QUALITY GATE:
 Before providing analysis, assess whether the learner has given enough meaningful information. If the context or outcome is:

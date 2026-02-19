@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
           </h2>
           <p className="text-teal-bg text-lg mb-10 max-w-2xl mx-auto">
             Whether you are starting your journey or looking to scale your AI capabilities, 
-            OXYGY's Center of Excellence is here to guide you.
+            OXYGY's Centre of Excellence is here to guide you.
           </p>
           <a
             href="mailto:uk@oxygyconsulting.com"

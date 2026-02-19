@@ -2,7 +2,7 @@
 
 ## Context for the Coding Agent
 
-You are building a single-page section of the Oxygy AI Center of Excellence website. This page presents Oxygy's engagement model — how the firm delivers AI upskilling to client organizations. The audience is **senior leadership teams** at client organizations evaluating Oxygy as a transformation partner. The tone is authoritative, consultative, and strategic — not playful or casual.
+You are building a single-page section of the Oxygy AI Centre of Excellence website. This page presents Oxygy's engagement model — how the firm delivers AI upskilling to client organizations. The audience is **senior leadership teams** at client organizations evaluating Oxygy as a transformation partner. The tone is authoritative, consultative, and strategic — not playful or casual.
 
 This page exists alongside (and links to) the Five Levels detail pages, which cover the specific training curriculum. This page answers the question: **"How do you actually deliver this, and what will it look like for our organization?"**
 

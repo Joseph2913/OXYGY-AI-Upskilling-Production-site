@@ -1,7 +1,7 @@
 # Oxygy AI Upskilling Website
 
 ## Project Overview
-Interactive multi-section website for Oxygy's AI Center of Excellence. Showcases a five-level AI upskilling framework. Dual audience: external clients (showcase) + internal participants (learning hub).
+Interactive multi-section website for Oxygy's AI Centre of Excellence. Showcases a five-level AI upskilling framework. Dual audience: external clients (showcase) + internal participants (learning hub).
 
 ## Site Sections
 1. Homepage / Hero

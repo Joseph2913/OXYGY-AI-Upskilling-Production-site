@@ -118,7 +118,7 @@ export const LEVELS: LevelData[] = [
       "Process Use Cases",
       "Performance & Feedback Loops"
     ],
-    targetAudience: ["Digital transformation leads", "Process excellence teams", "Operations directors", "Automation specialists", "Center of Excellence members"],
+    targetAudience: ["Digital transformation leads", "Process excellence teams", "Operations directors", "Automation specialists", "Centre of Excellence members"],
     keyTools: ["Make", "Zapier", "n8n", "API integrations", "Airtable", "Google Apps Script"],
     sessionTypes: [
       {

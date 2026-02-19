@@ -48,11 +48,11 @@ Once the user confirms the direction, you generate a **detailed PRD** for that s
 
 ## Project Context
 
-The user is building an interactive, multi-section website for Oxygy's AI Center of Excellence. It showcases a five-level AI upskilling framework. The full site architecture includes these sections (the user will tackle them one at a time):
+The user is building an interactive, multi-section website for Oxygy's AI Centre of Excellence. It showcases a five-level AI upskilling framework. The full site architecture includes these sections (the user will tackle them one at a time):
 
 ### Site Architecture Overview
 
-1. **Homepage / Hero** — Introduction to the AI Center of Excellence, visual overview of all five levels, primary CTA
+1. **Homepage / Hero** — Introduction to the AI Centre of Excellence, visual overview of all five levels, primary CTA
 2. **The Five Levels** — The core content. Each level gets rich, detailed treatment:
    - Level 1: AI Fundamentals & Awareness
    - Level 2: Applied Capability (Custom GPTs & Agents)

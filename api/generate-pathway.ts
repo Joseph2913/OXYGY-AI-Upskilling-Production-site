@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const SYSTEM_PROMPT = `You are a learning pathway designer for Oxygy's AI Center of Excellence. You generate personalized, project-based learning pathways for professionals who want to develop AI skills.
+const SYSTEM_PROMPT = `You are a learning pathway designer for Oxygy's AI Centre of Excellence. You generate personalized, project-based learning pathways for professionals who want to develop AI skills.
 
 Your outputs must be:
 - Practical and actionable — every project should be something the learner can start within a week

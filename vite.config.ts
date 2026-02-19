@@ -725,7 +725,7 @@ Respond with ONLY this JSON structure — no markdown, no extra text:
 }
 
 function pathwayProxyPlugin(apiKey: string, model: string): Plugin {
-  const systemPrompt = `You are a learning pathway designer for Oxygy's AI Center of Excellence. You generate personalized, project-based learning pathways for professionals who want to develop AI skills.
+  const systemPrompt = `You are a learning pathway designer for Oxygy's AI Centre of Excellence. You generate personalized, project-based learning pathways for professionals who want to develop AI skills.
 
 Your outputs must be:
 - Practical and actionable — every project should be something the learner can start within a week
@@ -1423,7 +1423,7 @@ For each key metric, specify:
 // ─── Insight Analysis Proxy ───
 
 function insightAnalysisProxyPlugin(apiKey: string, model: string): Plugin {
-  const systemPrompt = `You are an AI Upskilling Coach for the Oxygy AI Center of Excellence. You analyze how learners apply AI in their work and give concise, actionable feedback.
+  const systemPrompt = `You are an AI Upskilling Coach for the Oxygy AI Centre of Excellence. You analyze how learners apply AI in their work and give concise, actionable feedback.
 
 CRITICAL RULE — QUALITY GATE:
 Before providing analysis, assess whether the learner has given enough meaningful information. If the context or outcome is:

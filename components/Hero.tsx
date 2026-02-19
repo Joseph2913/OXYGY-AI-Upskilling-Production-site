@@ -689,7 +689,7 @@ export const Hero: React.FC = () => {
                   letterSpacing: '1.5px',
                 }}
               >
-                OXYGY AI CENTER OF EXCELLENCE
+                OXYGY AI CENTRE OF EXCELLENCE
               </span>
             </div>
 

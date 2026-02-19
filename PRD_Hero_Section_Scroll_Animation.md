@@ -5,7 +5,7 @@
 ## 1. Overview
 
 ### Purpose
-The hero section is the first thing users see when landing on Oxygy's AI Center of Excellence website. It combines a **scroll-linked frame-sequence animation** with overlaid text to create a premium, cinematic first impression that communicates the site's core message: AI transformation is personalized, human-centered, and built around the individual.
+The hero section is the first thing users see when landing on Oxygy's AI Centre of Excellence website. It combines a **scroll-linked frame-sequence animation** with overlaid text to create a premium, cinematic first impression that communicates the site's core message: AI transformation is personalized, human-centered, and built around the individual.
 
 ### Where It Sits
 This is the **very first section** of the site — it occupies the top of the page before any other content sections.
@@ -118,7 +118,7 @@ The hero uses a **full-viewport sticky container** with the animation canvas fil
 - **Purpose:** Creates a readable zone for text on the left while allowing the animation to be visible on the right. The gradient fades from solid off-white to transparent, so the animation figure (centered in the canvas) remains visible on the right side.
 
 ### 4.5 Text Content — Badge
-- **Content:** `AI CENTER OF EXCELLENCE`
+- **Content:** `AI CENTRE OF EXCELLENCE`
 - **Style:** Inline badge/pill — `1px solid #38B2AC` border, teal text `#38B2AC`, `background: transparent`, `border-radius: 20px`, `padding: 6px 16px`, `font-size: 13px`, `font-weight: 600`, `letter-spacing: 1.5px`, `text-transform: uppercase`
 - **Font:** DM Sans or Plus Jakarta Sans (match site font)
 - **Position:** Top of text block, left-aligned
@@ -303,7 +303,7 @@ Full experience as described above. Canvas fills viewport, text overlaid on left
 
 **Badge:**
 ```
-AI CENTER OF EXCELLENCE
+AI CENTRE OF EXCELLENCE
 ```
 
 **Headline:**
