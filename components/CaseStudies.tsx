@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, FileSearch, Globe, Users, Brain, BookOpen } from 'lucide-react';
+import { ArrowRight, FileSearch, Globe, Users, Brain, BookOpen } from 'lucide-react';
 import { ArtifactClosing } from './ArtifactClosing';
 
 const LEVEL_COLORS: Record<number, { bg: string; text: string; label: string }> = {
@@ -431,16 +431,6 @@ export const CaseStudiesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Breadcrumb */}
-        <a
-          href="#"
-          className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] hover:text-[#38B2AC] transition-colors mb-10"
-          style={{ textDecoration: 'none' }}
-        >
-          <ArrowLeft size={14} />
-          Back to Home
-        </a>
-
         {/* Centered Title */}
         <div className="text-center mb-6">
           <div

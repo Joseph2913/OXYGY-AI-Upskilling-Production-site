@@ -744,7 +744,7 @@ export function WorkflowDesigner() {
 
         {/* Breadcrumb */}
         <a href="#" onClick={e => { e.preventDefault(); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="inline-flex items-center gap-1.5 text-[14px] mb-8 transition-colors hover:text-[#C4A934]" style={{ color: '#718096' }}>
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> Home
         </a>
 
         {/* Centered Title */}

@@ -718,7 +718,7 @@ export const AgentBuilder: React.FC = () => {
 
         {/* ─── BREADCRUMB ─── */}
         <a href="#" onClick={e => { e.preventDefault(); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] hover:text-[#5B6DC2] transition-colors mb-8">
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> Home
         </a>
 
         {/* ─── HERO: Title (centered, matching L1 style) ─── */}

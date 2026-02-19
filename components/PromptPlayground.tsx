@@ -198,7 +198,7 @@ export const PromptPlayground: React.FC = () => {
           className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] hover:text-[#38B2AC] transition-colors mb-8"
         >
           <ArrowLeft size={16} />
-          Back to Home
+          Home
         </a>
 
         {/* ─── HERO: Title (centered, two-line) ─── */}

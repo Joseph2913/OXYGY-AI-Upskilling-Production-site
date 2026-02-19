@@ -632,7 +632,7 @@ export function ProductArchitecture() {
           onMouseEnter={e => (e.currentTarget.style.color = ACCENT_DARK)}
           onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
         >
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> Home
         </a>
 
         {/* Centered Title */}

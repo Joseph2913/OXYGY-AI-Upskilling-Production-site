@@ -82,7 +82,7 @@ export const ArtifactClosing: React.FC<ArtifactClosingProps> = ({
             }}
             className="hover:!text-[#38B2AC] transition-colors duration-150"
           >
-            &larr; Back to Home
+            &larr; Home
           </a>
         </div>
       </div>

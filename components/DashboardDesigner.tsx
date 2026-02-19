@@ -649,7 +649,7 @@ export const DashboardDesigner: React.FC = () => {
             SECTION A — Breadcrumb + Centered Title
         ═══════════════════════════════════════════ */}
         <a href="#" onClick={e => { e.preventDefault(); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] hover:text-[#D47B5A] transition-colors mb-8">
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> Home
         </a>
 
         <div className="mb-8 text-center">

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ArrowLeft,
   ArrowRight,
   Compass,
   Briefcase,
@@ -172,19 +171,6 @@ export const UserJourney: React.FC = () => {
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-6">
         {/* Breadcrumb */}
-        <a
-          href="#"
-          className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] hover:text-[#38B2AC] transition-colors mb-10"
-          style={{ textDecoration: 'none' }}
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.hash = '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        >
-          <ArrowLeft size={16} /> Back to Home
-        </a>
-
         {/* Centered Title */}
         <div className="mb-6 text-center">
           <div
