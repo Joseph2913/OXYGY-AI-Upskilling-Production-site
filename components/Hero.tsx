@@ -771,9 +771,9 @@ export const Hero: React.FC = () => {
               >
                 Start the Journey <ChevronRight size={16} />
               </a>
-              <a
-                href="#journey"
-                className="inline-flex items-center justify-center transition-colors"
+              <button
+                onClick={() => document.getElementById('journey')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex items-center justify-center transition-colors cursor-pointer"
                 style={{
                   background: 'transparent',
                   border: '1px solid #1A202C',
@@ -782,7 +782,6 @@ export const Hero: React.FC = () => {
                   padding: '14px 28px',
                   fontSize: '15px',
                   fontWeight: 600,
-                  textDecoration: 'none',
                   whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={(e) => {
@@ -795,7 +794,7 @@ export const Hero: React.FC = () => {
                 }}
               >
                 Explore the Framework
-              </a>
+              </button>
             </div>
           </div>
 
