@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
   Compass,
   Briefcase,
   Users,
@@ -8,13 +9,13 @@ import {
   MessageSquare,
   ClipboardCheck,
   TrendingUp,
-  HelpCircle,
   RefreshCw,
   ChevronDown,
   Lightbulb,
   Handshake,
   Play,
-  Presentation,
+  FileText,
+  Share2,
 } from 'lucide-react';
 import { ArtifactClosing } from './ArtifactClosing';
 
@@ -96,23 +97,24 @@ function BranchConnector({ direction }: { direction: 'split' | 'merge' }) {
 const LEARNING_MODES = [
   {
     step: 2,
-    pct: '70%',
-    title: 'Learn by Doing',
-    icon: Briefcase,
-    accentColor: ACCENT,
-    accentDark: ACCENT_DARK,
-    topColor: ACCENT,
-    pctColor: ACCENT_DARK,
+    pct: '10%',
+    title: 'Self-Paced Study',
+    icon: BookOpen,
+    accentColor: '#718096',
+    accentDark: '#4A5568',
+    topColor: '#718096',
+    pctColor: '#4A5568',
     description:
-      'Apply what you learn immediately to your actual work. Each level includes hands-on projects designed around real business scenarios — not hypothetical exercises.',
+      'Build foundational knowledge at your own pace. Self-paced modules give you the theory and context that makes hands-on practice more effective.',
     bullets: [
-      'Build AI tools directly relevant to your role and function',
-      'Work with real business data and workplace challenges',
-      'Receive iterative feedback from OXYGY coaches on your output',
-      'Progressively tackle more complex projects as your skills grow',
+      'Curated reading, articles, and reference guides for each level',
+      'Short video modules explaining key concepts and techniques',
+      'Knowledge checks to test your understanding before moving on',
+      'On-demand resources you can revisit anytime as a reference',
     ],
-    exampleIcon: Lightbulb,
-    example: 'Build a custom AI agent that triages your team\'s incoming requests automatically',
+    exampleIcon: Play,
+    example: 'Watch a 10-minute video on prompt engineering best practices before your next session',
+    oxygySupport: 'OXYGY curates all materials and adapts your reading list based on your progress and goals.',
   },
   {
     step: 3,
@@ -133,26 +135,28 @@ const LEARNING_MODES = [
     ],
     exampleIcon: Handshake,
     example: 'Present your AI workflow to peers and redesign it together based on their feedback',
+    oxygySupport: 'OXYGY facilitates every session, provides personalised feedback, and ensures discussions translate into action.',
   },
   {
     step: 4,
-    pct: '10%',
-    title: 'Self-Paced Study',
-    icon: BookOpen,
-    accentColor: '#718096',
-    accentDark: '#4A5568',
-    topColor: '#718096',
-    pctColor: '#4A5568',
+    pct: '70%',
+    title: 'Learn by Doing',
+    icon: Briefcase,
+    accentColor: ACCENT,
+    accentDark: ACCENT_DARK,
+    topColor: ACCENT,
+    pctColor: ACCENT_DARK,
     description:
-      'Build foundational knowledge at your own pace. Self-paced modules give you the theory and context that makes hands-on practice more effective.',
+      'Apply what you learn immediately to your actual work. Each level includes hands-on projects designed around real business scenarios — not hypothetical exercises.',
     bullets: [
-      'Curated reading, articles, and reference guides for each level',
-      'Short video modules explaining key concepts and techniques',
-      'Knowledge checks to test your understanding before moving on',
-      'On-demand resources you can revisit anytime as a reference',
+      'Build AI tools directly relevant to your role and function',
+      'Work with real business data and workplace challenges',
+      'Receive iterative feedback from OXYGY coaches on your output',
+      'Progressively tackle more complex projects as your skills grow',
     ],
-    exampleIcon: Play,
-    example: 'Watch a 10-minute video on prompt engineering best practices before your next session',
+    exampleIcon: Lightbulb,
+    example: 'Build a custom AI agent that triages your team\'s incoming requests automatically',
+    oxygySupport: 'OXYGY coaches review your work, answer questions, and adapt your path as your skills develop.',
   },
 ];
 
@@ -264,11 +268,23 @@ export const UserJourney: React.FC = () => {
                   </p>
                   <a
                     href="#learning-pathway"
-                    className="inline-flex items-center gap-2 text-[14px] font-semibold transition-colors"
-                    style={{ color: STEP1_COLOR, textDecoration: 'none' }}
+                    className="inline-flex items-center gap-2 text-white font-semibold rounded-full transition-all duration-200 hover:-translate-y-0.5"
+                    style={{
+                      backgroundColor: STEP1_COLOR,
+                      padding: '12px 24px',
+                      fontSize: '15px',
+                      textDecoration: 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
                   >
                     <Compass size={16} />
                     Try the Learning Pathway Generator
+                    <ArrowRight size={16} />
                   </a>
                 </div>
                 <div className="mt-6 md:mt-0 md:w-[280px] shrink-0">
@@ -318,19 +334,21 @@ export const UserJourney: React.FC = () => {
         </div>
 
         {/* STEPS 2-4 — Parallel Expandable Columns */}
-        <div className="rounded-2xl p-4 md:p-6 mb-2" style={{ backgroundColor: '#F7FAFC' }}>
-          <div className="grid grid-cols-1 md:grid-cols-3 md:items-start gap-5">
+        <div className="rounded-2xl overflow-hidden mb-2 border border-[#E2E8F0] bg-white">
+          {/* Shared top accent bar */}
+          <div className="h-[4px] w-full" style={{ background: `linear-gradient(90deg, #718096 0%, #718096 33%, #1E3A5F 33%, #1E3A5F 66%, ${ACCENT} 66%, ${ACCENT} 100%)` }} />
+          <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 md:items-start gap-0 md:divide-x md:divide-[#E2E8F0]">
             {LEARNING_MODES.map((mode) => {
               const isOpen = expandedStep === mode.step;
               const Icon = mode.icon;
               return (
                 <div
                   key={mode.step}
-                  className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden"
-                  style={{ minHeight: isOpen ? undefined : '290px' }}
+                  className="md:px-5 first:md:pl-0 last:md:pr-0 py-4 md:py-0 border-b md:border-b-0 border-[#E2E8F0] last:border-b-0"
+                  style={{ minHeight: isOpen ? undefined : '260px' }}
                 >
-                  <div className="h-[6px] w-full" style={{ backgroundColor: mode.topColor }} />
-                  <div className="p-5">
+                  <div>
                     {/* Always visible: header */}
                     <div className="flex items-center gap-3 mb-3">
                       <StepCircle number={mode.step} color={mode.accentDark} />
@@ -383,7 +401,7 @@ export const UserJourney: React.FC = () => {
 
                       {/* Example — single line with icon */}
                       <div
-                        className="rounded-lg px-3 py-2.5 flex items-start gap-2.5"
+                        className="rounded-lg px-3 py-2.5 flex items-start gap-2.5 mb-3"
                         style={{
                           backgroundColor: `${mode.accentColor}0D`,
                           border: `1px solid ${mode.accentColor}20`,
@@ -406,50 +424,43 @@ export const UserJourney: React.FC = () => {
                           </span>
                         </div>
                       </div>
+
+                      {/* OXYGY support note */}
+                      <div
+                        className="rounded-lg px-3 py-3 flex items-start gap-2.5"
+                        style={{
+                          backgroundColor: `${ACCENT}12`,
+                          border: `1px solid ${ACCENT}30`,
+                        }}
+                      >
+                        <MessageSquare
+                          size={14}
+                          className="shrink-0 mt-[2px]"
+                          style={{ color: ACCENT_DARK }}
+                        />
+                        <div>
+                          <span
+                            className="text-[11px] font-bold uppercase tracking-[0.06em] block mb-1"
+                            style={{ color: ACCENT_DARK }}
+                          >
+                            OXYGY's Role
+                          </span>
+                          <span className="text-[12px] text-[#4A5568] leading-[1.5]">
+                            {mode.oxygySupport}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               );
             })}
           </div>
+          </div>
         </div>
 
         {/* Converging connector — merge */}
         <BranchConnector direction="merge" />
-
-        {/* OXYGY Support Strip */}
-        <div
-          className="rounded-2xl px-6 md:px-10 py-6 my-4 text-center"
-          style={{
-            background: `linear-gradient(135deg, ${ACCENT}15 0%, #E6FFFA 50%, ${ACCENT}10 100%)`,
-            border: `1.5px solid ${ACCENT}40`,
-          }}
-        >
-          <p
-            className="text-[13px] font-bold uppercase tracking-[0.12em] mb-4"
-            style={{ color: ACCENT_DARK }}
-          >
-            OXYGY is with you every step
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { icon: Presentation, label: 'Facilitating collaborative sessions' },
-              { icon: MessageSquare, label: 'Providing personalised feedback' },
-              { icon: HelpCircle, label: 'Answering questions' },
-              { icon: RefreshCw, label: 'Adapting your path' },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-2">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: `${ACCENT}20` }}
-                >
-                  <Icon size={18} style={{ color: ACCENT_DARK }} />
-                </div>
-                <span className="text-[13px] font-medium leading-[1.4] text-[#2D3748]">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
 
         <Connector />
 
@@ -472,14 +483,17 @@ export const UserJourney: React.FC = () => {
                   </h2>
                 </div>
               </div>
+              <p className="text-[15px] text-[#4A5568] leading-[1.8] mb-3">
+                This is where learning becomes lasting capability. The goal is to be <strong className="text-[#1A202C]">consciously aware</strong> of where, how, and why you're applying AI &mdash; not just using it, but understanding its impact on your work.
+              </p>
               <p className="text-[15px] text-[#4A5568] leading-[1.8] mb-5">
-                Pause and connect what you've learned to your day-to-day work. Reflection is where knowledge becomes lasting capability &mdash; turning skills into habits and insights into action.
+                A core part of this step is creating an <strong className="text-[#1A202C]">AI Application Log</strong> &mdash; a living record of every place you've applied AI, the outcomes, and the lessons learned. This log is shared with your cohort and leadership team, creating a <strong className="text-[#1A202C]">cyclical feedback loop</strong> that continuously improves how AI is deployed across the organisation.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { icon: ClipboardCheck, title: 'Self-assessment', desc: 'Evaluate your growth against your goals' },
-                  { icon: MessageSquare, title: 'Manager check-ins', desc: 'Discuss how to apply new skills at work' },
-                  { icon: BookOpen, title: 'Reflection prompts', desc: 'Guided questions to deepen understanding' },
+                  { icon: FileText, title: 'AI Application Log', desc: 'Document every AI use case: where you applied it, what worked, and what you learned' },
+                  { icon: Share2, title: 'Cohort & leadership sharing', desc: 'Share your log with peers and leaders to create an organisation-wide feedback loop' },
+                  { icon: ClipboardCheck, title: 'Self-assessment & check-ins', desc: 'Evaluate your growth and discuss next steps with your manager and OXYGY coaches' },
                 ].map(({ icon: Icon, title, desc }) => (
                   <div
                     key={title}
