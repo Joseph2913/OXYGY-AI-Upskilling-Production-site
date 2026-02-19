@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Home, Menu, X, LayoutDashboard } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useAuth, signOut } from '../context/AuthContext';
 
 const AI_TOOLS = [
   { level: 1, emoji: '\uD83C\uDFAF', label: 'Prompt Engineering Fundamentals', href: '#playground' },
@@ -21,6 +22,7 @@ const Divider = () => (
 );
 
 export const Navbar: React.FC = () => {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -54,6 +56,9 @@ export const Navbar: React.FC = () => {
   const isOnCaseStudies = currentHash === '#case-studies';
   const isOnEngagementModel = currentHash === '#engagement-model';
   const isOnDashboard = currentHash === '#dashboard';
+
+  // Dropdown is "active" if on any artifact tool OR on learning pathway
+  const isDropdownActive = isOnAiTool || isOnLearningPlan;
 
   const goHome = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -105,6 +110,11 @@ export const Navbar: React.FC = () => {
   const pillActive = 'bg-[#2C9A94] text-white';
   const pillInactive = 'text-[#4A5568] hover:text-[#2D3748]';
 
+  /* User initial for avatar */
+  const userInitial = user
+    ? (user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U').toUpperCase()
+    : '';
+
   return (
     <nav
       className={cn(
@@ -139,7 +149,7 @@ export const Navbar: React.FC = () => {
             padding: '5px 6px',
           }}
         >
-          {/* Home icon button — nested darker pill */}
+          {/* Home icon button */}
           <a
             href="#"
             onClick={goHome}
@@ -155,7 +165,7 @@ export const Navbar: React.FC = () => {
 
           <Divider />
 
-          {/* AI Tools Dropdown */}
+          {/* AI Tools Dropdown (now includes Learning Plan Generator) */}
           <div
             ref={dropdownRef}
             className="relative"
@@ -165,7 +175,7 @@ export const Navbar: React.FC = () => {
             <button
               className={cn(
                 'flex items-center gap-1.5 px-4 h-[36px] rounded-full text-[14px] font-medium transition-all duration-150 cursor-pointer whitespace-nowrap',
-                isOnAiTool ? pillActive : pillInactive,
+                isDropdownActive ? pillActive : pillInactive,
               )}
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
@@ -203,24 +213,31 @@ export const Navbar: React.FC = () => {
                   overflow: 'hidden',
                 }}
               >
-                <div
+                {/* Learning Plan Generator — same layout as tools, subtle teal tint */}
+                <a
+                  href="#learning-pathway"
+                  className="flex items-center gap-3 transition-colors duration-150 hover:bg-[#E6FFFA]"
                   style={{
-                    padding: '10px 16px 8px',
-                    borderBottom: '1px solid #E2E8F0',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#2D3748',
+                    textDecoration: 'none',
+                    background: isOnLearningPlan ? '#E6FFFA' : 'rgba(56, 178, 172, 0.04)',
                   }}
+                  onClick={() => setDropdownOpen(false)}
                 >
                   <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px',
-                      color: '#A0AEC0',
-                    }}
+                    className="shrink-0 flex items-center justify-center"
+                    style={{ width: '24px', height: '24px', fontSize: '15px' }}
                   >
-                    Interactive Tools
+                    📋
                   </span>
-                </div>
+                  <span className="truncate">Learning Plan Generator</span>
+                </a>
+
+                {/* Divider */}
+                <div style={{ height: '1px', backgroundColor: '#E2E8F0' }} />
 
                 {AI_TOOLS.map((tool) => (
                   <a
@@ -254,20 +271,6 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <Divider />
-
-          {/* Learning Plan Generator */}
-          <a
-            href="#learning-pathway"
-            className={cn(
-              'flex items-center px-4 h-[36px] rounded-full text-[14px] font-medium transition-all duration-150 whitespace-nowrap',
-              isOnLearningPlan ? pillActive : pillInactive,
-            )}
-            style={{ textDecoration: 'none' }}
-          >
-            Learning Plan Generator
-          </a>
 
           <Divider />
 
@@ -313,37 +316,59 @@ export const Navbar: React.FC = () => {
 
         </div>
 
-        {/* Right — CTA + Mobile Toggle */}
-        <div className="flex items-center gap-3">
+        {/* Right — Dashboard + Contact Us + Mobile Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Dashboard / Sign-in — single combined button */}
+          {user ? (
+            <a
+              href="#dashboard"
+              className={cn(
+                'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
+                isOnDashboard
+                  ? 'bg-[#38B2AC] text-white'
+                  : 'bg-[#38B2AC] text-white hover:bg-[#2C9A94]',
+              )}
+              style={{ width: '40px', height: '40px', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}
+              title={`My Dashboard — ${user.user_metadata?.full_name || user.email || 'User'}`}
+            >
+              {userInitial}
+            </a>
+          ) : (
+            <a
+              href="#dashboard"
+              className={cn(
+                'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
+                isOnDashboard
+                  ? 'bg-[#38B2AC] text-white'
+                  : 'bg-[#F0F2F5] text-[#4A5568] hover:bg-[#E2E6EB]',
+              )}
+              style={{ width: '40px', height: '40px', textDecoration: 'none' }}
+              title="My Dashboard"
+            >
+              <LayoutDashboard size={18} />
+            </a>
+          )}
+
+          {/* Contact Us — text button */}
           <a
             href="mailto:uk@oxygyconsulting.com"
-            className="hidden sm:inline-flex items-center px-6 py-2.5 rounded-full font-medium text-[14px] text-white transition-all duration-200"
-            style={{ backgroundColor: '#1A202C', textDecoration: 'none' }}
+            className="hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0 text-white"
+            style={{
+              height: '40px',
+              padding: '0 20px',
+              backgroundColor: '#1A202C',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 600,
+            }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#38B2AC';
-              e.currentTarget.style.color = '#1A202C';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = '#1A202C';
-              e.currentTarget.style.color = '#FFFFFF';
             }}
           >
             Contact Us
-          </a>
-
-          {/* Dashboard icon button */}
-          <a
-            href="#dashboard"
-            className={cn(
-              'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
-              isOnDashboard
-                ? 'bg-[#38B2AC] text-white'
-                : 'bg-[#F0F2F5] text-[#4A5568] hover:bg-[#E2E6EB]',
-            )}
-            style={{ width: '40px', height: '40px', textDecoration: 'none' }}
-            title="My Dashboard"
-          >
-            <LayoutDashboard size={18} />
           </a>
 
           {/* Mobile hamburger */}
@@ -397,6 +422,26 @@ export const Navbar: React.FC = () => {
                 AI Tools
               </span>
             </div>
+
+            {/* Learning Plan Generator */}
+            <a
+              href="#learning-pathway"
+              className={cn(
+                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
+                isOnLearningPlan
+                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
+                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
+              )}
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+              onClick={() => setMobileOpen(false)}
+            >
+              <span style={{ fontSize: '15px' }}>📋</span>
+              <span>Learning Plan Generator</span>
+            </a>
             {AI_TOOLS.map((tool) => (
               <a
                 key={tool.level}
@@ -416,20 +461,6 @@ export const Navbar: React.FC = () => {
             ))}
 
             <div className="h-px bg-gray-100 my-2" />
-
-            <a
-              href="#learning-pathway"
-              className={cn(
-                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
-                isOnLearningPlan
-                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
-                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
-              )}
-              style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
-              onClick={() => setMobileOpen(false)}
-            >
-              Learning Plan Generator
-            </a>
 
             <a
               href="#user-journey"
@@ -473,6 +504,7 @@ export const Navbar: React.FC = () => {
               Case Studies
             </a>
 
+            {/* Dashboard — shows user name + sign out if signed in */}
             <a
               href="#dashboard"
               className={cn(
@@ -486,7 +518,29 @@ export const Navbar: React.FC = () => {
             >
               <LayoutDashboard size={16} />
               <span>My Dashboard</span>
+              {user && (
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#A0AEC0', fontWeight: 400 }}>
+                  {(user.user_metadata?.full_name || user.email || '').split(' ')[0]}
+                </span>
+              )}
             </a>
+
+            {user && (
+              <button
+                onClick={() => { signOut(); setMobileOpen(false); }}
+                className="flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors hover:bg-[#F7FAFC] text-[#A0AEC0]"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'left',
+                }}
+              >
+                Sign out
+              </button>
+            )}
 
             <div className="h-px bg-gray-100 my-2" />
 

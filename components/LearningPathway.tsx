@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { ArtifactClosing } from './ArtifactClosing';
 import { usePathwayApi } from '../hooks/usePathwayApi';
+import { useAuth } from '../context/AuthContext';
+import { getProfile, upsertProfile, getLatestLearningPlan, saveLearningPlan } from '../lib/database';
 import type { PathwayFormData, PathwayApiResponse, PathwayLevelResult, LevelDepth } from '../types';
 
 // ---- Constants ----
@@ -428,63 +430,52 @@ function LearningBreakdown({ applied, community, individual, accentColor }: {
 
 // ---- Main Component ----
 
-// ---- localStorage helpers for persistence ----
-
-const LP_FORM_KEY = 'oxygy_user_profile';
-const LP_RESULTS_KEY = 'oxygy_learning_plan';
-const LP_DEPTHS_KEY = 'oxygy_learning_plan_depths';
-
-function loadSavedFormData(): PathwayFormData {
-  try {
-    const raw = localStorage.getItem(LP_FORM_KEY);
-    if (raw) {
-      const profile = JSON.parse(raw);
-      return {
-        role: profile.role || '',
-        function: profile.function || '',
-        functionOther: profile.functionOther || '',
-        seniority: profile.seniority || '',
-        aiExperience: profile.aiExperience || '',
-        ambition: profile.ambition || '',
-        challenge: profile.challenge || '',
-        availability: profile.availability || '',
-        experienceDescription: profile.experienceDescription || '',
-        goalDescription: profile.goalDescription || '',
-      };
-    }
-  } catch { /* ignore */ }
-  return {
-    role: '', function: '', functionOther: '', seniority: '',
-    aiExperience: '', ambition: '', challenge: '', availability: '',
-    experienceDescription: '', goalDescription: '',
-  };
-}
-
-function loadSavedResults(): PathwayApiResponse | null {
-  try {
-    const raw = localStorage.getItem(LP_RESULTS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return null;
-}
-
-function loadSavedDepths(): Record<string, LevelDepth> | null {
-  try {
-    const raw = localStorage.getItem(LP_DEPTHS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return null;
-}
+const EMPTY_FORM: PathwayFormData = {
+  role: '', function: '', functionOther: '', seniority: '',
+  aiExperience: '', ambition: '', challenge: '', availability: '',
+  experienceDescription: '', goalDescription: '',
+};
 
 export const LearningPathway: React.FC = () => {
-  // Form state — pre-fill from dashboard profile if available
-  const [formData, setFormData] = useState<PathwayFormData>(loadSavedFormData);
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+
+  // Form state — pre-fill from Supabase profile if available
+  const [formData, setFormData] = useState<PathwayFormData>(EMPTY_FORM);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [answersChanged, setAnswersChanged] = useState(false);
 
-  // Results state — load previously generated plan if available
-  const [pathwayResults, setPathwayResults] = useState<PathwayApiResponse | null>(loadSavedResults);
-  const [levelDepths, setLevelDepths] = useState<Record<string, LevelDepth> | null>(loadSavedDepths);
+  // Results state — load previously generated plan from Supabase
+  const [pathwayResults, setPathwayResults] = useState<PathwayApiResponse | null>(null);
+  const [levelDepths, setLevelDepths] = useState<Record<string, LevelDepth> | null>(null);
+
+  // Load saved profile + plan from Supabase on mount
+  useEffect(() => {
+    if (!userId) return;
+    Promise.all([
+      getProfile(userId),
+      getLatestLearningPlan(userId),
+    ]).then(([profileData, planData]) => {
+      if (profileData) {
+        setFormData({
+          role: profileData.role || '',
+          function: profileData.function || '',
+          functionOther: profileData.functionOther || '',
+          seniority: profileData.seniority || '',
+          aiExperience: profileData.aiExperience || '',
+          ambition: profileData.ambition || '',
+          challenge: profileData.challenge || '',
+          availability: profileData.availability || '',
+          experienceDescription: profileData.experienceDescription || '',
+          goalDescription: profileData.goalDescription || '',
+        });
+      }
+      if (planData) {
+        setPathwayResults(planData.plan);
+        setLevelDepths(planData.level_depths);
+      }
+    });
+  }, [userId]);
 
   // UI state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -567,14 +558,10 @@ export const LearningPathway: React.FC = () => {
     const result = await generatePathway(formData, depths);
     if (result) {
       setPathwayResults(result);
-      // Persist plan and form data to localStorage for dashboard integration
-      try {
-        localStorage.setItem(LP_RESULTS_KEY, JSON.stringify(result));
-        localStorage.setItem(LP_DEPTHS_KEY, JSON.stringify(depths));
-        // Also sync form data to shared profile key
-        const existingProfile = JSON.parse(localStorage.getItem(LP_FORM_KEY) || '{}');
-        const updatedProfile = {
-          ...existingProfile,
+      // Persist plan and profile data to Supabase for dashboard integration
+      if (userId) {
+        saveLearningPlan(userId, result, depths);
+        upsertProfile(userId, {
           role: formData.role,
           function: formData.function,
           functionOther: formData.functionOther,
@@ -585,9 +572,8 @@ export const LearningPathway: React.FC = () => {
           availability: formData.availability,
           experienceDescription: formData.experienceDescription,
           goalDescription: formData.goalDescription,
-        };
-        localStorage.setItem(LP_FORM_KEY, JSON.stringify(updatedProfile));
-      } catch { /* ignore storage errors */ }
+        } as any);
+      }
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 200);
@@ -608,12 +594,6 @@ export const LearningPathway: React.FC = () => {
     setExpandedResults({});
     setShowOptional(false);
     clearError();
-    // Clear all persisted data (profile + plan) so dashboard reflects the reset
-    try {
-      localStorage.removeItem(LP_FORM_KEY);
-      localStorage.removeItem(LP_RESULTS_KEY);
-      localStorage.removeItem(LP_DEPTHS_KEY);
-    } catch { /* ignore */ }
     setTimeout(() => {
       questionnaireRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);

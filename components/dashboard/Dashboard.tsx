@@ -7,7 +7,8 @@ import { MyProfile } from './sections/MyProfile';
 import { MyProgress } from './sections/MyProgress';
 import { ApplicationInsights } from './sections/ApplicationInsights';
 import { PromptLibrary } from './sections/PromptLibrary';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useAuth } from '../../context/AuthContext';
+import { getProfile, upsertToolUsed } from '../../lib/database';
 import { SECTION_META, DEFAULT_PROFILE } from '../../data/dashboard-content';
 import type { DashboardSection, UserProfile } from '../../data/dashboard-types';
 
@@ -25,8 +26,12 @@ interface Toast {
 }
 
 export const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+
   const [activeSection, setActiveSection] = useState<DashboardSection>('profile');
-  const [profile] = useLocalStorage<UserProfile>('oxygy_user_profile', DEFAULT_PROFILE);
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [toast, setToast] = useState<Toast | null>(null);
   const [sectionKey, setSectionKey] = useState(0);
@@ -40,13 +45,24 @@ export const Dashboard: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Fetch profile from Supabase on mount
+  useEffect(() => {
+    if (!userId) return;
+    setProfileLoading(true);
+    getProfile(userId).then((data) => {
+      if (data) setProfile(data);
+      setProfileLoading(false);
+    });
+  }, [userId]);
+
   // L5 = Dashboard itself; mark tool as used when visited with a complete profile
   useEffect(() => {
+    if (!userId) return;
     const hasProfile = !!(profile.role && profile.function && profile.seniority && profile.aiExperience && profile.ambition);
     if (hasProfile) {
-      try { localStorage.setItem('oxygy_tool_used_L5', 'true'); } catch { /* ignore */ }
+      upsertToolUsed(userId, 5);
     }
-  }, [profile]);
+  }, [profile, userId]);
 
   useEffect(() => {
     if (toast) {
@@ -72,6 +88,8 @@ export const Dashboard: React.FC = () => {
         minHeight: '100vh',
         backgroundColor: '#F7FAFC',
         paddingTop: 68,
+        opacity: profileLoading ? 0.6 : 1,
+        transition: 'opacity 200ms ease',
       }}
     >
       {/* Sidebar (desktop/tablet) */}

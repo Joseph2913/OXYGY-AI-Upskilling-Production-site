@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pencil, ArrowRight, User } from 'lucide-react';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
+import { useAuth } from '../../../context/AuthContext';
+import { getProfile } from '../../../lib/database';
 import {
   DEFAULT_PROFILE,
   AI_EXPERIENCE_OPTIONS,
@@ -48,7 +49,19 @@ interface Props {
 }
 
 export const MyProfile: React.FC<Props> = () => {
-  const [profile] = useLocalStorage<UserProfile>('oxygy_user_profile', DEFAULT_PROFILE);
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    getProfile(userId).then((data) => {
+      if (data) setProfile(data);
+      setLoading(false);
+    });
+  }, [userId]);
 
   const isProfileComplete = !!(
     profile.role && profile.function && profile.seniority && profile.aiExperience && profile.ambition
@@ -58,8 +71,7 @@ export const MyProfile: React.FC<Props> = () => {
   const ambitionLabel = findOptionLabel(AMBITION_OPTIONS, profile.ambition);
   const availabilityLabel = findOptionLabel(AVAILABILITY_OPTIONS, profile.availability);
 
-  // Empty state — no profile data at all
-  if (!isProfileComplete) {
+  if (!loading && !isProfileComplete) {
     return (
       <div
         style={{
@@ -111,9 +123,10 @@ export const MyProfile: React.FC<Props> = () => {
         border: '1px solid #E2E8F0',
         borderRadius: 12,
         overflow: 'hidden',
+        opacity: loading ? 0.5 : 1,
+        transition: 'opacity 200ms ease',
       }}
     >
-      {/* Header with edit button */}
       <div
         style={{
           padding: '20px 28px',
@@ -158,129 +171,66 @@ export const MyProfile: React.FC<Props> = () => {
         </a>
       </div>
 
-      {/* Summary content */}
       <div style={{ padding: 28 }}>
-        {/* Two-column grid for key fields */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 32px', marginBottom: 24 }}>
-          {/* Role */}
           <div>
             <div style={labelStyle}>Role</div>
             <div style={profile.role ? valueStyle : emptyStyle}>{profile.role || 'Not set'}</div>
           </div>
-
-          {/* Function */}
           <div>
             <div style={labelStyle}>Function</div>
             <div style={profile.function ? valueStyle : emptyStyle}>
               {profile.function === 'Other' ? profile.functionOther || 'Other' : profile.function || 'Not set'}
             </div>
           </div>
-
-          {/* Seniority */}
           <div>
             <div style={labelStyle}>Seniority</div>
             <div style={profile.seniority ? valueStyle : emptyStyle}>{profile.seniority || 'Not set'}</div>
           </div>
-
-          {/* Availability */}
           <div>
             <div style={labelStyle}>Availability</div>
             <div style={profile.availability ? valueStyle : emptyStyle}>{availabilityLabel || 'Not set'}</div>
           </div>
         </div>
 
-        {/* AI Experience — highlighted card */}
-        <div
-          style={{
-            borderRadius: 10,
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            marginBottom: 16,
-            backgroundColor: '#F7FAFC',
-          }}
-        >
+        <div style={{ borderRadius: 10, border: '1px solid #E2E8F0', padding: '14px 18px', marginBottom: 16, backgroundColor: '#F7FAFC' }}>
           <div style={labelStyle}>AI Experience</div>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1A202C' }}>
             {aiExpLabel || <span style={emptyStyle}>Not set</span>}
           </div>
         </div>
 
-        {/* Ambition — highlighted card */}
-        <div
-          style={{
-            borderRadius: 10,
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            marginBottom: 16,
-            backgroundColor: '#F7FAFC',
-          }}
-        >
+        <div style={{ borderRadius: 10, border: '1px solid #E2E8F0', padding: '14px 18px', marginBottom: 16, backgroundColor: '#F7FAFC' }}>
           <div style={labelStyle}>Ambition</div>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1A202C' }}>
             {ambitionLabel || <span style={emptyStyle}>Not set</span>}
           </div>
         </div>
 
-        {/* Challenge */}
         {profile.challenge && (
           <div style={{ marginBottom: 16 }}>
             <div style={labelStyle}>Your Challenge</div>
-            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>
-              {profile.challenge}
-            </p>
+            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>{profile.challenge}</p>
           </div>
         )}
-
-        {/* Optional fields */}
         {profile.experienceDescription && (
           <div style={{ marginBottom: 16 }}>
             <div style={labelStyle}>AI Experience Description</div>
-            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>
-              {profile.experienceDescription}
-            </p>
+            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>{profile.experienceDescription}</p>
           </div>
         )}
-
         {profile.goalDescription && (
           <div style={{ marginBottom: 16 }}>
             <div style={labelStyle}>Goal</div>
-            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>
-              {profile.goalDescription}
-            </p>
+            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>{profile.goalDescription}</p>
           </div>
         )}
 
-        {/* Bottom CTA */}
-        <div
-          style={{
-            marginTop: 24,
-            padding: '14px 18px',
-            borderRadius: 10,
-            backgroundColor: '#E6FFFA',
-            border: '1px solid #38B2AC',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
+        <div style={{ marginTop: 24, padding: '14px 18px', borderRadius: 10, backgroundColor: '#E6FFFA', border: '1px solid #38B2AC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <p style={{ fontSize: 13, color: '#2D3748', margin: 0, lineHeight: 1.5 }}>
             Want to update your answers or regenerate your learning plan?
           </p>
-          <a
-            href="#learning-pathway"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#38B2AC',
-              textDecoration: 'none',
-              flexShrink: 0,
-            }}
-          >
+          <a href="#learning-pathway" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#38B2AC', textDecoration: 'none', flexShrink: 0 }}>
             Go to Learning Plan Generator <ArrowRight size={14} />
           </a>
         </div>

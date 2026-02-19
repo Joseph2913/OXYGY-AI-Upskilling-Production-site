@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
-import type { UserProfile } from '../../data/dashboard-types';
+import { useAuth } from '../../context/AuthContext';
+import { getProfile, getUiPreferences, upsertUiPreferences } from '../../lib/database';
 import { DEFAULT_PROFILE } from '../../data/dashboard-content';
+import type { UserProfile } from '../../data/dashboard-types';
 
 interface Props {
   onNavigateToProfile: () => void;
 }
 
 export const DashboardProfileNudge: React.FC<Props> = ({ onNavigateToProfile }) => {
-  const [dismissed, setDismissed] = useLocalStorage('oxygy_profile_nudge_dismissed', false);
-  const [profile] = useLocalStorage<UserProfile>('oxygy_user_profile', DEFAULT_PROFILE);
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+  const [dismissed, setDismissed] = useState(true); // default hidden until loaded
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    Promise.all([
+      getProfile(userId),
+      getUiPreferences(userId),
+    ]).then(([profileData, prefs]) => {
+      if (profileData) setProfile(profileData);
+      setDismissed(prefs?.profile_nudge_dismissed ?? false);
+    });
+  }, [userId]);
 
   // Profile is considered complete if the core LP Generator fields are filled
   // (fullName is optional — it's only set via the dashboard profile form)
@@ -21,7 +35,10 @@ export const DashboardProfileNudge: React.FC<Props> = ({ onNavigateToProfile }) 
 
   const handleDismiss = () => {
     setFading(true);
-    setTimeout(() => setDismissed(true), 150);
+    setTimeout(() => {
+      setDismissed(true);
+      if (userId) upsertUiPreferences(userId, { profile_nudge_dismissed: true });
+    }, 150);
   };
 
   const handleGoToPathway = () => {

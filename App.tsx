@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { LevelJourney } from './components/LevelJourney';
@@ -15,6 +16,7 @@ import { EngagementModel } from './components/EngagementModel';
 import { CaseStudiesSection, CaseStudiesPage } from './components/CaseStudies';
 import { UserJourney } from './components/UserJourney';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { AuthModal } from './components/AuthModal';
 
 type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'product-architecture' | 'dashboard-design' | 'learning-pathway' | 'engagement-model' | 'case-studies' | 'user-journey' | 'dashboard';
 
@@ -33,7 +35,10 @@ function getPageFromHash(): Page {
   return 'home';
 }
 
-function App() {
+const PROTECTED_PAGES = new Set<Page>(['learning-pathway', 'dashboard']);
+
+function AppContent() {
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>(getPageFromHash);
 
   useEffect(() => {
@@ -45,6 +50,8 @@ function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  const needsAuth = PROTECTED_PAGES.has(currentPage) && !user;
 
   return (
     <div className="min-h-screen bg-white font-sans text-navy-900 selection:bg-teal selection:text-white">
@@ -64,12 +71,20 @@ function App() {
       {currentPage === 'workflow-designer' && <WorkflowDesigner />}
       {currentPage === 'product-architecture' && <ProductArchitecture />}
       {currentPage === 'dashboard-design' && <DashboardDesigner />}
-      {currentPage === 'learning-pathway' && <LearningPathway />}
+      {currentPage === 'learning-pathway' && (needsAuth ? <AuthModal /> : <LearningPathway />)}
       {currentPage === 'engagement-model' && <EngagementModel />}
       {currentPage === 'case-studies' && <CaseStudiesPage />}
       {currentPage === 'user-journey' && <UserJourney />}
-      {currentPage === 'dashboard' && <Dashboard />}
+      {currentPage === 'dashboard' && (needsAuth ? <AuthModal /> : <Dashboard />)}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

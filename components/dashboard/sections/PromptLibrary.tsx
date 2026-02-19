@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, Check, Trash2, Library, FileText } from 'lucide-react';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
+import { useAuth } from '../../../context/AuthContext';
+import { getSavedPrompts, deletePrompt as dbDeletePrompt } from '../../../lib/database';
 import {
-  MOCK_PROMPTS,
   LEVEL_PILL_STYLES,
   formatRelativeDate,
 } from '../../../data/dashboard-content';
@@ -234,8 +234,20 @@ interface Props {
 }
 
 export const PromptLibrary: React.FC<Props> = ({ showToast }) => {
-  const [prompts, setPrompts] = useLocalStorage<SavedPrompt[]>('oxygy_prompts', MOCK_PROMPTS);
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+  const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState(0); // 0 = All
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    getSavedPrompts(userId).then((data) => {
+      setPrompts(data);
+      setLoading(false);
+    });
+  }, [userId]);
 
   const filteredPrompts = activeFilter === 0
     ? prompts
@@ -250,7 +262,10 @@ export const PromptLibrary: React.FC<Props> = ({ showToast }) => {
   };
 
   const handleDelete = (id: string) => {
+    // Optimistic UI removal
     setPrompts((prev) => prev.filter((p) => p.id !== id));
+    // Write to Supabase
+    if (userId) dbDeletePrompt(id, userId);
   };
 
   return (

@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Star, Loader2, ChevronDown, Lightbulb, Info, AlertCircle, CheckCircle2, Shield, ArrowRight, Pencil } from 'lucide-react';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
+import { useAuth } from '../../../context/AuthContext';
+import { getProfile, getInsights as dbGetInsights, saveInsight as dbSaveInsight, updateInsight as dbUpdateInsight } from '../../../lib/database';
 import {
-  MOCK_INSIGHTS,
   TOPIC_OPTIONS_BY_LEVEL,
   LEVEL_PILL_STYLES,
   IMPACT_TOOLTIP_TEXT,
@@ -383,9 +383,25 @@ const InsightCard: React.FC<{ entry: InsightEntry; onEdit: (entry: InsightEntry)
 // ─── Main Component ───
 
 export const ApplicationInsights: React.FC = () => {
-  const [insights, setInsights] = useLocalStorage<InsightEntry[]>('oxygy_insights', MOCK_INSIGHTS);
-  const [profile] = useLocalStorage<UserProfile>('oxygy_user_profile', DEFAULT_PROFILE);
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+  const [insights, setInsights] = useState<InsightEntry[]>([]);
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [dataLoading, setDataLoading] = useState(true);
   const [formLevel, setFormLevel] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    setDataLoading(true);
+    Promise.all([
+      dbGetInsights(userId),
+      getProfile(userId),
+    ]).then(([insightsData, profileData]) => {
+      setInsights(insightsData);
+      if (profileData) setProfile(profileData);
+      setDataLoading(false);
+    });
+  }, [userId]);
   const [formTopic, setFormTopic] = useState('');
   const [formContext, setFormContext] = useState('');
   const [formOutcome, setFormOutcome] = useState('');
@@ -475,8 +491,10 @@ export const ApplicationInsights: React.FC = () => {
       if (editingId) {
         // Replace existing entry in place
         setInsights((prev) => prev.map((i) => i.id === editingId ? newEntry : i));
+        dbUpdateInsight(editingId, userId, newEntry);
       } else {
         setInsights((prev) => [newEntry, ...prev]);
+        dbSaveInsight(userId, newEntry);
       }
       if (structuredFeedback) {
         setLatestFeedback(structuredFeedback);
@@ -512,6 +530,7 @@ export const ApplicationInsights: React.FC = () => {
       };
 
       setInsights((prev) => [newEntry, ...prev]);
+      dbSaveInsight(userId, newEntry);
       setApiError('AI analysis unavailable. Showing template-based feedback instead.');
       setLoading(false);
 

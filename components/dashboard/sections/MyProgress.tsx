@@ -1,27 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, ArrowRight, User, BookOpen, ChevronDown, Target, FileText, Lightbulb, Users, Minus } from 'lucide-react';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
+import { useAuth } from '../../../context/AuthContext';
+import {
+  getProfile,
+  getLatestLearningPlan,
+  getLevelProgress,
+  getSavedPrompts,
+  upsertWorkshopAttended,
+  validateWorkshopCode,
+} from '../../../lib/database';
+import type { LevelProgressRow } from '../../../lib/database';
 import {
   DEFAULT_PROFILE,
   LEVEL_ACCENTS,
   LEVEL_NAMES,
 } from '../../../data/dashboard-content';
-import type { WorkshopCodeEntry, UserProfile, SavedPrompt } from '../../../data/dashboard-types';
+import type { UserProfile, SavedPrompt } from '../../../data/dashboard-types';
 import type { PathwayApiResponse, PathwayLevelResult, LevelDepth } from '../../../types';
 
 // ─── Types ───
 
 type DisplayStatus = 'complete' | 'incomplete' | 'na';
 
-// ─── Demo workshop codes (one per level) ───
-
-const VALID_CODES: Record<number, string> = {
-  1: '1234',
-  2: '1234',
-  3: '1234',
-  4: '1234',
-  5: '1234',
-};
+// Workshop codes are now validated via Supabase workshop_sessions table.
 
 // ─── Level config ───
 
@@ -138,10 +139,10 @@ const WorkshopCodeCallout: React.FC<{
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
 
-  const handleConfirm = () => {
-    const validCode = VALID_CODES[level] || '1234';
-    if (code.trim() === validCode) {
-      onConfirm(code);
+  const handleConfirm = async () => {
+    const isValid = await validateWorkshopCode(null, level, code.trim());
+    if (isValid) {
+      onConfirm(code.trim());
     } else {
       setError('Invalid code. Please check with your facilitator.');
     }
@@ -385,14 +386,6 @@ const EmptyPlanPlaceholder: React.FC<{ reason: 'not-assigned' | 'no-plan' }> = (
 
 // ─── Helpers ───
 
-function readToolUsed(level: number): boolean {
-  try {
-    return localStorage.getItem(`oxygy_tool_used_L${level}`) === 'true';
-  } catch {
-    return false;
-  }
-}
-
 function hasOutputSaved(level: number, prompts: SavedPrompt[]): DisplayStatus {
   if (level > 2) return 'na';
   return prompts.some((p) => p.level === level) ? 'complete' : 'incomplete';
@@ -406,19 +399,45 @@ interface Props {
 }
 
 export const MyProgress: React.FC<Props> = ({ showToast }) => {
-  const [profile] = useLocalStorage<UserProfile>('oxygy_user_profile', DEFAULT_PROFILE);
-  const [workshopCodes, setWorkshopCodes] = useLocalStorage<WorkshopCodeEntry[]>('oxygy_workshop_codes', []);
-  const [savedPlan] = useLocalStorage<PathwayApiResponse | null>('oxygy_learning_plan', null);
-  const [savedDepths] = useLocalStorage<Record<string, LevelDepth> | null>('oxygy_learning_plan_depths', null);
-  const [prompts] = useLocalStorage<SavedPrompt[]>('oxygy_prompts', []);
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [savedPlan, setSavedPlan] = useState<PathwayApiResponse | null>(null);
+  const [savedDepths, setSavedDepths] = useState<Record<string, LevelDepth> | null>(null);
+  const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
+  const [levelProgress, setLevelProgress] = useState<LevelProgressRow[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [expandedPlans, setExpandedPlans] = useState<Set<number>>(new Set());
   const [activeCodePanel, setActiveCodePanel] = useState<number | null>(null);
 
+  // Fetch all data from Supabase on mount
+  useEffect(() => {
+    if (!userId) return;
+    setDataLoading(true);
+    Promise.all([
+      getProfile(userId),
+      getLatestLearningPlan(userId),
+      getLevelProgress(userId),
+      getSavedPrompts(userId),
+    ]).then(([profileData, planData, progressData, promptsData]) => {
+      if (profileData) setProfile(profileData);
+      if (planData) {
+        setSavedPlan(planData.plan);
+        setSavedDepths(planData.level_depths);
+      }
+      setLevelProgress(progressData);
+      setPrompts(promptsData);
+      setDataLoading(false);
+    });
+  }, [userId]);
+
   // Compute dynamic progress rows
   const rows = LEVEL_ROWS.map((row) => {
-    const toolUsed: DisplayStatus = readToolUsed(row.level) ? 'complete' : 'incomplete';
+    const progressRow = levelProgress.find((p) => p.level === row.level);
+    const toolUsed: DisplayStatus = progressRow?.tool_used ? 'complete' : 'incomplete';
     const outputSaved: DisplayStatus = hasOutputSaved(row.level, prompts);
-    const workshopAttended: DisplayStatus = workshopCodes.some((w) => w.level === row.level) ? 'complete' : 'incomplete';
+    const workshopAttended: DisplayStatus = progressRow?.workshop_attended ? 'complete' : 'incomplete';
     return { ...row, toolUsed, outputSaved, workshopAttended };
   });
 
@@ -433,9 +452,18 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
   const totalActivities = 12;
   const overallProgress = Math.round((activitiesCompleted / totalActivities) * 100);
 
-  const handleWorkshopConfirm = (level: number, code: string) => {
-    setWorkshopCodes((prev) => [...prev, { level, code, validatedAt: Date.now() }]);
+  const handleWorkshopConfirm = async (level: number, code: string) => {
+    // Optimistic UI update
+    setLevelProgress((prev) => {
+      const existing = prev.find((p) => p.level === level);
+      if (existing) {
+        return prev.map((p) => p.level === level ? { ...p, workshop_attended: true, workshop_code_used: code } : p);
+      }
+      return [...prev, { user_id: userId, level, tool_used: false, tool_used_at: null, workshop_attended: true, workshop_attended_at: new Date().toISOString(), workshop_code_used: code }];
+    });
     showToast('Workshop code verified!');
+    // Write to Supabase
+    await upsertWorkshopAttended(userId, level, code);
   };
 
   const togglePlanExpanded = (level: number) => {
