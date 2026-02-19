@@ -753,7 +753,7 @@ export function WorkflowDesigner() {
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
             style={{ backgroundColor: '#FDF6E3', color: '#C4A934', border: '1px solid #FBE8A6' }}
           >
-            Level 03 &mdash; Workflow Design
+            Level 3 &mdash; Systemic Integration
           </div>
           <h1 className="text-[36px] md:text-[48px] font-bold text-[#1A202C] leading-[1.15] mb-6">
             Design Your

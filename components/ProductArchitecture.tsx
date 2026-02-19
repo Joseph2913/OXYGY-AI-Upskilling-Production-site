@@ -641,7 +641,7 @@ export function ProductArchitecture() {
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
             style={{ backgroundColor: '#E6FFFA', color: ACCENT_DARK, border: `1px solid ${ACCENT}` }}
           >
-            Level 05 &mdash; Product Architecture
+            Level 5 &mdash; Full AI-Powered Applications
           </div>
           <h1 className="text-[36px] md:text-[48px] font-bold text-[#1A202C] leading-[1.15]">
             Build Your First AI-Powered

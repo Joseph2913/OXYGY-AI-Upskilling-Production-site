@@ -189,8 +189,8 @@ export const PromptPlayground: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-24">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-white pt-24 pb-16">
+      <div className="max-w-7xl mx-auto px-6">
         {/* Breadcrumb */}
         <a
           href="#"
@@ -207,7 +207,7 @@ export const PromptPlayground: React.FC = () => {
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
             style={{ backgroundColor: '#E6FFFA', color: '#2C7A6E', border: '1px solid #A8F0E0' }}
           >
-            Level 01 &mdash; Prompt Engineering
+            Level 1 &mdash; Fundamentals &amp; Awareness
           </div>
           <h1 className="text-[36px] md:text-[48px] font-bold text-[#1A202C] leading-[1.15] mb-6">
             <span className="relative inline-block">

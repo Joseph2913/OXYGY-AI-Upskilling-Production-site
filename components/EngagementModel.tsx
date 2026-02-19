@@ -990,7 +990,7 @@ export const EngagementModel: React.FC = () => {
   }, []);
 
   return (
-    <div id="page-top" style={{ paddingTop: '68px' }}>
+    <div id="page-top">
       {/* Section 1: Page Header + Tier Cards */}
       <PageHeader
         selectedTier={selectedTier}

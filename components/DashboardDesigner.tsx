@@ -657,7 +657,7 @@ export const DashboardDesigner: React.FC = () => {
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
             style={{ backgroundColor: '#FFF0EB', color: DARK_ACCENT, border: `1px solid ${ACCENT}` }}
           >
-            Level 04 &mdash; Dashboard Design
+            Level 4 &mdash; Interactive Dashboards
           </div>
           <h1 className="text-[36px] md:text-[48px] font-bold text-[#1A202C] leading-[1.15] mb-6">
             Dashboard<br />
