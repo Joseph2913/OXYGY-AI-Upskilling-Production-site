@@ -239,6 +239,7 @@ export const DashboardDesigner: React.FC = () => {
   const [feedbackText, setFeedbackText] = useState('');
 
   // PRD state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [prdResult, setPrdResult] = useState<NewPRDResult | null>(null);
   const [showFullPrd, setShowFullPrd] = useState(false);
   const [showPrdSectionsOverview, setShowPrdSectionsOverview] = useState(false);
@@ -287,7 +288,7 @@ export const DashboardDesigner: React.FC = () => {
     setTimeout(() => setShowToast(false), 2500);
   }, []);
 
-  const copyToClipboard = useCallback(async (text: string) => {
+  const copyToClipboard = useCallback(async (text: string, id?: string) => {
     try {
       await navigator.clipboard.writeText(text);
       toast('Copied to clipboard');
@@ -299,6 +300,10 @@ export const DashboardDesigner: React.FC = () => {
       document.execCommand('copy');
       document.body.removeChild(ta);
       toast('Copied to clipboard');
+    }
+    if (id) {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
     }
   }, [toast]);
 
@@ -637,7 +642,9 @@ export const DashboardDesigner: React.FC = () => {
     a.download = 'dashboard-prd.md';
     a.click();
     URL.revokeObjectURL(url);
+    setCopiedId('export-md');
     toast('Markdown exported');
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   // ─── Render ───
@@ -667,14 +674,14 @@ export const DashboardDesigner: React.FC = () => {
             </span>
           </h1>
           <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
-            Brief in your dashboard, generate an AI-powered mockup, refine it with feedback, and export a production-ready PRD &mdash; all in one tool.
+            Share your needs, generate an AI-powered mockup, refine it with feedback, and export a production-ready PRD &mdash; all in one tool.
           </p>
         </div>
 
         {/* ═══════════════════════════════════════════
             SECTION B — Fun Fact Card
         ═══════════════════════════════════════════ */}
-        <div className="mb-4">
+        <div className="mb-8">
           <div
             className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
             style={{
@@ -688,7 +695,7 @@ export const DashboardDesigner: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-[#D47B5A] opacity-30" />
             </div>
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#D47B5A] mb-3">Did you know?</p>
-            <p className="text-[18px] md:text-[20px] text-[#2D3748] font-bold leading-tight">
+            <p className="text-[17px] md:text-[19px] text-[#2D3748] font-bold leading-tight">
               <span className="text-[#D47B5A]">73%</span> of AI projects fail to deliver value because outputs never reach decision-makers.
             </p>
             <p className="text-[15px] text-[#718096] leading-tight mt-2">
@@ -1374,18 +1381,34 @@ export const DashboardDesigner: React.FC = () => {
                       const def = PRD_SECTIONS.find(s => s.key === key);
                       return `## ${def?.title || key}\n\n${val}`;
                     }).join('\n\n');
-                    copyToClipboard(`# ${prdResult.prd_content}\n\n${fullText}`);
-                  }} className="px-4 py-1.5 border border-[#E2E8F0] rounded-full text-[13px] text-[#2D3748] flex items-center gap-1.5 hover:bg-[#F7FAFC] transition-colors">
-                    <Copy size={13} /> Copy PRD
+                    copyToClipboard(`# ${prdResult.prd_content}\n\n${fullText}`, 'copy-prd');
+                  }}
+                    className="px-4 py-1.5 rounded-full text-[13px] flex items-center gap-1.5 transition-colors"
+                    style={copiedId === 'copy-prd'
+                      ? { backgroundColor: '#D47B5A', color: '#fff', border: '1px solid #D47B5A' }
+                      : { border: '1px solid #E2E8F0', color: '#2D3748' }
+                    }
+                  >
+                    {copiedId === 'copy-prd' ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy PRD</>}
                   </button>
                   <button onClick={handleExportMarkdown}
-                    className="px-4 py-1.5 border border-[#E2E8F0] rounded-full text-[13px] text-[#2D3748] flex items-center gap-1.5 hover:bg-[#F7FAFC] transition-colors">
-                    <Download size={13} /> Export Markdown
+                    className="px-4 py-1.5 rounded-full text-[13px] flex items-center gap-1.5 transition-colors"
+                    style={copiedId === 'export-md'
+                      ? { backgroundColor: '#D47B5A', color: '#fff', border: '1px solid #D47B5A' }
+                      : { border: '1px solid #E2E8F0', color: '#2D3748' }
+                    }
+                  >
+                    {copiedId === 'export-md' ? <><Check size={13} /> Exported!</> : <><Download size={13} /> Export Markdown</>}
                   </button>
                   {jsonPrompt && (
-                    <button onClick={() => copyToClipboard(JSON.stringify(jsonPrompt, null, 2))}
-                      className="px-4 py-1.5 border border-[#E2E8F0] rounded-full text-[13px] text-[#2D3748] flex items-center gap-1.5 hover:bg-[#F7FAFC] transition-colors">
-                      <Copy size={13} /> Copy JSON
+                    <button onClick={() => copyToClipboard(JSON.stringify(jsonPrompt, null, 2), 'copy-json')}
+                      className="px-4 py-1.5 rounded-full text-[13px] flex items-center gap-1.5 transition-colors"
+                      style={copiedId === 'copy-json'
+                        ? { backgroundColor: '#D47B5A', color: '#fff', border: '1px solid #D47B5A' }
+                        : { border: '1px solid #E2E8F0', color: '#2D3748' }
+                      }
+                    >
+                      {copiedId === 'copy-json' ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy JSON</>}
                     </button>
                   )}
                 </div>

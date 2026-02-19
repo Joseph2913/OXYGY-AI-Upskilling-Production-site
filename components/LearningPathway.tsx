@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  ArrowLeft, ArrowRight, Copy, FileText, Download,
+  ArrowRight, Copy, FileText, Download,
   Loader2, Check, RotateCcw, ChevronRight, ChevronDown, ChevronUp,
   Link2, AlertCircle, BookOpen, Users, Briefcase, Sparkles,
 } from 'lucide-react';
@@ -687,18 +687,7 @@ export const LearningPathway: React.FC = () => {
   // ---- Render ----
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-
-        {/* Breadcrumb */}
-        <a
-          href="#"
-          onClick={e => { e.preventDefault(); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          className="inline-flex items-center gap-1.5 text-[14px] text-[#718096] transition-colors mb-8"
-          onMouseEnter={e => (e.currentTarget.style.color = ACCENT_DARK)}
-          onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
-        >
-          <ArrowLeft size={16} /> Home
-        </a>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-12">
 
         {/* Centered Title */}
         <div className="mb-8 text-center">
@@ -719,14 +708,14 @@ export const LearningPathway: React.FC = () => {
               />
             </span>
           </h1>
-          <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-6">
+          <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
             This generator builds you a personalized plan for progressing through the levels &mdash; and assigns a relevant, hands-on project at each level to ensure your learning is applied and grounded in real business needs.
           </p>
         </div>
 
         {/* Did You Know? Card */}
         <div
-          className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden mb-12"
+          className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden mb-8"
           style={{
             background: 'linear-gradient(135deg, rgba(56,178,172,0.15) 0%, rgba(44,154,148,0.08) 50%, rgba(56,178,172,0.12) 100%)',
             border: `1.5px solid ${ACCENT}`,

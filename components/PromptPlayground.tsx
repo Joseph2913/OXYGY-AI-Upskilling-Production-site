@@ -234,40 +234,40 @@ export const PromptPlayground: React.FC = () => {
           <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
             Learn the six building blocks of a well-engineered prompt &mdash; and watch a vague idea transform into a structured instruction that gets dramatically better AI outputs.
           </p>
+        </div>
 
-          {/* ─── FUN FACT CARD ─── */}
-          <div className="mb-8">
-            <div
-              className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
-              style={{
-                background: 'linear-gradient(135deg, rgba(168,240,224,0.15) 0%, rgba(43,168,156,0.08) 50%, rgba(168,240,224,0.12) 100%)',
-                border: '1.5px solid #A8F0E0',
-              }}
-            >
-              {/* Decorative accent dots */}
-              <div className="absolute top-3 left-4 flex gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-40" />
-                <span className="w-2 h-2 rounded-full bg-[#A8F0E0] opacity-60" />
-                <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-30" />
-              </div>
-
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#2BA89C] mb-2">
-                Did you know?
-              </p>
-              <p className="text-[17px] md:text-[19px] text-[#2D3748] leading-[1.6] font-medium mb-2">
-                A well-structured prompt can improve AI output quality by up to <span className="text-[#2BA89C] font-bold">60%</span>.
-              </p>
-              <p className="text-[15px] text-[#718096] leading-[1.6] max-w-3xl mx-auto mb-5">
-                The difference between a vague ask and a structured 6-part prompt is the difference between a generic draft and an expert-level deliverable.
-              </p>
-
-              <button
-                onClick={scrollToModes}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#1A202C] text-white text-[14px] font-semibold rounded-full hover:bg-[#2D3748] transition-colors"
-              >
-                Choose your mode below <ChevronDown size={15} className="animate-bounce-down" />
-              </button>
+        {/* ─── FUN FACT CARD ─── */}
+        <div className="mb-8">
+          <div
+            className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(168,240,224,0.15) 0%, rgba(43,168,156,0.08) 50%, rgba(168,240,224,0.12) 100%)',
+              border: '1.5px solid #A8F0E0',
+            }}
+          >
+            {/* Decorative accent dots */}
+            <div className="absolute top-3 left-4 flex gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-40" />
+              <span className="w-2 h-2 rounded-full bg-[#A8F0E0] opacity-60" />
+              <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-30" />
             </div>
+
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#2BA89C] mb-2">
+              Did you know?
+            </p>
+            <p className="text-[17px] md:text-[19px] text-[#2D3748] leading-[1.6] font-medium mb-2">
+              A well-structured prompt can improve AI output quality by up to <span className="text-[#2BA89C] font-bold">60%</span>.
+            </p>
+            <p className="text-[15px] text-[#718096] leading-[1.6] max-w-3xl mx-auto mb-5">
+              The difference between a vague ask and a structured 6-part prompt is the difference between a generic draft and an expert-level deliverable.
+            </p>
+
+            <button
+              onClick={scrollToModes}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#1A202C] text-white text-[14px] font-semibold rounded-full hover:bg-[#2D3748] transition-colors"
+            >
+              Choose your mode below <ChevronDown size={15} className="animate-bounce-down" />
+            </button>
           </div>
         </div>
 

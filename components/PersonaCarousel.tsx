@@ -493,7 +493,7 @@ export const PersonaCarousel: React.FC = () => {
   const dotCount = maxIndex + 1;
 
   return (
-    <section className="pt-20 pb-16 bg-white border-t border-gray-100">
+    <section className="pt-12 pb-12 bg-white border-t border-gray-100">
       <div ref={containerRef} className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-12">

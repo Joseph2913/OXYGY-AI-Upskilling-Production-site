@@ -21,7 +21,7 @@ export const LevelJourney: React.FC = () => {
   };
 
   return (
-    <section id="journey" className="py-24 bg-white">
+    <section id="journey" className="pt-16 pb-12 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         
         {/* Section Header */}

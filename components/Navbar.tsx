@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Home, Menu, X, LayoutDashboard, LogOut } from 'lucide-react';
+import { ChevronDown, Home, Menu, X, User, LogOut } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useAuth, signOut } from '../context/AuthContext';
 
@@ -456,7 +456,7 @@ export const Navbar: React.FC = () => {
                     style={{ padding: '10px 16px', fontSize: 14, fontWeight: 500, color: '#2D3748', textDecoration: 'none' }}
                     onClick={() => setAvatarOpen(false)}
                   >
-                    <LayoutDashboard size={16} />
+                    <User size={16} />
                     My Dashboard
                   </a>
                   <div style={{ height: '1px', backgroundColor: '#E2E8F0' }} />
@@ -494,31 +494,9 @@ export const Navbar: React.FC = () => {
               style={{ width: '40px', height: '40px', textDecoration: 'none' }}
               title="My Dashboard"
             >
-              <LayoutDashboard size={18} />
+              <User size={18} />
             </a>
           )}
-
-          {/* Contact Us — text button */}
-          <a
-            href="mailto:uk@oxygyconsulting.com"
-            className="hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0 text-white"
-            style={{
-              height: '40px',
-              padding: '0 20px',
-              backgroundColor: '#1A202C',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#38B2AC';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#1A202C';
-            }}
-          >
-            Contact Us
-          </a>
 
           {/* Mobile hamburger */}
           <button
@@ -683,7 +661,7 @@ export const Navbar: React.FC = () => {
               style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
               onClick={() => setMobileOpen(false)}
             >
-              <LayoutDashboard size={16} />
+              <User size={16} />
               <span>My Dashboard</span>
               {user && (
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: '#A0AEC0', fontWeight: 400 }}>
@@ -709,16 +687,6 @@ export const Navbar: React.FC = () => {
               </button>
             )}
 
-            <div className="h-px bg-gray-100 my-2" />
-
-            <a
-              href="mailto:uk@oxygyconsulting.com"
-              className="flex items-center justify-center text-white py-3 rounded-full font-medium text-[14px] transition-colors mt-1"
-              style={{ backgroundColor: '#1A202C', textDecoration: 'none' }}
-              onClick={() => setMobileOpen(false)}
-            >
-              Contact Us
-            </a>
           </div>
         </div>
       )}

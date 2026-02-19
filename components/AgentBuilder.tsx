@@ -757,33 +757,33 @@ export const AgentBuilder: React.FC = () => {
           <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
             Describe a task you do regularly, and this toolkit will assess whether it warrants a custom AI agent &mdash; then design the system prompt, output format, and accountability features for you.
           </p>
+        </div>
 
-          {/* ─── FUN FACT CARD ─── */}
-          <div className="mb-4">
-            <div
-              className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
-              style={{
-                background: 'linear-gradient(135deg, rgba(195, 208, 245, 0.15) 0%, rgba(91, 109, 194, 0.08) 50%, rgba(195, 208, 245, 0.12) 100%)',
-                border: '1.5px solid #C3D0F5',
-              }}
-            >
-              <div className="absolute top-3 left-4 flex gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#5B6DC2] opacity-40" />
-                <span className="w-2 h-2 rounded-full bg-[#C3D0F5] opacity-60" />
-                <span className="w-2 h-2 rounded-full bg-[#5B6DC2] opacity-30" />
-              </div>
-
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#5B6DC2] mb-2">
-                Did you know?
-              </p>
-              <p className="text-[17px] md:text-[19px] text-[#2D3748] leading-[1.6] font-medium mb-2">
-                Teams that use standardized AI agents see up to <span className="text-[#5B6DC2] font-bold">3x faster adoption</span> across departments
-                than those relying on ad-hoc prompts alone.
-              </p>
-              <p className="text-[15px] text-[#718096] leading-[1.6] max-w-3xl mx-auto">
-                The difference between a one-off prompt and a Level 2 agent is the difference between a single answer and a reusable tool your entire team can rely on.
-              </p>
+        {/* ─── FUN FACT CARD ─── */}
+        <div className="mb-8">
+          <div
+            className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(195, 208, 245, 0.15) 0%, rgba(91, 109, 194, 0.08) 50%, rgba(195, 208, 245, 0.12) 100%)',
+              border: '1.5px solid #C3D0F5',
+            }}
+          >
+            <div className="absolute top-3 left-4 flex gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#5B6DC2] opacity-40" />
+              <span className="w-2 h-2 rounded-full bg-[#C3D0F5] opacity-60" />
+              <span className="w-2 h-2 rounded-full bg-[#5B6DC2] opacity-30" />
             </div>
+
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#5B6DC2] mb-2">
+              Did you know?
+            </p>
+            <p className="text-[17px] md:text-[19px] text-[#2D3748] leading-[1.6] font-medium mb-2">
+              Teams that use standardized AI agents see up to <span className="text-[#5B6DC2] font-bold">3x faster adoption</span> across departments
+              than those relying on ad-hoc prompts alone.
+            </p>
+            <p className="text-[15px] text-[#718096] leading-[1.6] max-w-3xl mx-auto">
+              The difference between a one-off prompt and a Level 2 agent is the difference between a single answer and a reusable tool your entire team can rely on.
+            </p>
           </div>
         </div>
 

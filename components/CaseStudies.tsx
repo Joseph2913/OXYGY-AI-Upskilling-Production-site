@@ -220,7 +220,7 @@ function CaseStudySummaryCard({ cs }: { cs: CaseStudy }) {
 /** Homepage section — condensed cards */
 export const CaseStudiesSection: React.FC = () => {
   return (
-    <section id="case-studies-section" className="py-24 bg-[#F7FAFC] border-t border-gray-100">
+    <section id="case-studies-section" className="pt-12 pb-12 bg-[#F7FAFC] border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-[36px] font-bold text-navy-900 mb-5 relative inline-block">
@@ -430,9 +430,9 @@ export const CaseStudiesPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 pt-12">
         {/* Centered Title */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <div
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
             style={{ backgroundColor: '#E6FFFA', color: '#2C9A94', border: '1px solid #38B2AC' }}
@@ -446,15 +446,14 @@ export const CaseStudiesPage: React.FC = () => {
               <span className="absolute left-0 -bottom-1 w-full h-[4px] bg-teal opacity-80 rounded-full"></span>
             </span>
           </h1>
+          <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
+            See how we've partnered with organizations across industries to build real AI capability &mdash; from multi-agent research workflows to interactive dashboards and tailored front-ends.
+          </p>
         </div>
-
-        <p className="text-center text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[680px] mx-auto mb-10">
-          See how we've partnered with organizations across industries to build real AI capability &mdash; from multi-agent research workflows to interactive dashboards and tailored front-ends.
-        </p>
 
         {/* Did You Know? Card */}
         <div
-          className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden mb-16"
+          className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden mb-8"
           style={{
             background: 'linear-gradient(135deg, rgba(56,178,172,0.15) 0%, rgba(44,154,148,0.08) 50%, rgba(56,178,172,0.12) 100%)',
             border: '1.5px solid #38B2AC',

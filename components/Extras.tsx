@@ -170,7 +170,7 @@ export const LearningModel: React.FC = () => {
   ];
 
   return (
-    <section ref={ref} className="pt-[100px] pb-[80px] bg-[#F7FAFC] border-t border-gray-200">
+    <section ref={ref} className="pt-12 pb-12 bg-[#F7FAFC] border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-6">
         
         {/* Title & Intro */}

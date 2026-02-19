@@ -5,7 +5,7 @@ import { Hero } from './components/Hero';
 import { LevelJourney } from './components/LevelJourney';
 import { LearningModel } from './components/Extras';
 import { PersonaCarousel } from './components/PersonaCarousel';
-import { Footer } from './components/Footer';
+import { Footer, FooterBar } from './components/Footer';
 import { PromptPlayground } from './components/PromptPlayground';
 import { AgentBuilder } from './components/AgentBuilder';
 import { WorkflowDesigner } from './components/WorkflowDesigner';
@@ -80,6 +80,9 @@ function AppContent() {
       {currentPage === 'case-studies' && <CaseStudiesPage />}
       {currentPage === 'user-journey' && <UserJourney />}
       {currentPage === 'dashboard' && (needsAuth ? <AuthModal /> : <Dashboard />)}
+
+      {/* Footer bar on all non-home pages */}
+      {currentPage !== 'home' && <FooterBar />}
     </div>
   );
 }

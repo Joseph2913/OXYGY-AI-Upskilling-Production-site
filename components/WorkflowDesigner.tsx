@@ -769,7 +769,7 @@ export function WorkflowDesigner() {
         </div>
 
         {/* Fun Fact Card */}
-        <div className="mb-4">
+        <div className="mb-8">
           <div className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, rgba(251,232,166,0.15) 0%, rgba(196,169,52,0.08) 50%, rgba(251,232,166,0.12) 100%)',

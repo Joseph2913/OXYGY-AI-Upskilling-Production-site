@@ -169,10 +169,9 @@ export const UserJourney: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Breadcrumb */}
+      <div className="max-w-7xl mx-auto px-6 pt-12">
         {/* Centered Title */}
-        <div className="mb-6 text-center">
+        <div className="mb-8 text-center">
           <div
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
             style={{ backgroundColor: '#E6FFFA', color: ACCENT_DARK, border: `1px solid ${ACCENT}` }}
@@ -190,15 +189,14 @@ export const UserJourney: React.FC = () => {
               />
             </span>
           </h1>
+          <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
+            Whether you're exploring Level 1 or mastering all five, the pathway is the same &mdash; personalized to you.
+          </p>
         </div>
-
-        <p className="text-center text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[680px] mx-auto mb-12">
-          Whether you're exploring Level 1 or mastering all five, the pathway is the same &mdash; personalized to you.
-        </p>
 
         {/* Fun Fact Card */}
         <div
-          className="rounded-2xl px-8 md:px-12 py-8 mb-14 text-center relative overflow-hidden"
+          className="rounded-2xl px-8 md:px-12 py-8 mb-8 text-center relative overflow-hidden"
           style={{
             background: `linear-gradient(135deg, ${ACCENT}18 0%, ${ACCENT_DARK}12 50%, ${ACCENT}1A 100%)`,
             border: `1.5px solid ${ACCENT}`,

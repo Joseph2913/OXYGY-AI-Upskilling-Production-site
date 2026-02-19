@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Check, ChevronDown, ArrowRight,
   Users, Database, Target, Award,
@@ -6,7 +6,6 @@ import {
   Box, BarChart2, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import {
   TIER_CONFIGS,
   PHASE_SECTIONS,
@@ -73,47 +72,6 @@ const V = {
 const ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
   Users, Database, Target, Award, Zap, Layers,
   GitBranch, FileText, Box, BarChart2, ShieldCheck,
-};
-
-// ─── Reduced Motion ───
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  return reduced;
-}
-
-// ─── Scroll-Triggered Reveal ───
-
-const Reveal: React.FC<{
-  children: React.ReactNode;
-  delay?: number;
-  className?: string;
-  style?: React.CSSProperties;
-}> = ({ children, delay = 0, className, style }) => {
-  const { ref, isIntersecting } = useIntersectionObserver({ threshold: 0.15, triggerOnce: true });
-  const rm = usePrefersReducedMotion();
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        ...style,
-        opacity: rm ? 1 : isIntersecting ? 1 : 0,
-        transform: rm ? 'none' : isIntersecting ? 'translateY(0)' : 'translateY(24px)',
-        transition: rm ? 'none' : `opacity 550ms ease ${delay}ms, transform 550ms ease ${delay}ms`,
-        willChange: isIntersecting ? 'auto' : 'transform, opacity',
-      }}
-    >
-      {children}
-    </div>
-  );
 };
 
 // ─── Teal Underline (generic accent underline) ───
@@ -292,71 +250,64 @@ const PageHeader: React.FC<{
   onSelectTier: (id: TierId) => void;
   onFeatureClick: (targetId: string) => void;
 }> = ({ selectedTier, onSelectTier, onFeatureClick }) => (
-  <section style={{ background: V.white, paddingTop: '96px', paddingBottom: '80px' }}>
+  <section style={{ background: V.white, paddingTop: '144px', paddingBottom: '80px' }}>
     <div className="mx-auto" style={{ maxWidth: '1160px', padding: '0 40px' }}>
       {/* Eyebrow Pill */}
-      <Reveal>
-        <div className="text-center" style={{ marginBottom: '16px' }}>
-          <div
-            style={{
-              display: 'inline-block',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              color: V.teal,
-              backgroundColor: 'rgba(56, 178, 172, 0.08)',
-              border: '1px solid rgba(56, 178, 172, 0.3)',
-              padding: '6px 16px',
-              borderRadius: '9999px',
-            }}
-          >
-            Partner With OXYGY
-          </div>
+      <div className="text-center" style={{ marginBottom: '24px' }}>
+        <div
+          style={{
+            display: 'inline-block',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            color: V.teal,
+            backgroundColor: 'rgba(56, 178, 172, 0.08)',
+            border: '1px solid rgba(56, 178, 172, 0.3)',
+            padding: '6px 16px',
+            borderRadius: '9999px',
+          }}
+        >
+          Partner With OXYGY
         </div>
-      </Reveal>
+      </div>
 
       {/* Headline */}
-      <Reveal delay={60}>
-        <h1
-          className="text-center"
-          style={{
-            fontSize: 'clamp(36px, 4.5vw, 48px)',
-            fontWeight: 800,
-            color: V.navy,
-            lineHeight: 1.15,
-            marginBottom: '20px',
-          }}
-        >
-          Three Ways to <AccentUnderline>Transform</AccentUnderline> Your Organization
-        </h1>
-      </Reveal>
+      <h1
+        className="text-center"
+        style={{
+          fontSize: 'clamp(36px, 4.5vw, 48px)',
+          fontWeight: 800,
+          color: V.navy,
+          lineHeight: 1.15,
+          marginBottom: '20px',
+        }}
+      >
+        Three Ways to <AccentUnderline>Transform</AccentUnderline> Your Organization
+      </h1>
 
       {/* Intro */}
-      <Reveal delay={120}>
-        <p
-          className="text-center mx-auto"
-          style={{
-            fontSize: '16px',
-            color: V.body,
-            lineHeight: 1.7,
-            maxWidth: '640px',
-            marginBottom: '56px',
-          }}
-        >
-          Every organization&rsquo;s AI journey is different. Choose the scope that matches your
-          ambition &mdash; from building foundational capability to full operating model transformation.
-        </p>
-      </Reveal>
+      <p
+        className="text-center mx-auto"
+        style={{
+          fontSize: '16px',
+          color: V.body,
+          lineHeight: 1.7,
+          maxWidth: '700px',
+          marginBottom: '32px',
+        }}
+      >
+        Every organization&rsquo;s AI journey is different. Choose the scope that matches your
+        ambition &mdash; from building foundational capability to full operating model transformation.
+      </p>
 
       {/* Did You Know? Card */}
-      <Reveal delay={160}>
-        <div
+      <div
           className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
           style={{
             background: 'linear-gradient(135deg, rgba(56,178,172,0.15) 0%, rgba(44,154,148,0.08) 50%, rgba(56,178,172,0.12) 100%)',
             border: '1.5px solid rgba(56, 178, 172, 0.3)',
-            marginBottom: '56px',
+            marginBottom: '32px',
           }}
         >
           <div className="absolute top-3 left-4 flex gap-1.5">
@@ -376,28 +327,25 @@ const PageHeader: React.FC<{
             The right engagement model ensures AI adoption sticks &mdash; not just for early adopters, but across the organization.
           </p>
         </div>
-      </Reveal>
 
       {/* Tier cards */}
-      <Reveal delay={200}>
-        <div
-          className="grid grid-cols-1 md:grid-cols-3"
-          style={{ gap: '24px', alignItems: 'stretch' }}
-        >
-          {TIER_CONFIGS.map((tier) => (
-            <TierCard
-              key={tier.id}
-              tier={tier}
-              isSelected={selectedTier === tier.id}
-              onSelect={() => {
-                onSelectTier(tier.id);
-                scrollToId('phase-0');
-              }}
-              onFeatureClick={onFeatureClick}
-            />
-          ))}
-        </div>
-      </Reveal>
+      <div
+        className="grid grid-cols-1 md:grid-cols-3"
+        style={{ gap: '24px', alignItems: 'stretch' }}
+      >
+        {TIER_CONFIGS.map((tier) => (
+          <TierCard
+            key={tier.id}
+            tier={tier}
+            isSelected={selectedTier === tier.id}
+            onSelect={() => {
+              onSelectTier(tier.id);
+              scrollToId('phase-0');
+            }}
+            onFeatureClick={onFeatureClick}
+          />
+        ))}
+      </div>
     </div>
   </section>
 );
@@ -745,11 +693,9 @@ const CompactExpandableCard: React.FC<{
 const PhaseDetailSection: React.FC<{
   phase: PhaseSection;
   isVisible: boolean;
-  staggerDelay: number;
   expandedCardId: string | null;
   onToggleCard: (cardId: string) => void;
-}> = ({ phase, isVisible, staggerDelay, expandedCardId, onToggleCard }) => {
-  const rm = usePrefersReducedMotion();
+}> = ({ phase, isVisible, expandedCardId, onToggleCard }) => {
   const titleParts = phase.title.split(phase.titleUnderlineWord);
 
   return (
@@ -757,69 +703,62 @@ const PhaseDetailSection: React.FC<{
       id={`phase-${phase.phaseNumber}`}
       style={{
         maxHeight: isVisible ? '10000px' : '0px',
-        opacity: isVisible ? 1 : 0,
         overflow: 'hidden',
-        transition: rm
-          ? 'none'
-          : `max-height 400ms ease ${staggerDelay}ms, opacity 400ms ease ${staggerDelay}ms`,
       }}
     >
       <div style={{ padding: '56px 0' }}>
         {/* Phase header */}
-        <Reveal>
-          <div style={{ marginBottom: '32px' }}>
-            <div
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: phase.accentColor,
-                marginBottom: '12px',
-              }}
-            >
-              {phase.eyebrow}
-            </div>
-
-            <h2
-              style={{
-                fontSize: 'clamp(26px, 3vw, 32px)',
-                fontWeight: 800,
-                color: V.navy,
-                marginBottom: '14px',
-              }}
-            >
-              {titleParts[0]}
-              <AccentUnderline color={phase.accentColor}>{phase.titleUnderlineWord}</AccentUnderline>
-              {titleParts[1] || ''}
-            </h2>
-
-            <p
-              style={{
-                fontSize: '15px',
-                color: V.body,
-                lineHeight: 1.7,
-                maxWidth: '600px',
-              }}
-            >
-              {phase.intro}
-            </p>
+        <div style={{ marginBottom: '32px' }}>
+          <div
+            style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: phase.accentColor,
+              marginBottom: '12px',
+            }}
+          >
+            {phase.eyebrow}
           </div>
-        </Reveal>
+
+          <h2
+            style={{
+              fontSize: 'clamp(26px, 3vw, 32px)',
+              fontWeight: 800,
+              color: V.navy,
+              marginBottom: '14px',
+            }}
+          >
+            {titleParts[0]}
+            <AccentUnderline color={phase.accentColor}>{phase.titleUnderlineWord}</AccentUnderline>
+            {titleParts[1] || ''}
+          </h2>
+
+          <p
+            style={{
+              fontSize: '15px',
+              color: V.body,
+              lineHeight: 1.7,
+              maxWidth: '600px',
+            }}
+          >
+            {phase.intro}
+          </p>
+        </div>
 
         {/* Expandable cards */}
         <div className="flex flex-col gap-3">
           {phase.cards.map((card, ci) => (
-            <Reveal key={card.id} delay={ci * 50}>
-              <CompactExpandableCard
-                card={card}
-                index={ci}
-                isExpanded={expandedCardId === card.id}
-                onToggle={() => onToggleCard(card.id)}
-                accentColor={phase.accentColor}
-                accentColorDark={phase.accentColorDark}
-              />
-            </Reveal>
+            <CompactExpandableCard
+              key={card.id}
+              card={card}
+              index={ci}
+              isExpanded={expandedCardId === card.id}
+              onToggle={() => onToggleCard(card.id)}
+              accentColor={phase.accentColor}
+              accentColorDark={phase.accentColorDark}
+            />
           ))}
         </div>
       </div>
@@ -1006,7 +945,6 @@ export const EngagementModel: React.FC = () => {
               key={phase.phaseNumber}
               phase={phase}
               isVisible={visiblePhases.includes(phase.phaseNumber)}
-              staggerDelay={pi * 150}
               expandedCardId={expandedCards[phase.phaseNumber] ?? null}
               onToggleCard={(cardId) => handleToggleCard(phase.phaseNumber, cardId)}
             />

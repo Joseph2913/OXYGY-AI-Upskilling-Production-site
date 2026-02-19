@@ -565,8 +565,10 @@ export function ProductArchitecture() {
     a.download = `AI_Build_Plan_${new Date().toISOString().slice(0, 10)}.md`;
     a.click();
     URL.revokeObjectURL(url);
+    setCopiedId('download');
     setToastMessage('Downloaded');
     setShowToast(true);
+    setTimeout(() => setCopiedId(null), 2000);
     setTimeout(() => setShowToast(false), 2500);
   }, [analysis, answers]);
 
@@ -660,14 +662,14 @@ export function ProductArchitecture() {
               />
             </span>
           </h1>
-          <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-4">
+          <p className="text-[16px] md:text-[18px] text-[#718096] leading-[1.7] max-w-[700px] mx-auto mt-2">
             Describe your app idea and get a personalized build plan across five essential tools &mdash; with tips, first steps, and connections to every level of the OXYGY framework.
           </p>
         </div>
 
         {/* Did You Know? Card */}
         <div
-          className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden mb-16"
+          className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden mb-8"
           style={{
             background: `linear-gradient(135deg, rgba(56,178,172,0.15) 0%, rgba(44,154,148,0.08) 50%, rgba(56,178,172,0.12) 100%)`,
             border: `1.5px solid ${ACCENT}`,
@@ -1007,10 +1009,13 @@ export function ProductArchitecture() {
                     'Copied as text', 'text'
                   )}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors"
-                  style={{ border: '1px solid #1A202C', color: '#1A202C' }}
+                  style={copiedId === 'text'
+                    ? { backgroundColor: '#38B2AC', color: '#fff', border: '1px solid #38B2AC' }
+                    : { border: '1px solid #1A202C', color: '#1A202C' }
+                  }
                 >
                   {copiedId === 'text' ? <Check size={14} /> : <Copy size={14} />}
-                  {copiedId === 'text' ? 'Copied!' : 'Copy as Text'}
+                  {copiedId === 'text' ? 'Copied to clipboard!' : 'Copy as Text'}
                 </button>
                 <button
                   onClick={() => copyToClipboard(
@@ -1018,17 +1023,24 @@ export function ProductArchitecture() {
                     'Copied as Markdown', 'markdown'
                   )}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors"
-                  style={{ border: '1px solid #1A202C', color: '#1A202C' }}
+                  style={copiedId === 'markdown'
+                    ? { backgroundColor: '#38B2AC', color: '#fff', border: '1px solid #38B2AC' }
+                    : { border: '1px solid #1A202C', color: '#1A202C' }
+                  }
                 >
                   {copiedId === 'markdown' ? <Check size={14} /> : <FileText size={14} />}
-                  {copiedId === 'markdown' ? 'Copied!' : 'Copy as Markdown'}
+                  {copiedId === 'markdown' ? 'Copied to clipboard!' : 'Copy as Markdown'}
                 </button>
                 <button
                   onClick={handleDownloadMd}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors"
-                  style={{ border: '1px solid #1A202C', color: '#1A202C' }}
+                  style={copiedId === 'download'
+                    ? { backgroundColor: '#38B2AC', color: '#fff', border: '1px solid #38B2AC' }
+                    : { border: '1px solid #1A202C', color: '#1A202C' }
+                  }
                 >
-                  <Download size={14} /> Download .md
+                  {copiedId === 'download' ? <Check size={14} /> : <Download size={14} />}
+                  {copiedId === 'download' ? 'Downloaded!' : 'Download .md'}
                 </button>
               </div>
             </div>
