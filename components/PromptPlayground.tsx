@@ -6,6 +6,7 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { BuildWizard } from './playground/BuildWizard';
 import type { PromptResult, WizardAnswers } from '../types';
 import { ArtifactClosing } from './ArtifactClosing';
+import { AuthModal } from './AuthModal';
 import { useAuth } from '../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../lib/database';
 
@@ -28,6 +29,7 @@ export const PromptPlayground: React.FC = () => {
   const [visibleBlocks, setVisibleBlocks] = useState(0);
   const [showMarkdownTooltip, setShowMarkdownTooltip] = useState(false);
   const [savedToLibrary, setSavedToLibrary] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -168,21 +170,33 @@ export const PromptPlayground: React.FC = () => {
 
   const handleSaveToLibrary = () => {
     if (!result) return;
-    const fullPrompt = buildMarkdownPrompt(result);
-    const newPrompt = {
-      id: `l1-${Date.now()}`,
-      level: 1,
-      title: result.task.slice(0, 60) + (result.task.length > 60 ? '...' : ''),
-      content: fullPrompt,
-      savedAt: Date.now(),
-    };
-    if (user) {
-      dbSavePrompt(user.id, { level: 1, title: newPrompt.title, content: newPrompt.content, source_tool: 'prompt-playground' });
+    if (!user) {
+      // Preserve result in localStorage so it survives an OAuth redirect
+      try { localStorage.setItem('oxygy_playground_draft', JSON.stringify({ result, originalPrompt, resultMode })); } catch {}
+      setShowAuthModal(true);
+      return;
     }
+    const fullPrompt = buildMarkdownPrompt(result);
+    const title = result.task.slice(0, 60) + (result.task.length > 60 ? '...' : '');
+    dbSavePrompt(user.id, { level: 1, title, content: fullPrompt, source_tool: 'prompt-playground' });
     setSavedToLibrary(true);
     showToastNotification('Prompt saved to your library');
     setTimeout(() => setSavedToLibrary(false), 3000);
   };
+
+  // Restore draft from localStorage after OAuth redirect
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem('oxygy_playground_draft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed.result) setResult(parsed.result);
+        if (parsed.originalPrompt) setOriginalPrompt(parsed.originalPrompt);
+        if (parsed.resultMode) setResultMode(parsed.resultMode);
+        localStorage.removeItem('oxygy_playground_draft');
+      }
+    } catch {}
+  }, []);
 
   const scrollToModes = () => {
     modeCardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -736,6 +750,9 @@ export const PromptPlayground: React.FC = () => {
           {toastMessage} ✓
         </div>
       )}
+
+      {/* Auth overlay for save-to-library */}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 };

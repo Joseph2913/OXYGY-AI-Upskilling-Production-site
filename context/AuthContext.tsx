@@ -95,6 +95,18 @@ export async function signInWithGoogle(): Promise<void> {
   });
 }
 
+export async function signInWithEmail(email: string): Promise<{ error: string | null }> {
+  saveReturnRoute();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: getBaseUrl(),
+    },
+  });
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   window.location.hash = '';

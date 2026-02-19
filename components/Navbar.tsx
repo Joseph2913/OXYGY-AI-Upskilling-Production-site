@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Home, Menu, X, LayoutDashboard } from 'lucide-react';
+import { ChevronDown, Home, Menu, X, LayoutDashboard, LogOut } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useAuth, signOut } from '../context/AuthContext';
 
@@ -32,6 +32,10 @@ export const Navbar: React.FC = () => {
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const methodologyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const methodologyRef = useRef<HTMLDivElement>(null);
+
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const avatarTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
 
   const [currentHash, setCurrentHash] = useState(() => window.location.hash);
 
@@ -118,6 +122,14 @@ export const Navbar: React.FC = () => {
   };
   const closeMethodology = () => {
     methodologyTimeout.current = setTimeout(() => setMethodologyOpen(false), 150);
+  };
+
+  const openAvatar = () => {
+    if (avatarTimeout.current) clearTimeout(avatarTimeout.current);
+    setAvatarOpen(true);
+  };
+  const closeAvatar = () => {
+    avatarTimeout.current = setTimeout(() => setAvatarOpen(false), 150);
   };
 
   /* Active = dark teal pill, inactive = transparent */
@@ -389,21 +401,87 @@ export const Navbar: React.FC = () => {
 
         {/* Right — Dashboard + Contact Us + Mobile Toggle */}
         <div className="flex items-center gap-2">
-          {/* Dashboard / Sign-in — single combined button */}
+          {/* Dashboard / Sign-in — avatar dropdown when signed in */}
           {user ? (
-            <a
-              href="#dashboard"
-              className={cn(
-                'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
-                isOnDashboard
-                  ? 'bg-[#38B2AC] text-white'
-                  : 'bg-[#38B2AC] text-white hover:bg-[#2C9A94]',
-              )}
-              style={{ width: '40px', height: '40px', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}
-              title={`My Dashboard — ${user.user_metadata?.full_name || user.email || 'User'}`}
+            <div
+              ref={avatarRef}
+              className="hidden sm:block relative"
+              onMouseEnter={openAvatar}
+              onMouseLeave={closeAvatar}
             >
-              {userInitial}
-            </a>
+              <button
+                className={cn(
+                  'flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
+                  'bg-[#38B2AC] text-white hover:bg-[#2C9A94]',
+                )}
+                style={{ width: '40px', height: '40px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                title={`${user.user_metadata?.full_name || user.email || 'User'}`}
+                onClick={() => setAvatarOpen(!avatarOpen)}
+              >
+                {userInitial}
+              </button>
+
+              {/* Avatar dropdown */}
+              <div
+                className={cn(
+                  'absolute top-full right-0 pt-2 transition-all duration-150',
+                  avatarOpen
+                    ? 'opacity-100 translate-y-0 pointer-events-auto'
+                    : 'opacity-0 -translate-y-1 pointer-events-none',
+                )}
+              >
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                    minWidth: '200px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* User info */}
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1A202C' }}>
+                      {user.user_metadata?.full_name || 'User'}
+                    </p>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: '#A0AEC0', wordBreak: 'break-all' }}>
+                      {user.email || ''}
+                    </p>
+                  </div>
+                  {/* My Dashboard */}
+                  <a
+                    href="#dashboard"
+                    className="flex items-center gap-2.5 transition-colors duration-150 hover:bg-[#F7FAFC]"
+                    style={{ padding: '10px 16px', fontSize: 14, fontWeight: 500, color: '#2D3748', textDecoration: 'none' }}
+                    onClick={() => setAvatarOpen(false)}
+                  >
+                    <LayoutDashboard size={16} />
+                    My Dashboard
+                  </a>
+                  <div style={{ height: '1px', backgroundColor: '#E2E8F0' }} />
+                  {/* Sign Out */}
+                  <button
+                    onClick={() => { signOut(); setAvatarOpen(false); }}
+                    className="flex items-center gap-2.5 transition-colors duration-150 hover:bg-[#FFF5F5]"
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: '#E53E3E',
+                      width: '100%',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <LogOut size={16} />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            </div>
           ) : (
             <a
               href="#dashboard"

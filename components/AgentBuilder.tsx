@@ -10,6 +10,7 @@ import {
 } from '../data/agent-builder-content';
 import type { AgentDesignResult, AgentReadinessCriteria } from '../types';
 import { ArtifactClosing } from './ArtifactClosing';
+import { AuthModal } from './AuthModal';
 import { useAuth } from '../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../lib/database';
 
@@ -270,6 +271,7 @@ export const AgentBuilder: React.FC = () => {
   // Save to library state
   const [savedPromptToLibrary, setSavedPromptToLibrary] = useState(false);
   const [savedAccountabilityToLibrary, setSavedAccountabilityToLibrary] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Refs
   const inputSectionRef = useRef<HTMLDivElement>(null);
@@ -394,21 +396,35 @@ export const AgentBuilder: React.FC = () => {
   };
 
   const saveToLibrary = (title: string, content: string) => {
-    const newPrompt = {
-      id: `l2-${Date.now()}`,
-      level: 2,
-      title: title.slice(0, 60) + (title.length > 60 ? '...' : ''),
-      content,
-      savedAt: Date.now(),
-    };
-    if (user) {
-      dbSavePrompt(user.id, { level: 2, title: newPrompt.title, content: newPrompt.content, source_tool: 'agent-builder' });
+    if (!user) {
+      // Preserve work in localStorage so it survives an OAuth redirect
+      try { localStorage.setItem('oxygy_agent_draft', JSON.stringify({ result, taskDescription, selectedChecks })); } catch {}
+      setShowAuthModal(true);
+      return false;
     }
+    const trimmedTitle = title.slice(0, 60) + (title.length > 60 ? '...' : '');
+    dbSavePrompt(user.id, { level: 2, title: trimmedTitle, content, source_tool: 'agent-builder' });
+    return true;
   };
+
+  // Restore draft from localStorage after OAuth redirect
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem('oxygy_agent_draft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed.result) setResult(parsed.result);
+        if (parsed.taskDescription) setTaskDescription(parsed.taskDescription);
+        if (parsed.selectedChecks) setSelectedChecks(parsed.selectedChecks);
+        localStorage.removeItem('oxygy_agent_draft');
+      }
+    } catch {}
+  }, []);
 
   const handleSaveSystemPrompt = () => {
     if (!result) return;
-    saveToLibrary(`Agent: ${taskDescription.slice(0, 50)}`, result.system_prompt);
+    const saved = saveToLibrary(`Agent: ${taskDescription.slice(0, 50)}`, result.system_prompt);
+    if (!saved) return;
     setSavedPromptToLibrary(true);
     setToastMessage('System prompt saved to your library');
     setShowToast(true);
@@ -418,7 +434,8 @@ export const AgentBuilder: React.FC = () => {
 
   const handleSaveFullWithChecks = () => {
     if (!result) return;
-    saveToLibrary(`Agent + Accountability: ${taskDescription.slice(0, 40)}`, buildFullPromptWithChecks());
+    const saved = saveToLibrary(`Agent + Accountability: ${taskDescription.slice(0, 40)}`, buildFullPromptWithChecks());
+    if (!saved) return;
     setSavedAccountabilityToLibrary(true);
     setToastMessage('Full prompt with accountability saved to your library');
     setShowToast(true);
@@ -1021,6 +1038,9 @@ export const AgentBuilder: React.FC = () => {
           {toastMessage} {'\u2713'}
         </div>
       )}
+
+      {/* Auth overlay for save-to-library */}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 };

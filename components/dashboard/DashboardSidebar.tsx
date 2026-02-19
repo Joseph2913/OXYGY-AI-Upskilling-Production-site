@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { User, BarChart2, Lightbulb, Library, ArrowLeft } from 'lucide-react';
+import { User, BarChart2, Lightbulb, Library, ArrowLeft, LogOut } from 'lucide-react';
 import { SIDEBAR_NAV_ITEMS } from '../../data/dashboard-content';
+import { signOut } from '../../context/AuthContext';
 import type { DashboardSection, UserProfile } from '../../data/dashboard-types';
 
 const ICON_MAP: Record<string, React.FC<{ size?: number; strokeWidth?: number }>> = {
@@ -181,6 +182,32 @@ export const DashboardSidebar: React.FC<Props> = ({
 
       {/* Divider */}
       <div style={{ height: 1, backgroundColor: '#2D3748' }} />
+
+      {/* Sign Out */}
+      <button
+        onClick={signOut}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: isCompact ? 0 : 8,
+          justifyContent: isCompact ? 'center' : 'flex-start',
+          padding: isCompact ? '12px 0' : '12px 20px',
+          color: '#718096',
+          fontSize: 13,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          width: '100%',
+          transition: 'color 150ms ease',
+          textAlign: 'left',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = '#FC8181'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = '#718096'; }}
+        title="Sign Out"
+      >
+        <LogOut size={16} strokeWidth={1.5} />
+        {!isCompact && <span>Sign Out</span>}
+      </button>
 
       {/* Back to Site */}
       <a

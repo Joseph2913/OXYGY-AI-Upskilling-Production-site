@@ -5,6 +5,7 @@ import {
   Link2, AlertCircle, BookOpen, Users, Briefcase, Sparkles,
 } from 'lucide-react';
 import { ArtifactClosing } from './ArtifactClosing';
+import { AuthModal } from './AuthModal';
 import { usePathwayApi } from '../hooks/usePathwayApi';
 import { useAuth } from '../context/AuthContext';
 import { getProfile, upsertProfile, getLatestLearningPlan, saveLearningPlan } from '../lib/database';
@@ -448,6 +449,7 @@ export const LearningPathway: React.FC = () => {
   // Results state — load previously generated plan from Supabase
   const [pathwayResults, setPathwayResults] = useState<PathwayApiResponse | null>(null);
   const [levelDepths, setLevelDepths] = useState<Record<string, LevelDepth> | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Load saved profile + plan from Supabase on mount
   useEffect(() => {
@@ -541,7 +543,25 @@ export const LearningPathway: React.FC = () => {
     }, 100);
   }, [pathwayResults]);
 
+  // Restore form draft from localStorage after OAuth redirect
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem('oxygy_pathway_draft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed.formData) setFormData(parsed.formData);
+        localStorage.removeItem('oxygy_pathway_draft');
+      }
+    } catch {}
+  }, []);
+
   const handleGenerate = useCallback(async () => {
+    if (!user) {
+      // Save form data so it survives an OAuth redirect
+      try { localStorage.setItem('oxygy_pathway_draft', JSON.stringify({ formData })); } catch {}
+      setShowAuthModal(true);
+      return;
+    }
     clearError();
     const depths = classifyLevels(formData.aiExperience, formData.ambition);
     setLevelDepths(depths);
@@ -1687,6 +1707,9 @@ export const LearningPathway: React.FC = () => {
           to { opacity: 1; }
         }
       `}</style>
+
+      {/* Auth overlay for generate */}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 };
