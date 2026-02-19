@@ -292,7 +292,7 @@ const PageHeader: React.FC<{
   onSelectTier: (id: TierId) => void;
   onFeatureClick: (targetId: string) => void;
 }> = ({ selectedTier, onSelectTier, onFeatureClick }) => (
-  <section style={{ background: V.white, paddingTop: '120px', paddingBottom: '80px' }}>
+  <section style={{ background: V.white, paddingTop: '96px', paddingBottom: '80px' }}>
     <div className="mx-auto" style={{ maxWidth: '1160px', padding: '0 40px' }}>
       {/* Eyebrow Pill */}
       <Reveal>
