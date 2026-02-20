@@ -528,14 +528,17 @@ export const UserJourney: React.FC = () => {
                   </h2>
                 </div>
               </div>
+              <p className="text-[15px] text-[#4A5568] leading-[1.8] mb-3">
+                Your journey doesn't end &mdash; it evolves. Every project you complete is designed to be <strong className="text-[#1A202C]">directly relevant to your role</strong> and immediately applicable to your day-to-day work. These aren't classroom exercises that get filed away &mdash; they're real tools, workflows, and applications that you take with you.
+              </p>
               <p className="text-[15px] text-[#4A5568] leading-[1.8] mb-5">
-                Your journey doesn't end &mdash; it evolves. Track your competency gains, unlock deeper levels, and become an AI champion within your organization. OXYGY continues to support you as your skills mature and new opportunities emerge.
+                The AI capabilities you build here are <strong className="text-[#1A202C]">yours to keep</strong>. A prompt library you create at Level 1, a custom agent at Level 2, an automated workflow at Level 3 &mdash; these live beyond the upskilling programme and become part of how you work. As your skills grow, so does your portfolio of AI-powered solutions that travel with you throughout your career.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { icon: TrendingUp, title: 'Track competency growth', desc: 'Measure progress across AI skill dimensions' },
-                  { icon: Compass, title: 'Unlock next levels', desc: 'Advance from fundamentals to full applications' },
-                  { icon: Users, title: 'Become an AI champion', desc: 'Lead AI adoption in your team and organization' },
+                  { icon: Briefcase, title: 'Projects built for your role', desc: 'Every deliverable is grounded in your actual work — not hypotheticals. You solve real problems in your function from day one.' },
+                  { icon: TrendingUp, title: 'Skills that travel with you', desc: 'The tools, agents, and workflows you build are yours to keep and use beyond this programme — in any role or organization.' },
+                  { icon: Users, title: 'Become an AI champion', desc: 'Lead AI adoption in your team, share what you\'ve built, and help others start their own journeys.' },
                 ].map(({ icon: Icon, title, desc }) => (
                   <div
                     key={title}
