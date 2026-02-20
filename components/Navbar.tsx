@@ -191,7 +191,21 @@ export const Navbar: React.FC = () => {
 
           <Divider />
 
-          {/* AI Tools Dropdown (now includes Learning Plan Generator) */}
+          {/* Learning Plan Generator — standalone button */}
+          <a
+            href="#learning-pathway"
+            className={cn(
+              'flex items-center px-4 h-[36px] rounded-full text-[14px] font-medium transition-all duration-150 whitespace-nowrap',
+              isOnLearningPlan ? pillActive : pillInactive,
+            )}
+            style={{ textDecoration: 'none' }}
+          >
+            Learning Plan
+          </a>
+
+          <Divider />
+
+          {/* AI Tools Dropdown */}
           <div
             ref={dropdownRef}
             className="relative"
@@ -271,20 +285,6 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <Divider />
-
-          {/* Learning Plan Generator — standalone button */}
-          <a
-            href="#learning-pathway"
-            className={cn(
-              'flex items-center px-4 h-[36px] rounded-full text-[14px] font-medium transition-all duration-150 whitespace-nowrap',
-              isOnLearningPlan ? pillActive : pillInactive,
-            )}
-            style={{ textDecoration: 'none' }}
-          >
-            Learning Plan
-          </a>
 
           <Divider />
 
@@ -536,6 +536,24 @@ export const Navbar: React.FC = () => {
 
             <div className="h-px bg-gray-100 my-2" />
 
+            {/* Learning Plan Generator — standalone */}
+            <a
+              href="#learning-pathway"
+              className={cn(
+                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
+                isOnLearningPlan
+                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
+                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
+              )}
+              style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
+              onClick={() => setMobileOpen(false)}
+            >
+              <span style={{ fontSize: '15px' }}>📋</span>
+              <span>Learning Plan Generator</span>
+            </a>
+
+            <div className="h-px bg-gray-100 my-2" />
+
             <div className="py-2">
               <span
                 style={{
@@ -567,24 +585,6 @@ export const Navbar: React.FC = () => {
                 <span>{tool.label}</span>
               </a>
             ))}
-
-            <div className="h-px bg-gray-100 my-2" />
-
-            {/* Learning Plan Generator — standalone */}
-            <a
-              href="#learning-pathway"
-              className={cn(
-                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
-                isOnLearningPlan
-                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
-                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
-              )}
-              style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
-              onClick={() => setMobileOpen(false)}
-            >
-              <span style={{ fontSize: '15px' }}>📋</span>
-              <span>Learning Plan Generator</span>
-            </a>
 
             <div className="h-px bg-gray-100 my-2" />
 
