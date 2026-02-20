@@ -90,6 +90,7 @@ export const Dashboard: React.FC = () => {
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
           profile={profile}
+          authUser={user}
           layout={layout}
         />
       )}

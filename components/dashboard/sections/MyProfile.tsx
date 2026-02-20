@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, ArrowRight, User } from 'lucide-react';
+import { Pencil, ArrowRight, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { getProfile } from '../../../lib/database';
 import {
@@ -42,6 +42,14 @@ function findOptionLabel(
   return opt ? `${opt.emoji ? opt.emoji + ' ' : ''}${opt.label}` : '';
 }
 
+/** Truncate text to a character limit, respecting word boundaries */
+function truncateText(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  const truncated = text.slice(0, limit);
+  const lastSpace = truncated.lastIndexOf(' ');
+  return (lastSpace > limit * 0.6 ? truncated.slice(0, lastSpace) : truncated) + '…';
+}
+
 // ─── Main Component ───
 
 interface Props {
@@ -53,6 +61,9 @@ export const MyProfile: React.FC<Props> = () => {
   const userId = user?.id ?? '';
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [loading, setLoading] = useState(true);
+  const [roleSummary, setRoleSummary] = useState('');
+  const [roleExpanded, setRoleExpanded] = useState(false);
+  const [challengeExpanded, setChallengeExpanded] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -63,6 +74,38 @@ export const MyProfile: React.FC<Props> = () => {
     });
   }, [userId]);
 
+  // Fetch AI-generated role summary when profile.role is long enough
+  useEffect(() => {
+    if (!profile.role || profile.role.length < 40) {
+      // Short role text doesn't need summarization — use as-is
+      setRoleSummary(profile.role);
+      return;
+    }
+
+    let cancelled = false;
+
+    fetch('/api/summarize-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: profile.role }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.summary) {
+          setRoleSummary(data.summary);
+        }
+      })
+      .catch(() => {
+        // Fallback: use first sentence or truncated version
+        if (!cancelled) {
+          const firstSentence = profile.role.split(/[.!?]/)[0];
+          setRoleSummary(firstSentence.length < 60 ? firstSentence : truncateText(profile.role, 50));
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [profile.role]);
+
   const isProfileComplete = !!(
     profile.role && profile.function && profile.seniority && profile.aiExperience && profile.ambition
   );
@@ -70,6 +113,26 @@ export const MyProfile: React.FC<Props> = () => {
   const aiExpLabel = findOptionLabel(AI_EXPERIENCE_OPTIONS, profile.aiExperience);
   const ambitionLabel = findOptionLabel(AMBITION_OPTIONS, profile.ambition);
   const availabilityLabel = findOptionLabel(AVAILABILITY_OPTIONS, profile.availability);
+
+  // Derive display name from profile or auth metadata
+  const displayName = profile.fullName
+    || user?.user_metadata?.full_name
+    || user?.email?.split('@')[0]
+    || '';
+
+  const initials = displayName
+    ? displayName
+        .split(' ')
+        .map((w: string) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U';
+
+  // Role text is long enough to warrant collapse
+  const ROLE_COLLAPSE_THRESHOLD = 120;
+  const roleIsLong = profile.role.length > ROLE_COLLAPSE_THRESHOLD;
+  const challengeIsLong = (profile.challenge?.length || 0) > ROLE_COLLAPSE_THRESHOLD;
 
   if (!loading && !isProfileComplete) {
     return (
@@ -127,22 +190,44 @@ export const MyProfile: React.FC<Props> = () => {
         transition: 'opacity 200ms ease',
       }}
     >
+      {/* ── Header: avatar + name + AI-summarized role ── */}
       <div
         style={{
-          padding: '20px 28px',
+          padding: '24px 28px',
           borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
         }}
       >
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>
-            {profile.fullName || profile.role || 'Your Profile'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+          {/* Avatar circle — matches Navbar style */}
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              backgroundColor: '#38B2AC',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 700 }}>{initials}</span>
           </div>
-          <p style={{ fontSize: 13, color: '#718096', margin: '4px 0 0', lineHeight: 1.4 }}>
-            This profile drives your personalized learning plan. Edit it via the Learning Plan Generator.
-          </p>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C' }}>
+              {displayName || 'Your Profile'}
+            </div>
+            {roleSummary && (
+              <div style={{ fontSize: 13, color: '#718096', marginTop: 2 }}>
+                {roleSummary}
+              </div>
+            )}
+          </div>
         </div>
         <a
           href="#learning-pathway"
@@ -171,12 +256,52 @@ export const MyProfile: React.FC<Props> = () => {
         </a>
       </div>
 
+      {/* ── Profile details ── */}
       <div style={{ padding: 28 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 32px', marginBottom: 24 }}>
+          {/* Role — collapsible if long */}
           <div>
             <div style={labelStyle}>Role</div>
-            <div style={profile.role ? valueStyle : emptyStyle}>{profile.role || 'Not set'}</div>
+            {profile.role ? (
+              <div>
+                <div style={valueStyle}>
+                  {roleIsLong && !roleExpanded
+                    ? truncateText(profile.role, ROLE_COLLAPSE_THRESHOLD)
+                    : profile.role}
+                </div>
+                {roleIsLong && (
+                  <button
+                    onClick={() => setRoleExpanded(!roleExpanded)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginTop: 4,
+                      padding: 0,
+                      border: 'none',
+                      background: 'none',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#38B2AC',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {roleExpanded ? 'Show less' : 'Read more'}
+                    <ChevronDown
+                      size={12}
+                      style={{
+                        transform: roleExpanded ? 'rotate(180deg)' : 'rotate(0)',
+                        transition: 'transform 150ms ease',
+                      }}
+                    />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={emptyStyle}>Not set</div>
+            )}
           </div>
+
           <div>
             <div style={labelStyle}>Function</div>
             <div style={profile.function ? valueStyle : emptyStyle}>
@@ -207,12 +332,45 @@ export const MyProfile: React.FC<Props> = () => {
           </div>
         </div>
 
+        {/* Challenge — collapsible if long */}
         {profile.challenge && (
           <div style={{ marginBottom: 16 }}>
             <div style={labelStyle}>Your Challenge</div>
-            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>{profile.challenge}</p>
+            <p style={{ ...valueStyle, fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: 0 }}>
+              {challengeIsLong && !challengeExpanded
+                ? truncateText(profile.challenge, ROLE_COLLAPSE_THRESHOLD)
+                : profile.challenge}
+            </p>
+            {challengeIsLong && (
+              <button
+                onClick={() => setChallengeExpanded(!challengeExpanded)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginTop: 4,
+                  padding: 0,
+                  border: 'none',
+                  background: 'none',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#38B2AC',
+                  cursor: 'pointer',
+                }}
+              >
+                {challengeExpanded ? 'Show less' : 'Read more'}
+                <ChevronDown
+                  size={12}
+                  style={{
+                    transform: challengeExpanded ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 150ms ease',
+                  }}
+                />
+              </button>
+            )}
           </div>
         )}
+
         {profile.experienceDescription && (
           <div style={{ marginBottom: 16 }}>
             <div style={labelStyle}>AI Experience Description</div>

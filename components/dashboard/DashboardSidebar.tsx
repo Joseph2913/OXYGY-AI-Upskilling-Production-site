@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, BarChart2, Lightbulb, Library, ArrowLeft, LogOut } from 'lucide-react';
 import { SIDEBAR_NAV_ITEMS } from '../../data/dashboard-content';
 import { signOut } from '../../context/AuthContext';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { DashboardSection, UserProfile } from '../../data/dashboard-types';
 
 const ICON_MAP: Record<string, React.FC<{ size?: number; strokeWidth?: number }>> = {
@@ -12,6 +13,7 @@ interface Props {
   activeSection: DashboardSection;
   onSectionChange: (section: DashboardSection) => void;
   profile: UserProfile;
+  authUser: SupabaseUser | null;
   layout: 'desktop' | 'tablet';
 }
 
@@ -19,16 +21,23 @@ export const DashboardSidebar: React.FC<Props> = ({
   activeSection,
   onSectionChange,
   profile,
+  authUser,
   layout,
 }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const isCompact = layout === 'tablet';
   const width = isCompact ? 48 : 240;
 
-  const initials = profile.fullName
-    ? profile.fullName
+  // Use profile name, fall back to OAuth name, then email first part
+  const displayName = profile.fullName
+    || authUser?.user_metadata?.full_name
+    || authUser?.email?.split('@')[0]
+    || '';
+
+  const initials = displayName
+    ? displayName
         .split(' ')
-        .map((w) => w[0])
+        .map((w: string) => w[0])
         .join('')
         .toUpperCase()
         .slice(0, 2)
@@ -87,7 +96,7 @@ export const DashboardSidebar: React.FC<Props> = ({
                   textOverflow: 'ellipsis',
                 }}
               >
-                {profile.fullName || 'New User'}
+                {displayName || 'New User'}
               </span>
               <span
                 style={{
