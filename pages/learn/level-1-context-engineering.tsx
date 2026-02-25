@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 /* ── Google Fonts + Flip Card CSS ── */
 const FontStyle = () => (
@@ -11,6 +11,36 @@ const FontStyle = () => (
     .l1-flip-back { transform: rotateY(180deg); position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     .l1-slider::-webkit-slider-thumb { background: #38B2AC; }
     .l1-slider { accent-color: #38B2AC; }
+    @keyframes l1-pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(56,178,172,0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(56,178,172,0); }
+    }
+    .l1-cta-glow {
+      animation: l1-pulse-glow 2s ease-in-out infinite;
+    }
+    @keyframes l1-shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .l1-interact-hint {
+      position: relative;
+      border: 2px solid #38B2AC !important;
+    }
+    .l1-interact-hint::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      border: 2px solid transparent;
+      background: linear-gradient(90deg, transparent 30%, rgba(56,178,172,0.3) 50%, transparent 70%) border-box;
+      background-size: 200% 100%;
+      animation: l1-shimmer 2.5s linear infinite;
+      pointer-events: none;
+      mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      -webkit-mask-composite: xor;
+    }
     @media (max-width: 767px) {
       .l1-two-col { flex-direction: column !important; }
       .l1-two-col > div { width: 100% !important; min-width: 0 !important; }
@@ -285,26 +315,37 @@ export default function Level1Page() {
 
       /* ── TITLE ── */
       case "title": return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <Eyebrow t="OXYGY AI UPSKILLING — LEVEL 1" />
-          <h1 style={{ fontFamily: F.h, fontSize: 28, fontWeight: 800, color: C.navy, lineHeight: 1.2, margin: "0 0 8px" }}>
+          <h1 style={{ fontFamily: F.h, fontSize: 28, fontWeight: 800, color: C.navy, lineHeight: 1.2, margin: "0 0 6px" }}>
             <TU>Prompt Engineering</TU> Essentials
           </h1>
-          <p style={{ fontSize: 14, color: C.light, fontFamily: F.b, margin: "0 0 12px" }}>{s.subheading}</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-            {s.meta.map((m: string) => <span key={m} style={{ padding: "5px 12px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: 12, color: C.body, fontWeight: 600, fontFamily: F.b }}>{m}</span>)}
+          <p style={{ fontSize: 13, color: C.light, fontFamily: F.b, margin: "0 0 10px" }}>{s.subheading}</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {s.meta.map((m: string) => <span key={m} style={{ padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: 11, color: C.body, fontWeight: 600, fontFamily: F.b }}>{m}</span>)}
           </div>
-          <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, maxWidth: 560, margin: "0 0 20px" }}>{s.body}</p>
-          <div style={{ background: C.tealLight, border: `1px solid ${C.mint}`, borderRadius: 12, padding: "16px 20px" }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: C.navy, fontFamily: F.b, margin: "0 0 12px" }}>Before we start — how confident do you feel about getting great outputs from AI tools?</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 11, color: C.muted, fontFamily: F.b, whiteSpace: "nowrap" }}>Not confident</span>
-              <input type="range" min={1} max={10} value={confSliderBefore} onChange={e => setConfSliderBefore(Number(e.target.value))} className="l1-slider" style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, color: C.muted, fontFamily: F.b, whiteSpace: "nowrap" }}>Very confident</span>
-            </div>
-            <div style={{ textAlign: "center", marginTop: 4 }}>
-              <span style={{ fontSize: 20, fontWeight: 700, color: C.teal, fontFamily: F.h }}>{confSliderBefore}</span>
-              <span style={{ fontSize: 11, color: C.muted, fontFamily: F.b }}> / 10</span>
+          <p style={{ fontSize: 13, color: C.body, fontFamily: F.b, lineHeight: 1.65, maxWidth: 560, margin: "0 0 0" }}>{s.body}</p>
+          <div style={{ marginTop: "auto" }}>
+            <div className="l1-cta-glow" style={{ background: C.tealLight, border: `1.5px solid ${C.mint}`, borderRadius: 12, padding: "16px 24px" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: C.navy, fontFamily: F.b, margin: "0 0 14px" }}>Before we start — how confident do you feel about getting great outputs from AI tools?</p>
+              <div style={{ position: "relative", margin: "0 0 6px" }}>
+                <input type="range" min={1} max={10} value={confSliderBefore} onChange={e => setConfSliderBefore(Number(e.target.value))} className="l1-slider" style={{ width: "100%", margin: 0 }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                  <span key={n} onClick={() => setConfSliderBefore(n)} style={{
+                    fontSize: 11, fontWeight: confSliderBefore === n ? 700 : 400,
+                    color: confSliderBefore === n ? C.teal : C.muted, fontFamily: F.b,
+                    cursor: "pointer", width: 20, textAlign: "center",
+                    transition: "all 150ms ease",
+                  }}>{n}</span>
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                <span style={{ fontSize: 10, color: C.muted, fontFamily: F.b }}>Not confident</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: C.teal, fontFamily: F.h }}>{confSliderBefore}<span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>/10</span></span>
+                <span style={{ fontSize: 10, color: C.muted, fontFamily: F.b }}>Very confident</span>
+              </div>
             </div>
           </div>
         </div>
@@ -314,43 +355,64 @@ export default function Level1Page() {
       case "concept": {
         const renderVisual = () => {
           if (s.visualKey === "comparison") return (
-            <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, marginTop: 0, marginBottom: 12, fontFamily: F.h }}>What the AI starts with vs. what it needs</p>
-              <div style={{ display: "flex", gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ background: C.errorLight, borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 700, color: C.error }}>What AI starts with</span></div>
-                  {["Your role or function", "Your organisation’s context", "Who your audience is", "What ‘good’ looks like for you", "Your constraints or timeline", "Your previous work on this"].map(t => <p key={t} style={{ fontSize: 12, color: C.body, margin: "4px 0", fontFamily: F.b }}><span style={{ color: C.error, fontWeight: 700 }}>✗ </span>{t}</p>)}
+            <div>
+              {/* Mirror visual: vague input → vague output vs. specific input → specific output */}
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>VAGUE INPUT</p>
+                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>"Write me a stakeholder email"</p>
+                  </div>
+                  <div style={{ textAlign: "center", color: C.error, fontSize: 16, margin: "2px 0" }}>↓</div>
+                  <div style={{ background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>VAGUE OUTPUT</p>
+                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>"Dear Stakeholder, I am writing to provide an update on the project…"</p>
+                    <p style={{ fontSize: 10, color: C.muted, fontFamily: F.b, margin: "6px 0 0", fontStyle: "italic" }}>Generic. No context. Unusable.</p>
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ background: C.successLight, borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 700, color: C.success }}>What it needs from you</span></div>
-                  {["Who you are and your expertise", "The situation and background", "The exact task and deliverable", "The format and length required", "Any constraints or priorities", "Examples of what you want"].map(t => <p key={t} style={{ fontSize: 12, color: C.body, margin: "4px 0", fontFamily: F.b }}><span style={{ color: C.success, fontWeight: 700 }}>✓ </span>{t}</p>)}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>SPECIFIC INPUT</p>
+                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>"Draft an email to the CFO updating her on ERP delays. Tone: direct. Include the revised timeline."</p>
+                  </div>
+                  <div style={{ textAlign: "center", color: C.success, fontSize: 16, margin: "2px 0" }}>↓</div>
+                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>SPECIFIC OUTPUT</p>
+                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>"Hi Sarah, Quick update on the ERP rollout: we’ve hit a 2-week delay on the data migration…"</p>
+                    <p style={{ fontSize: 10, color: C.muted, fontFamily: F.b, margin: "6px 0 0", fontStyle: "italic" }}>Contextual. Actionable. Ready to send.</p>
+                  </div>
                 </div>
               </div>
             </div>
           );
           if (s.visualKey === "layers") return (
-            <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20 }}>
-              <div className="l1-layers-row" style={{ display: "flex", gap: 0, alignItems: "stretch" }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1.5, margin: "0 0 10px", fontFamily: F.b }}>COURSE INDEX — CLICK TO JUMP</p>
+              <div className="l1-layers-row" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
                 {[
-                  { bg: C.teal, label: "LAYER 1", subtitle: "IN YOUR PROMPT", desc: "What you write in the message box", pill: "Slides 5–7 →", items: "Role · Context · Task · Format · Chain of Thought" },
-                  { bg: C.navyMid, label: "LAYER 2", subtitle: "THROUGH DOCUMENTS", desc: "Files, transcripts, reports, and briefs you attach", pill: "Slides 8–9 →", items: "Meeting transcripts · Strategy docs · Previous outputs · Briefs" },
-                  { bg: C.navy, label: "LAYER 3", subtitle: "THROUGH ORGANISATION", desc: "Projects, system prompts, cross-chat memory", pill: "Level 2 Preview →", items: "System prompts · Shared projects · Persistent context", pillBg: C.teal },
+                  { bg: C.teal, label: "LAYER 1", subtitle: "IN YOUR PROMPT", desc: "What you write in the message box", slideRange: "Slides 5–7", items: "Role · Context · Task · Format · Chain of Thought", target: 4 },
+                  { bg: "#5B6DC2", label: "LAYER 2", subtitle: "THROUGH DOCUMENTS", desc: "Files, transcripts, reports, and briefs you attach", slideRange: "Slides 8–9", items: "Meeting transcripts · Strategy docs · Previous outputs · Briefs", target: 7 },
+                  { bg: C.navy, label: "LAYER 3", subtitle: "THROUGH ORGANISATION", desc: "Projects, system prompts, cross-chat memory", slideRange: "Slide 10", items: "System prompts · Shared projects · Persistent context", target: 9 },
                 ].map((layer, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 && <div style={{ display: "flex", alignItems: "center", color: C.muted, fontSize: 18, padding: "0 6px", flexShrink: 0 }}>→</div>}
-                    <div style={{ background: layer.bg, borderRadius: 10, padding: "14px 16px", color: "#fff", flex: 1, minWidth: 0, display: "flex", flexDirection: "column" as const }}>
-                      <div style={{ marginBottom: 6 }}>
-                        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase" as const, opacity: 0.95, display: "block" }}>{layer.label}</span>
-                        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" as const, opacity: 0.7 }}>{layer.subtitle}</span>
-                      </div>
-                      <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.9, lineHeight: 1.4 }}>{layer.desc}</p>
-                      <p style={{ fontSize: 10, margin: "0 0 8px", opacity: 0.7, lineHeight: 1.4 }}>{layer.items}</p>
-                      <span style={{ background: layer.pillBg || "rgba(255,255,255,0.2)", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 20, padding: "3px 10px", alignSelf: "flex-start", marginTop: "auto" }}>{layer.pill}</span>
+                  <div key={i} onClick={() => goToSlide(layer.target)} style={{
+                    background: layer.bg, borderRadius: 10, padding: "14px 16px", color: "#fff",
+                    flex: 1, minWidth: 0, display: "flex", flexDirection: "column" as const,
+                    cursor: "pointer", transition: "transform 150ms ease, box-shadow 150ms ease",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = ""; }}
+                  >
+                    <div style={{ marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase" as const, opacity: 0.95, display: "block" }}>{layer.label}</span>
+                      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" as const, opacity: 0.7 }}>{layer.subtitle}</span>
                     </div>
-                  </React.Fragment>
+                    <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.9, lineHeight: 1.4 }}>{layer.desc}</p>
+                    <p style={{ fontSize: 10, margin: "0 0 8px", opacity: 0.7, lineHeight: 1.4 }}>{layer.items}</p>
+                    <span style={{ background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 20, padding: "3px 10px", alignSelf: "flex-start", marginTop: "auto" }}>{layer.slideRange}</span>
+                  </div>
                 ))}
               </div>
-              <p style={{ fontSize: 12, color: C.muted, fontStyle: "italic", marginTop: 14, marginBottom: 0, fontFamily: F.b }}>You don’t need to master all three layers today. By the end of this module you’ll understand how they connect — and you’ll be practising Layers 1 and 2 immediately.</p>
+              <p style={{ fontSize: 11, color: C.muted, fontStyle: "italic", marginTop: 12, marginBottom: 0, fontFamily: F.b }}>You don’t need to master all three layers today. Click any layer to jump ahead, or continue in order.</p>
             </div>
           );
           if (s.visualKey === "documents") return (
@@ -409,7 +471,7 @@ export default function Level1Page() {
           </div>
         );
         const renderTextBlock = (maxW?: number) => (
-          <div style={{ marginBottom: s.visualKey === "layers" || s.visualKey === "documents" ? 20 : 0 }}>
+          <div style={{ marginBottom: s.visualKey === "project" ? 0 : 16 }}>
             <Eyebrow t={s.section} />
             {renderH2(s.heading, s.tealWord)}
             {s.body.split("\n\n").map((p: string, i: number) => <p key={i} style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px", ...(maxW ? { maxWidth: maxW } : {}) }}>{p}</p>)}
@@ -420,16 +482,6 @@ export default function Level1Page() {
             )}
           </div>
         );
-
-        /* Full-width stacked layout for layers and documents */
-        if (s.visualKey === "layers" || s.visualKey === "documents") {
-          return (
-            <div>
-              {renderTextBlock(640)}
-              {renderVisual()}
-            </div>
-          );
-        }
 
         /* Two-column with Level 2 Preview in left column for project */
         if (s.visualKey === "project") {
@@ -444,13 +496,11 @@ export default function Level1Page() {
           );
         }
 
-        /* Default two-column layout (comparison / slide 2) */
+        /* Full-width stacked layout (comparison, layers, documents) */
         return (
-          <div className="l1-two-col" style={{ display: "flex", gap: 24 }}>
-            <div style={{ width: "55%", minWidth: 0 }}>
-              {renderTextBlock()}
-            </div>
-            <div style={{ width: "45%", minWidth: 0 }}>{renderVisual()}</div>
+          <div>
+            {renderTextBlock(640)}
+            {renderVisual()}
           </div>
         );
       }
@@ -459,45 +509,32 @@ export default function Level1Page() {
       case "spectrum": return (
         <div>
           <Eyebrow t={s.section} />
-          {renderH2(s.heading, s.tealWord)}
-          <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 20px" }}>{s.body}</p>
-          {/* Track */}
-          <div style={{ position: "relative", height: 8, borderRadius: 4, background: `linear-gradient(to right, ${C.mint}, ${C.teal})`, margin: "0 0 8px" }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} onClick={() => setSpectrumPos(i)} style={{
-                position: "absolute", top: -6, left: `${i * 50}%`, transform: "translateX(-50%)",
-                width: spectrumPos === i ? 20 : 14, height: spectrumPos === i ? 20 : 14, borderRadius: "50%",
-                background: spectrumPos === i ? C.teal : "#fff", border: `2px solid ${C.teal}`,
-                cursor: "pointer", transition: "all 200ms ease", zIndex: 2,
-              }} />
-            ))}
-          </div>
-          {/* Labels */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+          {renderH2(s.heading, s.tealWord, 20)}
+          <p style={{ fontSize: 13, color: C.body, fontFamily: F.b, lineHeight: 1.6, margin: "0 0 12px" }}>{s.body}</p>
+          {/* Toggle selector */}
+          <div className="l1-cta-glow" style={{ display: "inline-flex", background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 30, padding: 3, marginBottom: 14 }}>
             {s.positions.map((p: any, i: number) => (
               <button key={i} onClick={() => setSpectrumPos(i)} style={{
-                background: "none", border: "none", cursor: "pointer", padding: 0,
-                fontSize: 12, fontWeight: spectrumPos === i ? 700 : 500,
-                color: spectrumPos === i ? C.teal : C.muted, fontFamily: F.b,
-                textAlign: i === 0 ? "left" : i === 2 ? "right" : "center",
+                background: spectrumPos === i ? C.teal : "transparent",
+                color: spectrumPos === i ? "#fff" : C.muted,
+                border: "none", borderRadius: 24, padding: "7px 18px",
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+                fontFamily: F.b, transition: "all 200ms ease", whiteSpace: "nowrap",
               }}>{p.label}</button>
             ))}
           </div>
           {/* Active panel */}
-          <div style={{ background: C.bg, borderLeft: `3px solid ${C.teal}`, borderRadius: "0 8px 8px 0", padding: "14px 20px", marginBottom: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 4px", fontFamily: F.h }}>{s.positions[spectrumPos].label}</p>
-            <p style={{ fontSize: 12, color: C.muted, margin: "0 0 8px", fontFamily: F.b }}>{s.positions[spectrumPos].desc}</p>
+          <div style={{ background: C.bg, borderLeft: `3px solid ${C.teal}`, borderRadius: "0 8px 8px 0", padding: "12px 18px", marginBottom: 12 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 3px", fontFamily: F.h }}>{s.positions[spectrumPos].label}</p>
+            <p style={{ fontSize: 11, color: C.muted, margin: "0 0 6px", fontFamily: F.b }}>{s.positions[spectrumPos].desc}</p>
             <PromptBox>{s.positions[spectrumPos].example}</PromptBox>
           </div>
           {/* Pivot panel */}
-          <div style={{ borderLeft: `4px solid ${C.navy}`, background: C.bg, borderRadius: "0 8px 8px 0", padding: "16px 20px" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 2, margin: "0 0 4px", fontFamily: F.b }}>BUT HERE&apos;S THE LIMIT</p>
-            <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 8px", fontFamily: F.h }}>Prompting alone has a ceiling</p>
-            <p style={{ fontSize: 14, color: C.body, lineHeight: 1.7, margin: "0 0 8px", fontFamily: F.b }}>All three approaches share the same constraint: the AI only knows what you type. If your project has 40 pages of background documents, a team methodology, or weeks of shared context — none of that exists inside a single prompt, no matter how well-crafted.</p>
-            <p style={{ fontSize: 14, color: C.body, lineHeight: 1.7, margin: "0 0 8px", fontFamily: F.b }}>That&apos;s where context engineering comes in.</p>
-            <div style={{ textAlign: "right" }}>
-              <span style={{ background: C.tealLight, color: C.teal, fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20, fontFamily: F.b }}>Continue to see what this means →</span>
-            </div>
+          <div style={{ borderLeft: `4px solid ${C.navy}`, background: C.bg, borderRadius: "0 8px 8px 0", padding: "12px 18px" }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 2, margin: "0 0 3px", fontFamily: F.b }}>BUT HERE&apos;S THE LIMIT</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: "0 0 4px", fontFamily: F.h }}>Prompting alone has a ceiling</p>
+            <p style={{ fontSize: 13, color: C.body, lineHeight: 1.6, margin: "0 0 4px", fontFamily: F.b }}>All three approaches share the same constraint: the AI only knows what you type. If your project has 40 pages of background documents, a team methodology, or weeks of shared context — none of that exists inside a single prompt, no matter how well-crafted.</p>
+            <p style={{ fontSize: 13, color: C.body, lineHeight: 1.6, margin: 0, fontFamily: F.b }}>That&apos;s where context engineering comes in.</p>
           </div>
         </div>
       );
