@@ -23,6 +23,8 @@ const FontStyle = () => (
       .l1-hero-cols { flex-direction: column !important; }
       .l1-branch-opts { flex-direction: column !important; }
       .l1-branch-opts > div { width: 100% !important; }
+      .l1-layers-row { flex-direction: column !important; }
+      .l1-docs-row { flex-direction: column !important; }
       .l1-journey-strip { overflow-x: auto !important; }
       .l1-journey-strip > div { min-width: 480px; }
     }
@@ -328,48 +330,50 @@ export default function Level1Page() {
           );
           if (s.visualKey === "layers") return (
             <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20 }}>
-              {[
-                { bg: C.teal, label: "LAYER 1 — IN YOUR PROMPT", desc: "What you write in the message box", pill: "Slides 5–7 →", items: "Role · Context · Task · Format · Chain of Thought" },
-                { bg: C.navyMid, label: "LAYER 2 — THROUGH DOCUMENTS", desc: "Files, transcripts, reports, and briefs you attach", pill: "Slides 8–9 →", items: "Meeting transcripts · Strategy docs · Previous outputs · Briefs" },
-                { bg: C.navy, label: "LAYER 3 — THROUGH ORGANISATION", desc: "Projects, system prompts, cross-chat memory", pill: "Level 2 Preview →", items: "System prompts · Shared projects · Persistent context", pillBg: C.teal },
-              ].map((layer, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <div style={{ textAlign: "center", color: i === 1 ? C.navyMid : C.navy, fontSize: 14, margin: "4px 0" }}>↓</div>}
-                  <div style={{ background: layer.bg, borderRadius: 10, padding: "12px 16px", color: "#fff" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" as const, opacity: 0.9 }}>{layer.label}</span>
-                      <span style={{ background: layer.pillBg || "rgba(255,255,255,0.2)", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "3px 10px" }}>{layer.pill}</span>
+              <div className="l1-layers-row" style={{ display: "flex", gap: 0, alignItems: "stretch" }}>
+                {[
+                  { bg: C.teal, label: "LAYER 1", subtitle: "IN YOUR PROMPT", desc: "What you write in the message box", pill: "Slides 5–7 →", items: "Role · Context · Task · Format · Chain of Thought" },
+                  { bg: C.navyMid, label: "LAYER 2", subtitle: "THROUGH DOCUMENTS", desc: "Files, transcripts, reports, and briefs you attach", pill: "Slides 8–9 →", items: "Meeting transcripts · Strategy docs · Previous outputs · Briefs" },
+                  { bg: C.navy, label: "LAYER 3", subtitle: "THROUGH ORGANISATION", desc: "Projects, system prompts, cross-chat memory", pill: "Level 2 Preview →", items: "System prompts · Shared projects · Persistent context", pillBg: C.teal },
+                ].map((layer, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <div style={{ display: "flex", alignItems: "center", color: C.muted, fontSize: 18, padding: "0 6px", flexShrink: 0 }}>→</div>}
+                    <div style={{ background: layer.bg, borderRadius: 10, padding: "14px 16px", color: "#fff", flex: 1, minWidth: 0, display: "flex", flexDirection: "column" as const }}>
+                      <div style={{ marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase" as const, opacity: 0.95, display: "block" }}>{layer.label}</span>
+                        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" as const, opacity: 0.7 }}>{layer.subtitle}</span>
+                      </div>
+                      <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.9, lineHeight: 1.4 }}>{layer.desc}</p>
+                      <p style={{ fontSize: 10, margin: "0 0 8px", opacity: 0.7, lineHeight: 1.4 }}>{layer.items}</p>
+                      <span style={{ background: layer.pillBg || "rgba(255,255,255,0.2)", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 20, padding: "3px 10px", alignSelf: "flex-start", marginTop: "auto" }}>{layer.pill}</span>
                     </div>
-                    <p style={{ fontSize: 13, margin: "0 0 4px", opacity: 0.9 }}>{layer.desc}</p>
-                    <p style={{ fontSize: 11, margin: 0, opacity: 0.8 }}>{layer.items}</p>
-                  </div>
-                </React.Fragment>
-              ))}
-              <p style={{ fontSize: 12, color: C.muted, fontStyle: "italic", marginTop: 12, marginBottom: 0, fontFamily: F.b }}>You don’t need to master all three layers today. By the end of this module you’ll understand how they connect — and you’ll be practising Layers 1 and 2 immediately.</p>
+                  </React.Fragment>
+                ))}
+              </div>
+              <p style={{ fontSize: 12, color: C.muted, fontStyle: "italic", marginTop: 14, marginBottom: 0, fontFamily: F.b }}>You don’t need to master all three layers today. By the end of this module you’ll understand how they connect — and you’ll be practising Layers 1 and 2 immediately.</p>
             </div>
           );
           if (s.visualKey === "documents") return (
             <div>
-              {[
-                { eye: "CONSULTING / ANY FUNCTION", doc: "Post-workshop transcript (Circleback, Otter.ai)", prompt: "Identify the three unresolved tensions from this workshop and suggest how to address each one in the next session.", without: "Generic facilitation advice", withDoc: "Specific points grounded in what was actually said" },
-                { eye: "STRATEGY / LEADERSHIP", doc: "Company strategy deck or annual report (PDF)", prompt: "Based on this strategy document, identify the top 3 capability gaps that would prevent us from achieving the Year 3 targets.", without: "Theoretical gap analysis", withDoc: "Gaps mapped to the organisation’s own stated priorities" },
-                { eye: "BD / COMMS / ANY WRITTEN OUTPUT", doc: "Last quarter’s proposal, report, or email thread", prompt: "Using this previous proposal as a style and structure reference, draft a new proposal for [new client]. Match the tone exactly.", without: "Generic proposal structure", withDoc: "Output that matches your team’s actual voice and standards" },
-              ].map((card, i) => (
-                <div key={i} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: 14, marginBottom: 10 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1.5, textTransform: "uppercase" as const, margin: "0 0 4px", fontFamily: F.b }}>{card.eye}</p>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: C.navy, margin: "0 0 4px", fontFamily: F.h }}>{card.doc}</p>
-                  <PromptBox>{card.prompt}</PromptBox>
-                  <div style={{ marginTop: 8, display: "flex", gap: 12, fontSize: 12, fontFamily: F.b }}>
-                    <div><span style={{ fontSize: 10, fontWeight: 700, color: C.error }}>WITHOUT: </span><span style={{ color: C.body }}>{card.without}</span></div>
-                    <div><span style={{ fontSize: 10, fontWeight: 700, color: C.success }}>WITH: </span><span style={{ color: C.body }}>{card.withDoc}</span></div>
+              <div className="l1-docs-row" style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+                {[
+                  { eye: "CONSULTING / ANY FUNCTION", doc: "Post-workshop transcript (Circleback, Otter.ai)", prompt: "Identify the three unresolved tensions from this workshop and suggest how to address each one in the next session.", without: "Generic facilitation advice", withDoc: "Specific points grounded in what was actually said", tools: ["Circleback", "Otter.ai"] },
+                  { eye: "STRATEGY / LEADERSHIP", doc: "Company strategy deck or annual report (PDF)", prompt: "Based on this strategy document, identify the top 3 capability gaps that would prevent us from achieving the Year 3 targets.", without: "Theoretical gap analysis", withDoc: "Gaps mapped to the organisation’s own stated priorities", tools: ["NotebookLM"] },
+                  { eye: "BD / COMMS / ANY WRITTEN OUTPUT", doc: "Last quarter’s proposal, report, or email thread", prompt: "Using this previous proposal as a style and structure reference, draft a new proposal for [new client]. Match the tone exactly.", without: "Generic proposal structure", withDoc: "Output that matches your team’s actual voice and standards", tools: ["Claude / ChatGPT"] },
+                ].map((card, i) => (
+                  <div key={i} style={{ flex: 1, minWidth: 0, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: 14, display: "flex", flexDirection: "column" as const }}>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: 1.2, textTransform: "uppercase" as const, margin: "0 0 6px", fontFamily: F.b }}>{card.eye}</p>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: C.navy, margin: "0 0 8px", fontFamily: F.h, lineHeight: 1.4 }}>{card.doc}</p>
+                    <PromptBox>{card.prompt}</PromptBox>
+                    <div style={{ marginTop: 10, fontSize: 11, fontFamily: F.b, display: "flex", flexDirection: "column" as const, gap: 4 }}>
+                      <div><span style={{ fontSize: 9, fontWeight: 700, color: C.error }}>WITHOUT: </span><span style={{ color: C.body }}>{card.without}</span></div>
+                      <div><span style={{ fontSize: 9, fontWeight: 700, color: C.success }}>WITH: </span><span style={{ color: C.body }}>{card.withDoc}</span></div>
+                    </div>
+                    <div style={{ marginTop: "auto", paddingTop: 10, display: "flex", flexWrap: "wrap" as const, gap: 4 }}>
+                      {card.tools.map(t => <span key={t} style={{ border: `1px solid ${C.border}`, borderRadius: 16, padding: "3px 10px", fontSize: 10, fontWeight: 600, color: C.body, fontFamily: F.b }}>{t}</span>)}
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div style={{ marginTop: 12 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1.5, marginBottom: 8, fontFamily: F.b }}>TOOLS THAT MAKE THIS EASY</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {["Circleback", "Otter.ai", "NotebookLM", "Claude / ChatGPT"].map(t => <span key={t} style={{ border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 12, fontWeight: 600, color: C.body, fontFamily: F.b }}>{t}</span>)}
-                </div>
+                ))}
               </div>
             </div>
           );
@@ -392,27 +396,59 @@ export default function Level1Page() {
                   </div>
                 ))}
               </div>
-              <div style={{ borderLeft: `4px solid ${C.teal}`, background: C.tealLight, borderRadius: "0 10px 10px 0", padding: "16px 20px", margin: "0 14px 14px" }}>
-                <span style={{ background: C.teal, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "3px 10px", display: "inline-block", marginBottom: 8 }}>→ LEVEL 2 PREVIEW</span>
-                <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 8px", fontFamily: F.h }}>Setting this up is a Level 2 skill</p>
-                <p style={{ fontSize: 13, color: C.body, lineHeight: 1.7, margin: "0 0 8px", fontFamily: F.b }}>Designing a system prompt, structuring a project, and building shared context across your team is exactly what Level 2: Applied Capability covers.</p>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.teal, fontFamily: F.b, cursor: "pointer" }}>Preview Level 2 →</span>
-              </div>
             </div>
           );
           return null;
         };
+        const renderLevel2Preview = () => (
+          <div style={{ borderLeft: `4px solid ${C.teal}`, background: C.tealLight, borderRadius: "0 10px 10px 0", padding: "14px 18px", marginTop: 16 }}>
+            <span style={{ background: C.teal, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "3px 10px", display: "inline-block", marginBottom: 8 }}>→ LEVEL 2 PREVIEW</span>
+            <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: "0 0 6px", fontFamily: F.h }}>Setting this up is a Level 2 skill</p>
+            <p style={{ fontSize: 12, color: C.body, lineHeight: 1.6, margin: "0 0 6px", fontFamily: F.b }}>Designing a system prompt, structuring a project, and building shared context across your team is exactly what Level 2: Applied Capability covers.</p>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.teal, fontFamily: F.b, cursor: "pointer" }}>Preview Level 2 →</span>
+          </div>
+        );
+        const renderTextBlock = (maxW?: number) => (
+          <div style={{ marginBottom: s.visualKey === "layers" || s.visualKey === "documents" ? 20 : 0 }}>
+            <Eyebrow t={s.section} />
+            {renderH2(s.heading, s.tealWord)}
+            {s.body.split("\n\n").map((p: string, i: number) => <p key={i} style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px", ...(maxW ? { maxWidth: maxW } : {}) }}>{p}</p>)}
+            {s.pullQuote && (
+              <div style={{ borderLeft: `4px solid ${C.teal}`, background: C.tealLight, padding: "12px 16px", borderRadius: "0 8px 8px 0", marginTop: 12, ...(maxW ? { maxWidth: maxW } : {}) }}>
+                <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, lineHeight: 1.6, fontStyle: "italic", margin: 0 }}>{s.pullQuote}</p>
+              </div>
+            )}
+          </div>
+        );
+
+        /* Full-width stacked layout for layers and documents */
+        if (s.visualKey === "layers" || s.visualKey === "documents") {
+          return (
+            <div>
+              {renderTextBlock(640)}
+              {renderVisual()}
+            </div>
+          );
+        }
+
+        /* Two-column with Level 2 Preview in left column for project */
+        if (s.visualKey === "project") {
+          return (
+            <div className="l1-two-col" style={{ display: "flex", gap: 24 }}>
+              <div style={{ width: "55%", minWidth: 0 }}>
+                {renderTextBlock()}
+                {renderLevel2Preview()}
+              </div>
+              <div style={{ width: "45%", minWidth: 0 }}>{renderVisual()}</div>
+            </div>
+          );
+        }
+
+        /* Default two-column layout (comparison / slide 2) */
         return (
           <div className="l1-two-col" style={{ display: "flex", gap: 24 }}>
             <div style={{ width: "55%", minWidth: 0 }}>
-              <Eyebrow t={s.section} />
-              {renderH2(s.heading, s.tealWord)}
-              {s.body.split("\n\n").map((p: string, i: number) => <p key={i} style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px" }}>{p}</p>)}
-              {s.pullQuote && (
-                <div style={{ borderLeft: `4px solid ${C.teal}`, background: C.tealLight, padding: "12px 16px", borderRadius: "0 8px 8px 0", marginTop: 12 }}>
-                  <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, lineHeight: 1.6, fontStyle: "italic", margin: 0 }}>{s.pullQuote}</p>
-                </div>
-              )}
+              {renderTextBlock()}
             </div>
             <div style={{ width: "45%", minWidth: 0 }}>{renderVisual()}</div>
           </div>
