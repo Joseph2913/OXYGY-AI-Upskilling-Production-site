@@ -72,7 +72,7 @@ const SLIDES: any[] = [
   { id: 8, section: "LAYER 2 — THROUGH DOCUMENTS", type: "concept", heading: "Stop describing your work. Start showing it.", tealWord: "showing it", body: "Everything in Layer 1 — the role, the context, the format — you’ve been writing by hand. That works. But there’s a faster, more powerful approach for anything that involves real documents: attach them directly.\n\nWhen you give an AI a meeting transcript, a strategy document, a client brief, or a previous output, you’re not just saving time. You’re giving it access to specificity that no prompt description could replicate.", pullQuote: "Uploading a 30-page strategy document takes 10 seconds. Describing its contents accurately in a prompt would take 30 minutes — and you’d still lose most of the nuance.", visualKey: "documents" },
   { id: 9, section: "LAYER 2 — SEE THE DIFFERENCE", type: "flipcard", heading: "The same prompt. A document changes everything.", tealWord: "document changes everything", instruction: "Both cards start with the same request. Flip each to see what the AI produced." },
   { id: 10, section: "LAYER 3 — THROUGH ORGANISATION", type: "concept", heading: "When your AI knows your world", tealWord: "knows your world", body: "Layers 1 and 2 work session by session. Each time you start a new chat, you start from zero — re-write the role, re-upload the documents, re-explain the constraints.\n\nLayer 3 changes that. By organising your AI work into Projects — with a system prompt, shared documents, and context that builds across conversations — you move from prompting to partnership. The AI stops being a tool you instruct and starts being a collaborator that understands your work.", visualKey: "project" },
-  { id: 11, section: "APPLY IT", type: "branching", heading: "One scenario. You choose the approach.", tealWord: "you choose", bodyAboveScenario: "You’ve just finished a 90-minute client discovery session. Your notes are scattered. The partner wants a debrief summary by end of day. You have 30 minutes. Which context strategy do you use?" },
+  { id: 11, section: "APPLY IT", type: "branching", heading: "One scenario. You choose the approach.", tealWord: "you choose", bodyAboveScenario: "You’ve just finished a 90-minute client discovery session. Your notes are scattered. The partner wants a debrief summary by end of day. You have 30 minutes. Which context strategy do you use?", scenario: { situation: "90-minute client discovery session just finished", notes: "Scattered — mix of shorthand, observations, and half-formed impressions", theAsk: "Partner wants a structured debrief summary by end of day", timeAvailable: "30 minutes" } },
   { id: 12, section: "CHECK YOUR INSTINCTS", type: "quiz", heading: "One question. Think it through.", question: "A colleague asks you to review a 15-page client proposal they’ve written and give feedback on clarity and structure. You want AI’s help. What’s the most effective approach?", options: [
     "Write a detailed RCTF prompt describing what a good proposal looks like and asking for feedback criteria",
     "Attach the proposal and write: ‘Review this for clarity and structure. Flag the three weakest sections and suggest specific improvements for each.’",
@@ -655,14 +655,14 @@ export default function Level1Page() {
           {renderH2(s.heading, s.tealWord)}
           <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px" }}>{s.bodyAboveScenario}</p>
           {/* Scenario box */}
-          <div style={{ background: C.navy, borderRadius: 10, padding: "14px 20px", marginBottom: 16, display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", fontSize: 13, fontFamily: F.b, color: "#fff" }}>
+          {s.scenario && typeof s.scenario === "object" && <div style={{ background: C.navy, borderRadius: 10, padding: "14px 20px", marginBottom: 16, display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", fontSize: 13, fontFamily: F.b, color: "#fff" }}>
             {Object.entries(s.scenario).map(([k, v]) => (
               <React.Fragment key={k}>
                 <span style={{ color: C.mint, fontWeight: 700, textTransform: "capitalize" as const }}>{k.replace(/([A-Z])/g, " $1").trim()}:</span>
                 <span>{v as string}</span>
               </React.Fragment>
             ))}
-          </div>
+          </div>}
           {/* Options */}
           {!scenarioConfirmed && (
             <div className="l1-branch-opts" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
