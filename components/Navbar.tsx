@@ -11,7 +11,7 @@ const AI_TOOLS = [
   { level: 5, emoji: '\uD83C\uDFD7\uFE0F', label: 'Product Architecture Sprint', href: '#product-architecture' },
 ];
 
-const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies', '#engagement-model', '#dashboard']);
+const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies', '#engagement-model', '#dashboard', '#learn-level-1']);
 
 /* Thin vertical divider between nav items */
 const Divider = () => (
@@ -32,6 +32,10 @@ export const Navbar: React.FC = () => {
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const methodologyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const methodologyRef = useRef<HTMLDivElement>(null);
+
+  const [courseResourcesOpen, setCourseResourcesOpen] = useState(false);
+  const courseResourcesTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const courseResourcesRef = useRef<HTMLDivElement>(null);
 
   const [avatarOpen, setAvatarOpen] = useState(false);
   const avatarTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,6 +67,7 @@ export const Navbar: React.FC = () => {
   const isOnUserJourney = currentHash === '#user-journey';
   const isOnCaseStudies = currentHash === '#case-studies';
   const isOnEngagementModel = currentHash === '#engagement-model';
+  const isOnCourseResource = currentHash === '#learn-level-1';
   const isOnDashboard = currentHash === '#dashboard';
 
   // AI Tools dropdown active if on any artifact tool
@@ -122,6 +127,14 @@ export const Navbar: React.FC = () => {
   };
   const closeMethodology = () => {
     methodologyTimeout.current = setTimeout(() => setMethodologyOpen(false), 150);
+  };
+
+  const openCourseResources = () => {
+    if (courseResourcesTimeout.current) clearTimeout(courseResourcesTimeout.current);
+    setCourseResourcesOpen(true);
+  };
+  const closeCourseResources = () => {
+    courseResourcesTimeout.current = setTimeout(() => setCourseResourcesOpen(false), 150);
   };
 
   const openAvatar = () => {
@@ -282,6 +295,112 @@ export const Navbar: React.FC = () => {
                     </span>
                   </a>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          <Divider />
+
+          {/* Course Resources Dropdown */}
+          <div
+            ref={courseResourcesRef}
+            className="relative"
+            onMouseEnter={openCourseResources}
+            onMouseLeave={closeCourseResources}
+          >
+            <button
+              className={cn(
+                'flex items-center gap-1.5 px-4 h-[36px] rounded-full text-[14px] font-medium transition-all duration-150 cursor-pointer whitespace-nowrap',
+                isOnCourseResource ? pillActive : pillInactive,
+              )}
+              onClick={() => setCourseResourcesOpen(!courseResourcesOpen)}
+            >
+              Course Resources
+              <ChevronDown
+                size={14}
+                className={cn(
+                  'transition-transform duration-150',
+                  courseResourcesOpen && 'rotate-180',
+                )}
+              />
+            </button>
+
+            <div
+              className={cn(
+                'absolute top-full left-1/2 pt-3 transition-all duration-150',
+                courseResourcesOpen
+                  ? 'opacity-100 translate-y-0 pointer-events-auto'
+                  : 'opacity-0 -translate-y-1 pointer-events-none',
+              )}
+              style={{
+                transform: courseResourcesOpen
+                  ? 'translateX(-50%) translateY(0)'
+                  : 'translateX(-50%) translateY(-4px)',
+              }}
+            >
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  minWidth: '320px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '10px 16px 8px',
+                    borderBottom: '1px solid #E2E8F0',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase' as const,
+                    letterSpacing: '1px',
+                    color: '#A0AEC0',
+                  }}
+                >
+                  Level 1
+                </div>
+                <a
+                  href="#learn-level-1"
+                  className="flex items-center gap-3 transition-colors duration-150 hover:bg-[#F7FAFC] hover:text-[#38B2AC]"
+                  style={{
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#2D3748',
+                    textDecoration: 'none',
+                  }}
+                  onClick={() => setCourseResourcesOpen(false)}
+                >
+                  <span
+                    className="shrink-0 flex items-center justify-center"
+                    style={{
+                      background: '#A8F0E0',
+                      color: '#2C9A94',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                    }}
+                  >
+                    L1
+                  </span>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1A202C' }}>
+                      Context & Prompt Engineering
+                    </span>
+                    <span style={{ display: 'block', fontSize: '11px', color: '#A0AEC0' }}>
+                      Foundations · 13 slides · ~45 min
+                    </span>
+                  </div>
+                  <span
+                    className="ml-auto shrink-0"
+                    style={{ fontSize: '12px', color: '#A0AEC0' }}
+                  >
+                    →
+                  </span>
+                </a>
               </div>
             </div>
           </div>
@@ -585,6 +704,57 @@ export const Navbar: React.FC = () => {
                 <span>{tool.label}</span>
               </a>
             ))}
+
+            <div className="h-px bg-gray-100 my-2" />
+
+            {/* Course Resources section */}
+            <div className="py-2">
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  color: '#A0AEC0',
+                }}
+              >
+                Course Resources
+              </span>
+            </div>
+
+            <a
+              href="#learn-level-1"
+              className={cn(
+                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
+                isOnCourseResource
+                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
+                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
+              )}
+              style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
+              onClick={() => setMobileOpen(false)}
+            >
+              <span
+                className="shrink-0 flex items-center justify-center"
+                style={{
+                  background: '#A8F0E0',
+                  color: '#2C9A94',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                }}
+              >
+                L1
+              </span>
+              <div>
+                <span style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1A202C' }}>
+                  Context & Prompt Engineering
+                </span>
+                <span style={{ display: 'block', fontSize: '11px', color: '#A0AEC0' }}>
+                  Foundations · 13 slides · ~45 min
+                </span>
+              </div>
+            </a>
 
             <div className="h-px bg-gray-100 my-2" />
 

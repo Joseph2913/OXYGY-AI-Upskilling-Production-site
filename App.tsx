@@ -17,8 +17,9 @@ import { CaseStudiesSection, CaseStudiesPage } from './components/CaseStudies';
 import { UserJourney } from './components/UserJourney';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { AuthModal } from './components/AuthModal';
+import Level1Page from './pages/learn/level-1-context-engineering';
 
-type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'product-architecture' | 'dashboard-design' | 'learning-pathway' | 'engagement-model' | 'case-studies' | 'user-journey' | 'dashboard';
+type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'product-architecture' | 'dashboard-design' | 'learning-pathway' | 'engagement-model' | 'case-studies' | 'user-journey' | 'dashboard' | 'learn-level-1';
 
 function getPageFromHash(): Page {
   const hash = window.location.hash;
@@ -36,6 +37,7 @@ function getPageFromHash(): Page {
   if (hash === '#case-studies') return 'case-studies';
   if (hash === '#user-journey') return 'user-journey';
   if (hash === '#dashboard') return 'dashboard';
+  if (hash === '#learn-level-1') return 'learn-level-1';
   return 'home';
 }
 
@@ -80,6 +82,7 @@ function AppContent() {
       {currentPage === 'case-studies' && <CaseStudiesPage />}
       {currentPage === 'user-journey' && <UserJourney />}
       {currentPage === 'dashboard' && (needsAuth ? <AuthModal /> : <Dashboard />)}
+      {currentPage === 'learn-level-1' && <Level1Page />}
 
       {/* Footer bar on all non-home pages */}
       {currentPage !== 'home' && <FooterBar />}
