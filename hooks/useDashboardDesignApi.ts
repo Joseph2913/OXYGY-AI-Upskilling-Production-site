@@ -108,7 +108,7 @@ export function useDashboardDesignApi() {
         const errData = await res.json().catch(() => ({}));
         console.error('Dashboard API error:', res.status, errData);
         if (errData.error === 'API key not configured') {
-          setError('Gemini API key not configured. Please add GEMINI_API_KEY to .env.local and restart the server.');
+          setError('OpenRouter API key not configured. Please add OpenRouter_API to .env.local and restart the server.');
         } else {
           setError(getErrorMessage(res.status, 'dashboard design'));
         }
@@ -170,7 +170,7 @@ export function useDashboardDesignApi() {
         const errData = await res.json().catch(() => ({}));
         console.error('PRD API error:', res.status, errData);
         if (errData.error === 'API key not configured') {
-          setError('Gemini API key not configured. Please add GEMINI_API_KEY to .env.local and restart the server.');
+          setError('OpenRouter API key not configured. Please add OpenRouter_API to .env.local and restart the server.');
         } else {
           setError(getErrorMessage(res.status, 'PRD generation'));
         }

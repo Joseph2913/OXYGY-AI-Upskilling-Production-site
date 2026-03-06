@@ -132,24 +132,18 @@ function geminiProxyPlugin(apiKey: string, model: string): Plugin {
               userMessage = `The user wants to build a prompt with the following inputs:\n\nRole: ${wa.role || 'Not specified'}\nContext: ${wa.context || 'Not specified'}\nTask: ${wa.task || 'Not specified'}\nFormat preferences: ${formatText}\nSteps: ${wa.steps || 'Not specified'}\nQuality constraints: ${qualityText}\n\nPlease enhance and expand each section into a polished, comprehensive prompt following The Prompt Blueprint framework.`;
             }
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: GEMINI_SYSTEM_PROMPT }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: GEMINI_SYSTEM_PROMPT },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'enhance-prompt');
 
@@ -163,7 +157,7 @@ function geminiProxyPlugin(apiKey: string, model: string): Plugin {
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             // Parse the JSON response — handle potential markdown fences
             let parsed;
@@ -306,24 +300,18 @@ You must respond with the following JSON structure ONLY — no markdown, no extr
 
             const userMessage = `Task Description: ${task_description}\n\nInput Data Description: ${input_data_description || 'Not specified'}`;
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: systemPrompt }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'agent-design');
 
@@ -337,7 +325,7 @@ You must respond with the following JSON structure ONLY — no markdown, no extr
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -521,24 +509,18 @@ For the user's original workflow, you will receive nodes with IDs like "user-nod
               userMessage = `Process to automate: ${task_description}\n\nExisting tools and systems: ${tools_and_systems || 'Not specified'}\n\nUser's workflow:\n${nodeList}\n\nUser's design rationale: ${user_rationale || 'Not provided'}`;
             }
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: systemPrompt }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'workflow-design');
 
@@ -552,7 +534,7 @@ For the user's original workflow, you will receive nodes with IDs like "user-nod
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -715,24 +697,18 @@ Respond with ONLY this JSON structure — no markdown, no extra text:
               `TECHNICAL COMFORT LEVEL: ${techLabels[technicalLevel || ''] || technicalLevel || 'Not specified'}`,
             ].join('\n\n');
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: systemPrompt }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'architecture');
 
@@ -746,7 +722,7 @@ Respond with ONLY this JSON structure — no markdown, no extra text:
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -915,26 +891,20 @@ Respond ONLY with valid JSON:
 
 Only include levels that are "full" or "fast-track". Omit "awareness" and "skip" levels entirely.`;
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
             const requestBody = JSON.stringify({
-              system_instruction: {
-                parts: [{ text: systemPrompt }],
-              },
-              contents: [
-                {
-                  role: 'user',
-                  parts: [{ text: userMessage }],
-                },
+              model: openRouterModel,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMessage },
               ],
-              generationConfig: {
-                temperature: 0.7,
-                responseMimeType: 'application/json',
-              },
+              temperature: 0.7,
+              response_format: { type: 'json_object' },
             });
 
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: requestBody,
             }, 'pathway');
 
@@ -952,7 +922,7 @@ Only include levels that are "full" or "fast-track". Omit "awareness" and "skip"
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -980,7 +950,8 @@ Only include levels that are "full" or "fast-track". Omit "awareness" and "skip"
   };
 }
 
-function dashboardDesignProxyPlugin(apiKey: string, model: string): Plugin {
+function dashboardDesignProxyPlugin(apiKey: string, model: string, textModel?: string): Plugin {
+  const htmlModel = textModel || 'google/gemini-2.0-flash-001';
   // System prompt for Gemini HTML fallback (used when Imagen is unavailable)
   const htmlFallbackPrompt = `You are an elite UI designer creating stunning, modern dashboard mockups. Generate a complete HTML dashboard.
 
@@ -1036,54 +1007,47 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
             if (inspiration_images && Array.isArray(inspiration_images) && inspiration_images.length > 0) {
               console.log(`Analyzing ${inspiration_images.length} inspiration image(s)...`);
               try {
-                const analyzeUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                const inspModel = htmlModel.startsWith('google/') ? htmlModel : `google/${htmlModel}`;
                 const imageParts = inspiration_images.map((img: string) => {
-                  // img is a data URL like "data:image/png;base64,..."
-                  // Use string splitting instead of regex for robustness with large base64 payloads
                   if (!img.startsWith('data:')) return null;
                   const commaIdx = img.indexOf(',');
                   if (commaIdx === -1) return null;
-                  const header = img.slice(5, commaIdx); // e.g. "image/png;base64"
+                  const header = img.slice(5, commaIdx);
                   const semiIdx = header.indexOf(';');
                   if (semiIdx === -1) return null;
                   const mimeType = header.slice(0, semiIdx);
                   const data = img.slice(commaIdx + 1);
                   if (!mimeType.startsWith('image/') || !data) return null;
-                  return { inlineData: { mimeType, data } };
+                  return { mimeType, data };
                 }).filter(Boolean);
 
                 if (imageParts.length > 0) {
-                  const analyzeResponse = await fetchWithRetry(analyzeUrl, {
+                  const imageUrls = imageParts.map((p: any) => ({
+                    type: 'image_url',
+                    image_url: { url: `data:${p.mimeType};base64,${p.data}` },
+                  }));
+                  const analyzeResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
                     body: JSON.stringify({
-                      system_instruction: {
-                        parts: [{ text: `You are an expert UI/UX analyst specializing in dashboard design. Analyze the provided dashboard screenshot(s) and extract the key design patterns. Focus on:
-
-1. LAYOUT STRUCTURE: How are widgets arranged? Grid layout, column count, section grouping
-2. COLOR SCHEME: Primary colors, accent colors, background tones, card styling
-3. CHART TYPES: What visualization types are used (bar, line, donut, gauge, heatmap, sparkline, etc.)
-4. INFORMATION DENSITY: Is it data-dense or spacious? How many KPIs/widgets are visible?
-5. TYPOGRAPHY: Font style, heading sizes relative to body text, label formatting
-6. CARD DESIGN: Border radius, shadows, borders, padding style
-7. SPECIAL ELEMENTS: Any unique design patterns like progress bars, status indicators, alerts, tabs
-
-Output a concise paragraph (3-5 sentences) describing these patterns as design instructions that could guide generating a similar dashboard. Be specific about colors, layout ratios, and widget types. Do NOT describe the data — only the visual design patterns.` }],
-                      },
-                      contents: [{
-                        role: 'user',
-                        parts: [
-                          { text: 'Analyze these dashboard screenshot(s) and extract the key design patterns:' },
-                          ...imageParts,
-                        ],
-                      }],
-                      generationConfig: { temperature: 0.3 },
+                      model: inspModel,
+                      messages: [
+                        { role: 'system', content: `You are an expert UI/UX analyst specializing in dashboard design. Analyze the provided dashboard screenshot(s) and extract the key design patterns. Focus on layout structure, color scheme, chart types, information density, typography, card design, and special elements. Output a concise paragraph (3-5 sentences) describing these patterns as design instructions. Be specific about colors, layout ratios, and widget types. Do NOT describe the data — only the visual design patterns.` },
+                        {
+                          role: 'user',
+                          content: [
+                            { type: 'text', text: 'Analyze these dashboard screenshot(s) and extract the key design patterns:' },
+                            ...imageUrls,
+                          ],
+                        },
+                      ],
+                      temperature: 0.3,
                     }),
                   }, 'dashboard-analyze');
 
                   if (analyzeResponse.ok) {
                     const analyzeData = await analyzeResponse.json();
-                    const patterns = analyzeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    const patterns = analyzeData?.choices?.[0]?.message?.content || '';
                     if (patterns.trim()) {
                       inspirationPatterns = patterns.trim();
                       console.log('✅ Inspiration image analysis complete');
@@ -1102,31 +1066,28 @@ Output a concise paragraph (3-5 sentences) describing these patterns as design i
             // ─── If refinement feedback is provided, use Gemini text model to refine the prompt ───
             if (refinement_feedback && previous_prompt) {
               console.log('Refining image prompt based on user feedback...');
-              const refinementUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+              const refModel = htmlModel.startsWith('google/') ? htmlModel : `google/${htmlModel}`;
 
-              // Include inspiration patterns in the refinement context if available
               const inspirationContext = inspirationPatterns
                 ? `\n\nDESIGN REFERENCE FROM INSPIRATION IMAGES (must be maintained in the refined prompt): ${inspirationPatterns}`
                 : '';
 
-              const refinementResponse = await fetchWithRetry(refinementUrl, {
+              const refinementResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
                 body: JSON.stringify({
-                  system_instruction: {
-                    parts: [{ text: `You are an expert at refining image generation prompts for dashboard mockups. You will receive the original prompt that generated a dashboard image, the user's feedback about what they want changed, and optionally design patterns extracted from the user's inspiration images. Your job is to produce a NEW, complete image generation prompt that incorporates the user's feedback and the inspiration design patterns while keeping all the good parts of the original prompt. Output ONLY the refined prompt text, nothing else. Keep all formatting instructions (crisp text, 16:9 ratio, DM Sans font, etc.) from the original. If design reference patterns from inspiration images are provided, make sure they are incorporated into the new prompt.` }],
-                  },
-                  contents: [{
-                    role: 'user',
-                    parts: [{ text: `ORIGINAL PROMPT:\n${previous_prompt}\n\nUSER FEEDBACK:\n${refinement_feedback}${inspirationContext}\n\nGenerate the refined prompt:` }],
-                  }],
-                  generationConfig: { temperature: 0.4 },
+                  model: refModel,
+                  messages: [
+                    { role: 'system', content: `You are an expert at refining image generation prompts for dashboard mockups. Produce a NEW, complete prompt that incorporates user feedback while keeping all good parts of the original. Output ONLY the refined prompt text. Keep all formatting instructions from the original. If design reference patterns are provided, incorporate them.` },
+                    { role: 'user', content: `ORIGINAL PROMPT:\n${previous_prompt}\n\nUSER FEEDBACK:\n${refinement_feedback}${inspirationContext}\n\nGenerate the refined prompt:` },
+                  ],
+                  temperature: 0.4,
                 }),
               }, 'dashboard-refine');
 
               if (refinementResponse.ok) {
                 const refinementData = await refinementResponse.json();
-                const refinedText = refinementData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const refinedText = refinementData?.choices?.[0]?.message?.content || '';
                 if (refinedText.trim()) {
                   imagePrompt = refinedText.trim();
                   console.log('✅ Prompt refined successfully (with inspiration:', !!inspirationPatterns, ')');
@@ -1140,51 +1101,73 @@ Output a concise paragraph (3-5 sentences) describing these patterns as design i
               imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || 'business users'}. The dashboard shows: ${key_metrics || 'key business metrics'}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''} The dashboard has KPI metric cards at the top showing exact numbers with percentage change indicators, followed by line charts and bar charts below with clearly labeled axes. Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text, numbers, labels, and axis values crisp, sharp, and perfectly readable. 16:9 aspect ratio. This should look like a real production web application screenshot.${inspirationPatterns ? `\n\nIMPORTANT DESIGN REFERENCE — The user provided inspiration images. Match these design patterns closely: ${inspirationPatterns}` : ''}`;
             }
 
-            console.log('Generating dashboard image with Gemini 2.5 Flash Image...');
-            console.log('  → Inspiration patterns:', inspirationPatterns ? 'YES (' + inspirationPatterns.slice(0, 100) + '...)' : 'NONE');
-            console.log('  → Feedback refinement:', refinement_feedback ? 'YES' : 'NO');
+            console.log('Generating dashboard via OpenRouter...');
             console.log('  → Prompt length:', imagePrompt.length, 'chars');
 
-            // ─── Strategy 1: Gemini 2.5 Flash Image (best text rendering) ───
+            // ─── Strategy 1: Try image generation with Nano Banana 2 ───
+            const imgModel = model.startsWith('google/') ? model : `google/${model}`;
+            console.log('Strategy 1: Attempting image generation with', imgModel);
+
             try {
-              const geminiImageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
-              const geminiImageResponse = await fetchWithRetry(geminiImageUrl, {
+              const imageResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
                 body: JSON.stringify({
-                  contents: [{ parts: [{ text: imagePrompt }] }],
-                  generationConfig: {
-                    responseModalities: ['IMAGE', 'TEXT'],
-                    imageConfig: { aspectRatio: '16:9' },
-                  },
+                  model: imgModel,
+                  messages: [
+                    { role: 'user', content: imagePrompt },
+                  ],
+                  temperature: 0.7,
                 }),
               }, 'dashboard-image');
 
-              if (geminiImageResponse.ok) {
-                const geminiImageData = await geminiImageResponse.json();
-                const parts = geminiImageData?.candidates?.[0]?.content?.parts || [];
-                const imagePart = parts.find((p: any) => p.inlineData);
-                if (imagePart?.inlineData?.data) {
-                  const mimeType = imagePart.inlineData.mimeType || 'image/png';
-                  const imageUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-                  console.log('✅ Gemini 2.5 Flash Image generation successful');
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({
-                    image_url: imageUrl,
-                    image_prompt: imagePrompt,
-                    generation_method: 'gemini-image',
-                  }));
-                  return;
+              if (imageResponse.ok) {
+                const imageData = await imageResponse.json();
+                const message = imageData?.choices?.[0]?.message;
+
+                // OpenRouter returns images in message.images array
+                const images = message?.images;
+                if (Array.isArray(images) && images.length > 0) {
+                  const imagePart = images.find((p: any) => p.type === 'image_url' && p.image_url?.url);
+                  if (imagePart) {
+                    console.log('Image generated successfully via Nano Banana 2');
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({
+                      image_url: imagePart.image_url.url,
+                      image_prompt: imagePrompt,
+                      generation_method: 'gemini-image',
+                    }));
+                    return;
+                  }
                 }
+
+                // Also check content array (alternative format)
+                const content = message?.content;
+                if (Array.isArray(content)) {
+                  const contentImg = content.find((p: any) => p.type === 'image_url' && p.image_url?.url);
+                  if (contentImg) {
+                    console.log('Image generated successfully via Nano Banana 2 (content array)');
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({
+                      image_url: contentImg.image_url.url,
+                      image_prompt: imagePrompt,
+                      generation_method: 'gemini-image',
+                    }));
+                    return;
+                  }
+                }
+
+                console.log('Image model responded but no image found, falling back to HTML');
+              } else {
+                console.log('Image generation failed with status', imageResponse.status, ', falling back to HTML');
               }
-              const geminiImageErr = await geminiImageResponse.text().catch(() => '');
-              console.log('Gemini Image not available, falling back to HTML generation:', geminiImageErr.slice(0, 200));
-            } catch (geminiImageErr) {
-              console.log('Gemini Image error, falling back to HTML generation:', geminiImageErr);
+            } catch (imgErr) {
+              console.log('Image generation error, falling back to HTML:', imgErr);
             }
 
-            // ─── Strategy 2: Fallback to Gemini HTML generation ───
-            console.log('Using Gemini HTML fallback...');
+            // ─── Strategy 2: Fall back to HTML dashboard generation ───
+            const htmlModelId = htmlModel.startsWith('google/') ? htmlModel : `google/${htmlModel}`;
+            console.log('Strategy 2: Generating HTML dashboard with', htmlModelId);
             const userMessage = [
               `DASHBOARD PURPOSE: ${user_needs}`,
               target_audience ? `TARGET AUDIENCE: ${target_audience}` : '',
@@ -1195,30 +1178,23 @@ Output a concise paragraph (3-5 sentences) describing these patterns as design i
               inspiration_url ? `INSPIRATION URL: ${inspiration_url}` : '',
             ].filter(Boolean).join('\n');
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: htmlFallbackPrompt }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: htmlModelId,
+                messages: [
+                  { role: 'system', content: htmlFallbackPrompt },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'dashboard-html');
 
             if (!geminiResponse.ok) {
               const errText = await geminiResponse.text();
-              console.error('Gemini API error (dashboard):', errText);
+              console.error('OpenRouter API error (dashboard):', errText);
               res.statusCode = 502;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ error: 'AI service error', use_fallback: true, retryable: true }));
@@ -1226,7 +1202,7 @@ Output a concise paragraph (3-5 sentences) describing these patterns as design i
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -1234,7 +1210,7 @@ Output a concise paragraph (3-5 sentences) describing these patterns as design i
               parsed = JSON.parse(cleaned);
               parsed.generation_method = 'html';
             } catch {
-              console.error('Failed to parse Gemini response (dashboard):', text);
+              console.error('Failed to parse response (dashboard):', text);
               res.statusCode = 502;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ error: 'Failed to parse AI response', use_fallback: true, retryable: true }));
@@ -1417,24 +1393,18 @@ For each key metric, specify:
               update_frequency ? `UPDATE FREQUENCY: ${update_frequency}` : '',
             ].filter(Boolean).join('\n');
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: systemPrompt }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'prd');
 
@@ -1448,7 +1418,7 @@ For each key metric, specify:
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -1561,24 +1531,18 @@ Context: ${context}
 Outcome: ${outcome}
 Self-assessed Impact Rating: ${rating}/5${profileContext}`;
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const geminiResponse = await fetchWithRetry(geminiUrl, {
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: systemPrompt }],
-                },
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: userMessage }],
-                  },
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
                 ],
-                generationConfig: {
-                  temperature: 0.7,
-                  responseMimeType: 'application/json',
-                },
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
               }),
             }, 'insight');
 
@@ -1592,7 +1556,7 @@ Self-assessed Impact Rating: ${rating}/5${profileContext}`;
             }
 
             const data = await geminiResponse.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data?.choices?.[0]?.message?.content || '';
 
             let parsed;
             try {
@@ -1622,7 +1586,8 @@ Self-assessed Impact Rating: ${rating}/5${profileContext}`;
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  const geminiModel = env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
+  const dashboardModel = env.DASHBOARD_MODEL || 'google/gemini-3.1-flash-image-preview';
 
   return {
     server: {
@@ -1631,14 +1596,14 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      geminiProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      agentDesignProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      workflowDesignProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      architectureProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      pathwayProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      dashboardDesignProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      prdProxyPlugin(env.GEMINI_API_KEY, geminiModel),
-      insightAnalysisProxyPlugin(env.GEMINI_API_KEY, geminiModel),
+      geminiProxyPlugin(env.OpenRouter_API, geminiModel),
+      agentDesignProxyPlugin(env.OpenRouter_API, geminiModel),
+      workflowDesignProxyPlugin(env.OpenRouter_API, geminiModel),
+      architectureProxyPlugin(env.OpenRouter_API, geminiModel),
+      pathwayProxyPlugin(env.OpenRouter_API, geminiModel),
+      dashboardDesignProxyPlugin(env.OpenRouter_API, dashboardModel, geminiModel),
+      prdProxyPlugin(env.OpenRouter_API, geminiModel),
+      insightAnalysisProxyPlugin(env.OpenRouter_API, geminiModel),
     ],
     resolve: {
       alias: {

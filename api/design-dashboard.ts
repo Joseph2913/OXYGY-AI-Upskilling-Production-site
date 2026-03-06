@@ -29,8 +29,9 @@ Output a concise paragraph (3-5 sentences) describing these patterns as design i
 
 const REFINEMENT_PROMPT = `You are an expert at refining image generation prompts for dashboard mockups. You will receive the original prompt that generated a dashboard image, the user's feedback about what they want changed, and optionally design patterns extracted from the user's inspiration images. Your job is to produce a NEW, complete image generation prompt that incorporates the user's feedback and the inspiration design patterns while keeping all the good parts of the original prompt. Output ONLY the refined prompt text, nothing else. Keep all formatting instructions (crisp text, 16:9 ratio, DM Sans font, etc.) from the original. If design reference patterns from inspiration images are provided, make sure they are incorporated into the new prompt.`;
 
-// ─── Retry helper for Gemini API calls ───
+// ─── Retry helper for OpenRouter API calls ───
 
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRIES = 2;
 const BASE_DELAY_MS = 1500;
@@ -54,7 +55,7 @@ async function fetchWithRetry(
         const delayMs = retryAfter
           ? Math.min(parseInt(retryAfter, 10) * 1000, 10000)
           : BASE_DELAY_MS * Math.pow(2, attempt);
-        console.warn(`[${label}] Gemini API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+        console.warn(`[${label}] OpenRouter API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         lastResponse = response;
         continue;
@@ -94,8 +95,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const apiKey = process.env.OpenRouter_API;
+  const textModel = process.env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
+  const imageModel = process.env.DASHBOARD_MODEL || 'google/gemini-3.1-flash-image-preview';
 
   if (!apiKey) {
     return res.status(503).json({ error: 'API key not configured', use_fallback: true });
@@ -120,29 +122,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (inspiration_images && Array.isArray(inspiration_images) && inspiration_images.length > 0) {
       console.log(`Analyzing ${inspiration_images.length} inspiration image(s)...`);
       try {
-        const analyzeUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const imageParts = inspiration_images.map(parseInspirationImage).filter(Boolean);
+        const openRouterModel = textModel.startsWith('google/') ? textModel : `google/${textModel}`;
 
         if (imageParts.length > 0) {
-          const analyzeResponse = await fetchWithRetry(analyzeUrl, {
+          const imageUrls = imageParts.map((p: any) => ({
+            type: 'image_url',
+            image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` },
+          }));
+          const analyzeResponse = await fetchWithRetry(OPENROUTER_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
             body: JSON.stringify({
-              system_instruction: { parts: [{ text: INSPIRATION_ANALYSIS_PROMPT }] },
-              contents: [{
-                role: 'user',
-                parts: [
-                  { text: 'Analyze these dashboard screenshot(s) and extract the key design patterns:' },
-                  ...imageParts,
-                ],
-              }],
-              generationConfig: { temperature: 0.3 },
+              model: openRouterModel,
+              messages: [
+                { role: 'system', content: INSPIRATION_ANALYSIS_PROMPT },
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: 'Analyze these dashboard screenshot(s) and extract the key design patterns:' },
+                    ...imageUrls,
+                  ],
+                },
+              ],
+              temperature: 0.3,
             }),
           }, 'design-dashboard-inspiration-vercel');
 
           if (analyzeResponse.ok) {
             const analyzeData = await analyzeResponse.json();
-            const patterns = analyzeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const patterns = analyzeData?.choices?.[0]?.message?.content || '';
             if (patterns.trim()) {
               inspirationPatterns = patterns.trim();
               console.log('Inspiration image analysis complete');
@@ -162,27 +174,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (refinement_feedback && previous_prompt) {
       // Refine the previous prompt with user feedback
       console.log('Refining image prompt based on user feedback...');
-      const refinementUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const refinementModel = textModel.startsWith('google/') ? textModel : `google/${textModel}`;
       const inspirationContext = inspirationPatterns
         ? `\n\nDESIGN REFERENCE FROM INSPIRATION IMAGES (must be maintained in the refined prompt): ${inspirationPatterns}`
         : '';
 
-      const refinementResponse = await fetchWithRetry(refinementUrl, {
+      const refinementResponse = await fetchWithRetry(OPENROUTER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: REFINEMENT_PROMPT }] },
-          contents: [{
-            role: 'user',
-            parts: [{ text: `ORIGINAL PROMPT:\n${previous_prompt}\n\nUSER FEEDBACK:\n${refinement_feedback}${inspirationContext}\n\nGenerate the refined prompt:` }],
-          }],
-          generationConfig: { temperature: 0.4 },
+          model: refinementModel,
+          messages: [
+            { role: 'system', content: REFINEMENT_PROMPT },
+            { role: 'user', content: `ORIGINAL PROMPT:\n${previous_prompt}\n\nUSER FEEDBACK:\n${refinement_feedback}${inspirationContext}\n\nGenerate the refined prompt:` },
+          ],
+          temperature: 0.4,
         }),
       }, 'design-dashboard-refinement-vercel');
 
       if (refinementResponse.ok) {
         const refinementData = await refinementResponse.json();
-        const refinedText = refinementData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const refinedText = refinementData?.choices?.[0]?.message?.content || '';
         if (refinedText.trim()) {
           imagePrompt = refinedText.trim();
           console.log('Prompt refined successfully');
@@ -196,47 +211,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || 'business users'}. The dashboard shows: ${key_metrics || 'key business metrics'}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''} The dashboard has KPI metric cards at the top showing exact numbers with percentage change indicators, followed by line charts and bar charts below with clearly labeled axes. Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text, numbers, labels, and axis values crisp, sharp, and perfectly readable. 16:9 aspect ratio. This should look like a real production web application screenshot.${inspirationPatterns ? `\n\nIMPORTANT DESIGN REFERENCE — The user provided inspiration images. Match these design patterns closely: ${inspirationPatterns}` : ''}`;
     }
 
-    console.log('Generating dashboard with Gemini 2.5 Flash Image...');
+    console.log('Generating dashboard via OpenRouter...');
     console.log('  → Prompt length:', imagePrompt.length, 'chars');
 
-    // ─── Strategy 1: Gemini 2.5 Flash Image (native image generation) ───
+    // ─── Strategy 1: Try image generation with Nano Banana 2 ───
+    const imgModel = imageModel.startsWith('google/') ? imageModel : `google/${imageModel}`;
+    console.log('Strategy 1: Attempting image generation with', imgModel);
+
     try {
-      const geminiImageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
-      const geminiImageResponse = await fetchWithRetry(geminiImageUrl, {
+      const imageResponse = await fetchWithRetry(OPENROUTER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: imagePrompt }] }],
-          generationConfig: {
-            responseModalities: ['IMAGE', 'TEXT'],
-            imageConfig: { aspectRatio: '16:9' },
-          },
+          model: imgModel,
+          messages: [
+            { role: 'user', content: imagePrompt },
+          ],
+          temperature: 0.7,
         }),
       }, 'design-dashboard-image-vercel');
 
-      if (geminiImageResponse.ok) {
-        const geminiImageData = await geminiImageResponse.json();
-        const parts = geminiImageData?.candidates?.[0]?.content?.parts || [];
-        const imagePart = parts.find((p: any) => p.inlineData);
-        if (imagePart?.inlineData?.data) {
-          const mimeType = imagePart.inlineData.mimeType || 'image/png';
-          const imageUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-          console.log('Gemini 2.5 Flash Image generation successful');
-          return res.status(200).json({
-            image_url: imageUrl,
-            image_prompt: imagePrompt,
-            generation_method: 'gemini-image',
-          });
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        const message = imageData?.choices?.[0]?.message;
+
+        // OpenRouter returns images in message.images array
+        const images = message?.images;
+        if (Array.isArray(images) && images.length > 0) {
+          const imagePart = images.find((p: any) => p.type === 'image_url' && p.image_url?.url);
+          if (imagePart) {
+            console.log('Image generated successfully via Nano Banana 2');
+            return res.status(200).json({
+              image_url: imagePart.image_url.url,
+              image_prompt: imagePrompt,
+              generation_method: 'gemini-image',
+            });
+          }
         }
+
+        // Also check content array (alternative format)
+        const content = message?.content;
+        if (Array.isArray(content)) {
+          const contentImg = content.find((p: any) => p.type === 'image_url' && p.image_url?.url);
+          if (contentImg) {
+            console.log('Image generated successfully via Nano Banana 2 (content array)');
+            return res.status(200).json({
+              image_url: contentImg.image_url.url,
+              image_prompt: imagePrompt,
+              generation_method: 'gemini-image',
+            });
+          }
+        }
+
+        console.log('Image model responded but no image found in response, falling back to HTML');
+      } else {
+        console.log('Image generation failed with status', imageResponse.status, ', falling back to HTML');
       }
-      const errText = await geminiImageResponse.text().catch(() => '');
-      console.log('Gemini Image not available, falling back to HTML generation:', errText.slice(0, 200));
-    } catch (geminiImageErr) {
-      console.log('Gemini Image error, falling back to HTML generation:', geminiImageErr);
+    } catch (imgErr) {
+      console.log('Image generation error, falling back to HTML:', imgErr);
     }
 
-    // ─── Strategy 2: Fallback to Gemini HTML generation ───
-    console.log('Using Gemini HTML fallback...');
+    // ─── Strategy 2: Fall back to HTML dashboard generation ───
+    console.log('Strategy 2: Generating HTML dashboard with', textModel);
     const userMessage = [
       `DASHBOARD PURPOSE: ${user_needs}`,
       target_audience ? `TARGET AUDIENCE: ${target_audience}` : '',
@@ -247,23 +286,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       inspiration_url ? `INSPIRATION URL: ${inspiration_url} — Use this website's layout, style, and visual approach as design inspiration for the dashboard.` : '',
     ].filter(Boolean).join('\n');
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const geminiResponse = await fetchWithRetry(geminiUrl, {
+    const htmlModelId = textModel.startsWith('google/') ? textModel : `google/${textModel}`;
+    const geminiResponse = await fetchWithRetry(OPENROUTER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: HTML_FALLBACK_PROMPT }] },
-        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-        generationConfig: {
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-        },
+        model: htmlModelId,
+        messages: [
+          { role: 'system', content: HTML_FALLBACK_PROMPT },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     }, 'design-dashboard-html-vercel');
 
     if (!geminiResponse.ok) {
       const errText = await geminiResponse.text();
-      console.error('Gemini API error (dashboard):', geminiResponse.status, errText);
+      console.error('OpenRouter API error (dashboard):', geminiResponse.status, errText);
       const status = geminiResponse.status === 429 ? 429 : 502;
       const message = geminiResponse.status === 429
         ? 'The AI service is temporarily busy. Please wait a moment and try again.'
@@ -272,7 +315,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const data = await geminiResponse.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data?.choices?.[0]?.message?.content || '';
 
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const parsed = JSON.parse(cleaned);

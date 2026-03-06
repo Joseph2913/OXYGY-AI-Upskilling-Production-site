@@ -2,11 +2,11 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { callGemini, fetchWithRetry } from "./gemini";
 
-const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const openRouterApiKey = defineSecret("OPEN_ROUTER_API");
 
 function getEnv() {
-  const apiKey = geminiApiKey.value();
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const apiKey = openRouterApiKey.value();
+  const model = process.env.GEMINI_MODEL || "google/gemini-2.0-flash-001";
   return { apiKey, model };
 }
 
@@ -14,10 +14,10 @@ function getEnv() {
 // 1. HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════
 
-export const health = onRequest({ secrets: [geminiApiKey] }, (_req, res) => {
+export const health = onRequest({ secrets: [openRouterApiKey] }, (_req, res) => {
   res.status(200).json({
     status: "ok",
-    hasApiKey: !!geminiApiKey.value(),
+    hasApiKey: !!openRouterApiKey.value(),
     nodeVersion: process.version,
     timestamp: new Date().toISOString(),
   });
@@ -63,7 +63,7 @@ You must respond in the following JSON format ONLY — no markdown, no extra tex
   "quality": "The enhanced Quality Checks section text"
 }`;
 
-export const enhanceprompt = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const enhanceprompt = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -101,7 +101,7 @@ const SUMMARIZE_ROLE_SYSTEM = `You are a concise profile summarizer. Given a use
 - Input: "Software engineer focused on backend APIs and data pipelines for our analytics platform"
 - Output: "Backend Engineer — Analytics Platform"`;
 
-export const summarizerole = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const summarizerole = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -112,24 +112,31 @@ export const summarizerole = onRequest({ secrets: [geminiApiKey] }, async (req, 
       res.status(400).json({ error: "Role text too short to summarize" }); return;
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const geminiResponse = await fetch(geminiUrl, {
+    const openRouterModel = model.startsWith("google/") ? model : `google/${model}`;
+    const geminiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: SUMMARIZE_ROLE_SYSTEM }] },
-        contents: [{ role: "user", parts: [{ text: role }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 30 },
+        model: openRouterModel,
+        messages: [
+          { role: "system", content: SUMMARIZE_ROLE_SYSTEM },
+          { role: "user", content: role },
+        ],
+        temperature: 0.2,
+        max_tokens: 30,
       }),
     });
 
     if (!geminiResponse.ok) {
-      console.error("Gemini API error (summarize-role):", geminiResponse.status);
+      console.error("OpenRouter API error (summarize-role):", geminiResponse.status);
       res.status(502).json({ error: "AI service unavailable" }); return;
     }
 
     const data = await geminiResponse.json();
-    const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const summary = data?.choices?.[0]?.message?.content?.trim() || "";
     res.status(200).json({ summary });
   } catch (err) {
     console.error("summarize-role error:", err);
@@ -206,7 +213,7 @@ RESPONSE FORMAT (JSON only, no markdown):
   ]
 }`;
 
-export const designagent = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const designagent = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -274,7 +281,7 @@ RESPONSE FORMAT (JSON only):
   ]
 }`;
 
-export const designworkflow = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const designworkflow = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -321,7 +328,7 @@ For each tool, generate: classification (essential/recommended/optional), forYou
 
 Respond with ONLY JSON — no markdown, no extra text.`;
 
-export const analyzearchitecture = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const analyzearchitecture = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -368,7 +375,7 @@ FORMAT B (full analysis):
 
 RULES: Keep text concise. No filler. Be direct and useful. Respond in valid JSON only.`;
 
-export const analyzeinsight = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const analyzeinsight = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -412,7 +419,7 @@ OUTPUT FORMAT (JSON only):
   }
 }`;
 
-export const generatepathway = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
@@ -492,9 +499,10 @@ function parseInspirationImage(img: string): { inlineData: { mimeType: string; d
   return { inlineData: { mimeType, data } };
 }
 
-export const designdashboard = onRequest({ secrets: [geminiApiKey], timeoutSeconds: 120 }, async (req, res) => {
+export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 120 }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { apiKey, model } = getEnv();
+  const { apiKey, model: textModel } = getEnv();
+  const imageModel = process.env.DASHBOARD_MODEL || "google/gemini-3.1-flash-image-preview";
   if (!apiKey) { res.status(503).json({ error: "API key not configured", use_fallback: true }); return; }
 
   try {
@@ -513,21 +521,37 @@ export const designdashboard = onRequest({ secrets: [geminiApiKey], timeoutSecon
     let inspirationPatterns = "";
     if (inspiration_images && Array.isArray(inspiration_images) && inspiration_images.length > 0) {
       try {
-        const analyzeUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const imageParts = inspiration_images.map(parseInspirationImage).filter(Boolean);
+        const openRouterModel = textModel.startsWith("google/") ? textModel : `google/${textModel}`;
         if (imageParts.length > 0) {
-          const analyzeResponse = await fetchWithRetry(analyzeUrl, {
+          const imageUrls = imageParts.map((p: any) => ({
+            type: "image_url",
+            image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` },
+          }));
+          const analyzeResponse = await fetchWithRetry("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`,
+            },
             body: JSON.stringify({
-              system_instruction: { parts: [{ text: DASHBOARD_INSPIRATION }] },
-              contents: [{ role: "user", parts: [{ text: "Analyze these dashboard screenshot(s) and extract the key design patterns:" }, ...imageParts] }],
-              generationConfig: { temperature: 0.3 },
+              model: openRouterModel,
+              messages: [
+                { role: "system", content: DASHBOARD_INSPIRATION },
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: "Analyze these dashboard screenshot(s) and extract the key design patterns:" },
+                    ...imageUrls,
+                  ],
+                },
+              ],
+              temperature: 0.3,
             }),
           }, "dashboard-inspiration");
           if (analyzeResponse.ok) {
             const analyzeData = await analyzeResponse.json();
-            const patterns = analyzeData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const patterns = analyzeData?.choices?.[0]?.message?.content || "";
             if (patterns.trim()) inspirationPatterns = patterns.trim();
           }
         }
@@ -539,21 +563,27 @@ export const designdashboard = onRequest({ secrets: [geminiApiKey], timeoutSecon
     // Build image generation prompt
     let imagePrompt: string;
     if (refinement_feedback && previous_prompt) {
-      const refinementUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const refinementModel = textModel.startsWith("google/") ? textModel : `google/${textModel}`;
       const inspirationContext = inspirationPatterns ? `\n\nDESIGN REFERENCE: ${inspirationPatterns}` : "";
-      const refinementResponse = await fetchWithRetry(refinementUrl, {
+      const refinementResponse = await fetchWithRetry("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: DASHBOARD_REFINEMENT }] },
-          contents: [{ role: "user", parts: [{ text: `ORIGINAL PROMPT:\n${previous_prompt}\n\nUSER FEEDBACK:\n${refinement_feedback}${inspirationContext}\n\nGenerate the refined prompt:` }] }],
-          generationConfig: { temperature: 0.4 },
+          model: refinementModel,
+          messages: [
+            { role: "system", content: DASHBOARD_REFINEMENT },
+            { role: "user", content: `ORIGINAL PROMPT:\n${previous_prompt}\n\nUSER FEEDBACK:\n${refinement_feedback}${inspirationContext}\n\nGenerate the refined prompt:` },
+          ],
+          temperature: 0.4,
         }),
       }, "dashboard-refinement");
 
       if (refinementResponse.ok) {
         const refinementData = await refinementResponse.json();
-        const refinedText = refinementData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const refinedText = refinementData?.choices?.[0]?.message?.content || "";
         imagePrompt = refinedText.trim() || `${previous_prompt} IMPORTANT CHANGES REQUESTED: ${refinement_feedback}`;
       } else {
         imagePrompt = `${previous_prompt} IMPORTANT CHANGES REQUESTED: ${refinement_feedback}`;
@@ -562,34 +592,56 @@ export const designdashboard = onRequest({ secrets: [geminiApiKey], timeoutSecon
       imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || "business users"}. The dashboard shows: ${key_metrics || "key business metrics"}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ""} Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text crisp and readable. 16:9 aspect ratio.${inspirationPatterns ? `\n\nDESIGN REFERENCE: ${inspirationPatterns}` : ""}`;
     }
 
-    // Strategy 1: Gemini 2.5 Flash Image
+    // Strategy 1: Try image generation with Nano Banana 2
+    const imgModel = imageModel.startsWith("google/") ? imageModel : `google/${imageModel}`;
+    console.log("Strategy 1: Attempting image generation with", imgModel);
+
     try {
-      const geminiImageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
-      const geminiImageResponse = await fetchWithRetry(geminiImageUrl, {
+      const imageResponse = await fetchWithRetry("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: imagePrompt }] }],
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"], imageConfig: { aspectRatio: "16:9" } },
+          model: imgModel,
+          messages: [{ role: "user", content: imagePrompt }],
+          temperature: 0.7,
         }),
       }, "dashboard-image");
 
-      if (geminiImageResponse.ok) {
-        const geminiImageData = await geminiImageResponse.json();
-        const parts = geminiImageData?.candidates?.[0]?.content?.parts || [];
-        const imagePart = parts.find((p: any) => p.inlineData);
-        if (imagePart?.inlineData?.data) {
-          const mimeType = imagePart.inlineData.mimeType || "image/png";
-          const imageUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-          res.status(200).json({ image_url: imageUrl, image_prompt: imagePrompt, generation_method: "gemini-image" });
-          return;
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        const message = imageData?.choices?.[0]?.message;
+
+        // OpenRouter returns images in message.images array
+        const images = message?.images;
+        if (Array.isArray(images) && images.length > 0) {
+          const imagePart = images.find((p: any) => p.type === "image_url" && p.image_url?.url);
+          if (imagePart) {
+            console.log("Image generated successfully via Nano Banana 2");
+            res.status(200).json({ image_url: imagePart.image_url.url, image_prompt: imagePrompt, generation_method: "gemini-image" });
+            return;
+          }
         }
+
+        // Also check content array (alternative format)
+        const content = message?.content;
+        if (Array.isArray(content)) {
+          const contentImg = content.find((p: any) => p.type === "image_url" && p.image_url?.url);
+          if (contentImg) {
+            res.status(200).json({ image_url: contentImg.image_url.url, image_prompt: imagePrompt, generation_method: "gemini-image" });
+            return;
+          }
+        }
+
+        console.log("Image model responded but no image found, falling back to HTML");
+      } else {
+        console.log("Image generation failed with status", imageResponse.status, ", falling back to HTML");
       }
-    } catch (geminiImageErr) {
-      console.log("Gemini Image error, falling back to HTML:", geminiImageErr);
+    } catch (imgErr) {
+      console.log("Image generation error, falling back to HTML:", imgErr);
     }
 
-    // Strategy 2: HTML fallback
+    // Strategy 2: Fall back to HTML dashboard generation
+    console.log("Strategy 2: Generating HTML dashboard with", textModel);
     const userMessage = [
       `DASHBOARD PURPOSE: ${user_needs}`,
       target_audience ? `TARGET AUDIENCE: ${target_audience}` : "",
@@ -600,7 +652,7 @@ export const designdashboard = onRequest({ secrets: [geminiApiKey], timeoutSecon
       inspiration_url ? `INSPIRATION URL: ${inspiration_url}` : "",
     ].filter(Boolean).join("\n");
 
-    const result = await callGemini({ apiKey, model, systemPrompt: DASHBOARD_HTML_FALLBACK, userMessage, label: "dashboard-html" });
+    const result = await callGemini({ apiKey, model: textModel, systemPrompt: DASHBOARD_HTML_FALLBACK, userMessage, label: "dashboard-html" });
     if (!result.ok) { res.status(result.status).json({ error: result.message, use_fallback: true, retryable: result.retryable }); return; }
     result.data.generation_method = "html";
     res.status(200).json(result.data);
@@ -638,7 +690,7 @@ RESPONSE FORMAT (JSON only):
   }
 }`;
 
-export const generateprd = onRequest({ secrets: [geminiApiKey] }, async (req, res) => {
+export const generateprd = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }

@@ -36,8 +36,9 @@ You must respond in the following JSON format ONLY — no markdown, no extra tex
   "quality": "The enhanced Quality Checks section text"
 }`;
 
-// ─── Retry helper for Gemini API calls ───
+// ─── Retry helper for OpenRouter API calls ───
 
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRIES = 2;
 const BASE_DELAY_MS = 1500;
@@ -61,7 +62,7 @@ async function fetchWithRetry(
         const delayMs = retryAfter
           ? Math.min(parseInt(retryAfter, 10) * 1000, 10000)
           : BASE_DELAY_MS * Math.pow(2, attempt);
-        console.warn(`[${label}] Gemini API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+        console.warn(`[${label}] OpenRouter API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         lastResponse = response;
         continue;
@@ -88,8 +89,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const apiKey = process.env.OpenRouter_API;
+  const model = process.env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
 
   if (!apiKey) {
     return res.status(503).json({ error: 'API key not configured' });
@@ -115,30 +116,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       userMessage = `The user wants to build a prompt with the following inputs:\n\nRole: ${wa.role || 'Not specified'}\nContext: ${wa.context || 'Not specified'}\nTask: ${wa.task || 'Not specified'}\nFormat preferences: ${formatText}\nSteps: ${wa.steps || 'Not specified'}\nQuality constraints: ${qualityText}\n\nPlease enhance and expand each section into a polished, comprehensive prompt following The Prompt Blueprint framework.`;
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const geminiResponse = await fetchWithRetry(geminiUrl, {
+    const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+    const geminiResponse = await fetchWithRetry(OPENROUTER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: GEMINI_SYSTEM_PROMPT }],
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userMessage }],
-          },
+        model: openRouterModel,
+        messages: [
+          { role: 'system', content: GEMINI_SYSTEM_PROMPT },
+          { role: 'user', content: userMessage },
         ],
-        generationConfig: {
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-        },
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     }, 'enhance-prompt-vercel');
 
     if (!geminiResponse.ok) {
       const errText = await geminiResponse.text();
-      console.error('Gemini API error (enhance-prompt):', geminiResponse.status, errText);
+      console.error('OpenRouter API error (enhance-prompt):', geminiResponse.status, errText);
       const status = geminiResponse.status === 429 ? 429 : 502;
       const message = geminiResponse.status === 429
         ? 'The AI service is temporarily busy. Please wait a moment and try again.'
@@ -147,7 +145,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const data = await geminiResponse.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data?.choices?.[0]?.message?.content || '';
 
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const parsed = JSON.parse(cleaned);

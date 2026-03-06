@@ -1,8 +1,9 @@
 /**
- * Shared Gemini API helper for all Cloud Functions.
+ * Shared OpenRouter API helper for all Cloud Functions.
  * Handles retry logic and JSON response parsing.
  */
 
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRIES = 2;
 const BASE_DELAY_MS = 1500;
@@ -26,7 +27,7 @@ export async function fetchWithRetry(
           ? Math.min(parseInt(retryAfter, 10) * 1000, 10000)
           : BASE_DELAY_MS * Math.pow(2, attempt);
         console.warn(
-          `[${label}] Gemini API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`,
+          `[${label}] OpenRouter API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         lastResponse = response;
@@ -52,7 +53,7 @@ export async function fetchWithRetry(
 }
 
 /**
- * Standard Gemini call: sends system prompt + user message, returns parsed JSON.
+ * Standard OpenRouter call: sends system prompt + user message, returns parsed JSON.
  */
 export async function callGemini(opts: {
   apiKey: string;
@@ -63,38 +64,47 @@ export async function callGemini(opts: {
   temperature?: number;
   responseMimeType?: string;
 }): Promise<{ ok: true; data: any } | { ok: false; status: number; message: string; retryable: boolean }> {
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`;
+  const openRouterModel = opts.model.startsWith("google/") ? opts.model : `google/${opts.model}`;
 
-  const geminiResponse = await fetchWithRetry(
-    geminiUrl,
+  const body: Record<string, any> = {
+    model: openRouterModel,
+    messages: [
+      { role: "system", content: opts.systemPrompt },
+      { role: "user", content: opts.userMessage },
+    ],
+    temperature: opts.temperature ?? 0.7,
+  };
+
+  if ((opts.responseMimeType ?? "application/json") === "application/json") {
+    body.response_format = { type: "json_object" };
+  }
+
+  const response = await fetchWithRetry(
+    OPENROUTER_URL,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: opts.systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: opts.userMessage }] }],
-        generationConfig: {
-          temperature: opts.temperature ?? 0.7,
-          responseMimeType: opts.responseMimeType ?? "application/json",
-        },
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${opts.apiKey}`,
+      },
+      body: JSON.stringify(body),
     },
     opts.label,
   );
 
-  if (!geminiResponse.ok) {
-    const errText = await geminiResponse.text();
-    console.error(`Gemini API error (${opts.label}):`, geminiResponse.status, errText);
-    const status = geminiResponse.status === 429 ? 429 : 502;
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error(`OpenRouter API error (${opts.label}):`, response.status, errText);
+    const status = response.status === 429 ? 429 : 502;
     const message =
-      geminiResponse.status === 429
+      response.status === 429
         ? "The AI service is temporarily busy. Please wait a moment and try again."
         : "AI service error";
     return { ok: false, status, message, retryable: true };
   }
 
-  const data = await geminiResponse.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content || "";
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
   const parsed = JSON.parse(cleaned);
 
