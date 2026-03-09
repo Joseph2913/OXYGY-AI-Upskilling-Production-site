@@ -1,102 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { LevelJourney } from './components/LevelJourney';
-import { LearningModel } from './components/Extras';
-import { PersonaCarousel } from './components/PersonaCarousel';
-import { Footer, FooterBar } from './components/Footer';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { AppAuthGuard } from './components/app/AppAuthGuard';
+import { AppLayout } from './components/app/AppLayout';
+import { MarketingSite } from './MarketingSite';
+
+// Existing toolkit tool components (kept for legacy references)
 import { PromptPlayground } from './components/PromptPlayground';
 import { AgentBuilder } from './components/AgentBuilder';
-import { WorkflowDesigner } from './components/WorkflowDesigner';
-import { ProductArchitecture } from './components/ProductArchitecture';
-import { DashboardDesigner } from './components/DashboardDesigner';
-import { LearningPathway } from './components/LearningPathway';
-import { EngagementModel } from './components/EngagementModel';
-import { CaseStudiesSection, CaseStudiesPage } from './components/CaseStudies';
-import { UserJourney } from './components/UserJourney';
-import { Dashboard } from './components/dashboard/Dashboard';
-import { AuthModal } from './components/AuthModal';
-import CourseResources from './pages/learn/level-1-landing';
-import Level1Page from './pages/learn/level-1-context-engineering';
 
-type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'product-architecture' | 'dashboard-design' | 'learning-pathway' | 'engagement-model' | 'case-studies' | 'user-journey' | 'dashboard' | 'course-resources' | 'learn-level-1-prompt';
+// Lazy-load app pages
+const AppDashboard = React.lazy(() => import('./pages/app/AppDashboard'));
+const AppJourney = React.lazy(() => import('./pages/app/AppJourney'));
+const AppCurrentLevel = React.lazy(() => import('./pages/app/AppCurrentLevel'));
+const AppToolkit = React.lazy(() => import('./pages/app/AppToolkit'));
+const AppArtefacts = React.lazy(() => import('./pages/app/AppArtefacts'));
+const AppCohort = React.lazy(() => import('./pages/app/AppCohort'));
+const PromptLibraryPage = React.lazy(() => import('./pages/app/AppPromptLibrary'));
+const AppPromptPlayground = React.lazy(() => import('./components/app/toolkit/AppPromptPlayground'));
+const AppAgentBuilder = React.lazy(() => import('./components/app/toolkit/AppAgentBuilder'));
+const AppWorkflowCanvas = React.lazy(() => import('./components/app/toolkit/AppWorkflowCanvas'));
+const AppDashboardDesigner = React.lazy(() => import('./components/app/toolkit/AppDashboardDesigner'));
+const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppAppEvaluator'));
 
-function getPageFromHash(): Page {
-  const hash = window.location.hash;
-  // Ignore Supabase auth callback tokens in the hash
-  if (hash.includes('access_token=') || hash.includes('refresh_token=') || hash.includes('error_description=')) {
-    return 'home';
-  }
-  if (hash === '#playground') return 'playground';
-  if (hash === '#agent-builder') return 'agent-builder';
-  if (hash === '#workflow-designer') return 'workflow-designer';
-  if (hash === '#product-architecture') return 'product-architecture';
-  if (hash === '#dashboard-design') return 'dashboard-design';
-  if (hash === '#learning-pathway') return 'learning-pathway';
-  if (hash === '#engagement-model') return 'engagement-model';
-  if (hash === '#case-studies') return 'case-studies';
-  if (hash === '#user-journey') return 'user-journey';
-  if (hash === '#dashboard') return 'dashboard';
-  if (hash === '#course-resources' || hash === '#learn-level-1') return 'course-resources';
-  if (hash === '#learn-level-1-prompt') return 'learn-level-1-prompt';
-  return 'home';
+function AppSuspense({ children }: { children: React.ReactNode }) {
+  return (
+    <React.Suspense
+      fallback={
+        <div style={{ padding: 36, background: '#F7FAFC', minHeight: '100%' }}>
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              border: '3px solid #E2E8F0',
+              borderTopColor: '#38B2AC',
+              borderRadius: '50%',
+              animation: 'app-spin 0.7s linear infinite',
+            }}
+          />
+          <style>{`@keyframes app-spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      }
+    >
+      {children}
+    </React.Suspense>
+  );
 }
 
-const PROTECTED_PAGES = new Set<Page>(['learning-pathway', 'dashboard']);
-
-function AppContent() {
-  const { user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<Page>(getPageFromHash);
+/**
+ * Redirect old hash-based toolkit routes to new /app/toolkit/* paths.
+ */
+function HashRedirector() {
+  const location = useLocation();
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const page = getPageFromHash();
-      setCurrentPage(page);
-      window.scrollTo(0, 0);
+    const hash = window.location.hash;
+    const redirectMap: Record<string, string> = {
+      '#playground': '/app/toolkit/prompt-playground',
+      '#workflow-designer': '/app/toolkit/workflow-canvas',
+      '#agent-builder': '/app/toolkit/agent-builder',
+      '#dashboard-design': '/app/toolkit/dashboard-designer',
+      '#product-architecture': '/app/toolkit/app-builder',
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    const target = redirectMap[hash];
+    if (target) {
+      window.history.replaceState(null, '', target);
+      window.location.reload();
+    }
+  }, [location]);
+
+  return null;
+}
+
+/**
+ * Login redirect: sends user to the marketing site auth flow,
+ * saving the intended /app/* destination for after login.
+ */
+function LoginRedirect() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    if (redirect) {
+      sessionStorage.setItem('oxygy_auth_return_path', redirect);
+    }
+    // Send to marketing site login flow (hash-based dashboard shows AuthModal)
+    window.location.replace('/#dashboard');
   }, []);
 
-  const needsAuth = PROTECTED_PAGES.has(currentPage) && !user;
-
-  return (
-    <div className="min-h-screen bg-white font-sans text-navy-900 selection:bg-teal selection:text-white">
-      <Navbar />
-      {currentPage === 'home' && (
-        <>
-          <Hero />
-          <LevelJourney />
-          <PersonaCarousel />
-          <LearningModel />
-          <CaseStudiesSection />
-          <Footer />
-        </>
-      )}
-      {currentPage === 'playground' && <PromptPlayground />}
-      {currentPage === 'agent-builder' && <AgentBuilder />}
-      {currentPage === 'workflow-designer' && <WorkflowDesigner />}
-      {currentPage === 'product-architecture' && <ProductArchitecture />}
-      {currentPage === 'dashboard-design' && <DashboardDesigner />}
-      {currentPage === 'learning-pathway' && (needsAuth ? <AuthModal /> : <LearningPathway />)}
-      {currentPage === 'engagement-model' && <EngagementModel />}
-      {currentPage === 'case-studies' && <CaseStudiesPage />}
-      {currentPage === 'user-journey' && <UserJourney />}
-      {currentPage === 'dashboard' && (needsAuth ? <AuthModal /> : <Dashboard />)}
-      {currentPage === 'course-resources' && <CourseResources />}
-      {currentPage === 'learn-level-1-prompt' && <Level1Page />}
-
-      {/* Footer bar on all non-home pages */}
-      {currentPage !== 'home' && <FooterBar />}
-    </div>
-  );
+  return null;
 }
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <Routes>
+        {/* Authenticated app shell — all /app/* routes */}
+        <Route
+          path="/app"
+          element={
+            <AppAuthGuard>
+              <AppLayout />
+            </AppAuthGuard>
+          }
+        >
+          <Route index element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="dashboard" element={<AppSuspense><AppDashboard /></AppSuspense>} />
+          <Route path="journey" element={<AppSuspense><AppJourney /></AppSuspense>} />
+          <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
+          <Route path="toolkit" element={<AppSuspense><AppToolkit /></AppSuspense>} />
+          <Route path="toolkit/prompt-playground" element={<AppSuspense><AppPromptPlayground /></AppSuspense>} />
+          <Route path="toolkit/prompt-library" element={<AppSuspense><PromptLibraryPage /></AppSuspense>} />
+          <Route path="toolkit/agent-builder" element={<AppSuspense><AppAgentBuilder /></AppSuspense>} />
+          <Route path="toolkit/workflow-canvas" element={<AppSuspense><AppWorkflowCanvas /></AppSuspense>} />
+          <Route path="toolkit/dashboard-designer" element={<AppSuspense><AppDashboardDesigner /></AppSuspense>} />
+          <Route path="toolkit/app-builder" element={<AppSuspense><AppAppEvaluator /></AppSuspense>} />
+          <Route path="toolkit/ai-app-evaluator" element={<AppSuspense><AppAppEvaluator /></AppSuspense>} />
+          {/* Legacy routes — redirect to new paths */}
+          <Route path="toolkit/workflow-designer" element={<Navigate to="/app/toolkit/workflow-canvas" replace />} />
+          <Route path="toolkit/dashboard-design" element={<Navigate to="/app/toolkit/dashboard-designer" replace />} />
+          <Route path="toolkit/product-architecture" element={<Navigate to="/app/toolkit/app-builder" replace />} />
+          <Route path="artefacts" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
+          <Route path="artefacts/:artefactId" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
+          <Route path="cohort" element={<AppSuspense><AppCohort /></AppSuspense>} />
+        </Route>
+
+        {/* Login handler — bridges /login path to existing hash-based auth */}
+        <Route path="/login" element={<LoginRedirect />} />
+
+        {/* Marketing site — all other paths use existing hash-based routing */}
+        <Route
+          path="*"
+          element={
+            <>
+              <HashRedirector />
+              <MarketingSite />
+            </>
+          }
+        />
+      </Routes>
     </AuthProvider>
   );
 }

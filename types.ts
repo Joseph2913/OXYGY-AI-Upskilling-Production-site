@@ -164,6 +164,90 @@ export interface WorkflowDesignPayload {
   user_rationale?: string;
 }
 
+// n8n Workflow Intermediate types (Level 3 — workflow export)
+export interface N8nIntermediateNode {
+  id: string;
+  name: string;
+  type: 'trigger' | 'action' | 'ai' | 'condition' | 'transform' | 'output';
+  service: string | null;
+  n8nNodeKey: string;
+  description: string;
+  configRequirements: string[];
+}
+
+export interface WorkflowIntermediate {
+  workflowName: string;
+  summary: string;
+  complexity: 'simple' | 'moderate' | 'complex';
+  estimatedRunTime: string;
+  humanInTheLoop: boolean;
+  nodes: N8nIntermediateNode[];
+}
+
+// App Evaluator types (Level 5 — new toolkit page)
+export interface AppEvaluatorInputs {
+  appDescription: string;
+  problemAndUsers: string;
+  dataAndContent: string;
+}
+
+export interface DesignScoreCriteria {
+  score: number;
+  assessment: string;
+}
+
+export interface DesignScore {
+  overall_score: number;
+  verdict: string;
+  rationale: string;
+  criteria: {
+    user_clarity: DesignScoreCriteria;
+    data_architecture: DesignScoreCriteria;
+    personalisation: DesignScoreCriteria;
+    technical_feasibility: DesignScoreCriteria;
+    scalability: DesignScoreCriteria;
+  };
+}
+
+export interface ArchitectureComponent {
+  name: string;
+  description: string;
+  tools: string[];
+  level_connection: number;
+  priority: 'essential' | 'recommended' | 'optional';
+}
+
+export interface ImplementationStep {
+  phase: string;
+  description: string;
+  tasks: string[];
+  duration_estimate: string;
+  dependencies: string[];
+}
+
+export interface RiskItem {
+  name: string;
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+  mitigation: string;
+}
+
+export interface AppEvaluatorResult {
+  design_score: DesignScore;
+  architecture: {
+    summary: string;
+    components: ArchitectureComponent[];
+  };
+  implementation_plan: {
+    summary: string;
+    steps: ImplementationStep[];
+  };
+  risks_and_gaps: {
+    summary: string;
+    items: RiskItem[];
+  };
+}
+
 // Product Architecture types (Level 5)
 export type ToolClassification = 'essential' | 'recommended' | 'optional';
 

@@ -77,7 +77,7 @@ const F = { h: "'DM Sans', system-ui, sans-serif", b: "'Plus Jakarta Sans', syst
 
 /* ── Data: Phases ── */
 const PHASES = [
-  { id: "elearn", label: "E-Learning", icon: "▶", time: "~20 min", desc: "13-slide interactive module" },
+  { id: "elearn", label: "E-Learning", icon: "▶", time: "~20 min", desc: "12-slide interactive module" },
   { id: "read", label: "Read", icon: "◎", time: "~15 min", desc: "2 articles + reflection" },
   { id: "watch", label: "Watch", icon: "▷", time: "~12 min", desc: "2 videos + knowledge check" },
   { id: "practice", label: "Practice", icon: "◈", time: "~15 min", desc: "Prompt Playground →", external: true },
@@ -85,83 +85,109 @@ const PHASES = [
 
 /* ── Data: Slides ── */
 const SLIDES: any[] = [
-  { id: 1, section: "FOUNDATIONS", type: "title", heading: "Prompt Engineering Essentials", subheading: "Why some people get dramatically better results from the same tools you're already using", meta: ["13 slides", "~20 minutes", "Interactive", "Quiz included"], body: "You’re probably already using AI. But there’s a good chance you’re getting a fraction of what it’s capable of — not because the tool is limited, but because of what you’re giving it to work with. This module will change how you think about AI communication from the ground up." },
-  { id: 2, section: "FOUNDATIONS", type: "concept", heading: "Your AI outputs are a mirror", tealWord: "mirror", body: "When you get a disappointing response from an AI, the instinct is to blame the tool. Almost every time, the real issue is something else: the AI was working with incomplete information about you, your situation, your constraints, and what ‘good’ actually looks like.\n\nAI has no memory of previous conversations, no knowledge of your organisation, no idea who your audience is, or what you’ve already tried. Every time you start a new chat, it starts completely blank.", pullQuote: "The AI is not underperforming. It’s performing perfectly on incomplete information. The information is your job to provide.", visualKey: "comparison" },
-  { id: 3, section: "FOUNDATIONS", type: "spectrum", heading: "There’s no single right way to prompt", tealWord: "prompt", body: "Effective prompting isn’t about following one formula. The approach that works depends on what you’re trying to do, how much time you have, and how clearly you’ve formed your own thinking. Think of it as a spectrum.", positions: [
-    { label: "Brain Dump", desc: "Best when your thinking is unstructured", example: "We’ve just finished a difficult client workshop. There was tension around the change management timeline, the sponsor seemed disengaged, and three team members gave conflicting views on scope. I’m not sure how to frame the debrief. What should I be thinking about and what would you suggest I do next?" },
-    { label: "Conversational", desc: "Best for iterative, exploratory tasks", example: "Turn 1: Help me structure the key messages for a pitch to a pharma L&D team. Turn 2: The audience will be the L&D director, not commercial. Adjust for that. Turn 3: Make the opening more direct — they’re time-poor and need the business case upfront." },
-    { label: "Structured (RCTF)", desc: "Best for repeatable, consistent outputs", example: "Role: Senior L&D consultant. Context: Designing a capability framework for a 500-person pharma organisation post-merger. Task: Draft the 5 core competency areas. Format: Table with competency name, 2-sentence description, and one example behaviour per competency." },
-  ]},
-  { id: 4, section: "THE BIGGER PICTURE", type: "concept", heading: "Prompting is one layer of a bigger skill", tealWord: "bigger skill", body: "Context engineering is the practice of giving AI everything it needs to perform at its best — through your prompt, through the documents you provide, and through how you organise your working environment.\n\nPrompting is Layer 1. It’s essential and it’s where everyone starts. But the people getting the most from AI at work have gone further — and in this module, you’ll see exactly what that looks like.", visualKey: "layers" },
-  { id: 5, section: "LAYER 1 — IN YOUR PROMPT", type: "rctf", heading: "The RCTF Framework", tealWord: "RCTF", subheading: "The most practical structured approach — and the one your whole team can standardise on", elements: [
-    { key: "ROLE", color: "#667EEA", light: "#EBF4FF", desc: "Tell the AI who to be. A specific persona unlocks a specific style of thinking and a specific type of expertise.", example: "You are a senior change management consultant with 15 years of experience in large-scale digital transformations within pharmaceutical companies." },
-    { key: "CONTEXT", color: "#38B2AC", light: "#E6FFFA", desc: "Tell the AI about your situation — who’s involved, what’s happened so far, what the constraints are.", example: "We are 6 weeks into an ERP rollout. Commercial teams are showing resistance. A failed IT project 3 years ago has damaged trust in tech initiatives." },
-    { key: "TASK", color: "#ED8936", light: "#FFFBEB", desc: "Tell the AI exactly what to produce. Vague tasks produce vague outputs — every time.", example: "Create a 10-question stakeholder survey to identify the root causes of commercial team resistance to the ERP rollout." },
-    { key: "FORMAT", color: "#48BB78", light: "#F0FFF4", desc: "Tell the AI how to structure the output — length, layout, tone, what to include and what to leave out.", example: "Output as a numbered list. Max 15 words per question. Professional tone. No preamble or explanation — just the questions." },
-  ]},
-  { id: 6, section: "LAYER 1 — PRACTICE", type: "dragdrop", heading: "Build an RCTF prompt", tealWord: "RCTF prompt", instruction: "Below is a prompt someone wrote before they knew about RCTF. Drag each fragment into the correct category. Some fragments are deliberately missing — that’s part of the exercise.", scenario: "You work in the Learning & Development team at a large consulting firm. You need to brief AI on creating an onboarding plan for new graduate hires." },
-  { id: 7, section: "LAYER 1 — ADVANCED MOVES", type: "flipcard", heading: "Beyond RCTF — when to go further", tealWord: "go further", bodyAboveCards: "RCTF covers most situations. Two additional techniques unlock significantly better results for specific types of task. They take 30 seconds to learn." },
-  { id: 8, section: "LAYER 2 — THROUGH DOCUMENTS", type: "concept", heading: "Stop describing your work. Start showing it.", tealWord: "showing it", body: "Everything in Layer 1 — the role, the context, the format — you’ve been writing by hand. That works. But there’s a faster, more powerful approach for anything that involves real documents: attach them directly.\n\nWhen you give an AI a meeting transcript, a strategy document, a client brief, or a previous output, you’re not just saving time. You’re giving it access to specificity that no prompt description could replicate.", pullQuote: "Uploading a 30-page strategy document takes 10 seconds. Describing its contents accurately in a prompt would take 30 minutes — and you’d still lose most of the nuance.", visualKey: "documents" },
-  { id: 9, section: "LAYER 2 — SEE THE DIFFERENCE", type: "flipcard", heading: "The same prompt. A document changes everything.", tealWord: "document changes everything", instruction: "Both cards start with the same request. Flip each to see what the AI produced." },
-  { id: 10, section: "LAYER 3 — THROUGH ORGANISATION", type: "concept", heading: "When your AI knows your world", tealWord: "knows your world", body: "Layers 1 and 2 work session by session. Each time you start a new chat, you start from zero — re-write the role, re-upload the documents, re-explain the constraints.\n\nLayer 3 changes that. By organising your AI work into Projects — with a system prompt, shared documents, and context that builds across conversations — you move from prompting to partnership. The AI stops being a tool you instruct and starts being a collaborator that understands your work.", visualKey: "project" },
-  { id: 11, section: "APPLY IT", type: "branching", heading: "One scenario. You choose the approach.", tealWord: "you choose", bodyAboveScenario: "You’ve just finished a 90-minute client discovery session. Your notes are scattered. The partner wants a debrief summary by end of day. You have 30 minutes. Which context strategy do you use?", scenario: { situation: "90-minute client discovery session just finished", notes: "Scattered — mix of shorthand, observations, and half-formed impressions", theAsk: "Partner wants a structured debrief summary by end of day", timeAvailable: "30 minutes" } },
-  { id: 12, section: "CHECK YOUR INSTINCTS", type: "quiz", heading: "One question. Think it through.", question: "A colleague asks you to review a 15-page client proposal they’ve written and give feedback on clarity and structure. You want AI’s help. What’s the most effective approach?", options: [
-    "Write a detailed RCTF prompt describing what a good proposal looks like and asking for feedback criteria",
-    "Attach the proposal and write: ‘Review this for clarity and structure. Flag the three weakest sections and suggest specific improvements for each.’",
-    "Ask the AI: ‘What makes a great consulting proposal?’ and use its answer as a checklist to review the document yourself",
-    "Brain dump your initial impressions of the proposal and ask the AI to help you structure your feedback",
-  ], correct: 1, explanations: [
-    "Partially correct, but inefficient. You could describe what a good proposal looks like — but why describe it when you can show it? RCTF shines when you don’t have a document to provide. Here, the document exists. Attach it.",
-    "Layer 2 in action. The proposal carries all the context the AI needs. Your prompt is precise — specific task, specific format, specific depth. The combination of document plus structured prompt produces feedback grounded in the actual content, not generic best practices.",
-    "Misses the point. This uses the AI to generate abstract criteria rather than apply them to the specific document. You’d get a useful general framework — but you’d still be doing all the document analysis yourself.",
-    "Not wrong, but not optimal. Brain dumping your impressions could produce useful structured feedback — but it relies on your memory of a 15-page document, which is exactly where humans are unreliable.",
-  ]},
-  { id: 13, section: "YOUR STARTER KIT", type: "templates", heading: "Five templates you can use tomorrow", tealWord: "use tomorrow", body: "Each template is structured using RCTF and ready to use. Customise the bracketed fields for your situation. The ‘What to attach’ note tells you what document context will make each one significantly more powerful." },
+  /* Slide 1 — SITUATION — 1A: Dark full-bleed typographic statement */
+  { id: 1, section: "SITUATION", type: "darkStatement",
+    heading: "You\u2019ve just spent 20 minutes crafting a prompt. You hit enter. The AI gives you something a first-year intern would be embarrassed to submit." },
+
+  /* Slide 2 — SITUATION — 1B: Text + Visual (chat mockup) */
+  { id: 2, section: "SITUATION", type: "concept",
+    heading: "The prompt that wasted 20 minutes", tealWord: "20 minutes",
+    body: "You needed a stakeholder update for the CFO on a delayed ERP rollout. You typed a reasonable request. The AI responded with something so generic it could have been written about any project, for any person, at any company.",
+    visualKey: "scenario" },
+
+  /* Slide 3 — TENSION — 2A: Full-width statement */
+  { id: 3, section: "TENSION", type: "statement",
+    heading: "The AI performed exactly as instructed.",
+    subheading: "The problem is: your instruction carried almost no information.",
+    tealPhrase: "almost no information" },
+
+  /* Slide 4 — TENSION — 2B: Three-panel gap diagram */
+  { id: 4, section: "TENSION", type: "concept",
+    heading: "What you gave vs. what it needed", tealWord: "what it needed",
+    body: "Most prompts carry a single sentence of instruction and zero supporting information. The AI then fills every gap with generic assumptions \u2014 about who you are, what you need, and what \u2018good\u2019 looks like.",
+    visualKey: "gap" },
+
+  /* Slide 5 — CONCEPT — 3E: Definition + single example */
+  { id: 5, section: "CONCEPT", type: "concept",
+    heading: "The Prompt Blueprint", tealWord: "Prompt Blueprint",
+    body: "A six-part structure for giving AI everything it needs to produce professional-quality output on the first attempt. Each part fills a specific gap that most prompts leave empty. Together, they transform a vague instruction into a precise brief.",
+    visualKey: "definition" },
+
+  /* Slide 6 — CONCEPT — 3A: Six-component framework grid */
+  { id: 6, section: "CONCEPT", type: "rctf",
+    heading: "Six components. One complete instruction.", tealWord: "complete instruction",
+    subheading: "Each component does a specific job. Together, they eliminate the guesswork that produces generic outputs.",
+    elements: [
+      { key: "ROLE", color: "#667EEA", light: "#EBF4FF", desc: "Who the AI should be", example: "Senior change management consultant with pharma experience" },
+      { key: "CONTEXT", color: "#38B2AC", light: "#E6FFFA", desc: "Your situation and constraints", example: "6 weeks into ERP rollout. Commercial teams showing resistance." },
+      { key: "TASK", color: "#ED8936", light: "#FFFBEB", desc: "Exactly what to produce", example: "Draft a CFO stakeholder update on the timeline slip" },
+      { key: "FORMAT", color: "#48BB78", light: "#F0FFF4", desc: "Output shape, length, and tone", example: "3 short paragraphs. Professional. No jargon." },
+      { key: "STEPS", color: "#9F7AEA", light: "#FAF5FF", desc: "Reasoning sequence for the AI to follow", example: "First assess the delay impact, then recommend next steps" },
+      { key: "CHECKS", color: "#F6AD55", light: "#FFFBEB", desc: "Validation rules and constraints", example: "No generic phrases. Must name specific dates and people." },
+    ] },
+
+  /* Slide 7 — CONCEPT — 3B: Blueprint vs Brain Dump comparison [NEW] */
+  { id: 7, section: "CONCEPT", type: "concept",
+    heading: "Two approaches to the same problem", tealWord: "same problem",
+    body: "",
+    visualKey: "approaches" },
+
+  /* Slide 8 — CONCEPT — 3A: Modifier techniques [NEW] */
+  { id: 8, section: "CONCEPT", type: "concept",
+    heading: "These aren\u2019t separate approaches. They\u2019re amplifiers.", tealWord: "amplifiers",
+    body: "Add these on top of a Blueprint or a brain dump \u2014 they change how the AI reasons, not what information you give it.",
+    visualKey: "modifiers" },
+
+  /* Slide 9 — CONCEPT — 3C: Situational judgment decision matrix [NEW] */
+  { id: 9, section: "CONCEPT", type: "concept",
+    heading: "The best prompt isn\u2019t the most structured one. It\u2019s the right one for this task.", tealWord: "right one",
+    body: "",
+    visualKey: "decision" },
+
+  /* Slide 10 — CONCEPT — 3D: Interactive drag-and-drop categorisation */
+  { id: 10, section: "PRACTICE", type: "dragdrop",
+    heading: "Categorise the prompt fragments", tealWord: "prompt fragments",
+    instruction: "These are the raw ingredients of a prompt for a graduate onboarding plan. Identify what job each fragment is doing.",
+    scenario: "Creating an onboarding plan for new graduate hires joining a consulting team." },
+
+  /* Slide 11 — CONTRAST — 4A: Side-by-side with attribution */
+  { id: 11, section: "CONTRAST", type: "concept",
+    heading: "Same task. Same tool. Same person.", tealWord: "Same person",
+    body: "The only difference is the quality of information in the input.",
+    visualKey: "contrast" },
+
+  /* Slide 12 — BRIDGE — 5A: Two-panel action card */
+  { id: 12, section: "YOUR NEXT STEP", type: "bridge",
+    heading: "Now build your own.",
+    body: "The Prompt Playground uses the same Blueprint framework you\u2019ve just learned. Paste a real prompt from your current work \u2014 or build one from scratch using the guided builder.",
+    cta: "Open Prompt Playground \u2192", ctaHref: "#playground",
+    features: ["Paste any prompt and see it restructured", "Build a Blueprint prompt step by step", "Copy your structured prompt for immediate use"] },
 ];
 
-/* ── Data: Drag & Drop (Slide 6) ── */
+/* ── Data: Drag & Drop (Slide 10) ── */
 const DRAG_CHIPS = [
-  { id: "c1", text: "Create a 4-week onboarding plan", correctZone: "TASK" },
-  { id: "c2", text: "You are an experienced L&D specialist with deep knowledge of professional services firms", correctZone: "ROLE" },
-  { id: "c3", text: "Output as a week-by-week table with: focus area, key activities, and success criteria for each week", correctZone: "FORMAT" },
-  { id: "c4", text: "Our graduate cohort joins in September. They have no prior consulting experience. We want them client-ready within 30 days.", correctZone: "CONTEXT" },
-  { id: "c5", text: "Professional tone. No jargon.", correctZone: "FORMAT" },
-  { id: "c6", text: "For a professional services firm", correctZone: "CONTEXT" },
-  { id: "c7", text: "Make it detailed and useful", correctZone: "TASK", isDistractor: true, feedback: "This is too vague to be a useful task instruction. Specific tasks produce specific outputs. Try: ‘Create a 4-week onboarding plan’ instead." },
+  { id: "c1", text: "You are an experienced L&D consultant who has designed onboarding programmes for professional services firms.", correctZone: "ROLE" },
+  { id: "c2", text: "We have 12 graduates joining in September. They have no prior consulting experience. The first 90 days are critical for retention.", correctZone: "CONTEXT" },
+  { id: "c3", text: "Create a 90-day onboarding roadmap with weekly milestones.", correctZone: "TASK" },
+  { id: "c4", text: "Present as a timeline table. Include a column for owner and one for success criteria.", correctZone: "FORMAT" },
+  { id: "c5", text: "First identify the core skills graduates need in their first client engagement, then design activities that build those skills progressively.", correctZone: "STEPS" },
+  { id: "c6", text: "Every milestone must be measurable. No generic activities like \u2018shadowing\u2019 without a defined outcome.", correctZone: "CHECKS" },
+  { id: "c7", text: "Think through the most common failure points in graduate onboarding before designing the programme.", correctZone: "COT" },
+  { id: "c8", text: "Here are two examples of effective milestone descriptions from previous programmes: [example A] [example B]. Match this level of specificity.", correctZone: "FEWSHOT" },
+  { id: "c9", text: "This is a good start. Now make Week 3 more specific \u2014 it\u2019s too similar to Week 2.", correctZone: "ITERATIVE" },
+  { id: "c10", text: "Make it really good and professional.", correctZone: "VAGUE", isDistractor: true, feedback: "This tells the AI nothing it can act on. Replace vague adjectives with specific criteria." },
 ];
 const DROP_ZONES = [
   { id: "ROLE", label: "Role", color: "#667EEA", light: "#EBF4FF" },
   { id: "CONTEXT", label: "Context", color: "#38B2AC", light: "#E6FFFA" },
   { id: "TASK", label: "Task", color: "#ED8936", light: "#FFFBEB" },
   { id: "FORMAT", label: "Format", color: "#48BB78", light: "#F0FFF4" },
-];
-
-/* ── Data: Technique Flip Cards (Slide 7) ── */
-const TECHNIQUE_CARDS = [
-  { frontLabel: "Chain of Thought", frontOneLiner: "When you need the AI to reason, not just respond", frontExcerpt: "Think through this step by step before giving your final answer…", backWhen: "Complex decisions, multi-variable analysis, anything where you’d want to see the working — not just the conclusion.", backExample: "Analyse the risks of launching our new service in EMEA before the US. Think through this step by step: consider market readiness, regulatory environment, resource requirements, and competitive timing. Then give your recommendation.", backWhy: "Asking the AI to reason out loud catches errors in its logic — and yours. It produces outputs that are easier to challenge and refine." },
-  { frontLabel: "Few-Shot Prompting", frontOneLiner: "When you want consistent style — show, don’t tell", frontExcerpt: "Here are two examples of what I’m looking for. Follow this pattern exactly…", backWhen: "Recurring outputs where format and tone matter — status updates, client emails, meeting summaries. Anything your team produces repeatedly.", backExample: "Here are two examples of how we write project status updates: [Example 1] [Example 2]. Now write a status update for this week using the same structure and tone.", backWhy: "Showing is more precise than describing. A good example eliminates ambiguity about format, tone, and depth in a way that written instructions alone cannot." },
-];
-
-/* ── Data: Document Flip Cards (Slide 9) ── */
-const DOC_FLIP_CARDS = [
-  { frontBadge: "PROMPT — NO ATTACHMENT", badgeStyle: "error" as const, frontLabel: "Summarise the key decisions from our last leadership meeting", frontNote: "No document attached", backBadge: "AI RESPONSE", backResponse: "I’d be happy to help summarise your leadership meeting decisions, but I don’t have access to the content of your meeting. Could you share the key discussion points, agenda items, or notes from the meeting so I can help organise and summarise them for you?", backInsight: "The AI can’t help. It has nothing to work with.", insightBg: C.errorLight, insightBorder: C.errorBorder },
-  { frontBadge: "PROMPT + MEETING TRANSCRIPT", badgeStyle: "success" as const, frontLabel: "Summarise the key decisions from our last leadership meeting", frontNote: "Circleback transcript attached (47 min meeting)", backBadge: "AI RESPONSE", backResponse: "Key decisions from the 14 Feb leadership meeting:\n\n1. APPROVED: Q2 hiring plan — 3 additional consultants, start dates staggered April–June\n\n2. DEFERRED: New client pricing structure — CFO requested revised modelling before sign-off (deadline: 28 Feb)\n\n3. ASSIGNED: Sarah to lead the Frankfurt office proposal — first draft due 21 Feb for review\n\n4. ESCALATED: Capacity concern on Project Delta flagged to MD — decision expected by EOW", backInsight: "Same prompt. The document turned a dead-end into a complete, actionable output.", insightBg: C.successLight, insightBorder: C.successBorder },
-];
-
-/* ── Data: Branching Options (Slide 11) ── */
-const BRANCH_OPTS = [
-  { cardLabel: "LAYER 1 — PROMPT ONLY", whatYouDo: "Paste your rough notes into a brain dump prompt. Let the AI find structure in your unorganised thinking.", promptPreview: "Here are my raw notes from the discovery session: [paste everything]. The partner needs a debrief summary by EOD. Help me structure the key findings, tensions we observed, and recommended next steps.", qualityBadge: "GOOD — Fast and usable", qualityColor: C.task, outputSnippet: "Key findings from discovery session:\n\n1. Strategic fit uncertain — client sees outsourcing as cost reduction but hasn’t defined what ‘good’ looks like for medical affairs\n\n2. Internal tension flagged — Medical Director supportive; VP Commercial resistant (perceived loss of control)\n\n3. Decision timeline unclear — Board wants a recommendation in 6 weeks but due diligence scope isn’t agreed", reflection: "Brain dump works well here — your rough notes had enough substance for the AI to find structure. The output is solid but generic. It doesn’t reflect your firm’s methodology or specific framing. Good first draft. Needs editing for client delivery.", tradingOff: "Fast · Generic · Good first draft" },
-  { cardLabel: "LAYER 2 — DOCUMENT + PROMPT", whatYouDo: "Upload the Circleback transcript and write a structured RCTF prompt. Let the document carry the context.", promptPreview: "[Transcript attached] You are a senior management consultant. Using this discovery session transcript, produce a debrief summary covering: key themes, stakeholder concerns, open questions, and recommended next steps. Format as a structured brief, max 400 words.", qualityBadge: "STRONG — Specific and grounded", qualityColor: C.success, outputSnippet: "Discovery Debrief — Medical Affairs Outsourcing\n[Client], 18 Feb 2026\n\nKEY THEMES\n→ Strategic ambiguity: Client hasn’t defined the ‘make vs buy’ criteria.\n\n→ Stakeholder misalignment: Medical Director aligned; VP Commercial concerned about loss of KOL relationship ownership.\n\n→ Regulatory risk underweighted: No discussion of pharmacovigilance handover.\n\nRECOMMENDED NEXT STEPS\n1. Workshop: Define outsourcing success criteria with ExCo (Wk 2)\n2. Stakeholder map: KOL relationship ownership\n3. Regulatory review: Bring in PV lead for risk assessment", reflection: "The transcript gave the AI specificity no prompt description could replicate — names, specific concerns, exact tensions. This is near client-ready with minimal editing. Layer 2 at work.", tradingOff: "Specific · Grounded · Near client-ready" },
-  { cardLabel: "LAYER 3 — ORGANISED CONTEXT", whatYouDo: "Open your existing client project where the client brief and methodology are already loaded. Ask directly — the AI already knows the context.", promptPreview: "[In client project — brief and methodology already loaded] Summarise the key findings from today’s discovery session transcript [attached]. Flag any tensions with the original brief and suggest 3 next steps.", qualityBadge: "POWERFUL — Contextually aware", qualityColor: C.teal, outputSnippet: "[Same quality as Option B output, plus:]\n\nALIGNMENT WITH ENGAGEMENT BRIEF\nFindings broadly consistent with original scope. However, the regulatory risk gap identified represents a material scope addition. Recommend flagging to the partner before submitting.\n\nSuggested framing: ‘We’ve identified a PV risk dimension not in original scope but significant for the recommendation. Suggest a 30-min call before we submit findings.’", reflection: "Because the project contained the original brief and your methodology, the AI cross-referenced what it heard against what was expected — and proactively flagged the gap.\n\nYou didn’t build this project today — that’s Level 2. But now you know exactly why you will.", tradingOff: "Contextually aware · Proactive · Level 2 skill" },
-];
-
-/* ── Data: Templates (Slide 13) ── */
-const TEMPLATES = [
-  { id: "t1", name: "Meeting Debrief", tag: "CONSULTING · L&D · BD", tagColor: C.teal, prompt: "You are a senior [role] at a professional services firm. Review the attached meeting transcript and produce a structured debrief covering:\n• Key decisions made (with owners)\n• Open questions and unresolved tensions\n• Action items (owner + deadline)\n• What I should flag to my manager before next steps\n\nFormat: Structured bullet points. Max 300 words. Direct tone — no filler.", whatToAttach: "Your Circleback or Otter.ai transcript from the meeting", proTip: "No transcript? Paste your rough notes instead — brain dump them directly above this prompt." },
-  { id: "t2", name: "Document Analysis", tag: "STRATEGY · CONSULTING · ANY FUNCTION", tagColor: "#667EEA", prompt: "You are a [role] with expertise in [domain]. Review the attached document and identify:\n• The 3 most important insights or findings\n• The key assumptions being made (and whether they hold up)\n• The single most important question this document leaves unanswered\n• What I should do with this information\n\nFormat: Numbered list for each section. Analytical tone. Flag uncertainty explicitly — don’t guess.", whatToAttach: "The document, report, or strategy deck you want analysed", proTip: "Works especially well for long documents you don’t have time to read in full." },
-  { id: "t3", name: "First Draft Generator", tag: "BD · COMMS · ANY WRITTEN OUTPUT", tagColor: "#ED8936", prompt: "You are an experienced [consultant / writer / analyst] specialising in [domain or sector]. Draft a [document type — email / proposal section / briefing note] for the following situation:\n\n[Describe your situation here — or attach the brief]\n\nAudience: [Who will read this]\nTone: [Professional / direct / warm / technical]\nLength: [Max word count or format]\n\nDo not add preamble or sign-off unless specified.", whatToAttach: "A previous example of a similar document written in your team’s voice — or the brief you’re working from", proTip: "Attaching a previous example is often more powerful than describing tone in text. Show it what ‘good’ looks like." },
-  { id: "t4", name: "Stakeholder Preparation", tag: "CONSULTING · BD · LEADERSHIP", tagColor: "#48BB78", prompt: "You are a senior advisor helping me prepare for an important meeting. Based on the attached context, help me:\n\n• Anticipate the 3 most likely objections or concerns this stakeholder will raise\n• Prepare a response or position for each\n• Identify the one thing I must NOT say or do in this meeting\n• Suggest the ideal opening 2 minutes\n\nFormat: Structured by section. Practical and specific — no generic advice.", whatToAttach: "Stakeholder profile, LinkedIn background, previous meeting notes, or the document they will have reviewed", proTip: "More specific context = more specific preparation. Generic background produces generic prep." },
-  { id: "t5", name: "Learning & Synthesis", tag: "L&D · RESEARCH · PERSONAL DEVELOPMENT", tagColor: C.navyMid, prompt: "You are a knowledgeable [subject matter expert]. I have just [read / attended / completed] [resource name or type].\n\nHelp me:\n• Summarise the 3 most important ideas in plain language\n• Connect these ideas to [my role / current project / specific challenge]\n• Give me 2 questions I should now be asking myself\n• Suggest one immediate action I can take\n\nFormat: Short paragraphs per section. Practical and specific.", whatToAttach: "The article, transcript, or notes from whatever you just consumed", proTip: "Use after every significant piece of learning — articles, podcasts, workshops. Turns passive consumption into active synthesis." },
+  { id: "STEPS", label: "Steps", color: "#9F7AEA", light: "#FAF5FF" },
+  { id: "CHECKS", label: "Quality Checks", color: "#F6AD55", light: "#FFFBEB" },
+  { id: "COT", label: "Chain of Thought", color: "#E53E3E", light: "#FFF5F5" },
+  { id: "FEWSHOT", label: "Few-Shot", color: "#805AD5", light: "#FAF5FF" },
+  { id: "ITERATIVE", label: "Iterative Refinement", color: "#DD6B20", light: "#FFFAF0" },
+  { id: "VAGUE", label: "Too vague to be useful", color: "#A0AEC0", light: "#F7FAFC" },
 ];
 
 /* ── Data: Articles ── */
@@ -313,148 +339,237 @@ export default function Level1Page() {
     const s = SLIDES[slide];
     switch (s.type) {
 
-      /* ── TITLE ── */
-      case "title": return (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <Eyebrow t="OXYGY AI UPSKILLING — LEVEL 1" />
-          <h1 style={{ fontFamily: F.h, fontSize: 28, fontWeight: 800, color: C.navy, lineHeight: 1.2, margin: "0 0 6px" }}>
-            <TU>Prompt Engineering</TU> Essentials
-          </h1>
-          <p style={{ fontSize: 13, color: C.light, fontFamily: F.b, margin: "0 0 10px" }}>{s.subheading}</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-            {s.meta.map((m: string) => <span key={m} style={{ padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: 11, color: C.body, fontWeight: 600, fontFamily: F.b }}>{m}</span>)}
-          </div>
-          <p style={{ fontSize: 13, color: C.body, fontFamily: F.b, lineHeight: 1.65, maxWidth: 560, margin: "0 0 0" }}>{s.body}</p>
-          <div style={{ marginTop: "auto" }}>
-            <div className="l1-cta-glow" style={{ background: C.tealLight, border: `1.5px solid ${C.mint}`, borderRadius: 12, padding: "16px 24px" }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: C.navy, fontFamily: F.b, margin: "0 0 14px" }}>Before we start — how confident do you feel about getting great outputs from AI tools?</p>
-              <div style={{ position: "relative", margin: "0 0 6px" }}>
-                <input type="range" min={1} max={10} value={confSliderBefore} onChange={e => setConfSliderBefore(Number(e.target.value))} className="l1-slider" style={{ width: "100%", margin: 0 }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                  <span key={n} onClick={() => setConfSliderBefore(n)} style={{
-                    fontSize: 11, fontWeight: confSliderBefore === n ? 700 : 400,
-                    color: confSliderBefore === n ? C.teal : C.muted, fontFamily: F.b,
-                    cursor: "pointer", width: 20, textAlign: "center",
-                    transition: "all 150ms ease",
-                  }}>{n}</span>
-                ))}
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                <span style={{ fontSize: 10, color: C.muted, fontFamily: F.b }}>Not confident</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: C.teal, fontFamily: F.h }}>{confSliderBefore}<span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>/10</span></span>
-                <span style={{ fontSize: 10, color: C.muted, fontFamily: F.b }}>Very confident</span>
-              </div>
-            </div>
-          </div>
+      /* ── DARK STATEMENT (1A) ── */
+      case "darkStatement": return (
+        <div style={{ background: C.navy, margin: "-36px -48px", padding: "36px 48px", minHeight: "calc(100% + 72px)", display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box" as const }}>
+          <h1 style={{ fontFamily: F.h, fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.5, textAlign: "center", maxWidth: 540 }}>{s.heading}</h1>
         </div>
       );
+
+      /* ── STATEMENT (2A) ── */
+      case "statement": {
+        const phrase = s.tealPhrase || "";
+        const idx = s.subheading ? s.subheading.indexOf(phrase) : -1;
+        return (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center" }}>
+            <h1 style={{ fontFamily: F.h, fontSize: 28, fontWeight: 800, color: C.navy, lineHeight: 1.3, maxWidth: 600, margin: "0 0 20px" }}>{s.heading}</h1>
+            <p style={{ fontFamily: F.h, fontSize: 20, fontWeight: 600, color: C.teal, lineHeight: 1.4, maxWidth: 500, margin: 0 }}>
+              {idx > -1 ? (
+                <>{s.subheading.slice(0, idx)}<TU>{phrase}</TU>{s.subheading.slice(idx + phrase.length)}</>
+              ) : s.subheading}
+            </p>
+          </div>
+        );
+      }
 
       /* ── CONCEPT ── */
       case "concept": {
         const renderVisual = () => {
-          if (s.visualKey === "comparison") return (
-            <div>
-              {/* Mirror visual: vague input → vague output vs. specific input → specific output */}
-              <div style={{ display: "flex", gap: 16 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>VAGUE INPUT</p>
-                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>"Write me a stakeholder email"</p>
-                  </div>
-                  <div style={{ textAlign: "center", color: C.error, fontSize: 16, margin: "2px 0" }}>↓</div>
-                  <div style={{ background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: 10, padding: "12px 14px" }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>VAGUE OUTPUT</p>
-                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>"Dear Stakeholder, I am writing to provide an update on the project…"</p>
-                    <p style={{ fontSize: 10, color: C.muted, fontFamily: F.b, margin: "6px 0 0", fontStyle: "italic" }}>Generic. No context. Unusable.</p>
+          /* ── scenario: chat mockup (Slide 2) ── */
+          if (s.visualKey === "scenario") return (
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+              <div style={{ background: C.navy, padding: "10px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.error }} />
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ED8936" }} />
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.success }} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.muted, fontFamily: F.b, marginLeft: 8 }}>AI Chat</span>
+              </div>
+              <div style={{ padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                  <div style={{ background: C.tealLight, border: `1px solid ${C.mint}`, borderRadius: "12px 12px 0 12px", padding: "10px 14px", maxWidth: "80%" }}>
+                    <p style={{ fontSize: 12, color: C.navyMid, fontFamily: F.b, margin: 0, fontStyle: "italic" }}>Write me a stakeholder update email about the ERP project delays</p>
                   </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>SPECIFIC INPUT</p>
-                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>"Draft an email to the CFO updating her on ERP delays. Tone: direct. Include the revised timeline."</p>
+                <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
+                  <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px 12px 12px 0", padding: "10px 14px", maxWidth: "80%" }}>
+                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, margin: "0 0 4px", lineHeight: 1.5 }}>Dear Stakeholder,</p>
+                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, margin: "0 0 4px", lineHeight: 1.5 }}>I am writing to provide an update on the project status. We have encountered some delays which we are working to resolve...</p>
+                    <p style={{ fontSize: 11, color: C.muted, fontFamily: F.b, margin: 0, fontStyle: "italic" }}>[continues with generic corporate filler...]</p>
                   </div>
-                  <div style={{ textAlign: "center", color: C.success, fontSize: 16, margin: "2px 0" }}>↓</div>
-                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "12px 14px" }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>SPECIFIC OUTPUT</p>
-                    <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>"Hi Sarah, Quick update on the ERP rollout: we’ve hit a 2-week delay on the data migration…"</p>
-                    <p style={{ fontSize: 10, color: C.muted, fontFamily: F.b, margin: "6px 0 0", fontStyle: "italic" }}>Contextual. Actionable. Ready to send.</p>
-                  </div>
+                </div>
+                <div style={{ background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: 8, padding: "8px 12px" }}>
+                  <p style={{ fontSize: 11, color: C.error, fontWeight: 600, fontFamily: F.b, margin: 0 }}>No names. No specifics. No usable content.</p>
                 </div>
               </div>
             </div>
           );
-          if (s.visualKey === "layers") return (
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1.5, margin: "0 0 10px", fontFamily: F.b }}>COURSE INDEX — CLICK TO JUMP</p>
-              <div className="l1-layers-row" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+          /* ── gap: three-panel (Slide 4) ── */
+          if (s.visualKey === "gap") return (
+            <div style={{ display: "flex", gap: 0, alignItems: "stretch" }}>
+              <div style={{ flex: 1, background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: "10px 0 0 10px", padding: "14px 14px" }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 8px", fontFamily: F.b }}>WHAT YOU GAVE</p>
+                <div style={{ background: "#fff", borderRadius: 6, padding: "8px 10px" }}>
+                  <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, fontStyle: "italic", margin: 0 }}>&quot;Write me a stakeholder update email about the ERP project delays&quot;</p>
+                </div>
+              </div>
+              <div style={{ width: 50, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 60, fontWeight: 800, color: C.teal }}>?</span>
+                <span style={{ fontSize: 8, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: 1 }}>What&apos;s{"\n"}missing?</span>
+              </div>
+              <div style={{ flex: 1, background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: "0 10px 10px 0", padding: "14px 14px" }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 8px", fontFamily: F.b }}>WHAT IT NEEDED</p>
                 {[
-                  { bg: C.teal, label: "LAYER 1", subtitle: "IN YOUR PROMPT", desc: "What you write in the message box", slideRange: "Slides 5–7", items: "Role · Context · Task · Format · Chain of Thought", target: 4 },
-                  { bg: "#5B6DC2", label: "LAYER 2", subtitle: "THROUGH DOCUMENTS", desc: "Files, transcripts, reports, and briefs you attach", slideRange: "Slides 8–9", items: "Meeting transcripts · Strategy docs · Previous outputs · Briefs", target: 7 },
-                  { bg: C.navy, label: "LAYER 3", subtitle: "THROUGH ORGANISATION", desc: "Projects, system prompts, cross-chat memory", slideRange: "Slide 10", items: "System prompts · Shared projects · Persistent context", target: 9 },
-                ].map((layer, i) => (
-                  <div key={i} onClick={() => goToSlide(layer.target)} style={{
-                    background: layer.bg, borderRadius: 10, padding: "14px 16px", color: "#fff",
-                    flex: 1, minWidth: 0, display: "flex", flexDirection: "column" as const,
-                    cursor: "pointer", transition: "transform 150ms ease, box-shadow 150ms ease",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = ""; }}
-                  >
-                    <div style={{ marginBottom: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase" as const, opacity: 0.95, display: "block" }}>{layer.label}</span>
-                      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" as const, opacity: 0.7 }}>{layer.subtitle}</span>
-                    </div>
-                    <p style={{ fontSize: 12, margin: "0 0 6px", opacity: 0.9, lineHeight: 1.4 }}>{layer.desc}</p>
-                    <p style={{ fontSize: 10, margin: "0 0 8px", opacity: 0.7, lineHeight: 1.4 }}>{layer.items}</p>
-                    <span style={{ background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 20, padding: "3px 10px", alignSelf: "flex-start", marginTop: "auto" }}>{layer.slideRange}</span>
-                  </div>
+                  "Who you are and your role",
+                  "The specific situation and constraints",
+                  "Exactly what to produce",
+                  "How the output should be structured",
+                  "What \u201Cgood\u201D looks like for this audience",
+                ].map((item, i) => (
+                  <p key={i} style={{ margin: "4px 0", fontSize: 11, fontFamily: F.b, color: C.body, display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ color: C.teal, fontWeight: 700, flexShrink: 0 }}>{"\u2022"}</span> {item}
+                  </p>
                 ))}
               </div>
-              <p style={{ fontSize: 11, color: C.muted, fontStyle: "italic", marginTop: 12, marginBottom: 0, fontFamily: F.b }}>You don’t need to master all three layers today. Click any layer to jump ahead, or continue in order.</p>
             </div>
           );
-          if (s.visualKey === "documents") return (
+          /* ── definition: Blueprint definition + single example (Slide 5) ── */
+          if (s.visualKey === "definition") return (
+            <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1.5, textTransform: "uppercase" as const, margin: "0 0 10px", fontFamily: F.b }}>IN PRACTICE — ROLE COMPONENT ONLY</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ background: "#667EEA", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "3px 12px", fontFamily: F.b }}>ROLE</span>
+              </div>
+              <PromptBox borderColor="#667EEA">Senior change management consultant with pharmaceutical sector experience and expertise in ERP implementation programmes.</PromptBox>
+              <p style={{ fontSize: 11, color: C.muted, fontStyle: "italic", margin: "10px 0 0", fontFamily: F.b }}>Five more components follow. Each one does a specific job the bare prompt left undone.</p>
+            </div>
+          );
+          /* ── approaches: Blueprint vs Brain Dump (Slide 7) ── */
+          if (s.visualKey === "approaches") return (
             <div>
-              <div className="l1-docs-row" style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+              <Eyebrow t="TWO APPROACHES TO THE SAME PROBLEM" />
+              <div className="l1-two-col" style={{ display: "flex", gap: 14 }}>
+                {/* Blueprint panel */}
+                <div style={{ flex: 1, minWidth: 0, background: "#EBF4FF", border: "1px solid #C3DAFE", borderRadius: 12, padding: "14px 16px" }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 6px", fontFamily: F.h }}>THE BLUEPRINT</p>
+                  <span style={{ display: "inline-block", fontSize: 9, fontWeight: 600, color: C.light, border: `1px solid ${C.border}`, borderRadius: 12, padding: "2px 8px", marginBottom: 8, fontFamily: F.b }}>High structure · Reproducible · Best for recurring tasks</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {[
+                      { label: "ROLE", color: "#667EEA", text: "Senior change management consultant with pharma experience" },
+                      { label: "CONTEXT", color: "#38B2AC", text: "ERP rollout week 6, data migration slip, vendor issue, 3 Feb steering committee" },
+                      { label: "TASK", color: "#ED8936", text: "CFO stakeholder update on timeline slip" },
+                      { label: "FORMAT", color: "#48BB78", text: "3 paragraphs, professional, forwardable to board" },
+                      { label: "STEPS", color: "#9F7AEA", text: "Assess impact \u2192 timeline \u2192 recommend next steps" },
+                      { label: "CHECKS", color: "#F6AD55", text: "Named stakeholder, specific dates, actionable" },
+                    ].map(c => (
+                      <div key={c.label} style={{ background: "#fff", borderRadius: 6, padding: "3px 8px", display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 8, fontWeight: 700, color: c.color, fontFamily: F.b, minWidth: 40 }}>{c.label}</span>
+                        <span style={{ fontSize: 10, color: C.body, fontFamily: F.b }}>{c.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 6, padding: "5px 10px", marginTop: 8 }}>
+                    <p style={{ fontSize: 10, color: C.success, fontWeight: 600, margin: 0, fontFamily: F.b }}>Rich context \u2192 professional output</p>
+                  </div>
+                </div>
+                {/* Brain Dump panel */}
+                <div style={{ flex: 1, minWidth: 0, background: "#FFFFF0", border: "1px solid #FAF089", borderRadius: 12, padding: "14px 16px" }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 6px", fontFamily: F.h }}>THE BRAIN DUMP</p>
+                  <span style={{ display: "inline-block", fontSize: 9, fontWeight: 600, color: C.light, border: `1px solid ${C.border}`, borderRadius: 12, padding: "2px 8px", marginBottom: 8, fontFamily: F.b }}>Low friction · Dictated · Best for one-off complex requests</span>
+                  <div style={{ background: "#fff", borderRadius: 6, padding: "8px 10px", marginBottom: 6 }}>
+                    <p style={{ fontSize: 10, color: C.body, fontFamily: F.b, lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>Okay so I need to write an update for Sarah the CFO about the ERP delays &mdash; we&apos;re about 6 weeks in and the data migration slipped, vendor integration issue, it came up in the 3 Feb steering committee. The commercial team, especially Marcus&apos;s group, are resistant. Go-live was supposed to be March but now looks like mid-April. Sarah probably knows the headline but not the detail. I want something she can forward to the board if needed, three paragraphs max, professional but not stiff.</p>
+                  </div>
+                  <span style={{ display: "inline-block", fontSize: 9, fontWeight: 600, color: "#805AD5", background: "#FAF5FF", border: "1px solid #E9D8FD", borderRadius: 12, padding: "2px 8px", marginBottom: 6, fontFamily: F.b }}>Spoken in ~35 seconds via Wispr Flow or built-in dictation</span>
+                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 6, padding: "5px 10px" }}>
+                    <p style={{ fontSize: 10, color: C.success, fontWeight: 600, margin: 0, fontFamily: F.b }}>Rich context \u2192 professional output</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+          /* ── modifiers: three technique cards (Slide 8) ── */
+          if (s.visualKey === "modifiers") return (
+            <div className="l1-layers-row" style={{ display: "flex", gap: 12 }}>
+              {[
+                { title: "Chain of Thought", icon: "\u21E2", what: "Ask the AI to reason step-by-step before answering", example: "Think through this carefully before responding. Show your reasoning.", badge: "Use when: Analysis, judgment calls, multi-step reasoning" },
+                { title: "Few-Shot Examples", icon: "\u25EB", what: "Show the AI 2\u20133 examples of good output before asking it to produce", example: "Here are two examples of the format I want: [example 1] [example 2]. Now produce one for\u2026", badge: "Use when: Format or tone is critical and hard to describe in words" },
+                { title: "Iterative Refinement", icon: "\u21BB", what: "Treat the first output as a draft; give specific feedback to develop it", example: "Good start. Now make it more direct in the second paragraph and cut the final sentence.", badge: "Use when: Open-ended or creative tasks where you need to see something before you know what you want" },
+              ].map(card => (
+                <div key={card.title} style={{ flex: 1, minWidth: 0, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column" }}>
+                  <div style={{ fontSize: 22, marginBottom: 4, color: C.teal }}>{card.icon}</div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 4px", fontFamily: F.h }}>{card.title}</p>
+                  <p style={{ fontSize: 11, color: C.body, margin: "0 0 8px", fontFamily: F.b, lineHeight: 1.5 }}>{card.what}</p>
+                  <PromptBox>{card.example}</PromptBox>
+                  <span style={{ display: "inline-block", fontSize: 9, fontWeight: 600, color: C.teal, border: `1px solid ${C.teal}`, borderRadius: 12, padding: "3px 8px", marginTop: 8, fontFamily: F.b, alignSelf: "flex-start" }}>{card.badge}</span>
+                </div>
+              ))}
+            </div>
+          );
+          /* ── decision: 2x2 situational judgment matrix (Slide 9) ── */
+          if (s.visualKey === "decision") return (
+            <div>
+              <Eyebrow t="SITUATIONAL JUDGMENT" />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 {[
-                  { eye: "CONSULTING / ANY FUNCTION", doc: "Post-workshop transcript (Circleback, Otter.ai)", prompt: "Identify the three unresolved tensions from this workshop and suggest how to address each one in the next session.", without: "Generic facilitation advice", withDoc: "Specific points grounded in what was actually said", tools: ["Circleback", "Otter.ai"] },
-                  { eye: "STRATEGY / LEADERSHIP", doc: "Company strategy deck or annual report (PDF)", prompt: "Based on this strategy document, identify the top 3 capability gaps that would prevent us from achieving the Year 3 targets.", without: "Theoretical gap analysis", withDoc: "Gaps mapped to the organisation’s own stated priorities", tools: ["NotebookLM"] },
-                  { eye: "BD / COMMS / ANY WRITTEN OUTPUT", doc: "Last quarter’s proposal, report, or email thread", prompt: "Using this previous proposal as a style and structure reference, draft a new proposal for [new client]. Match the tone exactly.", without: "Generic proposal structure", withDoc: "Output that matches your team’s actual voice and standards", tools: ["Claude / ChatGPT"] },
+                  { accent: "#C3D0F5", type: "Recurring \u00B7 High-stakes \u00B7 Needs to be reusable", approach: "Blueprint", modifier: "+ Quality Checks", example: "Proposal template, weekly client update, analysis report" },
+                  { accent: "#F7E8A4", type: "One-off \u00B7 Complex \u00B7 Lots of nuance", approach: "Brain Dump", modifier: "+ Chain of Thought", example: "Stakeholder message, sensitive email, judgment call" },
+                  { accent: "#A8F0E0", type: "Format-critical \u00B7 Tone matters \u00B7 Hard to describe", approach: "Blueprint or Brain Dump", modifier: "+ Few-Shot Examples", example: "Slide deck, exec summary, specific document style" },
+                  { accent: "#F5B8A0", type: "Exploratory \u00B7 Creative \u00B7 Open-ended", approach: "Brain Dump", modifier: "+ Iterative Refinement", example: "Strategy framing, ideation, first draft of anything new" },
                 ].map((card, i) => (
-                  <div key={i} style={{ flex: 1, minWidth: 0, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: 14, display: "flex", flexDirection: "column" as const }}>
-                    <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: 1.2, textTransform: "uppercase" as const, margin: "0 0 6px", fontFamily: F.b }}>{card.eye}</p>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: C.navy, margin: "0 0 8px", fontFamily: F.h, lineHeight: 1.4 }}>{card.doc}</p>
-                    <PromptBox>{card.prompt}</PromptBox>
-                    <div style={{ marginTop: 10, fontSize: 11, fontFamily: F.b, display: "flex", flexDirection: "column" as const, gap: 4 }}>
-                      <div><span style={{ fontSize: 9, fontWeight: 700, color: C.error }}>WITHOUT: </span><span style={{ color: C.body }}>{card.without}</span></div>
-                      <div><span style={{ fontSize: 9, fontWeight: 700, color: C.success }}>WITH: </span><span style={{ color: C.body }}>{card.withDoc}</span></div>
-                    </div>
-                    <div style={{ marginTop: "auto", paddingTop: 10, display: "flex", flexWrap: "wrap" as const, gap: 4 }}>
-                      {card.tools.map(t => <span key={t} style={{ border: `1px solid ${C.border}`, borderRadius: 16, padding: "3px 10px", fontSize: 10, fontWeight: 600, color: C.body, fontFamily: F.b }}>{t}</span>)}
-                    </div>
+                  <div key={i} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", borderTop: `4px solid ${card.accent}` }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.light, margin: "0 0 6px", fontFamily: F.b }}>{card.type}</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: "0 0 2px", fontFamily: F.h }}>{card.approach}</p>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: C.teal, margin: "0 0 6px", fontFamily: F.b }}>{card.modifier}</p>
+                    <p style={{ fontSize: 11, color: C.muted, margin: 0, fontFamily: F.b, fontStyle: "italic" }}>{card.example}</p>
                   </div>
                 ))}
               </div>
+              <p style={{ fontSize: 11, color: C.muted, fontFamily: F.b, textAlign: "center", margin: 0, lineHeight: 1.5 }}>Approaches combine. A Blueprint prompt on a complex analysis task should also use Chain of Thought. There is no wrong combination &mdash; only incomplete information.</p>
             </div>
           );
-          if (s.visualKey === "project") return (
-            <div style={{ border: `2px solid ${C.border}`, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-              <div style={{ background: C.navy, padding: "10px 14px" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", fontFamily: F.h }}>PROJECT: Client Delivery Support</span>
+          /* ── contrast: side-by-side with attribution (Slide 11) ── */
+          if (s.visualKey === "contrast") return (
+            <div>
+              <Eyebrow t="SAME TASK \u00B7 SAME TOOL \u00B7 SAME PERSON" />
+              <div className="l1-two-col" style={{ display: "flex", gap: 14, marginBottom: 12 }}>
+                {/* Without */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ background: C.errorLight, border: `1px solid ${C.errorBorder}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>WITHOUT THE BLUEPRINT</p>
+                    <div style={{ background: "#fff", borderRadius: 6, padding: "8px 10px", marginBottom: 6, borderLeft: `3px solid ${C.error}` }}>
+                      <p style={{ fontSize: 11, color: C.body, fontFamily: F.b, fontStyle: "italic", margin: 0 }}>Write me a stakeholder update email about the ERP project delays</p>
+                    </div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: C.error, letterSpacing: 1, margin: "0 0 4px", fontFamily: F.b }}>AI OUTPUT</p>
+                    <div style={{ background: "#fff", borderRadius: 6, padding: "8px 10px" }}>
+                      <p style={{ fontSize: 11, color: C.body, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>Dear Stakeholder, I am writing to provide an update on the project status. We have encountered some delays which we are working to resolve. We remain committed to delivering a high-quality outcome and will keep you informed of any further developments.</p>
+                    </div>
+                    <div style={{ background: "#fff", borderRadius: 6, padding: "5px 10px", marginTop: 6 }}>
+                      <p style={{ fontSize: 10, color: C.error, fontWeight: 600, margin: 0, fontFamily: F.b }}>Generic. No names. Could be about any project. Not sendable.</p>
+                    </div>
+                  </div>
+                </div>
+                {/* With */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>WITH THE BLUEPRINT</p>
+                    <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px", marginBottom: 6, borderLeft: `3px solid ${C.success}` }}>
+                      {[
+                        { k: "Role", c: "#667EEA" }, { k: "Context", c: C.teal }, { k: "Task", c: "#ED8936" },
+                        { k: "Format", c: "#48BB78" }, { k: "Quality", c: "#F6AD55" },
+                      ].map(item => (
+                        <span key={item.k} style={{ display: "inline-block", fontSize: 8, fontWeight: 700, color: item.c, background: `${item.c}15`, borderRadius: 8, padding: "1px 6px", marginRight: 3, marginBottom: 2, fontFamily: F.b }}>{item.k}</span>
+                      ))}
+                      <p style={{ fontSize: 9, color: C.muted, fontStyle: "italic", margin: "3px 0 0", fontFamily: F.b }}>Senior change mgmt consultant \u00B7 ERP week 6 \u00B7 CFO update \u00B7 3 paras \u00B7 Named dates</p>
+                    </div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: C.success, letterSpacing: 1, margin: "0 0 4px", fontFamily: F.b }}>AI OUTPUT</p>
+                    <div style={{ background: "#fff", borderRadius: 6, padding: "8px 10px" }}>
+                      <p style={{ fontSize: 11, color: C.body, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>Hi Sarah, Quick update on the ERP timeline: the data migration phase has slipped by two weeks due to the vendor integration issue flagged at the 3 February steering committee. Revised go-live is now 14 April. I&apos;d recommend briefing Marcus&apos;s commercial team before Thursday&apos;s town hall &mdash; I can draft talking points if that&apos;s helpful. Let me know how you&apos;d like to handle the board communication.</p>
+                    </div>
+                    <div style={{ background: "#fff", borderRadius: 6, padding: "5px 10px", marginTop: 6 }}>
+                      <p style={{ fontSize: 10, color: C.success, fontWeight: 600, margin: 0, fontFamily: F.b }}>Named stakeholder. Specific dates. Actionable. Ready to send.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div style={{ padding: 14 }}>
+              {/* Attribution callouts */}
+              <div style={{ display: "flex", gap: 10 }}>
                 {[
-                  { label: "SYSTEM PROMPT", content: "You are a senior Oxygy consultant supporting client delivery teams. Always be direct. Prioritise practical recommendations over theory…", note: "Defines who the AI is and how it behaves across every conversation in this project." },
-                  { label: "FILES", content: null, files: ["📄 Oxygy_Methodology.pdf", "📄 Client_Brief_Q1.docx", "📄 Engagement_Tracker.xlsx"], note: "Documents always available — no re-uploading each session." },
-                  { label: "CONVERSATIONS", content: null, files: ["◎ Workshop prep — Feb 12", "◎ Stakeholder mapping — Feb 14", "◎ Risk register review — Feb 18"], note: "Previous conversations are accessible. The AI builds understanding over time." },
-                ].map((section, i) => (
-                  <div key={i} style={{ borderBottom: i < 2 ? `1px dashed ${C.border}` : "none", paddingBottom: i < 2 ? 10 : 0, marginBottom: i < 2 ? 10 : 0 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: C.teal, margin: "0 0 6px", fontFamily: F.b }}>{section.label}</p>
-                    {section.content && <div style={{ background: C.bg, borderRadius: 6, padding: 8, fontSize: 12, color: C.body, fontFamily: F.b, marginBottom: 4 }}>{section.content}</div>}
-                    {section.files && section.files.map(f => <p key={f} style={{ fontSize: 12, color: C.body, margin: "2px 0", fontFamily: F.b }}>{f}</p>)}
-                    <p style={{ fontSize: 11, color: C.muted, fontStyle: "italic", margin: "4px 0 0", fontFamily: F.b }}>{section.note}</p>
+                  { detail: "The name \u2018Sarah\u2019", source: "Role + Context" },
+                  { detail: "The date \u201814 April\u2019", source: "Context" },
+                  { detail: "The recommended action", source: "Steps" },
+                ].map((attr, i) => (
+                  <div key={i} style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: C.navy, margin: "0 0 2px", fontFamily: F.b }}>{attr.detail}</p>
+                    <p style={{ fontSize: 10, color: C.teal, fontWeight: 600, margin: 0, fontFamily: F.b }}>{"\u2192"} came from: {attr.source}</p>
                   </div>
                 ))}
               </div>
@@ -462,19 +577,11 @@ export default function Level1Page() {
           );
           return null;
         };
-        const renderLevel2Preview = () => (
-          <div style={{ borderLeft: `4px solid ${C.teal}`, background: C.tealLight, borderRadius: "0 10px 10px 0", padding: "14px 18px", marginTop: 16 }}>
-            <span style={{ background: C.teal, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "3px 10px", display: "inline-block", marginBottom: 8 }}>→ LEVEL 2 PREVIEW</span>
-            <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: "0 0 6px", fontFamily: F.h }}>Setting this up is a Level 2 skill</p>
-            <p style={{ fontSize: 12, color: C.body, lineHeight: 1.6, margin: "0 0 6px", fontFamily: F.b }}>Designing a system prompt, structuring a project, and building shared context across your team is exactly what Level 2: Applied Capability covers.</p>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.teal, fontFamily: F.b, cursor: "pointer" }}>Preview Level 2 →</span>
-          </div>
-        );
         const renderTextBlock = (maxW?: number) => (
-          <div style={{ marginBottom: s.visualKey === "project" ? 0 : 16 }}>
+          <div style={{ marginBottom: 16 }}>
             <Eyebrow t={s.section} />
             {renderH2(s.heading, s.tealWord)}
-            {s.body.split("\n\n").map((p: string, i: number) => <p key={i} style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px", ...(maxW ? { maxWidth: maxW } : {}) }}>{p}</p>)}
+            {s.body && s.body.split("\n\n").map((p: string, i: number) => <p key={i} style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px", ...(maxW ? { maxWidth: maxW } : {}) }}>{p}</p>)}
             {s.pullQuote && (
               <div style={{ borderLeft: `4px solid ${C.teal}`, background: C.tealLight, padding: "12px 16px", borderRadius: "0 8px 8px 0", marginTop: 12, ...(maxW ? { maxWidth: maxW } : {}) }}>
                 <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, lineHeight: 1.6, fontStyle: "italic", margin: 0 }}>{s.pullQuote}</p>
@@ -483,20 +590,7 @@ export default function Level1Page() {
           </div>
         );
 
-        /* Two-column with Level 2 Preview in left column for project */
-        if (s.visualKey === "project") {
-          return (
-            <div className="l1-two-col" style={{ display: "flex", gap: 24 }}>
-              <div style={{ width: "55%", minWidth: 0 }}>
-                {renderTextBlock()}
-                {renderLevel2Preview()}
-              </div>
-              <div style={{ width: "45%", minWidth: 0 }}>{renderVisual()}</div>
-            </div>
-          );
-        }
-
-        /* Full-width stacked layout (comparison, layers, documents) */
+        /* Full-width stacked layout */
         return (
           <div>
             {renderTextBlock(640)}
@@ -567,320 +661,128 @@ export default function Level1Page() {
         </div>
       );
 
-      /* ── DRAG & DROP ── */
+      /* ── DRAG & DROP (Slide 10) ── */
       case "dragdrop": {
         const chipsInPool = DRAG_CHIPS.filter(c => !chipPlacements[c.id]);
+        const blueprintZones = DROP_ZONES.filter(z => ["ROLE","CONTEXT","TASK","FORMAT","STEPS","CHECKS"].includes(z.id));
+        const modifierZones = DROP_ZONES.filter(z => ["COT","FEWSHOT","ITERATIVE"].includes(z.id));
+        const invalidZones = DROP_ZONES.filter(z => z.id === "VAGUE");
+        const renderZone = (zone: any) => {
+          const zoneChips = DRAG_CHIPS.filter(c => chipPlacements[c.id] === zone.id);
+          const hasError = dragChecked && zoneChips.some(c => c.correctZone !== zone.id);
+          const allCorrect = dragChecked && zoneChips.length > 0 && zoneChips.every(c => c.correctZone === zone.id && !c.isDistractor);
+          return (
+            <div key={zone.id}
+              onDragOver={(e: any) => e.preventDefault()}
+              onDrop={(e: any) => { e.preventDefault(); const chipId = e.dataTransfer.getData("chipId"); if (chipId) placeChip(chipId, zone.id); }}
+              onClick={() => { if (selectedDragChip) placeChip(selectedDragChip, zone.id); }}
+              style={{
+                background: zone.light, borderRadius: 10, padding: "10px 14px", minHeight: 52,
+                border: dragChecked ? (hasError ? `2px solid ${C.error}` : allCorrect ? `2px solid ${C.success}` : `1px solid ${zone.color}`) : `1px solid ${zone.color}`,
+              }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: zone.color, textTransform: "uppercase" as const, letterSpacing: 1, fontFamily: F.b }}>{zone.label}</span>
+              <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+                {zoneChips.map(chip => {
+                  const isCorrect = chip.correctZone === zone.id && !chip.isDistractor;
+                  const showDistractor = dragChecked && chip.isDistractor && chip.correctZone === zone.id;
+                  return (
+                    <div key={chip.id} onClick={(e: any) => { e.stopPropagation(); if (!dragChecked) removeChip(chip.id); }}
+                      style={{
+                        padding: "5px 8px", borderRadius: 6, fontSize: 10, fontFamily: F.b, color: C.navyMid,
+                        background: dragChecked ? (isCorrect ? C.successLight : C.errorLight) : "#fff",
+                        border: `1px solid ${dragChecked ? (isCorrect ? C.successBorder : C.errorBorder) : C.border}`,
+                        cursor: dragChecked ? "default" : "pointer", wordBreak: "break-word" as const,
+                      }}>
+                      {chip.text}
+                      {dragChecked && !isCorrect && !showDistractor && <span style={{ display: "block", fontSize: 9, color: C.error, marginTop: 2 }}>{"\u2192"} Belongs in {chip.correctZone}</span>}
+                      {showDistractor && <span style={{ display: "block", fontSize: 9, color: C.error, marginTop: 2 }}>{(chip as any).feedback}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        };
         return (
           <div>
             <Eyebrow t={s.section} />
             {renderH2(s.heading, s.tealWord)}
-            <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px" }}>{s.instruction}</p>
-            {/* Scenario */}
-            <div style={{ background: C.navy, borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
-              <p style={{ fontSize: 13, color: "#fff", fontFamily: F.b, lineHeight: 1.6, margin: 0 }}>{s.scenario}</p>
+            <p style={{ fontSize: 13, color: C.body, fontFamily: F.b, lineHeight: 1.6, margin: "0 0 8px" }}>{s.instruction}</p>
+            <div style={{ background: C.navy, borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
+              <p style={{ fontSize: 12, color: "#fff", fontFamily: F.b, lineHeight: 1.5, margin: 0 }}>{s.scenario}</p>
             </div>
             {/* Chip pool */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, minHeight: 40 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, minHeight: 36 }}>
               {chipsInPool.map(chip => (
-                <div key={chip.id} draggable onDragStart={(e) => e.dataTransfer.setData("chipId", chip.id)}
+                <div key={chip.id} draggable onDragStart={(e: any) => e.dataTransfer.setData("chipId", chip.id)}
                   onClick={() => setSelectedDragChip(selectedDragChip === chip.id ? null : chip.id)}
                   style={{
-                    padding: "8px 14px", borderRadius: 8, fontSize: 12, fontFamily: F.b, color: C.navyMid,
+                    padding: "6px 10px", borderRadius: 8, fontSize: 11, fontFamily: F.b, color: C.navyMid,
                     background: selectedDragChip === chip.id ? C.tealLight : "#fff",
                     border: `1px solid ${selectedDragChip === chip.id ? C.teal : C.border}`,
-                    cursor: "grab", fontWeight: 500, maxWidth: "100%", wordBreak: "break-word" as const,
+                    cursor: "grab", fontWeight: 500, maxWidth: "100%", wordBreak: "break-word" as const, minHeight: 44,
+                    display: "flex", alignItems: "center",
                   }}>{chip.text}</div>
               ))}
             </div>
-            {/* Drop zones */}
-            <div className="l1-drag-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-              {DROP_ZONES.map(zone => {
-                const zoneChips = DRAG_CHIPS.filter(c => chipPlacements[c.id] === zone.id);
-                const hasError = dragChecked && zoneChips.some(c => c.correctZone !== zone.id);
-                const allCorrect = dragChecked && zoneChips.length > 0 && zoneChips.every(c => c.correctZone === zone.id && !c.isDistractor);
-                return (
-                  <div key={zone.id}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => { e.preventDefault(); const chipId = e.dataTransfer.getData("chipId"); if (chipId) placeChip(chipId, zone.id); }}
-                    onClick={() => { if (selectedDragChip) placeChip(selectedDragChip, zone.id); }}
-                    style={{
-                      background: zone.light, borderRadius: 10, padding: "14px 16px", minHeight: 80,
-                      border: dragChecked ? (hasError ? `2px solid ${C.error}` : allCorrect ? `2px solid ${C.success}` : `1px solid ${zone.color}`) : `1px solid ${zone.color}`,
-                    }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: zone.color, textTransform: "uppercase" as const, letterSpacing: 1, fontFamily: F.b }}>{zone.label}</span>
-                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                      {zoneChips.map(chip => {
-                        const isCorrect = chip.correctZone === zone.id && !chip.isDistractor;
-                        const showDistractor = dragChecked && chip.isDistractor && chip.correctZone === zone.id;
-                        return (
-                          <div key={chip.id} onClick={(e) => { e.stopPropagation(); if (!dragChecked) removeChip(chip.id); }}
-                            style={{
-                              padding: "6px 10px", borderRadius: 6, fontSize: 11, fontFamily: F.b, color: C.navyMid,
-                              background: dragChecked ? (isCorrect ? C.successLight : C.errorLight) : "#fff",
-                              border: `1px solid ${dragChecked ? (isCorrect ? C.successBorder : C.errorBorder) : C.border}`,
-                              cursor: dragChecked ? "default" : "pointer",
-                            }}>
-                            {chip.text}
-                            {dragChecked && !isCorrect && !showDistractor && <span style={{ display: "block", fontSize: 10, color: C.error, marginTop: 2 }}>→ Belongs in {chip.correctZone}</span>}
-                            {showDistractor && <span style={{ display: "block", fontSize: 10, color: C.error, marginTop: 2 }}>{(chip as any).feedback}</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Blueprint zones (2x3) */}
+            <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: 1.5, textTransform: "uppercase" as const, margin: "0 0 6px", fontFamily: F.b }}>BLUEPRINT COMPONENTS</p>
+            <div className="l1-drag-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+              {blueprintZones.map(renderZone)}
+            </div>
+            {/* Modifier zones (3 columns) */}
+            <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: 1.5, textTransform: "uppercase" as const, margin: "0 0 6px", fontFamily: F.b }}>MODIFIER TECHNIQUES</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+              {modifierZones.map(renderZone)}
+            </div>
+            {/* Invalid zone (full width) */}
+            <div style={{ marginBottom: 10 }}>
+              {invalidZones.map(renderZone)}
             </div>
             {/* Actions */}
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Btn onClick={() => setDragChecked(true)} disabled={!allChipsPlaced || dragChecked}>Check Answers</Btn>
-              <Btn onClick={resetDrag} secondary>Start again ↺</Btn>
+              <Btn onClick={resetDrag} secondary>Start again {"\u21BA"}</Btn>
             </div>
             {dragChecked && allChipsPlaced && DRAG_CHIPS.filter(c => chipPlacements[c.id] !== c.correctZone || c.isDistractor).length === 0 && (
-              <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "14px 16px", marginTop: 12 }}>
-                <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, margin: 0, lineHeight: 1.6 }}>Well built. Notice how each element is doing a specific job. The assembled prompt is dramatically more powerful than &apos;create an onboarding plan for graduates&apos; — which is what most people actually send.</p>
+              <div style={{ background: C.successLight, border: `1px solid ${C.successBorder}`, borderRadius: 10, padding: "10px 14px", marginTop: 8 }}>
+                <p style={{ fontSize: 12, color: C.navyMid, fontFamily: F.b, margin: 0, lineHeight: 1.5 }}>Every fragment is doing a specific job. The distractor (&quot;Make it really good and professional&quot;) tells the AI nothing it can act on &mdash; replace vague adjectives with specific criteria.</p>
               </div>
             )}
           </div>
         );
       }
 
-      /* ── FLIPCARD ── */
-      case "flipcard": {
-        const isSlide7 = s.id === 7;
-        const cards = isSlide7 ? TECHNIQUE_CARDS : DOC_FLIP_CARDS;
-        const allFlipped = cards.every((_: any, i: number) => flippedCards[`${s.id}-${i}`]);
-        return (
-          <div>
-            <Eyebrow t={s.section} />
-            {renderH2(s.heading, s.tealWord)}
-            {s.bodyAboveCards && <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 16px" }}>{s.bodyAboveCards}</p>}
-            {s.instruction && <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 16px" }}>{s.instruction}</p>}
-            <div className="l1-flip-row" style={{ display: "flex", gap: 16 }}>
-              {cards.map((card: any, i: number) => {
-                const key = `${s.id}-${i}`;
-                const isFlipped = flippedCards[key];
-                return (
-                  <div key={i} className="l1-flip-card" style={{ width: "50%", minHeight: isSlide7 ? 340 : 360 }} onClick={() => setFlippedCards(prev => ({ ...prev, [key]: !prev[key] }))}>
-                    <div className={`l1-flip-inner ${isFlipped ? "flipped" : ""}`} style={{ height: "100%" }}>
-                      {/* Front */}
-                      <div className="l1-flip-front" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", height: "100%", boxSizing: "border-box" as const }}>
-                        {isSlide7 ? (
-                          <>
-                            <span style={{ display: "inline-block", background: C.tealLight, color: C.teal, fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "2px 10px", marginBottom: 8 }}>TECHNIQUE</span>
-                            <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px", fontFamily: F.h }}>{card.frontLabel}</p>
-                            <p style={{ fontSize: 12, color: C.light, margin: "0 0 10px", fontFamily: F.b }}>{card.frontOneLiner}</p>
-                            <PromptBox>{card.frontExcerpt}</PromptBox>
-                          </>
-                        ) : (
-                          <>
-                            <span style={{ display: "inline-block", background: card.badgeStyle === "error" ? C.errorLight : C.successLight, color: card.badgeStyle === "error" ? C.error : C.success, fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "2px 10px", marginBottom: 8, border: `1px solid ${card.badgeStyle === "error" ? C.errorBorder : C.successBorder}` }}>{card.frontBadge}</span>
-                            <p style={{ fontSize: 14, fontWeight: 600, color: C.navy, margin: "0 0 6px", fontFamily: F.h }}>{card.frontLabel}</p>
-                            <p style={{ fontSize: 12, color: C.muted, margin: "0 0 0", fontFamily: F.b }}>{card.frontNote}</p>
-                          </>
-                        )}
-                        <p style={{ fontSize: 11, color: C.muted, margin: "auto 0 0", paddingTop: 8, fontFamily: F.b }}>Click to flip ↺</p>
-                      </div>
-                      {/* Back */}
-                      <div className="l1-flip-back" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", height: "100%", boxSizing: "border-box" as const, overflowY: "auto" as const }}>
-                        {isSlide7 ? (
-                          <>
-                            <p style={{ fontSize: 11, fontWeight: 700, color: C.teal, margin: "0 0 4px", fontFamily: F.b }}>WHEN TO USE</p>
-                            <p style={{ fontSize: 12, color: C.body, margin: "0 0 10px", fontFamily: F.b, lineHeight: 1.5 }}>{card.backWhen}</p>
-                            <PromptBox>{card.backExample}</PromptBox>
-                            <p style={{ fontSize: 11, fontWeight: 700, color: C.teal, margin: "10px 0 4px", fontFamily: F.b }}>WHY IT WORKS</p>
-                            <p style={{ fontSize: 12, color: C.body, margin: 0, fontFamily: F.b, lineHeight: 1.5 }}>{card.backWhy}</p>
-                          </>
-                        ) : (
-                          <>
-                            <span style={{ display: "inline-block", background: card.badgeStyle === "error" ? C.bg : C.successLight, color: card.badgeStyle === "error" ? C.muted : C.success, fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "2px 10px", marginBottom: 8 }}>{card.backBadge}</span>
-                            <div style={{ fontSize: 12, color: C.body, fontFamily: F.b, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 10 }}>{card.backResponse}</div>
-                            <div style={{ background: card.insightBg, border: `1px solid ${card.insightBorder}`, borderRadius: 8, padding: "8px 12px" }}>
-                              <p style={{ fontSize: 12, color: C.navyMid, fontFamily: F.b, margin: 0, fontWeight: 600 }}>{card.backInsight}</p>
-                            </div>
-                          </>
-                        )}
-                        <p style={{ fontSize: 11, color: C.muted, marginTop: 8, fontFamily: F.b }}>Click to flip back ↺</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {allFlipped && (
-              <div style={{ background: C.tealLight, border: `1px solid ${C.mint}`, borderRadius: 10, padding: "14px 16px", marginTop: 16 }}>
-                <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, margin: 0, lineHeight: 1.6 }}>
-                  {isSlide7
-                    ? "These techniques stack — they don’t replace each other. A Few-Shot prompt can also be RCTF-structured. Chain of Thought works even better when you’ve defined the Role and Context first. Think of them as additions to your toolkit, not alternatives."
-                    : "The prompt didn’t change. The effort didn’t change. What changed was the context available to the AI — and the output quality changed completely as a result. More context, better output. Every time."
-                  }
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      }
-
-      /* ── BRANCHING ── */
-      case "branching": return (
-        <div>
-          <Eyebrow t={s.section} />
-          {renderH2(s.heading, s.tealWord)}
-          <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 12px" }}>{s.bodyAboveScenario}</p>
-          {/* Scenario box */}
-          {s.scenario && typeof s.scenario === "object" && <div style={{ background: C.navy, borderRadius: 10, padding: "14px 20px", marginBottom: 16, display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", fontSize: 13, fontFamily: F.b, color: "#fff" }}>
-            {Object.entries(s.scenario).map(([k, v]) => (
-              <React.Fragment key={k}>
-                <span style={{ color: C.mint, fontWeight: 700, textTransform: "capitalize" as const }}>{k.replace(/([A-Z])/g, " $1").trim()}:</span>
-                <span>{v as string}</span>
-              </React.Fragment>
-            ))}
-          </div>}
-          {/* Options */}
-          {!scenarioConfirmed && (
-            <div className="l1-branch-opts" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-              {BRANCH_OPTS.map((opt, i) => (
-                <div key={i} onClick={() => setScenarioChoice(i)} style={{
-                  flex: 1, background: "#fff", border: scenarioChoice === i ? `2px solid ${C.teal}` : `1px solid ${C.border}`,
-                  borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "all 200ms ease",
-                }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1, margin: "0 0 6px", fontFamily: F.b }}>{opt.cardLabel}</p>
-                  <p style={{ fontSize: 12, color: C.body, margin: "0 0 8px", fontFamily: F.b, lineHeight: 1.5 }}>{opt.whatYouDo}</p>
-                  <PromptBox>{opt.promptPreview}</PromptBox>
-                </div>
-              ))}
-            </div>
-          )}
-          {scenarioChoice !== null && !scenarioConfirmed && (
-            <div style={{ textAlign: "right" }}>
-              <Btn onClick={() => setScenarioConfirmed(true)}>Confirm this approach →</Btn>
-            </div>
-          )}
-          {/* Consequence */}
-          {scenarioConfirmed && scenarioChoice !== null && (
-            <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 24px", marginBottom: 16 }}>
-              <span style={{ display: "inline-block", background: BRANCH_OPTS[scenarioChoice].qualityColor, color: "#fff", fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 12px", marginBottom: 12 }}>{BRANCH_OPTS[scenarioChoice].qualityBadge}</span>
-              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px", marginBottom: 12 }}>
-                <p style={{ fontSize: 12, color: C.body, fontFamily: F.b, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{BRANCH_OPTS[scenarioChoice].outputSnippet}</p>
-              </div>
-              <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, lineHeight: 1.6, margin: "0 0 8px" }}>{BRANCH_OPTS[scenarioChoice].reflection}</p>
-              <p style={{ fontSize: 12, color: C.muted, fontFamily: F.b, margin: 0 }}>{BRANCH_OPTS[scenarioChoice].tradingOff}</p>
-            </div>
-          )}
-          {scenarioConfirmed && (
-            <>
-              <Btn onClick={() => { setScenarioChoice(null); setScenarioConfirmed(false); }} secondary>Try a different approach</Btn>
-              <div style={{ background: C.tealLight, border: `1px solid ${C.mint}`, borderRadius: 10, padding: "14px 16px", marginTop: 12 }}>
-                <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, margin: 0, lineHeight: 1.6 }}>All three approaches produced something useful. The difference isn&apos;t right vs. wrong — it&apos;s depth of context vs. speed. As your practice matures, you’ll move naturally up the layers. Most people start at A, build habits around B, and eventually live in C.</p>
-              </div>
-            </>
-          )}
-        </div>
-      );
-
-      /* ── QUIZ ── */
-      case "quiz": return (
-        <div>
-          <Eyebrow t="PRACTICE — QUESTION 1 OF 1" />
-          {renderH2(s.heading, "")}
-          <p style={{ fontSize: 18, color: C.navy, fontFamily: F.h, lineHeight: 1.5, maxWidth: 560, margin: "0 0 20px" }}>{s.question}</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {s.options.map((opt: string, i: number) => {
-              const isSelected = selectedAnswer === i;
-              const isCorrect = i === s.correct;
-              let bg = "#fff", border = `1px solid ${C.border}`;
-              if (answered) {
-                if (isCorrect) { bg = C.successLight; border = `2px solid ${C.success}`; }
-                else if (isSelected && !isCorrect) { bg = C.errorLight; border = `2px solid ${C.error}`; }
-              } else if (isSelected) { bg = C.tealLight; border = `2px solid ${C.teal}`; }
-              return (
-                <div key={i} onClick={() => { if (!answered) setSelectedAnswer(i); }}
-                  style={{ background: bg, border, borderRadius: 10, padding: "14px 16px", cursor: answered ? "default" : "pointer", transition: "all 200ms ease", minHeight: 44, display: "flex", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, color: C.body, fontFamily: F.b, lineHeight: 1.5 }}>{opt}</span>
-                </div>
-              );
-            })}
-          </div>
-          {selectedAnswer !== null && !answered && (
-            <div style={{ marginTop: 12, textAlign: "right" }}><Btn onClick={() => setAnswered(true)}>Check Answer</Btn></div>
-          )}
-          {answered && (
-            <div style={{ background: selectedAnswer === s.correct ? C.successLight : C.errorLight, border: `1px solid ${selectedAnswer === s.correct ? C.successBorder : C.errorBorder}`, borderRadius: 10, padding: "14px 16px", marginTop: 12 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: selectedAnswer === s.correct ? C.success : C.error, margin: "0 0 6px", fontFamily: F.b }}>{selectedAnswer === s.correct ? "Correct" : "Not quite"}</p>
-              <p style={{ fontSize: 13, color: C.body, fontFamily: F.b, lineHeight: 1.6, margin: "0 0 8px" }}>{s.explanations[selectedAnswer!]}</p>
-              <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>The pattern is consistent: when you have a document, attach it. Your prompt can then be shorter and more precise — because the document is doing the heavy lifting on context.</p>
-            </div>
-          )}
-        </div>
-      );
-
-      /* ── TEMPLATES ── */
-      case "templates": return (
-        <div>
-          <Eyebrow t={s.section} />
-          {renderH2(s.heading, s.tealWord)}
-          <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 16px" }}>{s.body}</p>
-          {TEMPLATES.map(tmpl => (
-            <div key={tmpl.id} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
-              <div style={{ background: C.bg, padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.navy, fontFamily: F.h }}>{tmpl.name}</span>
-                  <span style={{ background: tmpl.tagColor, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "3px 10px" }}>{tmpl.tag}</span>
-                </div>
-                <button onClick={() => copyTemplate(tmpl.id, tmpl.prompt)} style={{
-                  background: "none", border: `1px solid ${C.teal}`, borderRadius: 20, padding: "4px 14px",
-                  fontSize: 12, fontWeight: 600, color: C.teal, cursor: "pointer", fontFamily: F.b, minHeight: 32,
-                }}>{copiedTemplate === tmpl.id ? "Copied ✓" : "Copy"}</button>
-              </div>
-              <div style={{ padding: 16 }}>
-                <PromptBox>{tmpl.prompt}</PromptBox>
-                <div style={{ marginTop: 10 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: 1.5, margin: "0 0 4px", fontFamily: F.b }}>WHAT TO ATTACH</p>
-                  <div style={{ background: C.tealLight, borderLeft: `3px solid ${C.teal}`, borderRadius: "0 6px 6px 0", padding: "8px 12px" }}>
-                    <p style={{ fontSize: 13, color: C.body, margin: 0, fontFamily: F.b }}>{tmpl.whatToAttach}</p>
-                  </div>
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 1.5, margin: "0 0 4px", fontFamily: F.b }}>PRO TIP</p>
-                  <p style={{ fontSize: 12, color: C.body, fontStyle: "italic", margin: 0, fontFamily: F.b }}>{tmpl.proTip}</p>
-                </div>
+      /* ── BRIDGE (Slide 12) ── */
+      case "bridge": return (
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <div style={{ display: "flex", gap: 0, flex: 1, borderRadius: 16, overflow: "hidden" }}>
+            {/* Left panel — Playground CTA */}
+            <div style={{ flex: 1, minWidth: 0, background: C.teal, padding: "28px 32px", display: "flex", flexDirection: "column" }}>
+              <h2 style={{ fontFamily: F.h, fontSize: 24, fontWeight: 800, color: "#fff", margin: "0 0 10px", lineHeight: 1.2 }}>{s.heading}</h2>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", fontFamily: F.b, lineHeight: 1.6, margin: "0 0 16px" }}>{s.body}</p>
+              <a href={s.ctaHref} style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "12px 28px", borderRadius: 24, minHeight: 44,
+                background: "#fff", color: C.tealDark,
+                fontSize: 14, fontWeight: 700, textDecoration: "none", fontFamily: F.b,
+                alignSelf: "flex-start",
+              }}>{s.cta}</a>
+              <div style={{ marginTop: "auto", paddingTop: 16 }}>
+                {s.features.map((f: string, i: number) => (
+                  <p key={i} style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontFamily: F.b, margin: "0 0 6px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: C.mint }}>{"\u00B7"}</span> {f}
+                  </p>
+                ))}
               </div>
             </div>
-          ))}
-          {/* Confidence delta */}
-          <div style={{ background: C.tealLight, border: `1px solid ${C.mint}`, borderRadius: 12, padding: "20px 24px", marginTop: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: C.navy, fontFamily: F.h, margin: "0 0 8px" }}>One last question before you go</h3>
-            {confidenceBefore !== null && <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, margin: "0 0 12px" }}>At the start of this module, you rated your confidence at <strong style={{ color: C.teal }}>{confidenceBefore}</strong> out of 10.</p>}
-            {!confidenceSubmitted ? (
-              <>
-                <p style={{ fontSize: 13, fontWeight: 600, color: C.navy, fontFamily: F.b, margin: "0 0 8px" }}>How confident do you feel now?</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, color: C.muted, fontFamily: F.b }}>1</span>
-                  <input type="range" min={1} max={10} value={confSliderAfter} onChange={e => setConfSliderAfter(Number(e.target.value))} className="l1-slider" style={{ flex: 1 }} />
-                  <span style={{ fontSize: 11, color: C.muted, fontFamily: F.b }}>10</span>
-                </div>
-                <div style={{ textAlign: "center", marginBottom: 12 }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: C.teal, fontFamily: F.h }}>{confSliderAfter}</span><span style={{ fontSize: 11, color: C.muted }}> / 10</span>
-                </div>
-                <Btn onClick={() => { setConfidenceAfter(confSliderAfter); setConfidenceSubmitted(true); }}>Save my rating</Btn>
-              </>
-            ) : (
-              <div style={{
-                background: confidenceAfter! > (confidenceBefore || 0) ? C.successLight : confidenceAfter === confidenceBefore ? C.bg : C.tealLight,
-                border: `1px solid ${confidenceAfter! > (confidenceBefore || 0) ? C.successBorder : confidenceAfter === confidenceBefore ? C.border : C.mint}`,
-                borderRadius: 10, padding: "14px 16px", marginTop: 8,
-              }}>
-                <p style={{ fontSize: 13, color: C.navyMid, fontFamily: F.b, margin: 0, lineHeight: 1.6 }}>
-                  {confidenceBefore !== null && confidenceAfter !== null ? (
-                    confidenceAfter > confidenceBefore
-                      ? `↑ +${confidenceAfter - confidenceBefore} points — A meaningful shift. Lock it in: use one of these templates on a real piece of work today.`
-                      : confidenceAfter === confidenceBefore
-                      ? `Your rating stayed at ${confidenceAfter}. Confidence comes from practice, not learning. Pick one template and use it today. Come back and re-rate after.`
-                      : `Your rating went down — that’s a healthy sign. You now know more about what you don’t know yet. That’s the foundation of genuine skill development. Level 2 will fill the gaps.`
-                  ) : "Rating saved. Use one of these templates on a real piece of work today."}
-                </p>
-              </div>
-            )}
+            {/* Right panel — Context Engineering tease */}
+            <div style={{ width: "42%", minWidth: 0, background: C.tealDark, padding: "28px 28px", display: "flex", flexDirection: "column" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: C.mint, letterSpacing: 2, textTransform: "uppercase" as const, margin: "0 0 10px", fontFamily: F.b }}>COMING NEXT</p>
+              <h3 style={{ fontFamily: F.h, fontSize: 20, fontWeight: 700, color: "#fff", margin: "0 0 10px", lineHeight: 1.3 }}>Context Engineering</h3>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontFamily: F.b, lineHeight: 1.6, margin: "0 0 16px" }}>Everything you&apos;ve just learned works at the prompt level. In the next topic, you&apos;ll go one layer deeper &mdash; giving AI standing context about who you are, what you&apos;re working on, and what good looks like, before you write a single prompt. That&apos;s where the real leverage compounds.</p>
+              <a href="#level-1-context-engineering" style={{ fontSize: 13, fontWeight: 600, color: C.mint, textDecoration: "none", fontFamily: F.b, marginTop: "auto", display: "inline-flex", alignItems: "center", gap: 4 }}>Preview topic {"\u2192"}</a>
+            </div>
           </div>
         </div>
       );
@@ -1041,7 +943,7 @@ export default function Level1Page() {
           <div>
             <p style={{ fontSize: 10, fontWeight: 700, color: C.mint, letterSpacing: 2, margin: "0 0 4px", fontFamily: F.b, textTransform: "uppercase" as const }}>LEARNING JOURNEY COMPLETE</p>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: "#fff", margin: "0 0 4px", fontFamily: F.h }}>Ready to put it into practice</h3>
-            <p style={{ fontSize: 13, color: C.muted, margin: 0, fontFamily: F.b }}>Apply your context engineering skills in the Prompt Playground.</p>
+            <p style={{ fontSize: 13, color: C.muted, margin: 0, fontFamily: F.b }}>Apply your prompt engineering skills in the Prompt Playground.</p>
           </div>
           <Btn onClick={() => { markPhaseDone("watch"); setActivePhase("practice"); }}>Go to Prompt Playground →</Btn>
         </div>
@@ -1058,7 +960,7 @@ export default function Level1Page() {
         <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.tealLight, border: `2px solid ${C.mint}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 24, color: C.teal }}>◈</div>
         <p style={{ fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: 2, margin: "0 0 8px", fontFamily: F.b, textTransform: "uppercase" as const }}>NEXT STEP</p>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: C.navy, fontFamily: F.h, margin: "0 0 8px" }}>Prompt Playground</h2>
-        <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 20px" }}>Apply your context engineering skills to a structured real-work challenge. Build prompts, attach context, and get feedback — then save your best work to your personal prompt library.</p>
+        <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 20px" }}>Apply the Blueprint framework to a real prompt from your work. Build, test, and refine structured prompts — then save your best work to your personal prompt library.</p>
         <a href="#playground" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", borderRadius: 24, background: C.teal, color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", fontFamily: F.b }}>Open Prompt Playground →</a>
       </div>
     </div>
@@ -1130,13 +1032,13 @@ export default function Level1Page() {
             <span style={{ display: "inline-block", background: C.mint, color: C.tealDark, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20, marginBottom: 8, fontFamily: F.b, textTransform: "uppercase" as const }}>LEVEL 1</span>
             <p style={{ fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: 2, textTransform: "uppercase" as const, margin: "0 0 8px", fontFamily: F.b }}>FOUNDATIONS & AWARENESS</p>
             <h1 style={{ fontFamily: F.h, fontSize: 28, fontWeight: 800, color: C.navy, lineHeight: 1.2, margin: "0 0 12px" }}>
-              Context & <TU>Prompt Engineering</TU>
+              <TU>Prompt Engineering</TU> Essentials
             </h1>
             <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, maxWidth: 600, margin: "0 0 16px" }}>
-              Learn how to get dramatically better AI outputs — not by using a different tool, but by changing how you communicate with it. This module covers the full context engineering toolkit: from what you write in your prompt, to the documents you attach, to how you organise your work for consistent, high-quality AI performance.
+              Learn the Prompt Blueprint — a six-part framework for giving AI everything it needs to produce professional-quality output on the first attempt. You&apos;ll practise building structured prompts, see the before-and-after difference, and leave with a tool you can use immediately.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {["~45 min total", "3 activities", "Beginner friendly", "Pharma & Consulting"].map(tag => (
+              {["~40 min total", "3 activities", "Beginner friendly", "Pharma & Consulting"].map(tag => (
                 <span key={tag} style={{ padding: "5px 12px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: 12, color: C.body, fontWeight: 600, fontFamily: F.b }}>{tag}</span>
               ))}
             </div>

@@ -1584,6 +1584,173 @@ Self-assessed Impact Rating: ${rating}/5${profileContext}`;
   };
 }
 
+function evaluateAppProxyPlugin(apiKey: string, model: string): Plugin {
+  const systemPrompt = `You are the OXYGY AI Application Evaluator — an expert in assessing AI-powered application designs and producing actionable product specifications.
+
+You will receive a description of an AI application the user wants to build, including what it does, who it serves, and what data it uses.
+
+You must respond with a JSON object containing exactly 4 sections:
+
+SECTION 1: DESIGN SCORE
+Evaluate the application design across 5 criteria:
+- User Clarity: How well-defined are the user roles, needs, and journeys? (Score 0-100)
+- Data Architecture: How clear and feasible is the data model, storage, and flow? (Score 0-100)
+- Personalisation: How well does the design incorporate user-specific experiences? (Score 0-100)
+- Technical Feasibility: How realistic is the proposed architecture with available tools? (Score 0-100)
+- Scalability: How well would this design handle growth in users, data, or features? (Score 0-100)
+
+Calculate an overall score (weighted average — User Clarity 25%, Data Architecture 25%, Personalisation 15%, Technical Feasibility 20%, Scalability 15%).
+
+Provide a verdict, a rationale paragraph explaining the score.
+
+SECTION 2: ARCHITECTURE & COMPONENTS
+Break the application into its core components. For each component, provide:
+- name: Component name (e.g., "Authentication Layer", "Content Engine", "Analytics Dashboard")
+- description: What this component does and why it's needed
+- tools: Array of recommended tools/technologies (e.g., ["Supabase Auth", "Row-Level Security"])
+- level_connection: Which OXYGY level (1-5) this component most relates to
+- priority: "essential" | "recommended" | "optional"
+
+Include 4-8 components. Always include authentication, core AI logic, data storage, and user interface.
+
+SECTION 3: IMPLEMENTATION PLAN
+Break the build into phased steps. For each step:
+- phase: Phase name (e.g., "Phase 1: Foundation & Scaffold")
+- description: What happens in this phase
+- tasks: Array of specific tasks (3-6 per phase)
+- duration_estimate: Realistic time estimate (e.g., "1-2 weeks")
+- dependencies: Array of phases this depends on (empty array for Phase 1)
+
+Include 3-5 phases covering the full build from scaffold to deployment.
+
+SECTION 4: RISKS & GAPS
+Identify 3-5 potential risks or gaps in the design. For each:
+- name: Short risk name
+- severity: "high" | "medium" | "low"
+- description: What the risk is and why it matters
+- mitigation: Specific strategy to address this risk
+
+Include at least one risk from each severity level when possible.
+
+Provide a summary sentence for each of sections 2, 3, and 4.
+
+RESPONSE FORMAT (JSON only, no markdown):
+
+{
+  "design_score": {
+    "overall_score": 75,
+    "verdict": "Promising design with solid user clarity",
+    "rationale": "...",
+    "criteria": {
+      "user_clarity": { "score": 85, "assessment": "..." },
+      "data_architecture": { "score": 70, "assessment": "..." },
+      "personalisation": { "score": 65, "assessment": "..." },
+      "technical_feasibility": { "score": 80, "assessment": "..." },
+      "scalability": { "score": 60, "assessment": "..." }
+    }
+  },
+  "architecture": {
+    "summary": "Your application requires 6 core components...",
+    "components": [
+      { "name": "...", "description": "...", "tools": ["..."], "level_connection": 1, "priority": "essential" }
+    ]
+  },
+  "implementation_plan": {
+    "summary": "A 4-phase build over approximately 6-8 weeks...",
+    "steps": [
+      { "phase": "...", "description": "...", "tasks": ["..."], "duration_estimate": "...", "dependencies": [] }
+    ]
+  },
+  "risks_and_gaps": {
+    "summary": "3 key risks identified across data, security, and scalability...",
+    "items": [
+      { "name": "...", "severity": "high", "description": "...", "mitigation": "..." }
+    ]
+  }
+}`;
+
+  return {
+    name: 'evaluate-app-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/evaluate-app', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { appDescription, problemAndUsers, dataAndContent } = JSON.parse(body);
+
+            const userMessage = [
+              `APP DESCRIPTION:\n${appDescription || 'Not provided'}`,
+              `PROBLEM & USERS:\n${problemAndUsers || 'Not provided'}`,
+              `DATA & CONTENT:\n${dataAndContent || 'Not provided'}`,
+            ].join('\n\n');
+
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'evaluate-app');
+
+            if (!geminiResponse.ok) {
+              const errText = await geminiResponse.text();
+              console.error('Gemini API error (evaluate-app):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await geminiResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+
+            let parsed;
+            try {
+              const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+              parsed = JSON.parse(cleaned);
+            } catch {
+              console.error('Failed to parse Gemini response (evaluate-app):', text);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Failed to parse AI response', retryable: true }));
+              return;
+            }
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (evaluate-app):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
@@ -1604,6 +1771,7 @@ export default defineConfig(({ mode }) => {
       dashboardDesignProxyPlugin(env.OpenRouter_API, dashboardModel, geminiModel),
       prdProxyPlugin(env.OpenRouter_API, geminiModel),
       insightAnalysisProxyPlugin(env.OpenRouter_API, geminiModel),
+      evaluateAppProxyPlugin(env.OpenRouter_API, geminiModel),
     ],
     resolve: {
       alias: {

@@ -520,6 +520,35 @@ export const Navbar: React.FC = () => {
 
         {/* Right — Dashboard + Contact Us + Mobile Toggle */}
         <div className="flex items-center gap-2">
+          {/* "My Dashboard →" pill CTA — always visible in dev mode */}
+          {(
+            <a
+              href="/app/dashboard"
+              className="hidden sm:flex items-center transition-all duration-200"
+              style={{
+                border: '1px solid #1A202C',
+                borderRadius: 24,
+                padding: '8px 18px',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#1A202C',
+                background: 'transparent',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap' as const,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = '#1A202C';
+                (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = 'transparent';
+                (e.currentTarget as HTMLElement).style.color = '#1A202C';
+              }}
+            >
+              My Dashboard →
+            </a>
+          )}
+
           {/* Dashboard / Sign-in — avatar dropdown when signed in */}
           {user ? (
             <div

@@ -40,6 +40,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // After successful sign-in, navigate back to the saved page
       if (event === 'SIGNED_IN' && s) {
+        // Check for /app/* path-based redirect first (from AppAuthGuard)
+        const returnPath = sessionStorage.getItem('oxygy_auth_return_path');
+        if (returnPath) {
+          sessionStorage.removeItem('oxygy_auth_return_path');
+          window.location.href = returnPath;
+          return;
+        }
+        // Fall back to hash-based redirect (existing marketing site flow)
         const returnTo = sessionStorage.getItem('oxygy_auth_return');
         if (returnTo) {
           sessionStorage.removeItem('oxygy_auth_return');

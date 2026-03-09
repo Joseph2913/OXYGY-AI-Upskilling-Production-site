@@ -663,7 +663,117 @@ export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutS
 });
 
 // ═══════════════════════════════════════════════════════════════
-// 10. GENERATE PRD
+// 10. EVALUATE APP (Level 5 — AI App Evaluator)
+// ═══════════════════════════════════════════════════════════════
+
+const EVALUATE_APP_SYSTEM = `You are the OXYGY AI Application Evaluator — an expert in assessing AI-powered application designs and producing actionable product specifications.
+
+You will receive a description of an AI application the user wants to build, including what it does, who it serves, and what data it uses.
+
+You must respond with a JSON object containing exactly 4 sections:
+
+SECTION 1: DESIGN SCORE
+Evaluate the application design across 5 criteria:
+- User Clarity: How well-defined are the user roles, needs, and journeys? (Score 0-100)
+- Data Architecture: How clear and feasible is the data model, storage, and flow? (Score 0-100)
+- Personalisation: How well does the design incorporate user-specific experiences? (Score 0-100)
+- Technical Feasibility: How realistic is the proposed architecture with available tools? (Score 0-100)
+- Scalability: How well would this design handle growth in users, data, or features? (Score 0-100)
+
+Calculate an overall score (weighted average — User Clarity 25%, Data Architecture 25%, Personalisation 15%, Technical Feasibility 20%, Scalability 15%).
+
+Provide a verdict, a rationale paragraph explaining the score.
+
+SECTION 2: ARCHITECTURE & COMPONENTS
+Break the application into its core components. For each component, provide:
+- name: Component name (e.g., "Authentication Layer", "Content Engine", "Analytics Dashboard")
+- description: What this component does and why it's needed
+- tools: Array of recommended tools/technologies (e.g., ["Supabase Auth", "Row-Level Security"])
+- level_connection: Which OXYGY level (1-5) this component most relates to
+- priority: "essential" | "recommended" | "optional"
+
+Include 4-8 components. Always include authentication, core AI logic, data storage, and user interface.
+
+SECTION 3: IMPLEMENTATION PLAN
+Break the build into phased steps. For each step:
+- phase: Phase name (e.g., "Phase 1: Foundation & Scaffold")
+- description: What happens in this phase
+- tasks: Array of specific tasks (3-6 per phase)
+- duration_estimate: Realistic time estimate (e.g., "1-2 weeks")
+- dependencies: Array of phases this depends on (empty array for Phase 1)
+
+Include 3-5 phases covering the full build from scaffold to deployment.
+
+SECTION 4: RISKS & GAPS
+Identify 3-5 potential risks or gaps in the design. For each:
+- name: Short risk name
+- severity: "high" | "medium" | "low"
+- description: What the risk is and why it matters
+- mitigation: Specific strategy to address this risk
+
+Include at least one risk from each severity level when possible.
+
+Provide a summary sentence for each of sections 2, 3, and 4.
+
+RESPONSE FORMAT (JSON only, no markdown):
+
+{
+  "design_score": {
+    "overall_score": 75,
+    "verdict": "Promising design with solid user clarity",
+    "rationale": "...",
+    "criteria": {
+      "user_clarity": { "score": 85, "assessment": "..." },
+      "data_architecture": { "score": 70, "assessment": "..." },
+      "personalisation": { "score": 65, "assessment": "..." },
+      "technical_feasibility": { "score": 80, "assessment": "..." },
+      "scalability": { "score": 60, "assessment": "..." }
+    }
+  },
+  "architecture": {
+    "summary": "Your application requires 6 core components...",
+    "components": [
+      { "name": "...", "description": "...", "tools": ["..."], "level_connection": 1, "priority": "essential" }
+    ]
+  },
+  "implementation_plan": {
+    "summary": "A 4-phase build over approximately 6-8 weeks...",
+    "steps": [
+      { "phase": "...", "description": "...", "tasks": ["..."], "duration_estimate": "...", "dependencies": [] }
+    ]
+  },
+  "risks_and_gaps": {
+    "summary": "3 key risks identified across data, security, and scalability...",
+    "items": [
+      { "name": "...", "severity": "high", "description": "...", "mitigation": "..." }
+    ]
+  }
+}`;
+
+export const evaluateapp = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { appDescription, problemAndUsers, dataAndContent } = req.body;
+    const userMessage = [
+      `APP DESCRIPTION:\n${appDescription || "Not provided"}`,
+      `PROBLEM & USERS:\n${problemAndUsers || "Not provided"}`,
+      `DATA & CONTENT:\n${dataAndContent || "Not provided"}`,
+    ].join("\n\n");
+
+    const result = await callGemini({ apiKey, model, systemPrompt: EVALUATE_APP_SYSTEM, userMessage, label: "evaluate-app" });
+    if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
+    res.status(200).json(result.data);
+  } catch (err) {
+    console.error("evaluate-app error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 11. GENERATE PRD
 // ═══════════════════════════════════════════════════════════════
 
 const PRD_SYSTEM = `You are a senior product manager and technical writer specializing in dashboard and data visualization products. You create production-grade Product Requirements Documents (PRDs).

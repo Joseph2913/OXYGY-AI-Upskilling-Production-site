@@ -17,6 +17,7 @@
       { "source": "/api/generate-pathway", "function": { "functionId": "generatepathway" } },
       { "source": "/api/design-dashboard", "function": { "functionId": "designdashboard" } },
       { "source": "/api/generate-prd", "function": { "functionId": "generateprd" } },
+      { "source": "/api/evaluate-app", "function": { "functionId": "evaluateapp" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [

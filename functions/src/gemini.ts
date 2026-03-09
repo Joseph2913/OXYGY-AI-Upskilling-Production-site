@@ -77,9 +77,12 @@ export async function callOpenRouter(opts: {
     temperature: opts.temperature ?? 0.7,
   };
 
-<<<<<<< HEAD
-  if ((opts.responseMimeType ?? "application/json") === "application/json") {
+  if (opts.jsonMode !== false) {
     body.response_format = { type: "json_object" };
+  }
+
+  if (opts.maxTokens) {
+    body.max_tokens = opts.maxTokens;
   }
 
   const response = await fetchWithRetry(
@@ -113,3 +116,6 @@ export async function callOpenRouter(opts: {
 
   return { ok: true, data: parsed };
 }
+
+/** Alias used by index.ts */
+export const callGemini = callOpenRouter;
