@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { AppAuthGuard } from './components/app/AppAuthGuard';
+// DEV MODE: Auth disabled — no AuthProvider wrapping
+// import { AuthProvider } from './context/AuthContext';
+// import { AppAuthGuard } from './components/app/AppAuthGuard';
 import { AppLayout } from './components/app/AppLayout';
 import { MarketingSite } from './MarketingSite';
 
@@ -61,6 +62,7 @@ function HashRedirector() {
       '#agent-builder': '/app/toolkit/agent-builder',
       '#dashboard-design': '/app/toolkit/dashboard-designer',
       '#product-architecture': '/app/toolkit/app-builder',
+      '#dashboard': '/app/dashboard',
     };
     const target = redirectMap[hash];
     if (target) {
@@ -92,16 +94,11 @@ function LoginRedirect() {
 
 function App() {
   return (
-    <AuthProvider>
       <Routes>
-        {/* Authenticated app shell — all /app/* routes */}
+        {/* App shell — all /app/* routes (auth disabled for dev) */}
         <Route
           path="/app"
-          element={
-            <AppAuthGuard>
-              <AppLayout />
-            </AppAuthGuard>
-          }
+          element={<AppLayout />}
         >
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<AppSuspense><AppDashboard /></AppSuspense>} />
@@ -138,7 +135,6 @@ function App() {
           }
         />
       </Routes>
-    </AuthProvider>
   );
 }
 
