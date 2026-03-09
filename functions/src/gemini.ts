@@ -1,6 +1,7 @@
 /**
  * Shared OpenRouter API helper for all Cloud Functions.
  * Handles retry logic and JSON response parsing.
+ * Uses OpenAI-compatible API format via OpenRouter.
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -55,14 +56,15 @@ export async function fetchWithRetry(
 /**
  * Standard OpenRouter call: sends system prompt + user message, returns parsed JSON.
  */
-export async function callGemini(opts: {
+export async function callOpenRouter(opts: {
   apiKey: string;
   model: string;
   systemPrompt: string;
   userMessage: string;
   label: string;
   temperature?: number;
-  responseMimeType?: string;
+  jsonMode?: boolean;
+  maxTokens?: number;
 }): Promise<{ ok: true; data: any } | { ok: false; status: number; message: string; retryable: boolean }> {
   const openRouterModel = opts.model.startsWith("google/") ? opts.model : `google/${opts.model}`;
 
@@ -75,6 +77,7 @@ export async function callGemini(opts: {
     temperature: opts.temperature ?? 0.7,
   };
 
+<<<<<<< HEAD
   if ((opts.responseMimeType ?? "application/json") === "application/json") {
     body.response_format = { type: "json_object" };
   }

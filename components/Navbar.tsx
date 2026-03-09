@@ -11,7 +11,7 @@ const AI_TOOLS = [
   { level: 5, emoji: '\uD83C\uDFD7\uFE0F', label: 'Product Architecture Sprint', href: '#product-architecture' },
 ];
 
-const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies', '#engagement-model', '#dashboard', '#learn-level-1']);
+const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies', '#engagement-model', '#dashboard', '#course-resources', '#learn-level-1', '#learn-level-1-prompt', '#learn-level-1-context']);
 
 /* Thin vertical divider between nav items */
 const Divider = () => (
@@ -67,7 +67,7 @@ export const Navbar: React.FC = () => {
   const isOnUserJourney = currentHash === '#user-journey';
   const isOnCaseStudies = currentHash === '#case-studies';
   const isOnEngagementModel = currentHash === '#engagement-model';
-  const isOnCourseResource = currentHash === '#learn-level-1';
+  const isOnCourseResource = currentHash === '#course-resources' || currentHash === '#learn-level-1' || currentHash === '#learn-level-1-prompt' || currentHash === '#learn-level-1-context';
   const isOnDashboard = currentHash === '#dashboard';
 
   // AI Tools dropdown active if on any artifact tool
@@ -362,7 +362,7 @@ export const Navbar: React.FC = () => {
                   Level 1
                 </div>
                 <a
-                  href="#learn-level-1"
+                  href="#course-resources"
                   className="flex items-center gap-3 transition-colors duration-150 hover:bg-[#F7FAFC] hover:text-[#38B2AC]"
                   style={{
                     padding: '12px 16px',
@@ -723,7 +723,7 @@ export const Navbar: React.FC = () => {
             </div>
 
             <a
-              href="#learn-level-1"
+              href="#course-resources"
               className={cn(
                 'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
                 isOnCourseResource

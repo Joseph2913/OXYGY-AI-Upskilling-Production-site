@@ -1120,9 +1120,9 @@ export default function Level1Page() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 40px" }}>
         {/* Breadcrumb */}
         <p style={{ fontSize: 12, color: C.muted, margin: "0 0 16px", fontFamily: F.b }}>
-          <a href="#" style={{ color: C.muted, textDecoration: "none" }}>Learning</a> <span style={{ margin: "0 4px" }}>›</span>
+          <a href="#course-resources" style={{ color: C.muted, textDecoration: "none" }}>Course Resources</a> <span style={{ margin: "0 4px" }}>›</span>
           <span>Level 1</span> <span style={{ margin: "0 4px" }}>›</span>
-          <span style={{ color: C.body }}>Context & Prompt Engineering</span>
+          <span style={{ color: C.body }}>Prompt Engineering</span>
         </p>
         <div className="l1-hero-cols" style={{ display: "flex", gap: 40, alignItems: "flex-start" }}>
           {/* Left */}
