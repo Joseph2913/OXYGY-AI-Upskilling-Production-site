@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { LevelJourney } from './components/LevelJourney';
@@ -15,8 +14,6 @@ import { LearningPathway } from './components/LearningPathway';
 import { EngagementModel } from './components/EngagementModel';
 import { CaseStudiesSection, CaseStudiesPage } from './components/CaseStudies';
 import { UserJourney } from './components/UserJourney';
-import { Dashboard } from './components/dashboard/Dashboard';
-import { AuthModal } from './components/AuthModal';
 import CourseResources from './pages/learn/level-1-landing';
 import Level1Page from './pages/learn/level-1-context-engineering';
 
@@ -24,8 +21,8 @@ type Page = 'home' | 'playground' | 'agent-builder' | 'workflow-designer' | 'pro
 
 function getPageFromHash(): Page {
   const hash = window.location.hash;
-  // Ignore Supabase auth callback tokens in the hash
-  if (hash.includes('access_token=') || hash.includes('refresh_token=') || hash.includes('error_description=')) {
+  // Ignore any stale auth tokens in hash
+  if (hash.includes('access_token=') || hash.includes('error_description=')) {
     return 'home';
   }
   if (hash === '#playground') return 'playground';
@@ -43,10 +40,7 @@ function getPageFromHash(): Page {
   return 'home';
 }
 
-const PROTECTED_PAGES = new Set<Page>(['learning-pathway', 'dashboard']);
-
 export function MarketingSite() {
-  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>(getPageFromHash);
 
   useEffect(() => {
@@ -58,8 +52,6 @@ export function MarketingSite() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
-
-  const needsAuth = PROTECTED_PAGES.has(currentPage) && !user;
 
   return (
     <div className="min-h-screen bg-white font-sans text-navy-900 selection:bg-teal selection:text-white">
@@ -79,11 +71,12 @@ export function MarketingSite() {
       {currentPage === 'workflow-designer' && <WorkflowDesigner />}
       {currentPage === 'product-architecture' && <ProductArchitecture />}
       {currentPage === 'dashboard-design' && <DashboardDesigner />}
-      {currentPage === 'learning-pathway' && (needsAuth ? <AuthModal /> : <LearningPathway />)}
+      {currentPage === 'learning-pathway' && <LearningPathway />}
       {currentPage === 'engagement-model' && <EngagementModel />}
       {currentPage === 'case-studies' && <CaseStudiesPage />}
       {currentPage === 'user-journey' && <UserJourney />}
-      {currentPage === 'dashboard' && (needsAuth ? <AuthModal /> : <Dashboard />)}
+      {/* Old dashboard route — redirect to new app dashboard */}
+      {currentPage === 'dashboard' && (() => { window.location.href = '/app/dashboard'; return null; })()}
       {currentPage === 'course-resources' && <CourseResources />}
       {currentPage === 'learn-level-1-prompt' && <Level1Page />}
 

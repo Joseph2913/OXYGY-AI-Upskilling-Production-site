@@ -74,21 +74,11 @@ function HashRedirector() {
   return null;
 }
 
-/**
- * Login redirect: sends user to the marketing site auth flow,
- * saving the intended /app/* destination for after login.
- */
+/** Login route redirects straight to app dashboard (no auth) */
 function LoginRedirect() {
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const redirect = params.get('redirect');
-    if (redirect) {
-      sessionStorage.setItem('oxygy_auth_return_path', redirect);
-    }
-    // Send to marketing site login flow (hash-based dashboard shows AuthModal)
-    window.location.replace('/#dashboard');
+    window.location.replace('/app/dashboard');
   }, []);
-
   return null;
 }
 

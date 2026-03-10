@@ -1,66 +1,37 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import React, { createContext, useContext } from 'react';
+
+/**
+ * Auth completely removed — useAuth() returns a mock user so all
+ * downstream components work without changes.
+ */
+
+interface MockUser {
+  id: string;
+  email: string;
+  user_metadata: { full_name: string };
+}
 
 interface AuthContextValue {
-  user: User | null;
-  session: Session | null;
+  user: MockUser | null;
+  session: null;
   loading: boolean;
 }
 
+const MOCK_USER: MockUser = {
+  id: 'mock-user-001',
+  email: 'user@oxygy.ai',
+  user_metadata: { full_name: 'Joseph Thomas' },
+};
+
 const AuthContext = createContext<AuthContextValue>({
-  user: null,
+  user: MOCK_USER,
   session: null,
-  loading: true,
+  loading: false,
 });
 
-/** Base URL without any hash — safe for OAuth redirects */
-function getBaseUrl(): string {
-  return window.location.origin + window.location.pathname;
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check existing session on mount
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      setLoading(false);
-    });
-
-    // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      setLoading(false);
-
-      // After successful sign-in, navigate back to the saved page
-      if (event === 'SIGNED_IN' && s) {
-        // Check for /app/* path-based redirect first (from AppAuthGuard)
-        const returnPath = sessionStorage.getItem('oxygy_auth_return_path');
-        if (returnPath) {
-          sessionStorage.removeItem('oxygy_auth_return_path');
-          window.location.href = returnPath;
-          return;
-        }
-        // Fall back to hash-based redirect (existing marketing site flow)
-        const returnTo = sessionStorage.getItem('oxygy_auth_return');
-        if (returnTo) {
-          sessionStorage.removeItem('oxygy_auth_return');
-          window.location.hash = returnTo;
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
+    <AuthContext.Provider value={{ user: MOCK_USER, session: null, loading: false }}>
       {children}
     </AuthContext.Provider>
   );
@@ -70,52 +41,10 @@ export function useAuth(): AuthContextValue {
   return useContext(AuthContext);
 }
 
-/** Save current hash route before redirecting to OAuth */
-function saveReturnRoute(): void {
-  const hash = window.location.hash;
-  // Save the route the user was trying to access (default to dashboard)
-  if (hash && hash !== '#') {
-    sessionStorage.setItem('oxygy_auth_return', hash.replace('#', ''));
-  } else {
-    sessionStorage.setItem('oxygy_auth_return', 'dashboard');
-  }
-}
-
-export async function signInWithMicrosoft(): Promise<void> {
-  saveReturnRoute();
-  await supabase.auth.signInWithOAuth({
-    provider: 'azure',
-    options: {
-      scopes: 'email profile',
-      redirectTo: getBaseUrl(),
-    },
-  });
-}
-
-export async function signInWithGoogle(): Promise<void> {
-  saveReturnRoute();
-  await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      scopes: 'email profile',
-      redirectTo: getBaseUrl(),
-    },
-  });
-}
-
-export async function signInWithEmail(email: string): Promise<{ error: string | null }> {
-  saveReturnRoute();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: getBaseUrl(),
-    },
-  });
-  if (error) return { error: error.message };
+// No-op stubs so existing imports don't break
+export async function signInWithMicrosoft(): Promise<void> {}
+export async function signInWithGoogle(): Promise<void> {}
+export async function signInWithEmail(_email: string): Promise<{ error: string | null }> {
   return { error: null };
 }
-
-export async function signOut(): Promise<void> {
-  await supabase.auth.signOut();
-  window.location.hash = '';
-}
+export async function signOut(): Promise<void> {}
