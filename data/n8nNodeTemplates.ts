@@ -58,8 +58,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.googleSheetsTrigger',
       typeVersion: 1,
       parameters: {
-        pollTimes: { item: [{ mode: 'everyMinute' }] },
-        sheetId: { __rl: true, value: 'YOUR_SHEET_ID', mode: 'id' },
+        documentId: { __rl: true, value: 'YOUR_SPREADSHEET_ID', mode: 'id' },
+        sheetName: { __rl: true, value: 'Sheet1', mode: 'name' },
+        event: 'rowAdded',
+        pollTime: { mode: 'everyMinute' },
       },
       credentials: {
         googleSheetsOAuth2Api: { id: 'YOUR_CREDENTIAL_ID', name: 'Google Sheets account' },
@@ -74,11 +76,12 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
   googleSheets: {
     template: {
       type: 'n8n-nodes-base.googleSheets',
-      typeVersion: 4,
+      typeVersion: 4.5,
       parameters: {
         operation: 'append',
-        sheetId: { __rl: true, value: 'YOUR_SHEET_ID', mode: 'id' },
-        columns: { mappingMode: 'autoMapInputData' },
+        documentId: { __rl: true, value: 'YOUR_SPREADSHEET_ID', mode: 'id' },
+        sheetName: { __rl: true, value: 'Sheet1', mode: 'name' },
+        columns: { mappingMode: 'autoMapInputData', value: {}, matchingColumns: [] },
       },
       credentials: {
         googleSheetsOAuth2Api: { id: 'YOUR_CREDENTIAL_ID', name: 'Google Sheets account' },
@@ -97,10 +100,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       parameters: {
         resource: 'message',
         operation: 'send',
-        sendTo: 'YOUR_RECIPIENT@example.com',
+        toList: '={{ $json.email }}',
         subject: '={{ $json.subject }}',
-        emailType: 'text',
-        message: '={{ $json.output }}',
+        message: '={{ $json.body }}',
+        options: {},
       },
       credentials: {
         gmailOAuth2: { id: 'YOUR_CREDENTIAL_ID', name: 'Gmail account' },
@@ -117,10 +120,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.emailSend',
       typeVersion: 2.1,
       parameters: {
-        fromEmail: 'YOUR_EMAIL@example.com',
-        toEmail: 'YOUR_RECIPIENT@example.com',
+        toList: '={{ $json.email }}',
         subject: '={{ $json.subject }}',
-        text: '={{ $json.output }}',
+        message: '={{ $json.body }}',
+        options: {},
       },
       credentials: {
         smtp: { id: 'YOUR_CREDENTIAL_ID', name: 'SMTP account' },
@@ -135,12 +138,13 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
   slack: {
     template: {
       type: 'n8n-nodes-base.slack',
-      typeVersion: 2.2,
+      typeVersion: 2.3,
       parameters: {
         resource: 'message',
         operation: 'post',
-        channel: 'YOUR_CHANNEL_ID',
+        channel: { __rl: true, value: 'YOUR_CHANNEL_ID', mode: 'id' },
         text: '={{ $json.output }}',
+        otherOptions: {},
       },
       credentials: {
         slackApi: { id: 'YOUR_CREDENTIAL_ID', name: 'Slack account' },
@@ -159,8 +163,8 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       parameters: {
         resource: 'message',
         operation: 'send',
-        channelId: 'YOUR_CHANNEL_ID',
-        content: '={{ $json.output }}',
+        channelId: { __rl: true, value: 'YOUR_CHANNEL_ID', mode: 'id' },
+        content: '={{ $json.message }}',
       },
       credentials: {
         discordApi: { id: 'YOUR_CREDENTIAL_ID', name: 'Discord account' },
@@ -199,9 +203,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       parameters: {
         resource: 'message',
         operation: 'send',
-        toRecipients: 'YOUR_RECIPIENT@example.com',
+        toRecipients: '={{ $json.email }}',
         subject: '={{ $json.subject }}',
-        bodyContent: '={{ $json.output }}',
+        bodyContent: '={{ $json.body }}',
+        additionalFields: {},
       },
       credentials: {
         microsoftOutlookOAuth2Api: { id: 'YOUR_CREDENTIAL_ID', name: 'Microsoft Outlook account' },
@@ -218,10 +223,11 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.airtable',
       typeVersion: 2.1,
       parameters: {
+        resource: 'record',
         operation: 'create',
-        baseId: 'YOUR_BASE_ID',
-        tableId: 'YOUR_TABLE_ID',
-        columns: { mappingMode: 'autoMapInputData' },
+        base: { __rl: true, value: 'YOUR_BASE_ID', mode: 'id' },
+        table: { __rl: true, value: 'YOUR_TABLE_NAME', mode: 'name' },
+        fields: { fieldMappingMode: 'autoMapInputData', value: {}, schema: [] },
       },
       credentials: {
         airtableTokenApi: { id: 'YOUR_CREDENTIAL_ID', name: 'Airtable account' },
@@ -240,7 +246,9 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       parameters: {
         resource: 'page',
         operation: 'create',
-        databaseId: 'YOUR_DATABASE_ID',
+        databaseId: { __rl: true, value: 'YOUR_DATABASE_ID', mode: 'id' },
+        title: '={{ $json.title }}',
+        propertiesUi: { propertyValues: [] },
       },
       credentials: {
         notionApi: { id: 'YOUR_CREDENTIAL_ID', name: 'Notion account' },
@@ -257,9 +265,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.googleDrive',
       typeVersion: 3,
       parameters: {
+        resource: 'file',
         operation: 'upload',
-        folderId: 'YOUR_FOLDER_ID',
-        name: '={{ $json.fileName }}',
+        name: '={{ $json.filename }}',
+        folderId: { __rl: true, value: 'YOUR_FOLDER_ID', mode: 'id' },
       },
       credentials: {
         googleDriveOAuth2Api: { id: 'YOUR_CREDENTIAL_ID', name: 'Google Drive account' },
@@ -278,7 +287,8 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       parameters: {
         resource: 'file',
         operation: 'upload',
-        path: '/YOUR_FOLDER/{{ $json.fileName }}',
+        path: '/your-folder/={{ $json.filename }}',
+        binaryPropertyName: 'data',
       },
       credentials: {
         dropboxApi: { id: 'YOUR_CREDENTIAL_ID', name: 'Dropbox account' },
@@ -348,9 +358,9 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.supabase',
       typeVersion: 1,
       parameters: {
-        resource: 'row',
-        operation: 'create',
-        tableId: 'YOUR_TABLE_NAME',
+        operation: 'insert',
+        tableId: 'your_table_name',
+        fieldsUi: { fieldValues: [] },
       },
       credentials: {
         supabaseApi: { id: 'YOUR_CREDENTIAL_ID', name: 'Supabase account' },
@@ -365,7 +375,7 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
   claudeAi: {
     template: {
       type: '@n8n/n8n-nodes-langchain.lmChatAnthropic',
-      typeVersion: 1,
+      typeVersion: 1.3,
       parameters: {
         model: 'claude-sonnet-4-20250514',
         options: {
@@ -385,12 +395,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
   openAi: {
     template: {
       type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
-      typeVersion: 1,
+      typeVersion: 1.2,
       parameters: {
-        model: 'gpt-4o',
-        options: {
-          systemPrompt: "YOUR_SYSTEM_PROMPT_HERE — describe the AI's role, what it should do, and the format of its output. Use the Oxygy Prompt Playground (Level 1) or Agent Builder (Level 2) to craft this.",
-        },
+        model: { __rl: true, value: 'gpt-4o', mode: 'list' },
+        options: {},
       },
       credentials: {
         openAiApi: { id: 'YOUR_CREDENTIAL_ID', name: 'OpenAI API' },
@@ -407,9 +415,15 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.httpRequest',
       typeVersion: 4.2,
       parameters: {
-        method: 'GET',
-        url: 'https://YOUR_API_ENDPOINT',
-        options: {},
+        method: 'POST',
+        url: 'https://api.yourservice.com/endpoint',
+        authentication: 'genericCredentialType',
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [{ name: 'Content-Type', value: 'application/json' }],
+        },
+        sendBody: true,
+        bodyParameters: { parameters: [] },
       },
     },
     service: 'HTTP Request',
@@ -424,7 +438,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       typeVersion: 3.4,
       parameters: {
         mode: 'manual',
-        fields: { values: [{ name: 'output', value: '={{ $json.output }}' }] },
+        fields: {
+          values: [{ name: 'outputField', type: 'string', value: '={{ $json.inputField }}' }],
+        },
+        options: {},
       },
     },
     service: 'Set / Edit Fields',
@@ -436,11 +453,17 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
   if: {
     template: {
       type: 'n8n-nodes-base.if',
-      typeVersion: 2,
+      typeVersion: 2.2,
       parameters: {
         conditions: {
-          options: { caseSensitive: true },
-          conditions: [{ id: 'condition_1', leftValue: '={{ $json.value }}', rightValue: '', operator: { type: 'string', operation: 'exists' } }],
+          options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' },
+          conditions: [{
+            id: 'condition_1',
+            leftValue: '={{ $json.fieldName }}',
+            rightValue: 'your_value',
+            operator: { type: 'string', operation: 'equals' },
+          }],
+          combinator: 'and',
         },
       },
     },
@@ -456,9 +479,15 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       typeVersion: 2,
       parameters: {
         conditions: {
-          options: { caseSensitive: true },
-          conditions: [{ id: 'filter_1', leftValue: '={{ $json.value }}', rightValue: '', operator: { type: 'string', operation: 'exists' } }],
+          conditions: [{
+            id: 'filter_1',
+            leftValue: '={{ $json.fieldName }}',
+            rightValue: 'value_to_check',
+            operator: { type: 'string', operation: 'contains' },
+          }],
+          combinator: 'and',
         },
+        options: {},
       },
     },
     service: 'Filter',
@@ -472,7 +501,9 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.merge',
       typeVersion: 3,
       parameters: {
-        mode: 'append',
+        mode: 'combine',
+        combinationMode: 'mergeByPosition',
+        options: {},
       },
     },
     service: 'Merge',
@@ -487,6 +518,7 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       typeVersion: 3,
       parameters: {
         batchSize: 10,
+        options: {},
       },
     },
     service: 'Split in Batches',
@@ -515,7 +547,10 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       type: 'n8n-nodes-base.wait',
       typeVersion: 1.1,
       parameters: {
-        resume: 'webhook',
+        resume: 'timeInterval',
+        unit: 'hours',
+        amount: 1,
+        options: {},
       },
     },
     service: 'Wait',
@@ -530,7 +565,8 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       typeVersion: 1.1,
       parameters: {
         respondWith: 'json',
-        responseBody: '={{ $json }}',
+        responseBody: '={{ JSON.stringify($json) }}',
+        options: { responseCode: 200 },
       },
     },
     service: 'Respond to Webhook',
@@ -545,8 +581,9 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       typeVersion: 1,
       parameters: {
         content: '',
-        width: 400,
-        height: 300,
+        width: 380,
+        height: 200,
+        color: 5,
       },
     },
     service: 'Sticky Note',

@@ -1,6 +1,6 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import { callGemini, fetchWithRetry } from "./gemini";
+import { callGemini, fetchWithRetry, callOpenRouterRaw } from "./gemini";
 
 const openRouterApiKey = defineSecret("OPEN_ROUTER_API");
 
@@ -824,6 +824,65 @@ export const generateprd = onRequest({ secrets: [openRouterApiKey] }, async (req
     res.status(200).json(result.data);
   } catch (err) {
     console.error("generate-prd error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 12. GENERATE N8N WORKFLOW JSON (AI primary path)
+// ═══════════════════════════════════════════════════════════════
+
+import { N8N_SYSTEM_PROMPT } from "./n8nSystemPrompt";
+
+function buildN8nGeneratePrompt(intermediate: any): string {
+  return `Generate a complete, valid n8n workflow JSON for the following workflow.
+Respond ONLY with the raw JSON object. No markdown, no code fences, no explanation.
+
+Workflow specification:
+${JSON.stringify(intermediate, null, 2)}`;
+}
+
+function buildN8nRetryPrompt(intermediate: any, previousJson: string, errors: string[]): string {
+  return `Your previous n8n JSON had validation errors. Fix ALL of the following errors and regenerate the complete workflow JSON. Respond ONLY with the corrected JSON.
+
+Errors to fix:
+${errors.map((e: string) => `- ${e}`).join("\n")}
+
+Original workflow specification:
+${JSON.stringify(intermediate, null, 2)}
+
+Your previous (broken) JSON for reference:
+${previousJson.slice(0, 2000)}...`;
+}
+
+export const generaten8nworkflow = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 60 }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { intermediate, attempt, previousJson, previousErrors } = req.body;
+    if (!intermediate) { res.status(400).json({ error: "Missing intermediate workflow data" }); return; }
+
+    const isRetry = attempt && attempt > 1 && previousErrors?.length > 0;
+    const userMessage = isRetry
+      ? buildN8nRetryPrompt(intermediate, previousJson || "", previousErrors)
+      : buildN8nGeneratePrompt(intermediate);
+
+    const result = await callOpenRouterRaw({
+      apiKey,
+      model: "anthropic/claude-sonnet-4-20250514",
+      systemPrompt: N8N_SYSTEM_PROMPT,
+      userMessage,
+      label: "generate-n8n-workflow",
+      temperature: 0.3,
+      maxTokens: 4000,
+    });
+
+    if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
+    res.status(200).json({ json: result.text });
+  } catch (err) {
+    console.error("generate-n8n-workflow error:", err);
     res.status(500).json({ error: "Internal server error", retryable: true });
   }
 });

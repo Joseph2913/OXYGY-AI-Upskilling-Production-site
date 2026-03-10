@@ -18,9 +18,19 @@
       { "source": "/api/design-dashboard", "function": { "functionId": "designdashboard" } },
       { "source": "/api/generate-prd", "function": { "functionId": "generateprd" } },
       { "source": "/api/evaluate-app", "function": { "functionId": "evaluateapp" } },
+      { "source": "/api/generate-n8n-workflow", "function": { "functionId": "generaten8nworkflow" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [
+      {
+        "source": "index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
       {
         "source": "**/*.@(js|css)",
         "headers": [

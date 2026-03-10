@@ -117,5 +117,62 @@ export async function callOpenRouter(opts: {
   return { ok: true, data: parsed };
 }
 
+/**
+ * Raw OpenRouter call: returns the raw text content without JSON parsing.
+ * Used for n8n workflow generation where the AI output IS the JSON.
+ */
+export async function callOpenRouterRaw(opts: {
+  apiKey: string;
+  model: string;
+  systemPrompt: string;
+  userMessage: string;
+  label: string;
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<{ ok: true; text: string } | { ok: false; status: number; message: string; retryable: boolean }> {
+  const body: Record<string, any> = {
+    model: opts.model,
+    messages: [
+      { role: "system", content: opts.systemPrompt },
+      { role: "user", content: opts.userMessage },
+    ],
+    temperature: opts.temperature ?? 0.3,
+  };
+
+  if (opts.maxTokens) {
+    body.max_tokens = opts.maxTokens;
+  }
+
+  const response = await fetchWithRetry(
+    OPENROUTER_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${opts.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    },
+    opts.label,
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error(`OpenRouter API error (${opts.label}):`, response.status, errText);
+    const status = response.status === 429 ? 429 : 502;
+    const message =
+      response.status === 429
+        ? "The AI service is temporarily busy. Please wait a moment and try again."
+        : "AI service error";
+    return { ok: false, status, message, retryable: true };
+  }
+
+  const data = await response.json();
+  const rawText = data?.choices?.[0]?.message?.content || "";
+  const cleaned = rawText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+  return { ok: true, text: cleaned };
+}
+
 /** Alias used by index.ts */
 export const callGemini = callOpenRouter;

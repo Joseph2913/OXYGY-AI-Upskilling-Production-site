@@ -14,7 +14,8 @@ import {
   LAYER_COLORS, WORKFLOW_EXAMPLES, ICON_MAP,
 } from '../../../data/workflow-designer-content';
 import { N8N_NODE_TEMPLATES } from '../../../data/n8nNodeTemplates';
-import { assembleN8nWorkflow, buildIntermediate } from '../../../utils/assembleN8nWorkflow';
+import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
+import { generateN8nWithRetry, type GenerationMethod } from '../../../utils/generateN8nWithRetry';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
 
@@ -479,6 +480,7 @@ const AppWorkflowCanvas: React.FC = () => {
   const [jsonCopied, setJsonCopied] = useState(false);
   const [savedToArtefacts, setSavedToArtefacts] = useState(false);
   const [jsonPreviewOpen, setJsonPreviewOpen] = useState(false);
+  const [generationMethod, setGenerationMethod] = useState<GenerationMethod | null>(null);
 
   /* ── Shared State ── */
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -561,38 +563,37 @@ const AppWorkflowCanvas: React.FC = () => {
     setConnectionsAnimated(0);
   }, [comparisonView]);
 
-  /* ── Generate n8n JSON when approved ── */
+  /* ── Generate n8n JSON when approved (AI primary + template fallback) ── */
   useEffect(() => {
     if (!step2Done || n8nJson) return;
     const intermediate = buildIntermediate(workflowName, workflowDescription, finalNodes);
     setN8nIntermediate(intermediate);
-
-    // Simulate export loading with cycling messages
     setExportLoading(true);
-    const msgs = [
-      'Building your n8n workflow\u2026',
-      'Wiring node connections\u2026',
-      'Configuring node parameters\u2026',
-      'Validating JSON schema\u2026',
-      'Preparing export package\u2026',
-    ];
-    let msgIdx = 0;
-    setExportLoadingMsg(msgs[0]);
-    const msgTimer = setInterval(() => {
-      msgIdx++;
-      if (msgIdx < msgs.length) setExportLoadingMsg(msgs[msgIdx]);
-    }, 400);
+    setExportLoadingMsg('Building your n8n workflow\u2026');
 
-    // Assembly is instant but we animate for UX
-    setTimeout(() => {
-      clearInterval(msgTimer);
-      const json = assembleN8nWorkflow(intermediate);
-      setN8nJson(json);
-      setExportLoading(false);
-      setExportLoadingMsg('');
-    }, 2000);
+    let cancelled = false;
 
-    return () => clearInterval(msgTimer);
+    (async () => {
+      try {
+        const result = await generateN8nWithRetry(intermediate, (msg) => {
+          if (!cancelled) setExportLoadingMsg(msg);
+        });
+        if (!cancelled) {
+          setN8nJson(result.json);
+          setGenerationMethod(result.method);
+          setExportLoading(false);
+          setExportLoadingMsg('');
+        }
+      } catch (err) {
+        console.error('[n8n-gen] Unexpected error:', err);
+        if (!cancelled) {
+          setExportLoadingMsg('Generation failed. Please try again.');
+          setExportLoading(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [step2Done]);
 
   /* ── Close node menu on outside click ── */
@@ -792,6 +793,7 @@ const AppWorkflowCanvas: React.FC = () => {
     setJsonCopied(false);
     setSavedToArtefacts(false);
     setJsonPreviewOpen(false);
+    setGenerationMethod(null);
     setPathAApproved(false);
     setPathAFeedbackText('');
     setPathAFeedbackResult(null);
@@ -1529,6 +1531,20 @@ const AppWorkflowCanvas: React.FC = () => {
                       {n8nIntermediate.estimatedRunTime}
                     </span>
                   </div>
+
+                  {/* Generation method badge */}
+                  {generationMethod && (
+                    <div style={{ marginBottom: 12 }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
+                        ...(generationMethod === 'ai'
+                          ? { background: '#E6FFFA', color: '#1A7A76' }
+                          : { background: '#F7FAFC', color: '#718096' }),
+                      }}>
+                        {generationMethod === 'ai' ? '\u2726 AI-generated workflow' : '\u25C8 Template-assembled workflow'}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Download button */}
                   <button onClick={handleDownloadJson} style={{
