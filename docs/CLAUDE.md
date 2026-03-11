@@ -147,6 +147,19 @@ Do not create Vercel serverless functions, Vercel edge functions, or any `api/*.
 - **`firebase.json`** maps `/api/*` URL paths to Cloud Functions via `rewrites`
 - The `api/` directory at the project root contains **legacy Vercel files that are NOT used in production** — all production API logic lives in `functions/src/index.ts`
 
+### Deploying to Firebase
+
+**CRITICAL: Always deploy hosting explicitly to ensure the frontend is updated.**
+
+1. Build the frontend: `npx vite build`
+2. Deploy hosting: `npx firebase-tools deploy --only hosting`
+3. Deploy functions (if changed): `npx firebase-tools deploy --only functions`
+4. Or deploy both: `npx firebase-tools deploy --only hosting,functions`
+
+**Do NOT rely on `npx firebase-tools deploy` (no flags) to update hosting** — it may deploy functions successfully while serving a stale hosting build. Always verify the release timestamp updated in Firebase Console → Hosting → Dashboard.
+
+After deploying, remind the user to **hard-refresh** (Cmd+Shift+R / Ctrl+Shift+R) to bypass browser cache.
+
 ### Adding a new API endpoint
 
 1. Add the Cloud Function in `functions/src/index.ts` using `onRequest()` from `firebase-functions/v2/https`
