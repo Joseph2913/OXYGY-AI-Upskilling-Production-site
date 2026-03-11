@@ -169,6 +169,7 @@ const AppPromptPlayground: React.FC = () => {
       return;
     }
     setValidationError(false);
+    setIsRefineLoading(false);
     const data = await generate(userInput);
     if (data) {
       setResult(data);
@@ -294,6 +295,7 @@ const AppPromptPlayground: React.FC = () => {
     const hasAnswers = Object.values(refinementAnswers).some(a => (a as string).trim());
     if (!hasAnswers && !additionalContext.trim()) return;
 
+    setIsRefineLoading(true);
     const enrichedInput = buildRefinementMessage();
     const data = await generate(enrichedInput);
     if (data) {
@@ -646,18 +648,13 @@ const AppPromptPlayground: React.FC = () => {
               </div>
             </div>
           ) : isLoading ? (
-            /* ── Loading skeleton ── */
-            <div>
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{
-                  height: i === 1 ? 120 : 60,
-                  background: '#F7FAFC',
-                  borderRadius: 10,
-                  marginBottom: 12,
-                  animation: 'ppPulse 1.5s ease-in-out infinite',
-                }} />
-              ))}
-            </div>
+            /* ── Processing Progress Indicator ── */
+            <ProcessingProgress
+              steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
+              currentStep={loadingStep}
+              header={isRefineLoading ? 'Refining your prompt…' : 'Building your prompt…'}
+              subtext="This usually takes 15–20 seconds"
+            />
           ) : result ? (
             /* ── Generated output ── */
             <div>
@@ -1144,6 +1141,113 @@ export default AppPromptPlayground;
 /* ═══════════════════════════════════════════════════════════ */
 /* Shared-style sub-components (per Toolkit Page Standard)    */
 /* ═══════════════════════════════════════════════════════════ */
+
+/* ── Processing Progress Indicator ── */
+const ProcessingProgress: React.FC<{
+  steps: string[];
+  currentStep: number;
+  header: string;
+  subtext: string;
+}> = ({ steps, currentStep, header, subtext }) => {
+  const completedSteps = Math.min(currentStep, steps.length);
+  const progressPercent = (completedSteps / steps.length) * 100;
+
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      borderRadius: 14,
+      border: '1px solid #E2E8F0',
+      padding: '28px 32px',
+    }}>
+      {/* Header */}
+      <div style={{
+        fontSize: 15, fontWeight: 700, color: '#1A202C',
+        marginBottom: 4, fontFamily: "'DM Sans', sans-serif",
+      }}>
+        {header}
+      </div>
+      <div style={{
+        fontSize: 12, color: '#A0AEC0',
+        marginBottom: 24, fontFamily: "'DM Sans', sans-serif",
+      }}>
+        {subtext}
+      </div>
+
+      {/* Step list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {steps.map((label, i) => {
+          const stepNum = i + 1;
+          const isComplete = stepNum <= completedSteps;
+          const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
+          const isPending = !isComplete && !isActive;
+
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'opacity 0.2s',
+              opacity: isPending ? 0.5 : 1,
+            }}>
+              {/* Step circle */}
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
+                border: isActive
+                  ? `2px solid ${LEVEL_ACCENT}`
+                  : isComplete ? 'none' : '2px solid #E2E8F0',
+                position: 'relative',
+              }}>
+                {isComplete && (
+                  <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />
+                )}
+                {isActive && (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: `2px solid transparent`,
+                    borderTopColor: LEVEL_ACCENT_DARK,
+                    animation: 'ppSpin 0.7s linear infinite',
+                    position: 'absolute', top: -2, left: -2,
+                  }} />
+                )}
+              </div>
+
+              {/* Step label */}
+              <div style={{
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                color: isPending ? '#A0AEC0' : '#2D3748',
+                fontFamily: "'DM Sans', sans-serif",
+                transition: 'color 0.2s, font-weight 0.2s',
+              }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{
+        width: '100%', height: 4, borderRadius: 2,
+        background: '#EDF2F7', overflow: 'hidden',
+      }}>
+        <div style={{
+          height: '100%', borderRadius: 2,
+          background: LEVEL_ACCENT,
+          width: `${progressPercent}%`,
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+      <div style={{
+        fontSize: 11, color: '#A0AEC0',
+        textAlign: 'right', marginTop: 6,
+        fontFamily: "'DM Sans', sans-serif",
+      }}>
+        {completedSteps} of {steps.length}
+      </div>
+    </div>
+  );
+};
 
 /* ── Step Badge ── */
 const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
