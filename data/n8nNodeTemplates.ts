@@ -600,7 +600,7 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
  */
 export const APP_NODE_TO_N8N_KEY: Record<string, string> = {
   // Input layer
-  'input-excel': 'httpRequest',
+  'input-excel': 'googleSheetsTrigger',
   'input-gsheets': 'googleSheetsTrigger',
   'input-webhook': 'webhook',
   'input-api': 'httpRequest',
@@ -629,7 +629,7 @@ export const APP_NODE_TO_N8N_KEY: Record<string, string> = {
   'proc-human-review': 'wait',
 
   // Output layer
-  'output-excel': 'httpRequest',
+  'output-excel': 'googleSheets',
   'output-gsheets': 'googleSheets',
   'output-database': 'postgres',
   'output-email': 'gmail',

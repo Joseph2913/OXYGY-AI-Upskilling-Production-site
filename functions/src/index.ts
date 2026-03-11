@@ -3,6 +3,8 @@ import { defineSecret } from "firebase-functions/params";
 import { callGemini, fetchWithRetry, callOpenRouterRaw } from "./gemini";
 
 const openRouterApiKey = defineSecret("OPEN_ROUTER_API");
+// Note: All API calls go through OpenRouter. Use the appropriate model ID
+// (e.g. "anthropic/claude-sonnet-4-20250514") to access different providers.
 
 function getEnv() {
   const apiKey = openRouterApiKey.value();
@@ -871,7 +873,7 @@ export const generaten8nworkflow = onRequest({ secrets: [openRouterApiKey], time
 
     const result = await callOpenRouterRaw({
       apiKey,
-      model: "anthropic/claude-sonnet-4-20250514",
+      model: "anthropic/claude-sonnet-4",
       systemPrompt: N8N_SYSTEM_PROMPT,
       userMessage,
       label: "generate-n8n-workflow",
@@ -883,6 +885,736 @@ export const generaten8nworkflow = onRequest({ secrets: [openRouterApiKey], time
     res.status(200).json({ json: result.text });
   } catch (err) {
     console.error("generate-n8n-workflow error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 13. GENERATE BUILD GUIDE (markdown)
+// ═══════════════════════════════════════════════════════════════
+
+const BUILD_GUIDE_SYSTEM_PROMPT = `
+You are an expert workflow automation consultant and technical writer.
+Your task is to generate a complete, practical Build Guide for an automation workflow.
+The guide must be immediately actionable — readable by a non-technical user building
+it themselves, usable as a handover document for a developer, and structured enough
+to be parsed by an AI agent to generate a platform-specific workflow template.
+
+CRITICAL FORMATTING RULES:
+- Respond ONLY with the raw markdown document. No preamble, no explanation.
+- Follow the exact document structure below. Do not add, remove, or rename sections.
+- Use the platform's correct terminology throughout (provided in the user message).
+- Write in imperative voice for all Configure sections.
+- Every step must have a "What happens:" sentence before the configuration detail.
+- Code blocks must use triple backtick fences with the language identifier.
+- The Test Checklist must contain specific, testable actions — not generic advice.
+- Known Edge Cases must be real failure modes, not theoretical ones.
+- Minimum 3 edge cases, maximum 6.
+
+PLATFORM VOCABULARY:
+| Concept | n8n | Zapier | Make | Power Automate | Claude Code |
+|---|---|---|---|---|---|
+| Workflow container | Workflow | Zap | Scenario | Flow | Script / Agent |
+| Single unit | Node | Step | Module | Action | Function / Tool call |
+| Start event | Trigger node | Trigger | Trigger module | Trigger | Entry point |
+| Conditional branch | IF node | Filter / Paths | Router | Condition | if/else block |
+| Data transform | Set node / Code node | Formatter | Tools module | Data operations | Transform function |
+| Loop | Split in Batches | Looping | Iterator | Apply to each | for loop / map |
+
+TONE: Direct. Practical. Confident. No filler phrases.
+
+DOCUMENT STRUCTURE — follow exactly:
+
+# Build Guide
+## [workflow name]
+
+---
+
+**What this workflow does**
+[paragraph]
+
+**Complexity** \`[value]\` &nbsp; **Estimated build time** \`[value]\` &nbsp; **Steps** \`[N]\`
+
+---
+
+## Before You Start
+
+[one sentence intro]
+
+| What | Where to find it | Used in |
+|---|---|---|
+[rows]
+
+**Accounts to connect**
+[list]
+
+---
+
+## The Workflow
+
+---
+
+### Step [N] — [Name]
+**What happens:** [sentence]
+
+**Configure:**
+[instructions]
+
+---
+
+[repeat for all steps]
+
+---
+
+## Test Checklist
+
+Before going live, run through this with test data.
+
+- [ ] [item]
+
+---
+
+## Known Edge Cases
+
+**[name]**
+[paragraph]
+`;
+
+// Platform-specific knowledge addenda — appended to the system prompt based on selected platform
+const PLATFORM_ADDENDA: Record<string, string> = {
+'n8n': `
+PLATFORM-SPECIFIC KNOWLEDGE — n8n (v1.x)
+
+Use these exact node names, syntax, and patterns when writing the Build Guide.
+
+EXACT NODE NAMES (use these in step titles and instructions):
+- Triggers: Webhook, Schedule Trigger, Manual Trigger, Email Trigger (IMAP), Chat Trigger
+- HTTP: HTTP Request (supports all methods, auth types, pagination, retry)
+- Logic: IF (true/false branches), Switch (multi-branch), Filter, Merge
+- Data: Edit Fields (Set), Sort, Limit, Remove Duplicates, Aggregate, Split Out, Summarize, Compare Datasets
+- Code: Code (JavaScript or Python), Execute Command
+- Flow: Loop Over Items (formerly Split In Batches), Wait, Execute Workflow, Respond to Webhook
+- Error: Error Trigger (workflow-level error handler)
+- AI: AI Agent, Basic LLM Chain, OpenAI Chat Model, Anthropic Chat Model, Tool sub-nodes, Vector Store nodes
+
+POPULAR INTEGRATION NODES (exact names):
+| Service | Trigger | Action Node |
+|---|---|---|
+| Slack | Slack Trigger | Slack |
+| Google Sheets | Google Sheets Trigger | Google Sheets |
+| Gmail | Gmail Trigger | Gmail |
+| Airtable | Airtable Trigger | Airtable |
+| Notion | Notion Trigger | Notion |
+| OpenAI | — | OpenAI |
+| PostgreSQL | — | Postgres |
+| MySQL | — | MySQL |
+| MongoDB | — | MongoDB |
+| HubSpot | HubSpot Trigger | HubSpot |
+| GitHub | GitHub Trigger | GitHub |
+| Supabase | — | Supabase |
+
+DATA REFERENCE SYNTAX:
+- Current item field: \`{{ $json.fieldName }}\` or \`{{ $json["field name"] }}\`
+- Nested: \`{{ $json.nested.field }}\` or \`{{ $json.array[0].name }}\`
+- From another node: \`{{ $('NodeName').item.json.field }}\`
+- First/last item: \`{{ $('NodeName').first().json.field }}\` / \`{{ $('NodeName').last().json.field }}\`
+- All items: \`{{ $('NodeName').all() }}\`
+- Built-ins: \`{{ $now }}\`, \`{{ $today }}\`, \`{{ $itemIndex }}\`, \`{{ $runIndex }}\`
+- Execution: \`{{ $execution.id }}\`, \`{{ $workflow.name }}\`
+- Env vars: \`{{ $vars.myVar }}\` (Cloud/Enterprise) or \`{{ $env.MY_VAR }}\` (self-hosted)
+- Ternary: \`{{ $if($json.score > 50, "pass", "fail") }}\`
+
+CREDENTIAL SETUP (tell users exactly where to go):
+1. Left sidebar → Credentials → Add Credential
+2. Search for the credential type (e.g. "Slack OAuth2 API", "OpenAI API")
+3. For API keys: paste the key → Save. For OAuth2: fill Client ID + Secret → click Connect → authorize in popup → Save
+Auth types on HTTP Request node: Predefined Credential Type, Header Auth, OAuth2, Basic Auth, Query Auth, Digest Auth
+
+CODE NODE:
+- JavaScript "Run Once for All Items": access \`$input.all()\`, return array of \`{ json: {...} }\`
+- JavaScript "Run Once for Each Item": access \`$input.item\`, return single \`{ json: {...} }\`
+- Python: use \`_input.all()\` / \`_input.item\`, same return shape
+- require() blocked by default. Self-hosted: set NODE_FUNCTION_ALLOW_EXTERNAL=moduleName
+
+WEBHOOK SETUP:
+- Test URL: https://<domain>/webhook-test/<path> — works only in editor with "Listen for Test Event"
+- Production URL: https://<domain>/webhook/<path> — works only when workflow is active
+
+LOOPING (Loop Over Items node):
+- Set Batch Size (default 1). Two outputs: "Loop" and "Done". Most nodes auto-iterate — only use when you need batch control.
+
+CONDITIONAL ROUTING:
+- IF node: boolean condition → True/False branches. Switch node: multiple outputs. Filter node: single output, drops non-matching.
+
+ERROR HANDLING:
+- Per-node: Settings tab → "Retry On Fail" or "Continue On Fail". Workflow-level: Error Trigger node.
+
+GOTCHAS:
+- Cloud execution timeout varies by plan. Self-hosted: configurable via EXECUTIONS_TIMEOUT env var.
+- Self-hosted default DB is SQLite — use PostgreSQL for production.
+- No built-in rate limiting — add Wait nodes or use Loop Over Items with small batches.
+- Binary data flows through \`binary\` property alongside \`json\`.
+- Dates use Luxon: \`{{ $json.date.toDateTime().toFormat('yyyy-MM-dd') }}\`
+`,
+
+'Zapier': `
+PLATFORM-SPECIFIC KNOWLEDGE — Zapier (2025)
+
+Use these exact step type names, syntax, and patterns when writing the Build Guide.
+
+TERMINOLOGY:
+- A workflow is called a "Zap". Each Zap has a Trigger (step 1) and one or more Actions.
+- Steps are numbered: 1 (trigger), 2, 3, etc.
+
+STEP TYPES (exact names in UI):
+- Trigger: first step, starts the Zap
+- Action: performs an operation in an app
+- Search: looks up an existing record
+- Filter by Zapier: continues only if conditions are met
+- Paths by Zapier: conditional branching — up to 3-5 paths depending on plan
+- Formatter by Zapier: text/number/date transformations
+- Delay by Zapier: pause for a duration or until a specific time
+- Looping by Zapier: iterate over a line-item array
+- Sub-Zap by Zapier: call another Zap as a subroutine
+- Code by Zapier: run JavaScript or Python
+- Webhooks by Zapier: send/receive raw HTTP requests
+- Digest by Zapier: collect data over time, then release as a batch
+- Storage by Zapier: simple key-value store across Zap runs
+
+POPULAR APP NAMES (exact):
+| Service | Trigger Example | Action Example |
+|---|---|---|
+| Slack | New Message in Channel | Send Channel Message |
+| Google Sheets | New or Updated Spreadsheet Row | Create Spreadsheet Row |
+| Gmail | New Email | Send Email |
+| Webhooks by Zapier | Catch Hook | Custom Request |
+| Airtable | New Record | Create Record |
+| Notion | New Database Item | Create Database Item |
+| OpenAI (GPT) | — | Send Prompt |
+| HubSpot | New Contact | Create Contact |
+| Salesforce | New Record | Create Record |
+
+DATA REFERENCE / FIELD MAPPING:
+- In the Zap editor, click a field → "Insert Data" dropdown shows output fields from all previous steps
+- Data pills: displayed as chips showing "Step N. Field Name"
+- In Code by Zapier: access via \`inputData.fieldName\` (define input fields that map to previous steps)
+
+CREDENTIAL SETUP:
+1. When adding a step, Zapier prompts "Connect [App Name]" → click "Sign in to [App]"
+2. OAuth apps: authorize in popup. API key apps: paste key. Zapier tests the connection.
+3. Manage connections: Settings → Connections
+
+CODE BY ZAPIER:
+- JavaScript: access input via \`inputData\` object. Return: \`output = { key: value }\`
+- Python: access input via \`input_data\` dict. Return: \`output = [{"key": "value"}]\`
+- No external packages. 10-second timeout. 1MB memory limit.
+
+WEBHOOKS BY ZAPIER:
+- Catch Hook (trigger): unique URL → send POST/GET to it → Zap fires
+- Custom Request (action): make any HTTP request with custom headers, body, auth
+
+PATHS BY ZAPIER:
+- Each path has filter conditions (AND/OR). Only matching paths execute. All matching paths run in parallel.
+
+LOOPING BY ZAPIER:
+- Takes a line-item field (array) and runs subsequent steps per item. Max 500 iterations.
+
+FILTER BY ZAPIER:
+- Operators: Contains, Exactly matches, Is greater than, Exists, Starts with, etc. AND/OR logic.
+- If filter fails, Zap stops for that run. Use Paths for if/else.
+
+GOTCHAS:
+- Polling triggers: 1-15 min depending on plan (Free: 15min, Professional: 2min, Team: 1min). Instant triggers fire immediately.
+- Task usage: each action step that runs = 1 task. Triggers and Filters don't count.
+- Free: 100 tasks/month, 5 Zaps, single-step. Professional: 2,000 tasks/month, unlimited Zaps.
+- 30-second timeout per step (Code is 10s). Entire Zap timeout: 30 minutes.
+- Data flows strictly forward — cannot loop back to earlier steps. Use Sub-Zaps for recursion.
+- Zap History for debugging: shows every run with input/output data per step.
+`,
+
+'Make': `
+PLATFORM-SPECIFIC KNOWLEDGE — Make (formerly Integromat, 2025)
+
+Use these exact module names, syntax, and patterns when writing the Build Guide.
+
+TERMINOLOGY:
+- A workflow is called a "Scenario". Scenarios contain Modules connected by routes.
+- Each module has a number (1, 2, 3...) used in data references.
+
+MODULE TYPES:
+- Trigger modules: start a scenario (instant webhook or polling)
+- Action modules: create, update, delete, send
+- Search modules: look up records (returns multiple items, triggers implicit loop)
+- Aggregator modules: Array Aggregator, Text Aggregator, Table Aggregator
+- Iterator module: takes an array, outputs individual items
+- Router module: splits flow into parallel routes with optional filters
+- Tools: Set Variable, Get Variable, Sleep, Ignore, Compose a string
+
+HTTP MODULE (exact name: "HTTP — Make a request"):
+- Auth: No Auth, Basic, API Key, OAuth 2.0, Client Certificate, AWS Signature
+- Also: "HTTP — Make a Basic Auth request", "HTTP — Make an OAuth 2.0 request"
+
+WEBHOOKS:
+- "Webhooks — Custom webhook" (trigger): Make gives you a URL → send data to it
+- "Webhook response" module: send custom HTTP response
+
+POPULAR APP MODULES (exact names):
+| Service | Trigger Module | Action Module |
+|---|---|---|
+| Slack | Watch Messages | Create a Message |
+| Google Sheets | Watch Changes, Watch New Rows | Add a Row, Update a Row |
+| Gmail | Watch Emails | Send an Email |
+| Airtable | Watch Records | Create a Record |
+| Notion | Watch Database Items | Create a Database Item |
+| OpenAI (ChatGPT) | — | Create a Completion (Chat) |
+| PostgreSQL | — | Execute a query |
+| HubSpot | Watch Contacts/Deals | Create a Contact |
+| Salesforce | Watch Records | Create a Record |
+
+DATA REFERENCE SYNTAX:
+- Module number reference: \`{{1.fieldName}}\` — module 1's output field
+- Nested: \`{{1.data.nested.field}}\`
+- Functions: \`{{formatDate(1.date; "YYYY-MM-DD")}}\`, \`{{lower(1.name)}}\`, \`{{length(1.items)}}\`
+- Conditionals: \`{{if(1.status = "active"; "yes"; "no")}}\`, \`{{ifempty(1.field; "default")}}\`
+- Array access: \`{{1.items[1]}}\` (1-indexed!)
+- Concatenation: \`{{1.firstName}} {{1.lastName}}\`
+
+CREDENTIAL SETUP (Connections):
+1. When adding a module, click "Add" next to the Connection dropdown
+2. Name the connection → for OAuth: click Authorize → popup → grant access. For API keys: paste key → Save.
+3. Connections are reusable across scenarios. Manage at: Organization → Connections.
+
+ROUTER (conditional branching):
+- Add Router → creates multiple routes. Each route can have a Filter (conditions with AND/OR).
+- Fallback route: last route with no filter = "else" branch. Set via "Set as fallback".
+- All matching routes execute in parallel by default.
+
+ITERATOR + AGGREGATOR:
+- Iterator: input array → outputs individual bundles. Array Aggregator: collects bundles back into array.
+- Must pair them: Iterator expands → processing → Aggregator collects.
+
+ERROR HANDLING (per-module):
+- Right-click module → "Add error handler" → directives: Resume, Rollback, Ignore, Break, Commit
+- Break: stores incomplete execution for retry. Auto-retry configurable (max retries + interval).
+- Incomplete Executions: Scenario → Incomplete Executions tab.
+
+GOTCHAS:
+- Operation limits: Free 1,000 ops/month. Each module execution = 1 operation.
+- Execution time: max 40 minutes per scenario (hard limit).
+- Bundle size: max 50MB per bundle.
+- Free plan: minimum 15-minute scheduling interval. Paid: 1-minute minimum.
+- Data Stores: built-in key-value databases. Create at Organization → Data Stores. Use "Data Store" modules.
+- 1-indexed arrays: \`{{1.items[1]}}\` is the FIRST item, not the second.
+- Search modules return multiple bundles — triggers implicit iteration through all downstream modules.
+`,
+
+'Power Automate': `
+PLATFORM-SPECIFIC KNOWLEDGE — Microsoft Power Automate (2025)
+
+Use these exact action/connector names, syntax, and patterns when writing the Build Guide.
+
+TERMINOLOGY:
+- A workflow is called a "Flow". Operations are "Actions" (or "Triggers" for start events).
+- Services are accessed via "Connectors" (Standard or Premium).
+
+FLOW TYPES:
+- Automated cloud flow: triggered by an event
+- Instant cloud flow: triggered manually or via HTTP request
+- Scheduled cloud flow: runs on a cron schedule
+
+CORE ACTIONS (exact names):
+- Compose, Initialize variable, Set variable, Append to string/array variable
+- Condition (if/then/else), Switch (multi-branch)
+- Apply to each (loop over array), Do until (loop until condition)
+- Scope (group actions — used for try-catch patterns)
+- Terminate (end flow with Succeeded/Failed/Cancelled status)
+- Delay, Delay until
+- HTTP (Premium — raw HTTP requests), Parse JSON
+- Select (array map), Filter array, Join, Create CSV/HTML table
+
+POPULAR CONNECTORS (exact names):
+| Service | Connector | Premium? | Example |
+|---|---|---|---|
+| Outlook | Office 365 Outlook | Standard | When a new email arrives → Send an email (V2) |
+| SharePoint | SharePoint | Standard | When an item is created → Create item, Get items |
+| Teams | Microsoft Teams | Standard | When a message is posted → Post message |
+| OneDrive | OneDrive for Business | Standard | When a file is created → Create file |
+| Excel | Excel Online (Business) | Standard | List rows present in a table → Add a row |
+| SQL Server | SQL Server | Premium | Execute a SQL query, Get rows (V2) |
+| Dataverse | Microsoft Dataverse | Premium | When a row is added → List rows, Add a new row |
+| HTTP | HTTP | Premium | Make any REST call |
+| Slack | Slack | Standard | When a new message is posted → Post message |
+| Google Sheets | Google Sheets | Standard | When a row is added → Insert row |
+| AI Builder | AI Builder | Premium | Create text with GPT, Extract info from documents |
+
+DATA REFERENCE SYNTAX (expressions):
+- Dynamic Content panel: click field → pick from list of outputs from previous actions
+- Expressions tab: formulas using Workflow Definition Language
+- Trigger output: \`@{triggerOutputs()?['body/field']}\` or \`@{triggerBody()?['field']}\`
+- Action output: \`@{body('ActionName')?['field']}\` or \`@{outputs('ActionName')?['body/field']}\`
+- Variables: \`@{variables('varName')}\`
+- Loop current item: \`@{items('Apply_to_each')?['field']}\`
+- Common functions: concat(), substring(), replace(), split(), toLower(), toUpper(), trim(), length()
+- Date functions: utcNow(), addDays(), formatDateTime(utcNow(), 'yyyy-MM-dd')
+- Logic: if(condition, trueValue, falseValue), equals(), and(), or(), not(), empty(), coalesce()
+- Null-safe navigation: use ?[] operator — \`body('Action')?['field']\` returns null safely
+
+CREDENTIAL / CONNECTION SETUP:
+1. First time adding a connector: Power Automate prompts "Sign in"
+2. Microsoft services: signs in via M365 account (automatic OAuth)
+3. Third-party: redirects to their OAuth page or enter API key
+4. Manage connections: Power Automate portal → Data → Connections
+5. Custom connectors: Data → Custom connectors → define from OpenAPI spec
+
+CONDITION (if/then/else):
+- Condition action → value1 [operator] value2. Operators: equals, not equals, greater than, contains, starts with, etc.
+- AND/OR groups. Two branches: "If yes" and "If no".
+
+APPLY TO EACH (looping):
+- Select array to loop over. Add actions inside loop body.
+- Concurrency: Settings → Concurrency Control → 1-50 (default 20). Set to 1 for sequential.
+
+ERROR HANDLING:
+- Click (...) on action → Configure run after → "is successful", "has failed", "is skipped", "has timed out"
+- Try-catch pattern: put risky actions in Scope → add Scope after configured to "Run after: has failed"
+- Terminate action: use in catch block to mark flow as Failed with custom error message
+
+GOTCHAS:
+- Premium connectors (HTTP, SQL, Dataverse, Custom) require paid license (~$15/user/month or $150/flow/month for Process plan).
+- Max 500 actions per workflow. Max 8 nesting levels. Max 25 cases per Switch. Max 250 variables per flow.
+- Initialize variable must be at top level (not inside loops/conditions). Set variable can be used anywhere.
+- Do until: default max 60 iterations, configurable up to 5,000.
+- Apply to each: array limit 5,000 items (basic plan) / 100,000 (premium). Concurrency default 20, set to 1 for sequential.
+- Pagination: enable on "List" actions via Settings → set threshold (up to 100,000).
+- Always use ?[] safe navigation to avoid null errors — \`body('Action')?['field']\` not \`body('Action')['field']\`.
+- Outbound request timeout: 120 seconds. Flow run duration: max 30 days.
+- Approval actions: built-in "Start and wait for an approval" — sends via Teams/email. Very common in business flows.
+- Environment variables: available in Solutions for configurable values across dev/test/prod.
+- AI Builder: built-in AI (GPT, document processing) — no external API key needed with AI Builder credits (5,000/month with Premium).
+- Connection References: use in solution-aware flows to decouple connections from flow definitions for Dev/Test/Prod deployment.
+`,
+
+'Claude Code': `
+PLATFORM-SPECIFIC KNOWLEDGE — Claude Code
+
+Claude Code is Anthropic's CLI-based AI coding agent. Build guides describe scripts, agent loops, or tool-use patterns — not visual drag-and-drop workflows.
+
+CORE CONCEPTS:
+- Entry point: A script file (TypeScript/Python) or a prompt-driven agent session
+- Tool calls: Claude can call tools (Read, Write, Edit, Bash, Grep, Glob, WebSearch, etc.)
+- Agent loop: Claude reasons → selects a tool → observes result → repeats until done
+- No visual canvas — everything is code or prompt-based
+
+SDK & API:
+- Anthropic SDK: \`@anthropic-ai/sdk\` (TypeScript) or \`anthropic\` (Python)
+- Model IDs: \`claude-sonnet-4-20250514\`, \`claude-opus-4-20250514\`, \`claude-haiku-4-5-20251001\`
+- API endpoint: https://api.anthropic.com/v1/messages
+- Authentication: x-api-key header with API key from console.anthropic.com
+- Max tokens: up to 64K output for Claude 4 family
+
+TOOL USE PATTERN:
+\`\`\`typescript
+import Anthropic from '@anthropic-ai/sdk';
+const client = new Anthropic();
+const response = await client.messages.create({
+  model: 'claude-sonnet-4-20250514',
+  max_tokens: 4096,
+  tools: [{ name: 'tool_name', description: '...', input_schema: { type: 'object', properties: { ... } } }],
+  messages: [{ role: 'user', content: '...' }],
+});
+\`\`\`
+
+AGENT LOOP:
+1. Send initial message with tools defined
+2. If response stop_reason is \`tool_use\`, execute the tool
+3. Send tool result back as tool_result content block
+4. Repeat until stop_reason is \`end_turn\`
+
+CREDENTIAL SETUP:
+- API Key: console.anthropic.com → API Keys. Set as ANTHROPIC_API_KEY env var.
+- SDK auto-reads from env var.
+
+GOTCHAS:
+- Rate limits vary by tier (tier 1: 50 RPM, tier 4: 4000 RPM).
+- Context window: 200K tokens input.
+- Tool schemas must be valid JSON Schema.
+- max_tokens is required and caps output.
+- 429 Too Many Requests: back off with exponential delay. 529 Overloaded: retry after seconds.
+
+COMMON PATTERNS:
+- Text processing: single messages.create() call
+- Multi-step agent: tool-use loop with file system tools
+- Batch processing: Promise.allSettled() for parallel items
+- Structured output: use tool_use to force JSON schema
+`,
+};
+
+/**
+ * Look up platform-specific knowledge addendum. Returns empty string for unknown platforms.
+ */
+function getPlatformAddendum(platform: string): string {
+  return PLATFORM_ADDENDA[platform] || '';
+}
+
+export const generatebuildguide = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 60 }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { intermediate, platform } = req.body;
+    if (!intermediate || !platform) { res.status(400).json({ error: "Missing intermediate or platform" }); return; }
+
+    // Append platform-specific knowledge to the system prompt
+    const platformKnowledge = getPlatformAddendum(platform);
+    const fullSystemPrompt = platformKnowledge
+      ? `${BUILD_GUIDE_SYSTEM_PROMPT}\n\n${platformKnowledge}`
+      : BUILD_GUIDE_SYSTEM_PROMPT;
+
+    // Build enriched user message with context from all prior steps
+    const ctx = intermediate.context;
+    let contextBlock = '';
+    if (ctx) {
+      const parts: string[] = [];
+
+      // Original user intent
+      if (ctx.originalTaskDescription) {
+        parts.push(`USER'S ORIGINAL REQUEST:\n${ctx.originalTaskDescription}`);
+      }
+      if (ctx.toolsAndSystems && ctx.toolsAndSystems !== 'Not specified') {
+        parts.push(`TOOLS & SYSTEMS THE USER ALREADY USES:\n${ctx.toolsAndSystems}`);
+      }
+
+      // Design path context
+      parts.push(`DESIGN PATH: ${ctx.pathUsed === 'a' ? 'AI-generated workflow (Path A)' : 'User-designed workflow (Path B)'}`);
+
+      // Feedback & review history
+      if (ctx.overallAssessment) {
+        parts.push(`AI REVIEW ASSESSMENT:\n${ctx.overallAssessment}`);
+      }
+      if (ctx.pathARefinementText) {
+        parts.push(`USER'S REFINEMENT FEEDBACK:\n${ctx.pathARefinementText}`);
+      }
+      if (ctx.feedbackItems && ctx.feedbackItems.length > 0) {
+        const fbLines = ctx.feedbackItems.map((fi: { nodeName: string; type: string; rationale: string; resolution: string; disputeText?: string; disputeOutcome?: string; disputeResponse?: string }) => {
+          let line = `- [${fi.type.toUpperCase()}] "${fi.nodeName}": ${fi.rationale} → Resolution: ${fi.resolution}`;
+          if (fi.disputeText) line += `\n  User disputed: "${fi.disputeText}"`;
+          if (fi.disputeOutcome) line += `\n  Outcome: ${fi.disputeOutcome}${fi.disputeResponse ? ` — ${fi.disputeResponse}` : ''}`;
+          return line;
+        });
+        parts.push(`FEEDBACK ITEMS & RESOLUTIONS:\n${fbLines.join('\n')}`);
+      }
+
+      // Canvas layout
+      if (ctx.canvasLayout && ctx.canvasLayout.length > 0) {
+        const layoutLines = ctx.canvasLayout.map((n: { position: number; nodeName: string; layer: string; connections: string[] }) =>
+          `${n.position}. ${n.nodeName} [${n.layer}]${n.connections.length > 0 ? ` → ${n.connections.join(', ')}` : ''}`
+        );
+        parts.push(`CANVAS LAYOUT (execution order):\n${layoutLines.join('\n')}`);
+      }
+
+      contextBlock = `\n\nADDITIONAL CONTEXT FROM PRIOR STEPS:\n${parts.join('\n\n')}`;
+    }
+
+    const userMessage = `Generate a complete Build Guide for the following workflow.
+Platform: ${platform}
+Respond ONLY with the raw markdown document. No preamble, no explanation.
+
+Workflow specification:
+${JSON.stringify(intermediate, null, 2)}${contextBlock}`;
+
+    const result = await callOpenRouterRaw({
+      apiKey,
+      model: "anthropic/claude-sonnet-4",
+      systemPrompt: fullSystemPrompt,
+      userMessage,
+      label: "generate-build-guide",
+      temperature: 0.5,
+      maxTokens: 6000,
+    });
+
+    if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
+
+    const cleaned = result.text.replace(/^```markdown\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+    res.status(200).json({ markdown: cleaned });
+  } catch (err) {
+    console.error("generate-build-guide error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 14. RESOLVE FEEDBACK DISPUTE
+// ═══════════════════════════════════════════════════════════════
+
+const DISPUTE_SYSTEM_PROMPT = `You are an n8n workflow reviewer. A user has pushed back on one of your feedback items.
+Consider their argument carefully and honestly. If they raise a valid point or provide
+context you were missing, concede and explain why the issue no longer applies.
+If your original feedback is still correct despite their argument, maintain your position
+and explain clearly why — but acknowledge their perspective.
+Respond ONLY with valid JSON matching this schema:
+{
+  "outcome": "concede | maintain",
+  "response": "string — 1-2 sentences. Direct, honest, not defensive."
+}`;
+
+export const resolvedispute = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 30 }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { originalMessage, severity, disputeText, nodeContext } = req.body;
+
+    const userMessage = `Original feedback: ${originalMessage}
+Severity: ${severity}
+User's argument: ${disputeText}
+Workflow context: ${JSON.stringify(nodeContext || {})}`;
+
+    const openRouterModel = model.startsWith("google/") ? model : `google/${model}`;
+    const result = await callGemini({
+      apiKey,
+      model: openRouterModel,
+      systemPrompt: DISPUTE_SYSTEM_PROMPT,
+      userMessage,
+      label: "resolve-dispute",
+      temperature: 0.5,
+    });
+
+    if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
+    res.status(200).json(result.data);
+  } catch (err) {
+    console.error("resolve-dispute error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PROMPT PLAYGROUND V2
+// ═══════════════════════════════════════════════════════════════
+
+const PLAYGROUND_V2_SYSTEM = `You are the Oxygy Prompt Engineering Coach — an expert practitioner in AI prompting who helps professionals build better prompts for their real work tasks.
+
+Your job is to:
+1. Read the user's task description
+2. Select 2–4 prompting strategies from the approved list below that are most appropriate for this specific task
+3. Write a single, clean, optimised prompt that combines those strategies
+4. Provide a practitioner's rationale for why each strategy was chosen for this specific task
+
+---
+
+APPROVED PROMPTING STRATEGIES:
+
+1. STRUCTURED_BLUEPRINT — Use for complex, multi-part deliverables needing explicit structure. Defines Role, Context, Task, Format, Steps, Quality Checks. Avoid for simple tasks.
+
+2. CHAIN_OF_THOUGHT — Use for analytical, evaluative, or reasoning tasks. Instructs the AI to work step-by-step before concluding. Avoid for simple factual or creative tasks.
+
+3. PERSONA_EXPERT_ROLE — Use for almost all professional tasks. Assigns a specific expert identity that anchors tone, vocabulary, and perspective.
+
+4. OUTPUT_FORMAT_SPECIFICATION — Use when the output will be shared or directly used. Defines length, layout, tone, structure. Avoid for exploratory or ideation tasks.
+
+5. CONSTRAINT_FRAMING — Always used alongside other strategies, never alone. Scopes what the AI should NOT do. Use for high-stakes or sensitive outputs.
+
+6. FEW_SHOT_EXAMPLES — Use for repeatable, template-style tasks where showing the desired output pattern is more effective than describing it.
+
+7. ITERATIVE_DECOMPOSITION — Use for large, multi-component deliverables. Breaks the task into sequential sub-tasks. Avoid for simple outputs.
+
+8. TONE_AND_VOICE — Use for communication tasks where the relationship with the reader matters. Specifies register and relational dynamic precisely.
+
+---
+
+COMBINATION RULES:
+
+- Minimum 2 strategies, maximum 4
+- PERSONA almost always appears (exception: purely mechanical tasks)
+- STRUCTURED_BLUEPRINT and CHAIN_OF_THOUGHT are rarely combined — choose one based on whether the task is primarily about structure or reasoning
+- CONSTRAINT_FRAMING is always additive — never the sole strategy
+- Colour-coded pairs that share a colour tag (Blueprint/Decomposition = Lavender; Chain-of-Thought/Tone = Yellow) should not both appear in the same output
+
+---
+
+TASK TYPE GUIDANCE:
+
+- Simple communication tasks (emails, updates, messages): PERSONA + OUTPUT_FORMAT + optionally CONSTRAINT_FRAMING (2–3 strategies)
+- Analytical / evaluative tasks: CHAIN_OF_THOUGHT + CONSTRAINT_FRAMING + PERSONA + optionally OUTPUT_FORMAT (3–4 strategies)
+- Complex structured deliverables: STRUCTURED_BLUEPRINT + PERSONA + optionally ITERATIVE_DECOMPOSITION (3–4)
+- Workshop / facilitation design: PERSONA + CHAIN_OF_THOUGHT + TONE_AND_VOICE + optionally FEW_SHOT_EXAMPLES
+- Template / repeatable format creation: FEW_SHOT_EXAMPLES + OUTPUT_FORMAT + optionally PERSONA (2–3)
+- Stakeholder / executive communication: PERSONA + TONE_AND_VOICE + OUTPUT_FORMAT + optionally CONSTRAINT_FRAMING (3–4)
+
+---
+
+OUTPUT FORMAT:
+
+You must respond in the following JSON format ONLY — no markdown, no extra text, no code fences:
+
+{
+  "prompt": "The full optimised prompt as a clean, copy-ready string. Use \\n for line breaks within the prompt.",
+  "strategies_used": [
+    {
+      "id": "PERSONA_EXPERT_ROLE",
+      "name": "Persona / Expert Role",
+      "icon": "🎭",
+      "why": "A single sentence — practitioner's rationale specific to this task.",
+      "what": "One sentence — general description of what this strategy does.",
+      "how_applied": "1–2 sentences describing exactly how this strategy was applied in the generated prompt. Be specific — reference the actual content.",
+      "prompt_excerpt": "The exact substring from the 'prompt' field that most clearly demonstrates this strategy in action. Must be a verbatim excerpt — copy it character-for-character from the prompt. Choose the most illustrative passage (1–3 sentences)."
+    }
+  ],
+  "refinement_questions": [
+    "A specific context-seeking question that, if answered, would let you write a significantly better prompt for this task. 3-5 questions total."
+  ]
+}
+
+REFINEMENT HANDLING:
+
+If the user's message begins with "[REFINEMENT]", it contains their original task description followed by answers to your previous questions and/or additional context. Use ALL provided context to write a significantly improved prompt. The refinement answers provide crucial specifics — weave them deeply into the prompt structure, not as afterthoughts. Generate new refinement_questions that probe even deeper.
+
+RULES:
+- The prompt must be clean, professional, and immediately usable in ChatGPT or Claude without modification
+- The "why" must be specific to the user's task — not a generic description of the strategy
+- The "what" is the stable, general description — it can be consistent across similar tasks
+- The "how_applied" must describe the specific way this strategy manifests in the generated prompt — reference actual content you wrote
+- The "prompt_excerpt" MUST be an exact, verbatim substring copied from the "prompt" field — do not paraphrase or summarise. The excerpt will be used for text highlighting, so character-perfect accuracy is critical
+- "refinement_questions" must contain 3-5 questions seeking specific context not provided in the input. Each must be practical and answerable in 1-2 sentences
+- Do NOT add preamble, commentary, or explanation outside the JSON object
+- If the user's input is very short or vague, make reasonable inferences and build the best possible prompt — do not ask for clarification`;
+
+export const generateplaygroundprompt = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 30 }, async (req, res) => {
+  // CORS headers
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+  const apiKey = openRouterApiKey.value();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { userInput } = req.body;
+    if (!userInput || typeof userInput !== "string" || userInput.trim().length === 0) {
+      res.status(400).json({ error: "userInput is required" }); return;
+    }
+
+    const result = await callGemini({
+      apiKey,
+      model: "anthropic/claude-sonnet-4",
+      systemPrompt: PLAYGROUND_V2_SYSTEM,
+      userMessage: userInput,
+      label: "playground-v2",
+      temperature: 0.7,
+      maxTokens: 2000,
+    });
+
+    if (!result.ok) {
+      res.status(result.status).json({ error: result.message, retryable: result.retryable }); return;
+    }
+
+    res.status(200).json(result.data);
+  } catch (err) {
+    console.error("playground-v2 error:", err);
     res.status(500).json({ error: "Internal server error", retryable: true });
   }
 });

@@ -66,7 +66,9 @@ export async function callOpenRouter(opts: {
   jsonMode?: boolean;
   maxTokens?: number;
 }): Promise<{ ok: true; data: any } | { ok: false; status: number; message: string; retryable: boolean }> {
-  const openRouterModel = opts.model.startsWith("google/") ? opts.model : `google/${opts.model}`;
+  // If the model already has a provider prefix (e.g. "anthropic/...", "google/..."), use as-is.
+  // Otherwise assume it's a Google model and add the "google/" prefix for backwards compatibility.
+  const openRouterModel = opts.model.includes("/") ? opts.model : `google/${opts.model}`;
 
   const body: Record<string, any> = {
     model: openRouterModel,

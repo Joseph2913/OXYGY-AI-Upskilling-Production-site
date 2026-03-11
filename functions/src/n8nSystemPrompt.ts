@@ -538,6 +538,15 @@ BEST PRACTICES:
 - For webhook workflows: pair with Respond to Webhook as the last node
 - For batch workflows: always use Merge after Split in Batches completes
 
+CRITICAL RULE — NATIVE NODES OVER HTTP REQUEST:
+NEVER use "n8n-nodes-base.httpRequest" when a native integration node exists in Section 3 above.
+For example:
+- For Google Sheets: ALWAYS use "n8n-nodes-base.googleSheets", NEVER httpRequest
+- For Gmail: ALWAYS use "n8n-nodes-base.gmail", NEVER httpRequest
+- For Slack: ALWAYS use "n8n-nodes-base.slack", NEVER httpRequest
+- For Notion: ALWAYS use "n8n-nodes-base.notion", NEVER httpRequest
+Only use httpRequest for services that have NO native n8n node (e.g., custom APIs, niche services).
+
 RESPOND WITH:
 Complete, valid n8n workflow JSON only. No markdown fences, no explanation, no preamble.
 The response must be parseable by JSON.parse() without any pre-processing.

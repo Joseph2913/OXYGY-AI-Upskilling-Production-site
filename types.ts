@@ -47,7 +47,7 @@ export interface DepartmentData {
   link: string;
 }
 
-// Prompt Engineering Playground types
+// Prompt Engineering Playground types (v1 — legacy, kept for reference)
 export interface PromptBlock {
   key: string;
   label: string;
@@ -74,6 +74,33 @@ export interface WizardAnswers {
   steps: string;
   qualityChips: string[];
   qualityCustom: string;
+}
+
+// Prompt Playground v2.0 — Strategy-aware types
+export type StrategyId =
+  | 'STRUCTURED_BLUEPRINT'
+  | 'CHAIN_OF_THOUGHT'
+  | 'PERSONA_EXPERT_ROLE'
+  | 'OUTPUT_FORMAT_SPECIFICATION'
+  | 'CONSTRAINT_FRAMING'
+  | 'FEW_SHOT_EXAMPLES'
+  | 'ITERATIVE_DECOMPOSITION'
+  | 'TONE_AND_VOICE';
+
+export interface PlaygroundStrategy {
+  id: StrategyId;
+  name: string;
+  icon: string;
+  why: string;
+  what: string;
+  how_applied: string;
+  prompt_excerpt: string;
+}
+
+export interface PlaygroundResult {
+  prompt: string;
+  strategies_used: PlaygroundStrategy[];
+  refinement_questions?: string[];
 }
 
 // Agent Builder Toolkit types (Level 2)
@@ -182,6 +209,29 @@ export interface WorkflowIntermediate {
   estimatedRunTime: string;
   humanInTheLoop: boolean;
   nodes: N8nIntermediateNode[];
+  // Rich context for build guide generation
+  context?: {
+    originalTaskDescription: string;
+    toolsAndSystems: string;
+    pathUsed: 'a' | 'b';
+    feedbackItems?: Array<{
+      nodeName: string;
+      type: 'added' | 'removed';
+      rationale: string;
+      resolution: 'applied' | 'disputed' | 'dismissed';
+      disputeText?: string;
+      disputeOutcome?: 'concede' | 'maintain';
+      disputeResponse?: string;
+    }>;
+    pathARefinementText?: string;
+    overallAssessment?: string;
+    canvasLayout?: Array<{
+      nodeName: string;
+      layer: string;
+      position: number;
+      connections: string[];
+    }>;
+  };
 }
 
 // App Evaluator types (Level 5 — new toolkit page)
@@ -322,20 +372,20 @@ export interface PersonaCardData {
   };
 }
 
-// Dashboard Designer types (Level 4)
+// App Designer types (Level 4)
 export type DashboardStepStatus = 'pending' | 'active' | 'completed';
 
 export interface DashboardBrief {
   // Group 1: Context & Purpose
-  q1_purpose: string;
-  q2_audience: string;
-  q3_type: string;
-  // Group 2: Data & Metrics
-  q4_metrics: string;
-  q5_dataSources: string[];
+  q1_purpose: string;       // What does the app/tool need to do?
+  q2_audience: string;       // Who are the target users?
+  q3_type: string;           // Open text: describe the type of app/tool
+  // Group 2: Features & Data
+  q4_metrics: string;        // Key features, screens, or metrics to display
+  q5_dataSources: string[];  // Where data comes from (APIs, databases, user input, etc.)
   q5_otherSource: string;
   q6_frequency: string;
-  // Group 3: Inspiration & Style
+  // Group 3: Inspiration & Style (optional)
   q7_visualStyle: string;
   q8_colorScheme: string;
   q8_customColor: string;

@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Wrench, ChevronDown, ChevronUp, Play, FileText, Video, PenTool } from 'lucide-react';
+import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, FileText, Video, PenTool, FolderOpen } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useDashboardData, LeaderboardMember } from '../../hooks/useDashboardData';
 import {
   LEVEL_TOPICS,
   LEVEL_FULL_NAMES,
-  LEVEL_SHORT_NAMES,
   LEVEL_ACCENT_COLORS,
   LEVEL_ACCENT_DARK_COLORS,
 } from '../../data/levelTopics';
-import { ALL_TOOLS } from '../../data/toolkitData';
+import { getPrimaryTool } from '../../data/toolkitData';
 import { timeAgo } from '../../utils/timeAgo';
 
 /* ─── Greeting helper ─── */
@@ -262,9 +261,6 @@ const AppDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { userProfile } = useAppContext();
   const { data, loading } = useDashboardData();
-  const [expandedTopicLevel, setExpandedTopicLevel] = useState<number | null>(null);
-  const [expandedToolLevel, setExpandedToolLevel] = useState<number | null>(null);
-
   const firstName = userProfile?.fullName?.split(' ')[0] || 'User';
 
   if (loading || !data) {
@@ -291,21 +287,9 @@ const AppDashboard: React.FC = () => {
   const accent = LEVEL_ACCENT_COLORS[level];
   const accentDark = LEVEL_ACCENT_DARK_COLORS[level];
   const levelFull = LEVEL_FULL_NAMES[level];
-  const completed = data.completedTopics;
   const activeTopic = topics[data.activeTopicIndex];
   const phaseNames: Record<number, string> = { 1: 'E-Learning', 2: 'Read', 3: 'Watch', 4: 'Practice' };
 
-  // Tool unlock logic
-  const getToolState = (toolLevel: number): 'unlocked' | 'locked' => {
-    return toolLevel <= level ? 'unlocked' : 'locked';
-  };
-
-  // Group tools by level
-  const toolsByLevel: Record<number, typeof ALL_TOOLS> = {};
-  ALL_TOOLS.forEach(t => {
-    if (!toolsByLevel[t.levelRequired]) toolsByLevel[t.levelRequired] = [];
-    toolsByLevel[t.levelRequired].push(t);
-  });
 
   const currentUserRank = data.leaderboard.findIndex(m => m.isCurrentUser) + 1;
   const currentUserData = data.leaderboard.find(m => m.isCurrentUser);
@@ -468,18 +452,17 @@ const AppDashboard: React.FC = () => {
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 10,
-                padding: '16px 20px',
+                gap: 18,
+                padding: '12px 24px',
                 borderRadius: 14,
                 background: accent + '15',
-                minWidth: 150,
                 flexShrink: 0,
+                alignSelf: 'stretch',
               }}
             >
-              <ProgressRing completed={data.currentSlide} total={data.totalSlides} accentColor={accent} size={72} strokeWidth={6} />
+              <ProgressRing completed={data.currentSlide} total={data.totalSlides} accentColor={accent} size={110} strokeWidth={8} />
               <button
                 onClick={() => navigate('/app/level')}
                 style={{
@@ -552,173 +535,230 @@ const AppDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Topics + Toolkit side by side */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {/* Topics card */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <BookOpen size={14} color="#1A202C" />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>Topics</span>
-                </div>
+          {/* ── Unified Journey + Toolkit card ── */}
+          <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '22px 22px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BookOpen size={16} color="#1A202C" />
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Your Journey</span>
+              </div>
+              <div style={{ display: 'flex', gap: 14 }}>
                 <button
                   onClick={() => navigate('/app/journey')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
                   onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
-                  Full journey →
+                  All topics →
                 </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {[1, 2, 3, 4, 5].map(lvl => {
-                  const lvlTopics = LEVEL_TOPICS[lvl] || [];
-                  const lvlAccent = LEVEL_ACCENT_COLORS[lvl];
-                  const lvlAccentDark = LEVEL_ACCENT_DARK_COLORS[lvl];
-                  const isCurrentLevel = lvl === level;
-                  const isCompletedLevel = lvl < level;
-                  const isLocked = lvl > level;
-                  const isExpanded = expandedTopicLevel === lvl;
-
-                  return (
-                    <div key={lvl}>
-                      <div
-                        onClick={() => setExpandedTopicLevel(isExpanded ? null : lvl)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '8px 10px',
-                          borderRadius: 8,
-                          border: `1px solid ${isCurrentLevel ? lvlAccent + '99' : '#E2E8F0'}`,
-                          background: isCurrentLevel ? lvlAccent + '10' : '#FFFFFF',
-                          cursor: 'pointer',
-                          opacity: isLocked ? 0.55 : 1,
-                          transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={e => { if (!isLocked) (e.currentTarget as HTMLElement).style.background = isCurrentLevel ? lvlAccent + '18' : '#F7FAFC'; }}
-                        onMouseLeave={e => { if (!isLocked) (e.currentTarget as HTMLElement).style.background = isCurrentLevel ? lvlAccent + '10' : '#FFFFFF'; }}
-                      >
-                        <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isCompletedLevel ? '#1A202C' : isCurrentLevel ? lvlAccent : '#E2E8F0' }}>
-                          {isCompletedLevel && <Check size={10} color="#FFFFFF" strokeWidth={3} />}
-                          {isCurrentLevel && <span style={{ fontSize: 9, fontWeight: 800, color: lvlAccentDark }}>{lvl}</span>}
-                          {isLocked && <Lock size={9} color="#718096" />}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: isCurrentLevel ? 700 : 500, color: '#1A202C' }}>
-                            L{lvl} · {LEVEL_SHORT_NAMES[lvl]}
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 10, color: '#A0AEC0', flexShrink: 0 }}>{lvlTopics.length}t</span>
-                        {!isLocked && (isExpanded ? <ChevronUp size={12} color="#718096" /> : <ChevronDown size={12} color="#718096" />)}
-                      </div>
-
-                      {isExpanded && !isLocked && (
-                        <div style={{ paddingLeft: 30, paddingTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {lvlTopics.map((topic, ti) => {
-                            const topicCompleted = isCompletedLevel || (isCurrentLevel && ti < completed);
-                            const topicActive = isCurrentLevel && ti === data.activeTopicIndex;
-                            return (
-                              <div
-                                key={topic.id}
-                                onClick={() => { if (topicCompleted || topicActive) navigate('/app/level'); }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 6, background: topicActive ? lvlAccent + '15' : 'transparent', cursor: (topicCompleted || topicActive) ? 'pointer' : 'default', transition: 'background 0.1s' }}
-                                onMouseEnter={e => { if (topicCompleted || topicActive) (e.currentTarget as HTMLElement).style.background = lvlAccent + '20'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = topicActive ? lvlAccent + '15' : 'transparent'; }}
-                              >
-                                <span style={{ fontSize: 12 }}>{topic.icon}</span>
-                                <span style={{ flex: 1, fontSize: 11, fontWeight: topicActive ? 600 : 400, color: '#1A202C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{topic.title}</span>
-                                {topicCompleted && <Check size={9} color="#38B2AC" strokeWidth={3} />}
-                                {topicActive && <span style={{ fontSize: 8, fontWeight: 700, color: lvlAccentDark, background: lvlAccent + '44', padding: '1px 5px', borderRadius: 6, flexShrink: 0 }}>NOW</span>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                <button
+                  onClick={() => navigate('/app/toolkit')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  All tools →
+                </button>
               </div>
             </div>
 
-            {/* Toolkit card */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Wrench size={14} color="#1A202C" />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>Toolkit</span>
-                </div>
-                <button
-                  onClick={() => navigate('/app/toolkit')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                >
-                  Full toolkit →
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {[1, 2, 3, 4, 5].map(lvl => {
-                  const lvlTools = toolsByLevel[lvl] || [];
-                  const lvlAccent = LEVEL_ACCENT_COLORS[lvl];
-                  const allUnlocked = lvl <= level;
-                  const isExpanded = expandedToolLevel === lvl;
+            {/* Column labels */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, padding: '0 14px 8px', marginBottom: 2 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Topic & Progress</span>
+              <div />
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em', paddingLeft: 14 }}>Tool & Artefacts</span>
+            </div>
 
-                  return (
-                    <div key={lvl}>
-                      <div
-                        onClick={() => setExpandedToolLevel(isExpanded ? null : lvl)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '8px 10px',
-                          borderRadius: 8,
-                          border: `1px solid ${allUnlocked ? lvlAccent + '88' : '#E2E8F0'}`,
-                          borderLeft: `3px solid ${allUnlocked ? lvlAccent : '#E2E8F0'}`,
-                          background: allUnlocked ? lvlAccent + '10' : '#FFFFFF',
-                          cursor: 'pointer',
-                          opacity: allUnlocked ? 1 : 0.55,
-                          transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = allUnlocked ? lvlAccent + '18' : '#F7FAFC'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = allUnlocked ? lvlAccent + '10' : '#FFFFFF'; }}
-                      >
-                        <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: allUnlocked ? lvlAccent + '55' : '#E2E8F0' }}>
-                          {allUnlocked ? <span style={{ fontSize: 11 }}>{lvlTools[0]?.icon || ''}</span> : <Lock size={9} color="#718096" />}
+            {/* Level rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+              {[1, 2, 3, 4, 5].map(lvl => {
+                const lvlTopics = LEVEL_TOPICS[lvl] || [];
+                const topic = lvlTopics[0];
+                const primaryTool = getPrimaryTool(lvl);
+                if (!topic || !primaryTool) return null;
+
+                const lvlAccent = LEVEL_ACCENT_COLORS[lvl];
+                const lvlAccentDark = LEVEL_ACCENT_DARK_COLORS[lvl];
+                const isCurrentLevel = lvl === level;
+                const isCompletedLevel = lvl < level;
+                const isLocked = lvl > level;
+                const progress = data.levelProgress[lvl];
+                const phases = progress?.phasesCompleted || [false, false, false, false];
+                const usage = data.toolUsage[primaryTool.id];
+                const artefactsCreated = usage?.artefactsCreated || 0;
+
+                // Status badge config
+                const statusLabel = isCompletedLevel ? 'COMPLETED' : isCurrentLevel ? 'IN PROGRESS' : 'NOT STARTED';
+                const statusBg = isCompletedLevel ? '#C6F6D5' : isCurrentLevel ? lvlAccent + '44' : '#EDF2F7';
+                const statusColor = isCompletedLevel ? '#276749' : isCurrentLevel ? lvlAccentDark : '#A0AEC0';
+
+                // Short tool descriptions
+                const toolDescriptions: Record<string, string> = {
+                  'prompt-playground': 'Write, test, and refine prompts with live AI feedback',
+                  'agent-builder': 'Design custom AI agents with personas and guardrails',
+                  'workflow-canvas': 'Map end-to-end automated AI pipelines visually',
+                  'dashboard-designer': 'Prototype interactive dashboards for AI outputs',
+                  'ai-app-evaluator': 'Evaluate and score your AI application architecture',
+                };
+
+                return (
+                  <div
+                    key={lvl}
+                    style={{
+                      flex: 1,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1px 1fr',
+                      borderRadius: 10,
+                      border: `1px solid ${isLocked ? '#EDF2F7' : isCurrentLevel ? lvlAccent + '99' : '#E2E8F0'}`,
+                      borderLeft: `3px solid ${isCompletedLevel ? lvlAccent : isCurrentLevel ? lvlAccent : isLocked ? '#EDF2F7' : '#E2E8F0'}`,
+                      background: isLocked ? '#FAFBFC' : isCurrentLevel ? lvlAccent + '08' : '#FFFFFF',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* LEFT — Topic + progress */}
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 5,
+                        opacity: isLocked ? 0.45 : 1,
+                      }}
+                    >
+                      {/* Title + status badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{
+                          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: isCompletedLevel ? lvlAccent : isCurrentLevel ? lvlAccent : '#E2E8F0',
+                          fontSize: 10, fontWeight: 800, color: lvlAccentDark,
+                        }}>
+                          {isCompletedLevel ? <Check size={10} color={lvlAccentDark} strokeWidth={3} /> : isLocked ? <Lock size={9} color="#718096" /> : lvl}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: allUnlocked ? '#1A202C' : '#718096' }}>L{lvl} · {LEVEL_SHORT_NAMES[lvl]}</div>
-                        </div>
-                        <span style={{ fontSize: 10, color: '#A0AEC0', flexShrink: 0 }}>{lvlTools.length}t</span>
-                        {isExpanded ? <ChevronUp size={12} color="#718096" /> : <ChevronDown size={12} color="#718096" />}
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {topic.title}
+                        </span>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: statusColor, background: statusBg, padding: '2px 7px', borderRadius: 6, flexShrink: 0, letterSpacing: '0.02em' }}>
+                          {statusLabel}
+                        </span>
                       </div>
 
-                      {isExpanded && (
-                        <div style={{ paddingLeft: 30, paddingTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {lvlTools.map(tool => {
-                            const state = getToolState(tool.levelRequired);
-                            return (
-                              <div
-                                key={tool.id}
-                                onClick={() => { if (state === 'unlocked') navigate(tool.route); }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 6, cursor: state === 'unlocked' ? 'pointer' : 'default', transition: 'background 0.1s' }}
-                                onMouseEnter={e => { if (state === 'unlocked') (e.currentTarget as HTMLElement).style.background = tool.accentColor + '15'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                              >
-                                <span style={{ fontSize: 12 }}>{tool.icon}</span>
-                                <span style={{ flex: 1, fontSize: 11, fontWeight: 500, color: state === 'unlocked' ? '#1A202C' : '#718096', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tool.name}</span>
-                                {state === 'unlocked' && <span style={{ fontSize: 10, fontWeight: 600, color: tool.accentDark, flexShrink: 0 }}>→</span>}
-                                {state === 'locked' && <Lock size={9} color="#A0AEC0" />}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                      {/* Subtitle */}
+                      <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.3, paddingLeft: 29, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {topic.subtitle}
+                      </div>
+
+                      {/* Phase count + course button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 29, marginTop: 'auto' }}>
+                        {(() => {
+                          const phasesCompleted = phases.filter(Boolean).length;
+                          return (
+                            <div
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 4,
+                                padding: '2px 8px', borderRadius: 8,
+                                background: phasesCompleted === 4 ? lvlAccent + '25' : '#F7FAFC',
+                                border: `1px solid ${phasesCompleted === 4 ? lvlAccent + '55' : '#E2E8F0'}`,
+                                fontSize: 10, fontWeight: 600,
+                                color: phasesCompleted === 4 ? lvlAccentDark : '#4A5568',
+                              }}
+                            >
+                              {phasesCompleted === 4 ? <Check size={9} strokeWidth={3} /> : <Play size={9} />}
+                              {phasesCompleted} of 4 phases
+                            </div>
+                          );
+                        })()}
+                        {!isLocked && (
+                          <button
+                            onClick={() => navigate('/app/level')}
+                            style={{
+                              marginLeft: 'auto', background: 'none', border: `1px solid ${lvlAccent}`,
+                              borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 600,
+                              color: lvlAccentDark, cursor: 'pointer', flexShrink: 0,
+                              transition: 'background 0.12s', fontFamily: 'inherit',
+                            }}
+                            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = lvlAccent + '30')}
+                            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            Go to course →
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Divider */}
+                    <div style={{ background: '#E2E8F0', margin: '8px 0' }} />
+
+                    {/* RIGHT — Tool + description + artefacts */}
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 5,
+                        opacity: isLocked ? 0.45 : 1,
+                      }}
+                    >
+                      {/* Tool name + icon */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{
+                          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: !isLocked ? lvlAccent + '55' : '#E2E8F0', fontSize: 12,
+                        }}>
+                          {!isLocked ? primaryTool.icon : <Lock size={9} color="#718096" />}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: !isLocked ? '#1A202C' : '#718096', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {primaryTool.name}
+                        </span>
+                      </div>
+
+                      {/* Tool description */}
+                      <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.3, paddingLeft: 29, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {toolDescriptions[primaryTool.id] || primaryTool.toolType}
+                      </div>
+
+                      {/* Artefact badge + open tool button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 29, marginTop: 'auto' }}>
+                        {!isLocked && artefactsCreated > 0 && (
+                          <div
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); navigate('/app/artefacts'); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px', borderRadius: 8,
+                              background: lvlAccent + '25', border: `1px solid ${lvlAccent + '55'}`,
+                              fontSize: 10, fontWeight: 600, color: lvlAccentDark,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <FolderOpen size={9} />
+                            {artefactsCreated} artefact{artefactsCreated !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                        {!isLocked && artefactsCreated === 0 && (
+                          <span style={{ fontSize: 10, color: '#A0AEC0' }}>No artefacts yet</span>
+                        )}
+                        {!isLocked && (
+                          <button
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); navigate(primaryTool.route); }}
+                            style={{
+                              marginLeft: 'auto', background: 'none', border: `1px solid ${lvlAccent}`,
+                              borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 600,
+                              color: lvlAccentDark, cursor: 'pointer', flexShrink: 0,
+                              transition: 'background 0.12s', fontFamily: 'inherit',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = lvlAccent + '30')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            Open tool →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

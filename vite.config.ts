@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin, Connect } from 'vite';
@@ -1136,6 +1137,7 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
                       image_url: imagePart.image_url.url,
                       image_prompt: imagePrompt,
                       generation_method: 'gemini-image',
+                      ...(inspirationPatterns ? { inspiration_analysis: inspirationPatterns } : {}),
                     }));
                     return;
                   }
@@ -1152,6 +1154,7 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
                       image_url: contentImg.image_url.url,
                       image_prompt: imagePrompt,
                       generation_method: 'gemini-image',
+                      ...(inspirationPatterns ? { inspiration_analysis: inspirationPatterns } : {}),
                     }));
                     return;
                   }
@@ -1169,13 +1172,14 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
             const htmlModelId = htmlModel.startsWith('google/') ? htmlModel : `google/${htmlModel}`;
             console.log('Strategy 2: Generating HTML dashboard with', htmlModelId);
             const userMessage = [
-              `DASHBOARD PURPOSE: ${user_needs}`,
-              target_audience ? `TARGET AUDIENCE: ${target_audience}` : '',
-              key_metrics ? `KEY METRICS: ${key_metrics}` : '',
+              `APP PURPOSE: ${user_needs}`,
+              target_audience ? `TARGET USERS: ${target_audience}` : '',
+              key_metrics ? `KEY FEATURES / METRICS: ${key_metrics}` : '',
               data_sources ? `DATA SOURCES: ${data_sources}` : '',
-              dashboard_type ? `DASHBOARD TYPE: ${dashboard_type}` : '',
+              dashboard_type ? `APP TYPE: ${dashboard_type}` : '',
               visual_style ? `VISUAL STYLE: ${visual_style}` : '',
               inspiration_url ? `INSPIRATION URL: ${inspiration_url}` : '',
+              inspirationPatterns ? `\nCRITICAL DESIGN REFERENCE — The user provided inspiration images. You MUST match these design patterns closely (colours, layout, typography, card styles, spacing):\n${inspirationPatterns}` : '',
             ].filter(Boolean).join('\n');
 
             const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
@@ -1209,6 +1213,7 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
               const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
               parsed = JSON.parse(cleaned);
               parsed.generation_method = 'html';
+              if (inspirationPatterns) parsed.inspiration_analysis = inspirationPatterns;
             } catch {
               console.error('Failed to parse response (dashboard):', text);
               res.statusCode = 502;
@@ -1232,131 +1237,58 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
 }
 
 function prdProxyPlugin(apiKey: string, model: string): Plugin {
-  const systemPrompt = `You are a senior product manager and technical writer specializing in dashboard and data visualization products. You create production-grade Product Requirements Documents (PRDs) that development teams can use to build real dashboards.
+  const systemPrompt = `You are a senior product manager who writes PRDs specifically optimised for AI coding tools (Cursor, Lovable, Bolt.new, V0, Replit Agent, Claude Code). Your PRDs are the exact specification an AI agent reads to build a working app — every sentence either constrains a decision or describes a testable behaviour.
 
-You will receive details about a dashboard project including: purpose, target audience, key metrics, data sources, visual style preferences, and a description of the mockup design. Your job is to generate a comprehensive, detailed, and actionable PRD that a real development team or AI coding tool could use to build this dashboard.
+The user may be building anything — a professional dashboard, a personal side project, an internal tool, or any web application. Match the PRD's complexity to the project scope.
 
 CRITICAL RULES:
-- Every section must be SPECIFIC to the user's actual project — reference their exact metrics, audience, data sources, and use case throughout.
-- Write at a professional level — this should read like a real PRD from a product team at a tech company.
-- Be quantitative wherever possible — specify pixel sizes, grid ratios, refresh intervals, loading times, character limits.
-- Include edge cases, error states, and fallback behaviors.
-- Use concrete examples that reference the user's specific metrics and data.
-- IMPORTANT: Every section value MUST be a plain text STRING, not a JSON object. Use formatted text with newlines, bullets (using * or -), and headers (using plain text) within the string. Never nest JSON objects inside section values.
+- Be SPECIFIC — reference the user's exact features, users, data sources in every section.
+- Every feature: "When X happens, do Y." Not vague goals.
+- Lock down every decision point. Include edge cases, error states, empty states, loading states.
+- Be quantitative: pixel sizes, breakpoints, loading times, grid ratios.
+- IMPORTANT: Every section value MUST be a plain text STRING. Use newlines and bullets. Never nest JSON objects.
 
 RESPONSE FORMAT (JSON only, no markdown, no code fences):
 
 {
-  "prd_content": "PRD: [Descriptive dashboard name based on the user's purpose]",
+  "prd_content": "PRD: [Descriptive app name]",
   "sections": {
-    "dashboard_overview": "SECTION CONTENT — see requirements below",
-    "target_users": "SECTION CONTENT",
-    "information_architecture": "SECTION CONTENT",
-    "widget_specifications": "SECTION CONTENT",
-    "visual_design": "SECTION CONTENT",
+    "project_overview": "SECTION CONTENT",
     "tech_stack": "SECTION CONTENT",
-    "data_integration": "SECTION CONTENT",
-    "interactions_filtering": "SECTION CONTENT",
-    "responsive_behavior": "SECTION CONTENT",
-    "human_checkpoints": "SECTION CONTENT",
-    "acceptance_criteria": "SECTION CONTENT"
+    "file_structure": "SECTION CONTENT",
+    "data_models": "SECTION CONTENT",
+    "feature_requirements": "SECTION CONTENT",
+    "api_routes": "SECTION CONTENT",
+    "ui_specifications": "SECTION CONTENT",
+    "auth_permissions": "SECTION CONTENT",
+    "scope_boundaries": "SECTION CONTENT",
+    "acceptance_criteria": "SECTION CONTENT",
+    "implementation_plan": "SECTION CONTENT"
   }
 }
 
-SECTION REQUIREMENTS (each section must be comprehensive):
+SECTIONS:
+1. PROJECT OVERVIEW (20-30 sentences): App name, elevator pitch, problem, users, success criteria, scope boundaries. Detailed VISUAL DESCRIPTION of layout. Colour/style direction with hex codes. 2-3 key user flows step-by-step. Must be enough to understand the full app alone.
 
-1. DASHBOARD OVERVIEW (15-25 sentences — this is the most important section):
-- Dashboard name and one-line elevator pitch
-- The specific business problem this dashboard solves — be very specific about the pain points
-- Who requested it and why existing tools (spreadsheets, manual reports, existing dashboards) are insufficient
-- 3-5 key success metrics for the dashboard itself (adoption rate >X%, time-to-insight <Xs, decision turnaround improvement)
-- Scope boundaries: what this dashboard covers AND what it explicitly does not cover
-- Expected launch timeline and iteration plan
-- VISUAL DESCRIPTION: Provide an extremely detailed description of what the dashboard should look like when built. Describe the overall layout (e.g., "A top navigation bar with the dashboard title and date filters, followed by a row of 4-5 KPI summary cards, then a 2-column section with a line chart on the left and a bar chart on the right, and a full-width data table at the bottom"). Reference specific widget types, their approximate sizes, positions, and how they relate to each other.
-- COLOR AND STYLE DIRECTION: Describe the intended visual tone — modern and minimal? Data-dense and enterprise? Colorful and engaging? Specify the primary color palette direction.
-- KEY USER FLOWS: Describe the 2-3 most important things a user does when they open this dashboard (e.g., "1. Glance at KPI cards to see today's numbers. 2. Check the trend chart to see if metrics are improving. 3. Filter by region to compare performance.")
-- This section should be comprehensive enough that an AI coding tool (like Cursor, Bolt, or Lovable) or a developer could read ONLY this section and understand exactly what to build
+2. TECH STACK & CONSTRAINTS (10-15 sentences): Lock down framework+version, styling, UI library, charting, backend, database, auth, hosting, key dependencies, packages to avoid.
 
-2. TARGET USERS & USER STORIES (10-15 sentences):
-- 2-3 distinct user personas with their roles, goals, technical comfort, and typical usage patterns
-- 5-8 user stories in 'As a [specific role], I want to [concrete action on the dashboard] so that [specific business outcome]' format
-- Frequency of use per persona (daily, weekly, on-demand)
-- Key decisions each persona needs to make using this dashboard
+3. FILE & FOLDER STRUCTURE (8-12 sentences): Explicit directory tree. Naming conventions. Where pages, components, hooks, utils, types, and tests live.
 
-3. INFORMATION ARCHITECTURE (8-12 sentences):
-- Page layout description: header region, navigation, main content zones, sidebar (if applicable)
-- Section hierarchy with specific regions (e.g., "Top banner: 4 KPI summary cards. Middle: 2-column chart area. Bottom: data table with pagination")
-- Content priority ordering — what the user sees first, second, third
-- Navigation patterns (tabs, filters, drill-down paths)
-- State management: default view, filtered view, detail view, empty state, error state
+4. DATA MODELS & SCHEMA (10-15 sentences): Every entity: EntityName { field: type }. Relationships. Enums. Required vs optional. Defaults. Validation rules.
 
-4. WIDGET SPECIFICATIONS (create a detailed spec for EACH metric):
-For each key metric, specify:
-- Widget type (KPI card, line chart, bar chart, donut chart, data table, sparkline, gauge, heatmap)
-- Data displayed: primary value, comparison value (vs. previous period), trend direction, percentage change
-- Visualization details: chart type, axis labels, legend, tooltip content, color coding rules
-- Size: grid position (e.g., "Row 1, spans 3 of 12 columns")
-- Interaction: hover behavior, click-through destination, drill-down capability
-- Update frequency and loading state behavior
-- Create at least one additional derived widget (e.g., trend chart combining multiple metrics, ranking table, distribution chart)
+5. FEATURE REQUIREMENTS (15-25 sentences): "When X, do Y" for every feature. Trigger → action → result → error. Loading states. Empty states. Error states.
 
-5. VISUAL DESIGN REQUIREMENTS (8-12 sentences):
-- Color palette: primary, secondary, accent, success/warning/error states — with hex codes
-- Typography: font family, heading sizes (H1-H4), body text size, line height, font weights
-- Spacing system: padding, margins, gap between cards (use 4px/8px grid system)
-- Card component spec: background color, border radius, border color, shadow, padding
-- Chart color sequences for multi-series data
-- Dark mode support (if applicable) or explanation of why single-mode
-- Accessibility: contrast ratios, focus states, screen reader considerations
+6. API & DATA LAYER (10-15 sentences): Per operation: method, path, request/response shapes, error codes. Refresh strategy. Caching. Error handling.
 
-6. RECOMMENDED TECH STACK (8-12 sentences):
-- Frontend framework recommendation with rationale (e.g., React + TypeScript for component reusability, or Next.js for SSR)
-- Charting/visualization library (e.g., Recharts, Tremor, D3.js, Chart.js) with rationale based on the dashboard's complexity
-- Backend/API layer (e.g., Node.js + Express, Supabase Edge Functions, serverless functions) based on data sources
-- Database recommendation if persistent storage is needed (e.g., PostgreSQL via Supabase, MongoDB)
-- Authentication approach (e.g., Clerk, Supabase Auth, Auth0) if role-based access is needed
-- Hosting/deployment platform (e.g., Vercel, Netlify, AWS Amplify) with rationale
-- Key dependencies and libraries (e.g., date-fns for date handling, tanstack-query for data fetching)
-- Development tools (e.g., ESLint, Prettier, Storybook for component development)
-- This section should be written so a non-technical stakeholder can understand WHY each technology is chosen — use analogies and plain language alongside the technical names
+7. UI & DESIGN SYSTEM (12-18 sentences): Colour palette (hex codes). Typography scale. Spacing system. Card specs. Page layouts referencing mockup. Component hierarchy. Responsive breakpoints. Accessibility.
 
-7. DATA INTEGRATION (8-12 sentences):
-- List each data source with: connection method (API, database query, file import, webhook)
-- Data refresh strategy: real-time, polling interval, scheduled batch, on-demand
-- Data transformation pipeline: raw data → cleaned data → aggregated metrics → display-ready values
-- Caching strategy: what gets cached, TTL, invalidation triggers
-- Error handling: what happens when a data source is unavailable, stale data indicators
-- Data volume estimates: expected row counts, query performance requirements
-- Authentication and access control for each data source
+8. AUTH & PERMISSIONS (6-10 sentences): Auth provider, method, roles, protected routes. Or explicitly "No auth needed."
 
-8. INTERACTIONS & FILTERING (8-12 sentences):
-- Global filters: date range picker (presets: Today, 7D, 30D, 90D, Custom), refresh button
-- Dimension filters: dropdowns for each categorical dimension (e.g., region, product, team)
-- Cross-filtering: clicking one widget filters others (specify which widgets are linked)
-- Drill-down paths: what happens when a user clicks a KPI card, chart data point, or table row
-- Search functionality: where applicable, what fields are searchable
-- Sort behavior: default sort order, sortable columns, multi-column sort
-- Export options: CSV, PDF, screenshot, email scheduled report
+9. SCOPE & BOUNDARIES (8-12 sentences): ALWAYS DO / ASK FIRST / NEVER DO tiers. Out-of-scope list. Future considerations.
 
-9. RESPONSIVE BEHAVIOR (6-10 sentences):
-- Desktop (>1200px): full layout with all widgets visible, specific column grid (e.g., 12-column)
-- Tablet (768-1200px): reorganized grid, specify which widgets stack or collapse
-- Mobile (<768px): single-column stack, specify order priority, which widgets are hidden or collapsed
-- Touch interactions: swipe between tabs, pinch-to-zoom on charts
-- Performance: lazy loading for below-fold content, skeleton loading states
+10. ACCEPTANCE CRITERIA (15-25 numbered items): One per feature. Performance. Responsive. Error handling. Accessibility. Verification commands.
 
-10. HUMAN-IN-THE-LOOP CHECKPOINTS (6-10 sentences):
-- Data accuracy review: who verifies metric calculations before dashboard goes live
-- Metric definition sign-off: stakeholder approval of how each metric is calculated
-- Threshold configuration: who sets alert thresholds and how they are updated
-- Access control review: who approves user permissions for sensitive data views
-- Change management: process for updating metric definitions, adding new widgets, or modifying data sources
-- Anomaly escalation: when the dashboard flags unusual data, who gets notified and what is the review process
-
-11. ACCEPTANCE CRITERIA (12-20 numbered items):
-- Specific, testable criteria covering: data accuracy, performance (load time <2s), responsive behavior, filter functionality, export functionality, error handling, accessibility (WCAG 2.1 AA), cross-browser compatibility
-- Include edge cases: empty data states, single data point, maximum data volume, concurrent users
-- Each criterion must be binary pass/fail testable`;
+11. IMPLEMENTATION PHASES (10-15 sentences): Vertical slices: Phase 1 foundation, Phase 2 core feature, Phase 3 secondary, Phase 4 polish. Each: files, deliverable, verification.`;
 
   return {
     name: 'prd-proxy',
@@ -1382,12 +1314,12 @@ For each key metric, specify:
             const { user_needs, image_prompt, target_audience, key_metrics, data_sources, dashboard_type, visual_style, color_scheme, update_frequency } = JSON.parse(body);
 
             const userMessage = [
-              `DASHBOARD PURPOSE: ${user_needs}`,
-              `DASHBOARD DESIGN: ${image_prompt}`,
-              target_audience ? `TARGET AUDIENCE: ${target_audience}` : '',
-              key_metrics ? `KEY METRICS: ${key_metrics}` : '',
+              `APP PURPOSE: ${user_needs}`,
+              `APP DESIGN / MOCKUP DESCRIPTION: ${image_prompt}`,
+              target_audience ? `TARGET USERS: ${target_audience}` : '',
+              key_metrics ? `KEY FEATURES / METRICS: ${key_metrics}` : '',
               data_sources ? `DATA SOURCES: ${data_sources}` : '',
-              dashboard_type ? `DASHBOARD TYPE: ${dashboard_type}` : '',
+              dashboard_type ? `APP TYPE: ${dashboard_type}` : '',
               visual_style ? `VISUAL STYLE: ${visual_style}` : '',
               color_scheme ? `COLOR SCHEME: ${color_scheme}` : '',
               update_frequency ? `UPDATE FREQUENCY: ${update_frequency}` : '',
@@ -1751,6 +1683,340 @@ RESPONSE FORMAT (JSON only, no markdown):
   };
 }
 
+function n8nGenerateProxyPlugin(apiKey: string): Plugin {
+  // Lazy-load the system prompt from the constants file
+  let systemPrompt: string | null = null;
+  function getSystemPrompt(): string {
+    if (!systemPrompt) {
+      const raw = fs.readFileSync(path.resolve(__dirname, 'constants/n8nSystemPrompt.ts'), 'utf-8');
+      // Extract the template literal content between the backticks
+      const match = raw.match(/export const N8N_SYSTEM_PROMPT = `([\s\S]*?)`;/);
+      systemPrompt = match ? match[1] : '';
+    }
+    return systemPrompt!;
+  }
+
+  function buildN8nGeneratePrompt(intermediate: any): string {
+    return `Generate a complete, valid n8n workflow JSON for the following workflow.
+Respond ONLY with the raw JSON object. No markdown, no code fences, no explanation.
+
+Workflow specification:
+${JSON.stringify(intermediate, null, 2)}`;
+  }
+
+  function buildN8nRetryPrompt(intermediate: any, previousJson: string, errors: string[]): string {
+    return `Your previous n8n JSON had validation errors. Fix ALL of the following errors and regenerate the complete workflow JSON. Respond ONLY with the corrected JSON.
+
+Errors to fix:
+${errors.map((e: string) => `- ${e}`).join('\n')}
+
+Original workflow specification:
+${JSON.stringify(intermediate, null, 2)}
+
+Your previous (broken) JSON for reference:
+${previousJson.slice(0, 2000)}...`;
+  }
+
+  return {
+    name: 'n8n-generate-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-n8n-workflow', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { intermediate, attempt, previousJson, previousErrors } = JSON.parse(body);
+
+            if (!intermediate) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing intermediate workflow data' }));
+              return;
+            }
+
+            const isRetry = attempt && attempt > 1 && previousErrors?.length > 0;
+            const userMessage = isRetry
+              ? buildN8nRetryPrompt(intermediate, previousJson || '', previousErrors)
+              : buildN8nGeneratePrompt(intermediate);
+
+            // Use Claude via OpenRouter (not Gemini)
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: 'anthropic/claude-sonnet-4',
+                messages: [
+                  { role: 'system', content: getSystemPrompt() },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.3,
+                max_tokens: 4000,
+              }),
+            }, 'generate-n8n-workflow');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (generate-n8n-workflow):', errText);
+              const status = openRouterResponse.status === 429 ? 429 : 502;
+              const message = openRouterResponse.status === 429
+                ? 'The AI service is temporarily busy. Please wait a moment and try again.'
+                : 'AI service error';
+              res.statusCode = status;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: message, retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const rawText = data?.choices?.[0]?.message?.content || '';
+            const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ json: cleaned }));
+          } catch (err) {
+            console.error('Proxy error (generate-n8n-workflow):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+function buildGuideProxyPlugin(apiKey: string): Plugin {
+  let systemPrompt: string | null = null;
+  function getSystemPrompt(): string {
+    if (!systemPrompt) {
+      const raw = fs.readFileSync(path.resolve(__dirname, 'constants/buildGuideSystemPrompt.ts'), 'utf-8');
+      const match = raw.match(/export const BUILD_GUIDE_SYSTEM_PROMPT = `([\s\S]*?)`;/);
+      systemPrompt = match ? match[1] : '';
+    }
+    return systemPrompt!;
+  }
+
+  return {
+    name: 'build-guide-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-build-guide', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') { res.statusCode = 503; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'API key not configured' })); return; }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { intermediate, platform } = JSON.parse(body);
+            if (!intermediate || !platform) { res.statusCode = 400; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'Missing intermediate or platform' })); return; }
+
+            const userMessage = `Generate a complete Build Guide for the following workflow.
+Platform: ${platform}
+Respond ONLY with the raw markdown document. No preamble, no explanation.
+
+Workflow specification:
+${JSON.stringify(intermediate, null, 2)}`;
+
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: 'anthropic/claude-sonnet-4',
+                messages: [
+                  { role: 'system', content: getSystemPrompt() },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.5,
+                max_tokens: 4000,
+              }),
+            }, 'generate-build-guide');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (generate-build-guide):', errText);
+              res.statusCode = openRouterResponse.status === 429 ? 429 : 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: openRouterResponse.status === 429 ? 'AI service busy. Try again.' : 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const rawText = data?.choices?.[0]?.message?.content || '';
+            const cleaned = rawText.replace(/^```markdown\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ markdown: cleaned }));
+          } catch (err) {
+            console.error('Proxy error (generate-build-guide):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+function disputeResolutionProxyPlugin(apiKey: string): Plugin {
+  const systemPrompt = `You are an n8n workflow reviewer. A user has pushed back on one of your feedback items.
+Consider their argument carefully and honestly. If they raise a valid point or provide
+context you were missing, concede and explain why the issue no longer applies.
+If your original feedback is still correct despite their argument, maintain your position
+and explain clearly why — but acknowledge their perspective.
+Respond ONLY with valid JSON matching this schema:
+{
+  "outcome": "concede | maintain",
+  "response": "string — 1-2 sentences. Direct, honest, not defensive."
+}`;
+
+  return {
+    name: 'dispute-resolution-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/resolve-dispute', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') { res.statusCode = 503; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'API key not configured' })); return; }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { originalMessage, severity, disputeText, nodeContext } = JSON.parse(body);
+
+            const userMessage = `Original feedback: ${originalMessage}
+Severity: ${severity}
+User's argument: ${disputeText}
+Workflow context: ${JSON.stringify(nodeContext || {})}`;
+
+            const openRouterModel = 'google/gemini-2.0-flash-001';
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.5,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'resolve-dispute');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (resolve-dispute):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (resolve-dispute):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+// ─── Prompt Playground v2 — Strategy-aware prompt generation ───
+
+function playgroundProxyPlugin(apiKey: string): Plugin {
+  const systemPrompt = fs.readFileSync(
+    path.resolve(__dirname, 'constants/playgroundSystemPrompt.ts'),
+    'utf-8',
+  );
+  // Extract the template literal content between the backticks
+  const match = systemPrompt.match(/`([\s\S]*)`/);
+  const PLAYGROUND_SYSTEM = match ? match[1] : '';
+
+  return {
+    name: 'playground-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/playground', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') { res.statusCode = 503; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'API key not configured' })); return; }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { userInput } = JSON.parse(body);
+            if (!userInput || typeof userInput !== 'string') {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'userInput is required' }));
+              return;
+            }
+
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: 'anthropic/claude-sonnet-4',
+                messages: [
+                  { role: 'system', content: PLAYGROUND_SYSTEM },
+                  { role: 'user', content: userInput },
+                ],
+                max_tokens: 2000,
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'playground');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (playground):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (playground):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
@@ -1772,6 +2038,10 @@ export default defineConfig(({ mode }) => {
       prdProxyPlugin(env.OpenRouter_API, geminiModel),
       insightAnalysisProxyPlugin(env.OpenRouter_API, geminiModel),
       evaluateAppProxyPlugin(env.OpenRouter_API, geminiModel),
+      n8nGenerateProxyPlugin(env.OpenRouter_API),
+      buildGuideProxyPlugin(env.OpenRouter_API),
+      disputeResolutionProxyPlugin(env.OpenRouter_API),
+      playgroundProxyPlugin(env.OpenRouter_API),
     ],
     resolve: {
       alias: {

@@ -19,6 +19,9 @@
       { "source": "/api/generate-prd", "function": { "functionId": "generateprd" } },
       { "source": "/api/evaluate-app", "function": { "functionId": "evaluateapp" } },
       { "source": "/api/generate-n8n-workflow", "function": { "functionId": "generaten8nworkflow" } },
+      { "source": "/api/generate-build-guide", "function": { "functionId": "generatebuildguide" } },
+      { "source": "/api/resolve-dispute", "function": { "functionId": "resolvedispute" } },
+      { "source": "/api/playground", "function": { "functionId": "generateplaygroundprompt" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [

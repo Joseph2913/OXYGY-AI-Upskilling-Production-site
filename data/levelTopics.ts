@@ -67,7 +67,7 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
         { icon: "▶", label: "E-Learning", detail: "Interactive module on user-centred AI design, data transformation, and dashboard architecture." },
         { icon: "◎", label: "Read", detail: "Articles on UX-first thinking for data products and connecting AI to visual interfaces." },
         { icon: "▷", label: "Watch", detail: "Videos on designing AI interfaces that users actually want to use." },
-        { icon: "◈", label: "Practice", detail: "Design and build an interactive dashboard using the Dashboard Designer." },
+        { icon: "◈", label: "Practice", detail: "Design and build a web application using the App Designer." },
       ],
     },
   ],

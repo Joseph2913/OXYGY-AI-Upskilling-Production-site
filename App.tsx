@@ -23,6 +23,7 @@ const AppAgentBuilder = React.lazy(() => import('./components/app/toolkit/AppAge
 const AppWorkflowCanvas = React.lazy(() => import('./components/app/toolkit/AppWorkflowCanvas'));
 const AppDashboardDesigner = React.lazy(() => import('./components/app/toolkit/AppDashboardDesigner'));
 const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppAppEvaluator'));
+const BuildGuideView = React.lazy(() => import('./pages/app/BuildGuideView'));
 
 function AppSuspense({ children }: { children: React.ReactNode }) {
   return (
@@ -108,6 +109,7 @@ function App() {
           <Route path="toolkit/product-architecture" element={<Navigate to="/app/toolkit/app-builder" replace />} />
           <Route path="artefacts" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
           <Route path="artefacts/:artefactId" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
+          <Route path="artefacts/:id/build-guide" element={<AppSuspense><BuildGuideView /></AppSuspense>} />
           <Route path="cohort" element={<AppSuspense><AppCohort /></AppSuspense>} />
         </Route>
 

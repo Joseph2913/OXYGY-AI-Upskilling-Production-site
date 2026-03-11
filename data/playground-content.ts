@@ -208,39 +208,128 @@ export const EXAMPLE_SCENARIOS = [
   },
 ];
 
-// System prompt for Gemini API (from PRD Section 9.2)
-export const GEMINI_SYSTEM_PROMPT = `You are the OXYGY Prompt Engineering Coach — an expert in transforming raw, unstructured prompts into well-engineered, structured prompts that produce dramatically better AI outputs.
+// ═══════════════════════════════════════════════════════════════
+// PROMPT PLAYGROUND v2.0 — Strategy-Aware Definitions
+// ═══════════════════════════════════════════════════════════════
 
-Your job is to take a user's input and produce an enhanced prompt structured into exactly 6 sections. These 6 sections are called "The Prompt Blueprint":
+import type { StrategyId } from '../types';
 
-1. ROLE — Define who the AI should act as. Specify the expertise, perspective, seniority level, and domain knowledge the AI should adopt. Be specific (not just "act as an expert" but "act as a senior change management consultant with 15 years of experience in digital transformation for large enterprises").
+/**
+ * The 8 canonical prompting strategies with metadata for UI rendering.
+ * Sourced from PRD v2.0, Section 2.
+ */
+export interface StrategyDefinition {
+  id: StrategyId;
+  name: string;
+  icon: string;
+  color: string;
+  definition: string;
+  whenToUse: string;
+  whenNotToUse: string;
+  teachesLearner: string;
+}
 
-2. CONTEXT — Provide the background information the AI needs. Include the situation, environment, constraints, stakeholders involved, timeline, and any relevant details that shape the response. Infer reasonable context from the user's input even if they didn't provide much.
+export const STRATEGY_DEFINITIONS: StrategyDefinition[] = [
+  {
+    id: 'STRUCTURED_BLUEPRINT',
+    name: 'Structured Blueprint',
+    icon: '🏗️',
+    color: '#C3D0F5',
+    definition: 'Breaks a prompt into named, explicit sections — typically Role, Context, Task, Format, Steps, and Quality Checks. Each section anchors a specific dimension of the AI\'s response.',
+    whenToUse: 'Complex, multi-part deliverables where the output needs to be reliable and repeatable. Reports, structured documents, strategic analyses, workshop designs.',
+    whenNotToUse: 'Short, conversational tasks. Simple rewrites. Anything where the overhead of a 6-part structure outweighs the output complexity.',
+    teachesLearner: 'Not every prompt needs a blueprint. Knowing when to deploy structure is the skill — not applying it universally.',
+  },
+  {
+    id: 'CHAIN_OF_THOUGHT',
+    name: 'Chain-of-Thought',
+    icon: '🧠',
+    color: '#FBE8A6',
+    definition: 'Instructs the AI to reason step-by-step before delivering a conclusion. Rather than jumping to an answer, the model works through the problem in sequence.',
+    whenToUse: 'Evaluation tasks, diagnostic tasks, planning tasks, any question where a confident wrong answer is worse than a slower right one.',
+    whenNotToUse: 'Simple factual retrieval. Creative tasks where structured reasoning interrupts generative flow.',
+    teachesLearner: 'The AI is not a search engine — it reasons. You can control how it reasons by telling it to show its work before it concludes.',
+  },
+  {
+    id: 'PERSONA_EXPERT_ROLE',
+    name: 'Persona / Expert Role',
+    icon: '🎭',
+    color: '#A8F0E0',
+    definition: 'Assigns the AI a specific expert identity before the task. The persona anchors vocabulary, tone, assumed knowledge, and perspective for the entire response.',
+    whenToUse: 'Almost every professional task benefits from a persona. Communication tasks, advisory tasks, creative tasks.',
+    whenNotToUse: 'Purely mechanical tasks where identity is irrelevant — e.g., "Convert this list into a table."',
+    teachesLearner: 'Who is speaking matters as much as what is said. The single highest-leverage addition to most prompts is a well-defined role.',
+  },
+  {
+    id: 'OUTPUT_FORMAT_SPECIFICATION',
+    name: 'Output Format Specification',
+    icon: '📐',
+    color: '#38B2AC',
+    definition: 'Explicitly defines how the output should be structured: length, layout, section headers, tone register, and any constraints on presentation.',
+    whenToUse: 'Any task where the output will be shared, presented, or directly used. Stakeholder communications, reports, documentation, templates.',
+    whenNotToUse: 'Exploratory tasks where you want the AI to surprise you with structure. Brainstorming. Early-stage ideation.',
+    teachesLearner: 'Format is not cosmetic — it determines usability. The same information as a bulleted list versus a narrative paragraph serves completely different purposes.',
+  },
+  {
+    id: 'CONSTRAINT_FRAMING',
+    name: 'Constraint Framing',
+    icon: '🚧',
+    color: '#FBCEB1',
+    definition: 'Scopes the prompt by defining what the AI should NOT do — topics to avoid, assumptions it shouldn\'t make, length it shouldn\'t exceed, risks it shouldn\'t introduce.',
+    whenToUse: 'Any high-stakes communication where errors matter. Client-facing documents. Tasks with known risk areas.',
+    whenNotToUse: 'Unconstrained creative brainstorming. Research tasks where you want the AI to range widely.',
+    teachesLearner: 'The AI will fill any silence with assumptions. Constraints are not limitations — they are specifications of your actual requirements.',
+  },
+  {
+    id: 'FEW_SHOT_EXAMPLES',
+    name: 'Few-Shot Examples',
+    icon: '📖',
+    color: '#E6FFFA',
+    definition: 'Includes one or more concrete examples of desired output directly inside the prompt. The AI pattern-matches from your examples.',
+    whenToUse: 'Repeatable tasks where consistency matters — template creation, standardised reports, agenda formats.',
+    whenNotToUse: 'Tasks where the example might anchor the AI too narrowly. Novel tasks with no clear prior.',
+    teachesLearner: 'Showing beats telling. One well-chosen example does more work than three paragraphs of description.',
+  },
+  {
+    id: 'ITERATIVE_DECOMPOSITION',
+    name: 'Iterative Decomposition',
+    icon: '🔗',
+    color: '#C3D0F5',
+    definition: 'Breaks a complex task into explicit sub-tasks that the AI handles sequentially. Each building on the previous.',
+    whenToUse: 'Large, multi-component deliverables. Strategic plans, research summaries with recommendations, multi-section documents.',
+    whenNotToUse: 'Simple, single-output tasks. Anything where the decomposition overhead is greater than the task complexity.',
+    teachesLearner: 'Complex tasks given to AI in one shot produce compressed, generic outputs. Breaking the task into explicit sub-tasks forces the AI to do real work at each stage.',
+  },
+  {
+    id: 'TONE_AND_VOICE',
+    name: 'Tone & Voice Setting',
+    icon: '🎙️',
+    color: '#FBE8A6',
+    definition: 'Specifies the register, emotional temperature, and relational dynamic of the output — beyond simple instructions like "professional" or "friendly."',
+    whenToUse: 'Any communication task where the relationship with the reader is as important as the information itself.',
+    whenNotToUse: 'Internal technical documentation where tone is irrelevant. Mechanical tasks with no audience consideration.',
+    teachesLearner: 'Most people think of tone as a finishing touch. In prompting, tone instruction shapes the AI\'s entire approach from the first word.',
+  },
+];
 
-3. TASK — State the specific instruction clearly and precisely. What exactly should the AI produce? Be explicit about the deliverable (e.g., "Write a 500-word email" not "Help me with an email"). If the user was vague, sharpen the task into something concrete and actionable.
+/** Strategy accent colours for UI rendering, indexed by strategy ID */
+export const STRATEGY_ACCENT_COLORS: Record<StrategyId, string> = {
+  STRUCTURED_BLUEPRINT: '#C3D0F5',
+  CHAIN_OF_THOUGHT: '#FBE8A6',
+  PERSONA_EXPERT_ROLE: '#A8F0E0',
+  OUTPUT_FORMAT_SPECIFICATION: '#38B2AC',
+  CONSTRAINT_FRAMING: '#FBCEB1',
+  FEW_SHOT_EXAMPLES: '#E6FFFA',
+  ITERATIVE_DECOMPOSITION: '#C3D0F5',
+  TONE_AND_VOICE: '#FBE8A6',
+};
 
-4. FORMAT & STRUCTURE — Specify how the output should be organized. Include guidance on length, layout (bullets, tables, paragraphs, numbered lists), tone (formal, conversational, technical), and any structural requirements (e.g., "Include an executive summary at the top").
-
-5. STEPS & PROCESS — Outline the explicit reasoning steps or methodology the AI should follow. Break down the task into a logical sequence (e.g., "First, analyze X. Then, compare with Y. Finally, recommend Z with supporting evidence"). This guides the AI to think systematically rather than jumping to conclusions.
-
-6. QUALITY CHECKS — Define validation rules, constraints, and things the AI should avoid. Include accuracy requirements, tone guardrails, things to exclude, assumptions to avoid, and any quality standards (e.g., "Do not make up statistics. Cite specific examples where possible. Avoid generic corporate language.").
-
-RULES FOR YOUR OUTPUT:
-
-- You must ALWAYS produce all 6 sections, even if the user's input is minimal. Use reasonable inference to fill in sections the user didn't address.
-- Each section should be substantive — at least 1-2 sentences, ideally 2-4 sentences.
-- Write in a clear, professional, confident tone.
-- Do NOT repeat the user's exact words — enhance, expand, and professionalize their intent.
-- Do NOT add preamble, commentary, or explanation outside of the 6 sections. Just return the structured prompt.
-- If the user's input is very short or vague (e.g., "help me write an email"), make reasonable assumptions and note them within the Context section (e.g., "Assuming this is a professional context...").
-
-You must respond in the following JSON format ONLY — no markdown, no extra text:
-
-{
-  "role": "The enhanced Role section text",
-  "context": "The enhanced Context section text",
-  "task": "The enhanced Task section text",
-  "format": "The enhanced Format & Structure section text",
-  "steps": "The enhanced Steps & Process section text",
-  "quality": "The enhanced Quality Checks section text"
-}`;
+/** v2 example chips for the Prompt Playground input (PRD Section 4.4) */
+export const PLAYGROUND_EXAMPLE_CHIPS = [
+  'Write a stakeholder update email',
+  'Design an AI introduction workshop for sceptics',
+  'Evaluate tools for my team',
+  'Create a 90-day onboarding plan',
+  'Summarise a research report into recommendations',
+  'Draft a business case for a new initiative',
+];

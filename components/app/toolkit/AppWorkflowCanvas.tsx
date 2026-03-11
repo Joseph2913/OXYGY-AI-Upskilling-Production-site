@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, Copy, Check, RotateCcw, Download,
-  Info, ChevronRight, ChevronDown, Sparkles, Wrench, Plus, Undo2, Trash2, X,
+  ArrowRight, ArrowDown, ArrowLeft, Check, RotateCcw, Download,
+  Info, ChevronRight, Sparkles, Wrench, Plus, Undo2, Trash2, X,
   Lightbulb, Loader2,
 } from 'lucide-react';
 import type {
@@ -13,11 +13,13 @@ import {
   INPUT_NODES, PROCESSING_NODES, OUTPUT_NODES, NODE_MAP,
   LAYER_COLORS, WORKFLOW_EXAMPLES, ICON_MAP,
 } from '../../../data/workflow-designer-content';
-import { N8N_NODE_TEMPLATES } from '../../../data/n8nNodeTemplates';
 import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
-import { generateN8nWithRetry, type GenerationMethod } from '../../../utils/generateN8nWithRetry';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import PlatformSelector from '../workflow/PlatformSelector';
+import ExportSummaryCard from '../workflow/ExportSummaryCard';
+import OutputActionsPanel from '../workflow/OutputActionsPanel';
+import FeedbackItemRow from '../workflow/FeedbackItemRow';
 
 /* ─── Constants ─── */
 
@@ -33,7 +35,80 @@ const BAND_H = 6;
 
 const DRAFT_KEY = 'oxygy_workflow-canvas_draft';
 
-/* ─── (educational sections removed — now using n8n Export Card) ─── */
+/* ─── Build Guide markdown extraction helpers ─── */
+
+function extractOverview(md: string): string {
+  const match = md.match(/\*\*What this workflow does\*\*\s*\n([\s\S]*?)(?=\n\*\*|\n---)/);
+  return match ? match[1].trim() : '';
+}
+
+function extractStepCount(md: string): number {
+  const matches = md.match(/### Step \d+/g);
+  return matches ? matches.length : 0;
+}
+
+function extractBuildTime(md: string): string {
+  const match = md.match(/\*\*Estimated build time\*\*\s*`([^`]+)`/);
+  return match ? match[1] : '1–2 hours';
+}
+
+function extractCredentials(md: string): Array<{ what: string; whereToFind: string; usedIn: string; why: string }> {
+  const section = md.match(/## Before You Start[\s\S]*?(?=\n## )/);
+  if (!section) return [];
+  const rows: Array<{ what: string; whereToFind: string; usedIn: string; why: string }> = [];
+  const tableLines = section[0].split('\n').filter(l => l.startsWith('|') && !l.includes('---') && !l.includes('What'));
+  for (const line of tableLines) {
+    const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
+    if (cells.length >= 3) {
+      // Infer a short description of why this credential is needed based on what it is
+      const why = inferCredentialPurpose(cells[0], cells[2]);
+      rows.push({ what: cells[0], whereToFind: cells[1], usedIn: cells[2], why });
+    }
+  }
+  return rows;
+}
+
+function inferCredentialPurpose(what: string, usedIn: string): string {
+  const w = what.toLowerCase();
+  if (w.includes('api key') || w.includes('api token')) {
+    const service = what.replace(/api\s*(key|token)/i, '').replace(/[^a-zA-Z ]/g, '').trim();
+    return service
+      ? `Authenticates your connection to ${service} so the automation can make API calls on your behalf.`
+      : `Authenticates API requests from your workflow to this service.`;
+  }
+  if (w.includes('oauth') || w.includes('client id') || w.includes('client secret')) {
+    return `Enables secure OAuth authentication so the platform can access this service without storing your password.`;
+  }
+  if (w.includes('webhook') || w.includes('url')) {
+    return `Provides the endpoint that triggers this workflow when an external event occurs.`;
+  }
+  if (w.includes('password') || w.includes('credentials')) {
+    return `Grants the workflow access to this service. Store securely — never hard-code in your automation.`;
+  }
+  if (w.includes('account') || w.includes('workspace')) {
+    return `Identifies which account or workspace the workflow should operate in.`;
+  }
+  if (w.includes('database') || w.includes('connection string')) {
+    return `Connects your workflow to the database where data is read or written.`;
+  }
+  return `Required for the "${usedIn}" step to connect and communicate with this service.`;
+}
+
+function extractSteps(md: string): Array<{ number: number; name: string }> {
+  const matches = [...md.matchAll(/### Step (\d+)\s*—\s*(.+)/g)];
+  return matches.map(m => ({ number: parseInt(m[1], 10), name: m[2].trim() }));
+}
+
+function extractTestChecklist(md: string): string[] {
+  const section = md.match(/## Test Checklist[\s\S]*?(?=\n## |$)/);
+  if (!section) return [];
+  const items: string[] = [];
+  for (const line of section[0].split('\n')) {
+    const match = line.match(/^- \[ \]\s*(.+)/);
+    if (match) items.push(match[1].trim());
+  }
+  return items;
+}
 
 /* ─── Layout helpers (from original WorkflowDesigner) ─── */
 
@@ -463,6 +538,17 @@ const AppWorkflowCanvas: React.FC = () => {
   const [feedbackResult, setFeedbackResult] = useState<WorkflowFeedbackResult | null>(null);
   const [comparisonView, setComparisonView] = useState<'user' | 'ai'>('user');
   const [generateResult, setGenerateResult] = useState<WorkflowGenerateResult | null>(null);
+
+  /* ── Path B feedback loop state (Change 1) ── */
+  const [pathBApproved, setPathBApproved] = useState(false);
+  const [resolvedFeedbackIds, setResolvedFeedbackIds] = useState<Set<string>>(new Set());
+  const [openDisputeId, setOpenDisputeId] = useState<string | null>(null);
+  const [feedbackResolutions, setFeedbackResolutions] = useState<Record<string, {
+    resolution: 'applied' | 'disputed' | 'dismissed';
+    disputeText?: string;
+    disputeOutcome?: 'concede' | 'maintain';
+    disputeResponse?: string;
+  }>>({});
   const [nodesAnimated, setNodesAnimated] = useState(0);
   const [connectionsAnimated, setConnectionsAnimated] = useState(0);
 
@@ -472,15 +558,16 @@ const AppWorkflowCanvas: React.FC = () => {
   const [pathAFeedbackResult, setPathAFeedbackResult] = useState<WorkflowFeedbackResult | null>(null);
   const [pathAShowingRevised, setPathAShowingRevised] = useState(false);
 
-  /* ── Step 3 State (n8n export) ── */
-  const [n8nJson, setN8nJson] = useState<string | null>(null);
-  const [n8nIntermediate, setN8nIntermediate] = useState<WorkflowIntermediate | null>(null);
+  /* ── Step 2.5 State (platform selector) ── */
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [platformStepDone, setPlatformStepDone] = useState(false);
+
+  /* ── Step 3 State (build guide export) ── */
+  const [buildGuideMarkdown, setBuildGuideMarkdown] = useState<string | null>(null);
+  const [buildGuideIntermediate, setBuildGuideIntermediate] = useState<WorkflowIntermediate | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [exportLoadingMsg, setExportLoadingMsg] = useState('');
-  const [jsonCopied, setJsonCopied] = useState(false);
   const [savedToArtefacts, setSavedToArtefacts] = useState(false);
-  const [jsonPreviewOpen, setJsonPreviewOpen] = useState(false);
-  const [generationMethod, setGenerationMethod] = useState<GenerationMethod | null>(null);
 
   /* ── Shared State ── */
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -497,8 +584,7 @@ const AppWorkflowCanvas: React.FC = () => {
 
   /* ── Derived state ── */
   const step1Done = selectedPath !== null;
-  const hasResult = selectedPath === 'a' ? !!generateResult : !!feedbackResult;
-  const step2Done = selectedPath === 'a' ? pathAApproved : hasResult;
+  const step2Done = selectedPath === 'a' ? pathAApproved : pathBApproved;
   // step3Done derived from n8nJson state — used inline as !!n8nJson
 
   const displayedNodes: WorkflowNode[] = (() => {
@@ -563,38 +649,95 @@ const AppWorkflowCanvas: React.FC = () => {
     setConnectionsAnimated(0);
   }, [comparisonView]);
 
-  /* ── Generate n8n JSON when approved (AI primary + template fallback) ── */
-  useEffect(() => {
-    if (!step2Done || n8nJson) return;
-    const intermediate = buildIntermediate(workflowName, workflowDescription, finalNodes);
-    setN8nIntermediate(intermediate);
+  /* ── Build Guide generation (triggered after platform selection) ── */
+  const handleGenerateBuildGuide = useCallback(async () => {
+    if (!selectedPlatform || buildGuideMarkdown) return;
+
+    // Assemble rich context from all prior steps
+    const activeFeedbackResult = selectedPath === 'a' ? pathAFeedbackResult : feedbackResult;
+    const activeFeedbackChanges = activeFeedbackResult?.changes || [];
+
+    const richContext: NonNullable<import('../../../types').WorkflowIntermediate['context']> = {
+      originalTaskDescription: taskDescription,
+      toolsAndSystems: toolsAndSystems || 'Not specified',
+      pathUsed: selectedPath as 'a' | 'b',
+      // Feedback items with resolution outcomes
+      feedbackItems: activeFeedbackChanges.map(c => {
+        const itemId = c.node_id || `feedback-${activeFeedbackChanges.indexOf(c)}`;
+        const res = feedbackResolutions[itemId];
+        return {
+          nodeName: c.node_name,
+          type: c.type,
+          rationale: c.rationale,
+          resolution: res?.resolution || 'applied',
+          ...(res?.disputeText ? { disputeText: res.disputeText } : {}),
+          ...(res?.disputeOutcome ? { disputeOutcome: res.disputeOutcome } : {}),
+          ...(res?.disputeResponse ? { disputeResponse: res.disputeResponse } : {}),
+        };
+      }),
+      // Path A refinement text (if user wrote free-text feedback)
+      ...(pathAFeedbackText ? { pathARefinementText: pathAFeedbackText } : {}),
+      // Overall assessment from the feedback agent
+      ...(activeFeedbackResult?.overall_assessment ? { overallAssessment: activeFeedbackResult.overall_assessment } : {}),
+      // Canvas layout with connections
+      canvasLayout: finalNodes.map((node, idx) => {
+        const nextNode = idx < finalNodes.length - 1 ? finalNodes[idx + 1] : null;
+        return {
+          nodeName: node.name,
+          layer: node.layer,
+          position: idx + 1,
+          connections: nextNode ? [nextNode.name] : [],
+        };
+      }),
+    };
+
+    const intermediate = buildIntermediate(workflowName, workflowDescription, finalNodes, richContext);
+    setBuildGuideIntermediate(intermediate);
     setExportLoading(true);
-    setExportLoadingMsg('Building your n8n workflow\u2026');
+    setPlatformStepDone(true);
 
-    let cancelled = false;
+    const loadingSteps = [
+      { label: 'Analysing your workflow nodes and connections', delay: 0 },
+      { label: `Translating to ${selectedPlatform} terminology and conventions`, delay: 4000 },
+      { label: 'Writing step-by-step configuration instructions', delay: 9000 },
+      { label: 'Generating credential requirements and prerequisites', delay: 15000 },
+      { label: 'Building test checklist and documenting edge cases', delay: 21000 },
+      { label: 'Finalising your Build Guide', delay: 28000 },
+    ];
+    let msgIndex = 0;
+    setExportLoadingMsg(JSON.stringify({ steps: loadingSteps, activeIndex: 0 }));
+    const stepTimers = loadingSteps.slice(1).map((step, idx) =>
+      setTimeout(() => {
+        msgIndex = idx + 1;
+        setExportLoadingMsg(JSON.stringify({ steps: loadingSteps, activeIndex: msgIndex }));
+      }, step.delay)
+    );
 
-    (async () => {
-      try {
-        const result = await generateN8nWithRetry(intermediate, (msg) => {
-          if (!cancelled) setExportLoadingMsg(msg);
-        });
-        if (!cancelled) {
-          setN8nJson(result.json);
-          setGenerationMethod(result.method);
-          setExportLoading(false);
-          setExportLoadingMsg('');
-        }
-      } catch (err) {
-        console.error('[n8n-gen] Unexpected error:', err);
-        if (!cancelled) {
-          setExportLoadingMsg('Generation failed. Please try again.');
-          setExportLoading(false);
-        }
+    try {
+      const response = await fetch('/api/generate-build-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intermediate, platform: selectedPlatform }),
+      });
+
+      stepTimers.forEach(t => clearTimeout(t));
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `API error: ${response.status}`);
       }
-    })();
 
-    return () => { cancelled = true; };
-  }, [step2Done]);
+      const data = await response.json();
+      setBuildGuideMarkdown(data.markdown || '');
+      setExportLoading(false);
+      setExportLoadingMsg('');
+    } catch (err) {
+      stepTimers.forEach(t => clearTimeout(t));
+      console.error('[build-guide] Generation error:', err);
+      setExportLoadingMsg('Generation failed. Please try again.');
+      setExportLoading(false);
+    }
+  }, [selectedPlatform, buildGuideMarkdown, workflowName, workflowDescription, finalNodes, selectedPath, taskDescription, toolsAndSystems, feedbackResolutions, pathAFeedbackText, pathAFeedbackResult, feedbackResult]);
 
   /* ── Close node menu on outside click ── */
   useEffect(() => {
@@ -606,7 +749,7 @@ const AppWorkflowCanvas: React.FC = () => {
 
   /* ── beforeunload warning for unsaved workflows ── */
   useEffect(() => {
-    const hasUnsavedWork = (step2Done || n8nIntermediate) && !savedToArtefacts;
+    const hasUnsavedWork = (step2Done || buildGuideIntermediate) && !savedToArtefacts;
     if (!hasUnsavedWork) return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -614,7 +757,7 @@ const AppWorkflowCanvas: React.FC = () => {
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [step2Done, n8nIntermediate, savedToArtefacts]);
+  }, [step2Done, buildGuideIntermediate, savedToArtefacts]);
 
   const toast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -736,6 +879,9 @@ const AppWorkflowCanvas: React.FC = () => {
     setConnectionsAnimated(0);
     setFeedbackResult(null);
     setComparisonView('user');
+    setPathBApproved(false);
+    setResolvedFeedbackIds(new Set());
+    setOpenDisputeId(null);
   };
 
   const handleRemoveNode = (nodeId: string) => {
@@ -765,8 +911,70 @@ const AppWorkflowCanvas: React.FC = () => {
       setComparisonView('ai');
       setNodesAnimated(0);
       setConnectionsAnimated(0);
+      setResolvedFeedbackIds(new Set());
+      setOpenDisputeId(null);
+      setPathBApproved(false);
       if (user) upsertToolUsed(user.id, 3);
     }
+  };
+
+  /* ── Path B feedback loop handlers (Change 1) ── */
+
+  // Convert feedbackResult.changes to FeedbackItem[] for FeedbackItemRow
+  const feedbackItems = feedbackResult?.changes.map((c, i) => ({
+    id: c.node_id || `feedback-${i}`,
+    nodeId: c.node_id,
+    nodeName: c.node_name,
+    severity: (c.type === 'added' ? 'blocking' : 'advisory') as 'blocking' | 'advisory',
+    message: c.rationale,
+  })) || [];
+
+  const handleFeedbackApply = (itemId: string) => {
+    setResolvedFeedbackIds(prev => new Set(prev).add(itemId));
+    setFeedbackResolutions(prev => ({ ...prev, [itemId]: { resolution: 'applied' } }));
+  };
+
+  const handleFeedbackDispute = async (itemId: string, disputeText: string): Promise<{ outcome: 'concede' | 'maintain'; response: string }> => {
+    const item = feedbackItems.find(fi => fi.id === itemId);
+    const resp = await fetch('/api/resolve-dispute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        originalMessage: item?.message || '',
+        severity: item?.severity || 'advisory',
+        disputeText,
+        nodeContext: { nodeName: item?.nodeName, workflow: canvasNodes.map(n => n.name) },
+      }),
+    });
+    const data = await resp.json();
+    setResolvedFeedbackIds(prev => new Set(prev).add(itemId));
+    setFeedbackResolutions(prev => ({
+      ...prev,
+      [itemId]: {
+        resolution: 'disputed',
+        disputeText,
+        disputeOutcome: data.outcome || 'maintain',
+        disputeResponse: data.response || 'Unable to process dispute.',
+      },
+    }));
+    return { outcome: data.outcome || 'maintain', response: data.response || 'Unable to process dispute.' };
+  };
+
+  const handleFeedbackDismiss = (itemId: string) => {
+    setResolvedFeedbackIds(prev => new Set(prev).add(itemId));
+    setFeedbackResolutions(prev => ({ ...prev, [itemId]: { resolution: 'dismissed' } }));
+  };
+
+  const handleOpenDispute = (itemId: string) => {
+    setOpenDisputeId(itemId);
+  };
+
+  // Derive approval banner state
+  const allFeedbackResolved = feedbackItems.length > 0 && feedbackItems.every(fi => resolvedFeedbackIds.has(fi.id));
+  const overriddenBlockingCount = feedbackItems.filter(fi => fi.severity === 'blocking' && resolvedFeedbackIds.has(fi.id)).length;
+
+  const handlePathBApprove = () => {
+    setPathBApproved(true);
   };
 
   const handleStartOver = () => {
@@ -786,14 +994,17 @@ const AppWorkflowCanvas: React.FC = () => {
     setGenerateResult(null);
     setNodesAnimated(0);
     setConnectionsAnimated(0);
-    setN8nJson(null);
-    setN8nIntermediate(null);
+    setSelectedPlatform(null);
+    setPlatformStepDone(false);
+    setBuildGuideMarkdown(null);
+    setBuildGuideIntermediate(null);
+    setPathBApproved(false);
+    setResolvedFeedbackIds(new Set());
+    setOpenDisputeId(null);
+    setFeedbackResolutions({});
     setExportLoading(false);
     setExportLoadingMsg('');
-    setJsonCopied(false);
     setSavedToArtefacts(false);
-    setJsonPreviewOpen(false);
-    setGenerationMethod(null);
     setPathAApproved(false);
     setPathAFeedbackText('');
     setPathAFeedbackResult(null);
@@ -803,43 +1014,73 @@ const AppWorkflowCanvas: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleCopyJson = async () => {
-    if (!n8nJson) return;
-    try {
-      await navigator.clipboard.writeText(n8nJson);
-      setJsonCopied(true);
-      toast('n8n JSON copied to clipboard');
-      setTimeout(() => setJsonCopied(false), 2000);
-    } catch { toast('Failed to copy'); }
+  /* ── Step-back navigation ── */
+  const handleGoBackToStep1 = () => {
+    // Reopen step 1 — preserve generateResult so re-selecting Path A is instant
+    setSelectedPath(null);
+    setPathAApproved(false);
+    setPathBApproved(false);
+    setPlatformStepDone(false);
+    setSelectedPlatform(null);
+    setBuildGuideMarkdown(null);
+    setBuildGuideIntermediate(null);
+    setSavedToArtefacts(false);
+    setExportLoading(false);
+    setExportLoadingMsg('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDownloadJson = () => {
-    if (!n8nJson) return;
-    const blob = new Blob([n8nJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}-workflow.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Downloaded workflow.json');
+  const handleGoBackToStep2 = () => {
+    // Reopen step 2 — un-approve, keep canvas/feedback intact
+    if (selectedPath === 'a') setPathAApproved(false);
+    else setPathBApproved(false);
+    setPlatformStepDone(false);
+    setSelectedPlatform(null);
+    setBuildGuideMarkdown(null);
+    setBuildGuideIntermediate(null);
+    setSavedToArtefacts(false);
+    setExportLoading(false);
+    setExportLoadingMsg('');
+  };
+
+  const handleGoBackToStep3 = () => {
+    // Reopen step 3 — keep platform pre-selected, clear build guide
+    setBuildGuideMarkdown(null);
+    setBuildGuideIntermediate(null);
+    setPlatformStepDone(false);
+    setSavedToArtefacts(false);
+    setExportLoading(false);
+    setExportLoadingMsg('');
   };
 
   const handleSaveToArtefacts = async () => {
-    if (!user || savedToArtefacts || !n8nIntermediate) return;
+    if (!user || savedToArtefacts || !buildGuideIntermediate || !buildGuideMarkdown) return;
+    const artefactId = `wf_${Date.now()}`;
+    // Store in localStorage for share link access (TODO: Supabase)
+    localStorage.setItem(`build_guide_${artefactId}`, JSON.stringify({
+      intermediate: buildGuideIntermediate,
+      buildGuide: buildGuideMarkdown,
+      platform: selectedPlatform,
+      generatedAt: new Date().toISOString(),
+    }));
     const result = await dbSavePrompt(user.id, {
       level: 3,
       title: `Workflow: ${workflowName}`,
-      content: JSON.stringify(n8nIntermediate, null, 2),
+      content: JSON.stringify({
+        intermediate: buildGuideIntermediate,
+        buildGuide: buildGuideMarkdown,
+        platform: selectedPlatform,
+      }, null, 2),
       source_tool: 'workflow-canvas',
     });
     if (result) {
       setSavedToArtefacts(true);
-      toast('Saved to Artefacts');
+      toast('Saved to Library');
     } else {
       toast('Failed to save — please try again');
     }
   };
+
 
   /* ── Render helper: layer label ── */
   // layerLabel removed — no longer needed in n8n export view
@@ -869,10 +1110,11 @@ const AppWorkflowCanvas: React.FC = () => {
       <ToolOverview
         steps={[
           { number: 1, label: 'Define your workflow', detail: 'Describe the process and choose your path', done: step1Done },
-          { number: 2, label: 'Build & review', detail: 'Review, refine, and approve your workflow', done: step2Done },
-          { number: 3, label: 'Export your workflow', detail: 'Download your importable n8n workflow JSON', done: !!n8nJson },
+          { number: 2, label: 'Build & review your canvas', detail: 'Review, refine, and approve your workflow', done: step2Done },
+          { number: 3, label: 'Choose the platform', detail: 'Select your automation tool', done: platformStepDone },
+          { number: 4, label: 'Download your Build Guide', detail: 'Get your implementation document', done: !!buildGuideMarkdown },
         ]}
-        outcome="A downloadable n8n workflow JSON file — importable directly into n8n Cloud or self-hosted with no manual editing."
+        outcome="A downloadable Build Guide — a complete, platform-specific implementation document ready to build from."
       />
 
       {/* ─── STEP 1: Define your workflow ─── */}
@@ -1036,6 +1278,23 @@ const AppWorkflowCanvas: React.FC = () => {
             />
           ) : (
             <>
+              {/* Back to Step 1 */}
+              {!step2Done && (
+                <button
+                  onClick={handleGoBackToStep1}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    background: 'none', border: 'none', padding: '0 0 12px',
+                    fontSize: 13, fontWeight: 500, color: '#718096',
+                    cursor: 'pointer', fontFamily: FONT,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = LEVEL_ACCENT; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#718096'; }}
+                >
+                  <ArrowLeft size={14} /> Back to Step 1
+                </button>
+              )}
+
               {/* Comparison toggle (Path B with feedback) */}
               {selectedPath === 'b' && feedbackResult && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
@@ -1409,40 +1668,58 @@ const AppWorkflowCanvas: React.FC = () => {
                 </div>
               )}
 
-              {/* Changes panel (Path B feedback) */}
-              {selectedPath === 'b' && feedbackResult && comparisonView === 'ai' && feedbackResult.changes.length > 0 && (
-                <div style={{ marginTop: 16, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 20, fontFamily: FONT }}>
-                  <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', marginBottom: 12, margin: 0 }}>Changes Suggested</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
-                    {feedbackResult.changes.filter(c => c.type === 'added').length > 0 && (
+              {/* Feedback items (Path B — FeedbackItemRow per change) */}
+              {selectedPath === 'b' && feedbackResult && comparisonView === 'ai' && feedbackItems.length > 0 && (
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', margin: '0 0 4px', fontFamily: FONT }}>AI Feedback</h4>
+                  {feedbackItems.map(item => (
+                    <FeedbackItemRow
+                      key={item.id}
+                      item={item}
+                      onApply={handleFeedbackApply}
+                      onDispute={handleFeedbackDispute}
+                      onDismiss={handleFeedbackDismiss}
+                      isDisputeOpen={openDisputeId === item.id}
+                      onOpenDispute={handleOpenDispute}
+                    />
+                  ))}
+
+                  {/* Approval Banner */}
+                  {!pathBApproved && (
+                    <div style={{
+                      marginTop: 8, padding: '14px 20px', borderRadius: 12, fontFamily: FONT,
+                      background: allFeedbackResolved ? '#F0FFF4' : '#F7FAFC',
+                      border: `1px solid ${allFeedbackResolved ? '#9AE6B4' : '#E2E8F0'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+                    }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ width: 14, height: 14, borderRadius: 3, border: '2px solid #48BB78', background: 'rgba(72,187,120,0.1)' }} />
-                          <span style={{ fontWeight: 600, fontSize: 13, color: '#38A169' }}>Nodes Added</span>
-                        </div>
-                        {feedbackResult.changes.filter(c => c.type === 'added').map((c, i) => (
-                          <div key={i} style={{ marginBottom: 10, paddingLeft: 22 }}>
-                            <span style={{ fontWeight: 600, fontSize: 13, color: '#1A202C' }}>{c.node_name}</span>
-                            <p style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.5, margin: '2px 0 0' }}>{c.rationale}</p>
-                          </div>
-                        ))}
+                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', margin: 0 }}>
+                          {allFeedbackResolved
+                            ? (overriddenBlockingCount > 0
+                              ? `⚠ You've overridden ${overriddenBlockingCount} blocking issue(s). Your workflow may not run as expected.`
+                              : '✓ All feedback resolved. Your workflow is ready.')
+                            : `Resolve all feedback items to approve (${resolvedFeedbackIds.size}/${feedbackItems.length})`}
+                        </p>
+                        {overriddenBlockingCount > 0 && allFeedbackResolved && (
+                          <p style={{ fontSize: 11, color: '#718096', margin: '4px 0 0' }}>{overriddenBlockingCount} item(s) manually overridden</p>
+                        )}
                       </div>
-                    )}
-                    {feedbackResult.changes.filter(c => c.type === 'removed').length > 0 && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ width: 14, height: 14, borderRadius: 3, border: '2px solid #FC8181', background: 'rgba(252,129,129,0.1)' }} />
-                          <span style={{ fontWeight: 600, fontSize: 13, color: '#E53E3E' }}>Nodes Removed</span>
-                        </div>
-                        {feedbackResult.changes.filter(c => c.type === 'removed').map((c, i) => (
-                          <div key={i} style={{ marginBottom: 10, paddingLeft: 22 }}>
-                            <span style={{ fontWeight: 600, fontSize: 13, color: '#1A202C' }}>{c.node_name}</span>
-                            <p style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.5, margin: '2px 0 0' }}>{c.rationale}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                      <button
+                        onClick={handlePathBApprove}
+                        disabled={!allFeedbackResolved}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600,
+                          background: allFeedbackResolved ? LEVEL_ACCENT : '#E2E8F0',
+                          color: allFeedbackResolved ? '#FFFFFF' : '#A0AEC0',
+                          border: 'none', cursor: allFeedbackResolved ? 'pointer' : 'not-allowed',
+                          fontFamily: FONT,
+                        }}
+                      >
+                        {overriddenBlockingCount > 0 ? 'Approve anyway' : 'Approve & Export'} <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1459,303 +1736,147 @@ const AppWorkflowCanvas: React.FC = () => {
 
       <StepConnector />
 
-      {/* ─── STEP 3: Export n8n Workflow ─── */}
+      {/* ─── STEP 3: Choose the platform ─── */}
+      <StepCard
+        stepNumber={3}
+        title="Choose the platform"
+        subtitle="Select the automation tool you'll use to build this workflow."
+        done={platformStepDone}
+        collapsed={platformStepDone && !!buildGuideMarkdown}
+      >
+        {!step2Done ? (
+          <StepPlaceholder
+            icon={<ArrowRight size={16} color="#A0AEC0" />}
+            message="Complete Step 2 first"
+            detail="Approve your workflow design to choose a platform."
+          />
+        ) : platformStepDone && exportLoading ? (
+          (() => {
+            let parsedSteps: { steps: { label: string; delay: number }[]; activeIndex: number } | null = null;
+            try { parsedSteps = JSON.parse(exportLoadingMsg); } catch { /* ignore */ }
+            const stepsData = parsedSteps?.steps || [];
+            const activeIdx = parsedSteps?.activeIndex ?? 0;
+            return (
+              <div style={{ padding: '16px 0', fontFamily: FONT }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                  <Loader2 size={18} color={LEVEL_ACCENT} style={{ animation: 'ppSpin 0.7s linear infinite' }} />
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>Generating your Build Guide</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {stepsData.map((s: { label: string }, i: number) => {
+                    const isDone = i < activeIdx;
+                    const isActive = i === activeIdx;
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                        borderRadius: 10,
+                        background: isDone ? '#F0FFF4' : isActive ? `${LEVEL_ACCENT}08` : '#F7FAFC',
+                        border: `1px solid ${isDone ? '#C6F6D5' : isActive ? `${LEVEL_ACCENT}30` : '#E2E8F0'}`,
+                        transition: 'all 0.3s ease',
+                      }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                          background: isDone ? '#48BB78' : isActive ? LEVEL_ACCENT : '#E2E8F0',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.3s ease',
+                        }}>
+                          {isDone ? (
+                            <Check size={13} color="#fff" />
+                          ) : isActive ? (
+                            <Loader2 size={13} color="#fff" style={{ animation: 'ppSpin 0.7s linear infinite' }} />
+                          ) : (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0' }}>{i + 1}</span>
+                          )}
+                        </div>
+                        <span style={{
+                          fontSize: 13, fontWeight: isActive ? 600 : 400,
+                          color: isDone ? '#38A169' : isActive ? '#1A202C' : '#A0AEC0',
+                          transition: 'color 0.3s ease',
+                        }}>
+                          {s.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()
+        ) : !platformStepDone ? (
+          <div style={{ animation: 'ppFadeIn 0.4s ease-out' }}>
+            <button
+              onClick={handleGoBackToStep2}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: 'none', border: 'none', padding: '0 0 12px',
+                fontSize: 13, fontWeight: 500, color: '#718096',
+                cursor: 'pointer', fontFamily: FONT,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = LEVEL_ACCENT; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#718096'; }}
+            >
+              <ArrowLeft size={14} /> Back to Step 2
+            </button>
+            <PlatformSelector
+              selectedPlatform={selectedPlatform}
+              onSelectPlatform={setSelectedPlatform}
+              onGenerate={handleGenerateBuildGuide}
+              loading={exportLoading}
+              loadingMessage={exportLoadingMsg}
+            />
+          </div>
+        ) : null}
+      </StepCard>
+
+      <StepConnector />
+
+      {/* ─── STEP 4: Download Build Guide ─── */}
       <div ref={step3Ref}>
         <StepCard
-          stepNumber={3}
-          title="Export your n8n workflow"
-          subtitle="Download your importable n8n workflow JSON file."
-          done={!!n8nJson}
+          stepNumber={4}
+          title="Download your Build Guide"
+          subtitle="Your complete, platform-specific implementation document."
+          done={!!buildGuideMarkdown}
           collapsed={false}
         >
-          {!step2Done ? (
-            /* Pre-export placeholder */
+          {!platformStepDone ? (
             <StepPlaceholder
               icon={<Download size={18} color="#A0AEC0" />}
-              message="Your n8n workflow file will appear here"
-              detail="Complete the steps above to generate a downloadable n8n workflow JSON file that you can import directly into n8n Cloud or self-hosted."
+              message="Your Build Guide will appear here"
+              detail="Complete the steps above and choose your platform to generate a Build Guide tailored to your automation tool."
             />
-          ) : exportLoading ? (
-            /* Export loading state */
-            <div style={{ padding: '32px 0', textAlign: 'center' as const, fontFamily: FONT }}>
-              <div style={{
-                width: '100%', height: 4, background: '#E2E8F0', borderRadius: 2, overflow: 'hidden', marginBottom: 16,
-              }}>
-                <div style={{
-                  height: '100%', background: LEVEL_ACCENT, borderRadius: 2,
-                  animation: 'ppExportBar 2s ease-in-out forwards',
-                }} />
-              </div>
-              <div style={{ fontSize: 13, color: '#718096', fontFamily: FONT }}>
-                {exportLoadingMsg}
-              </div>
-              <style>{`@keyframes ppExportBar { from { width: 0%; } to { width: 100%; } }`}</style>
-            </div>
-          ) : n8nJson && n8nIntermediate ? (
-            /* Export Card — PRD Section 7 */
+          ) : buildGuideMarkdown && buildGuideIntermediate ? (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: window.innerWidth >= 768 ? '55% 45%' : '1fr',
-              gap: 24, fontFamily: FONT,
+              fontFamily: FONT,
               animation: 'ppFadeIn 0.5s ease-out',
             }}>
-              {/* LEFT COLUMN — Download & Import */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Full-width Summary Card */}
+              <ExportSummaryCard
+                workflowName={workflowName}
+                platform={selectedPlatform || 'Not sure yet'}
+                overview={extractOverview(buildGuideMarkdown)}
+                stepCount={extractStepCount(buildGuideMarkdown)}
+                complexity={buildGuideIntermediate.complexity}
+                estimatedBuildTime={extractBuildTime(buildGuideMarkdown)}
+                credentials={extractCredentials(buildGuideMarkdown)}
+                steps={extractSteps(buildGuideMarkdown)}
+                testChecklist={extractTestChecklist(buildGuideMarkdown)}
+                fullMarkdown={buildGuideMarkdown}
+              />
 
-                {/* Panel 1: Download block */}
-                <div style={{
-                  background: '#E6FFFA', border: '1.5px solid #38B2AC44', borderRadius: 16, padding: 28,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%', background: '#38B2AC20',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Check size={18} color="#38B2AC" />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C' }}>{n8nIntermediate.workflowName}</div>
-                      <div style={{ fontSize: 13, color: '#718096' }}>{n8nIntermediate.summary}</div>
-                    </div>
-                  </div>
-
-                  {/* Stats row */}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#38B2AC20', color: '#1A7A76' }}>
-                      {n8nIntermediate.nodes.length} nodes
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#38B2AC20', color: '#1A7A76' }}>
-                      {n8nIntermediate.complexity}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, background: '#38B2AC20', color: '#1A7A76' }}>
-                      {n8nIntermediate.estimatedRunTime}
-                    </span>
-                  </div>
-
-                  {/* Generation method badge */}
-                  {generationMethod && (
-                    <div style={{ marginBottom: 12 }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
-                        ...(generationMethod === 'ai'
-                          ? { background: '#E6FFFA', color: '#1A7A76' }
-                          : { background: '#F7FAFC', color: '#718096' }),
-                      }}>
-                        {generationMethod === 'ai' ? '\u2726 AI-generated workflow' : '\u25C8 Template-assembled workflow'}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Download button */}
-                  <button onClick={handleDownloadJson} style={{
-                    width: '100%', padding: '12px 0', borderRadius: 99, border: 'none',
-                    background: '#38B2AC', color: '#FFFFFF', fontSize: 15, fontWeight: 700,
-                    cursor: 'pointer', fontFamily: FONT, transition: 'opacity 0.15s',
-                  }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                  >
-                    <Download size={15} style={{ marginRight: 8, verticalAlign: 'middle', marginTop: -2 }} />
-                    Download workflow.json
-                  </button>
-                  <div style={{ fontSize: 11, color: '#718096', textAlign: 'center' as const, marginTop: 8 }}>
-                    Compatible with n8n Cloud and n8n self-hosted
-                  </div>
-                </div>
-
-                {/* Panel 2: How to import into n8n */}
-                <div style={{
-                  background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 14, padding: '22px 24px',
-                }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1A202C', marginBottom: 16 }}>How to import into n8n</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {[
-                      <>Open your n8n instance and click <strong>Create new workflow</strong></>,
-                      <>Click the <strong>&#x22EF;</strong> menu in the top-right corner of the canvas</>,
-                      <>Select <strong>Import from File</strong> and choose <code style={{ fontSize: 12, background: '#F7FAFC', padding: '1px 6px', borderRadius: 4 }}>{workflowName.replace(/\s+/g, '-').toLowerCase()}.json</code></>,
-                      <>Reconnect credentials for each node that requires authentication</>,
-                      <>Click <strong>Execute once</strong> with test data to validate the workflow runs correctly</>,
-                    ].map((text, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <span style={{
-                          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                          background: '#E6FFFA', border: '1px solid #38B2AC44',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 11, fontWeight: 700, color: '#1A7A76',
-                        }}>{i + 1}</span>
-                        <span style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.5 }}>{text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {/* Output Actions — full width below */}
+              <div style={{ marginTop: 20 }}>
+                <OutputActionsPanel
+                  workflowName={workflowName}
+                  fullMarkdown={buildGuideMarkdown}
+                  onSaveToArtefacts={handleSaveToArtefacts}
+                  isSaved={savedToArtefacts}
+                />
               </div>
 
-              {/* RIGHT COLUMN — Setup Guide */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-                {/* Panel 3: Variables to configure */}
-                <div style={{
-                  background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 14, padding: '22px 24px',
-                }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1A202C', marginBottom: 4 }}>What you'll need to configure</div>
-                  <div style={{ fontSize: 12, color: '#718096', marginBottom: 14 }}>
-                    After importing, you'll need to connect these to your own accounts and settings.
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {n8nIntermediate.nodes
-                      .filter(node => node.configRequirements.length > 0)
-                      .map((node, i) => {
-                        const templateMeta = N8N_NODE_TEMPLATES[node.n8nNodeKey];
-                        return (
-                          <div key={i} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '8px 12px', background: '#F7FAFC', borderRadius: 8,
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 14 }}>{templateMeta?.emoji || '🔧'}</span>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{node.service || node.name}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                              {node.configRequirements.map((req, j) => (
-                                <span key={j} style={{
-                                  fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                                  background: '#FFFFF0', border: '1px solid #D69E2E44', color: '#8A6A00',
-                                }}>{req}</span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-
-                {/* Human-in-the-loop advisory */}
-                {n8nIntermediate.humanInTheLoop && (
-                  <div style={{
-                    background: '#FFFFF0', border: '1px solid #D69E2E44', borderRadius: 12, padding: '14px 20px',
-                  }}>
-                    <div style={{ fontSize: 13, color: '#744210', lineHeight: 1.5 }}>
-                      This workflow performs irreversible actions (sending messages, writing to databases). Consider adding a manual review step before the output. n8n's "Wait" node can pause execution for human approval.
-                    </div>
-                  </div>
-                )}
-
-                {/* Panel 4: Cross-tool references */}
-                <div style={{
-                  background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 14, padding: '20px 24px',
-                }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1A202C', marginBottom: 12 }}>Want to go further?</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Card A: Prompt Playground */}
-                    <div style={{
-                      background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px',
-                    }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                        background: '#E6FFFA', color: '#1A7A76', marginBottom: 6, display: 'inline-block',
-                      }}>L1</span>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.5, marginTop: 4 }}>
-                        Use the Prompt Playground to test and refine any AI prompts in this workflow before locking them in.
-                      </div>
-                      <a href="/app/toolkit/prompt-playground" style={{
-                        fontSize: 12, fontWeight: 700, color: '#38B2AC', textDecoration: 'none', marginTop: 6, display: 'inline-block',
-                      }}
-                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                      >Open Prompt Playground →</a>
-                    </div>
-
-                    {/* Card B: Agent Builder */}
-                    <div style={{
-                      background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px',
-                    }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                        background: '#E6FFFA', color: '#1A7A76', marginBottom: 6, display: 'inline-block',
-                      }}>L2</span>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.5, marginTop: 4 }}>
-                        If any step uses an AI model, replace it with a custom agent built in the Agent Builder for better control.
-                      </div>
-                      <a href="/app/toolkit/agent-builder" style={{
-                        fontSize: 12, fontWeight: 700, color: '#38B2AC', textDecoration: 'none', marginTop: 6, display: 'inline-block',
-                      }}
-                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                      >Open Agent Builder →</a>
-                    </div>
-
-                    {/* Card C: Save to Artefacts */}
-                    <div style={{
-                      background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px',
-                    }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                        background: '#E6FFFA', color: '#1A7A76', marginBottom: 6, display: 'inline-block',
-                      }}>L3</span>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.5, marginTop: 4 }}>
-                        This workflow feeds directly into your Level 5 Business Case evaluation. Save it to your Artefacts library.
-                      </div>
-                      <button onClick={handleSaveToArtefacts} disabled={savedToArtefacts} style={{
-                        marginTop: 8, padding: '7px 16px', borderRadius: 99, border: 'none',
-                        background: savedToArtefacts ? '#48BB78' : '#38B2AC',
-                        color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: savedToArtefacts ? 'default' : 'pointer',
-                        fontFamily: FONT, transition: 'opacity 0.15s',
-                      }}
-                        onMouseEnter={e => { if (!savedToArtefacts) e.currentTarget.style.opacity = '0.85'; }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
-                      >
-                        {savedToArtefacts ? <><Check size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Saved</> : 'Save to Artefacts →'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Panel 5: JSON preview (collapsible) */}
-                <div style={{
-                  background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 14, overflow: 'hidden',
-                }}>
-                  <button
-                    onClick={() => setJsonPreviewOpen(!jsonPreviewOpen)}
-                    style={{
-                      width: '100%', padding: '14px 24px', border: 'none', background: 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      cursor: 'pointer', fontFamily: FONT,
-                    }}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#718096' }}>View raw n8n JSON</span>
-                    <ChevronDown size={16} color="#718096" style={{
-                      transform: jsonPreviewOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s',
-                    }} />
-                  </button>
-                  {jsonPreviewOpen && (
-                    <div style={{ position: 'relative', padding: '0 24px 16px' }}>
-                      <button
-                        onClick={handleCopyJson}
-                        style={{
-                          position: 'absolute', top: 4, right: 32, background: '#F7FAFC',
-                          border: '1px solid #E2E8F0', borderRadius: 6, padding: '4px 10px',
-                          fontSize: 11, fontWeight: 600, color: '#718096', cursor: 'pointer',
-                          fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 4,
-                        }}
-                      >
-                        {jsonCopied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
-                      </button>
-                      <pre style={{
-                        fontSize: 11, color: '#4A5568', background: '#F7FAFC', borderRadius: 8,
-                        padding: 16, maxHeight: 280, overflowY: 'auto', overflowX: 'auto',
-                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                        lineHeight: 1.5, margin: 0, whiteSpace: 'pre',
-                      }}>
-                        {n8nJson}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom action row (full width) */}
-              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+              {/* Bottom action row */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <ActionBtn icon={<ArrowLeft size={14} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
                 <ActionBtn icon={<RotateCcw size={14} />} label="Start Over" onClick={handleStartOver} />
               </div>
             </div>

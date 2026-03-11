@@ -8,6 +8,7 @@ export interface DashboardImageResult {
   html_content?: string;
   use_fallback?: boolean;
   generation_method?: 'gemini-image' | 'imagen' | 'html';
+  inspiration_analysis?: string;
 }
 
 export interface PRDResult {

@@ -118,7 +118,7 @@ const AppJourney: React.FC = () => {
           background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
           padding: '20px 24px',
         }}>
-          {/* Top row: progress bar + percentage */}
+          {/* Top row: progress bar coloured by current level */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
             <div style={{
               fontSize: 11, fontWeight: 700, color: '#718096',
@@ -129,7 +129,8 @@ const AppJourney: React.FC = () => {
             </div>
             <div style={{ flex: 1, height: 6, background: '#E2E8F0', borderRadius: 6, overflow: 'hidden' }}>
               <div style={{
-                height: '100%', width: `${overallPct}%`, background: '#38B2AC',
+                height: '100%', width: `${overallPct}%`,
+                background: currentMeta.accentDark,
                 borderRadius: 6, transition: 'width 0.6s ease',
               }} />
             </div>
@@ -138,18 +139,21 @@ const AppJourney: React.FC = () => {
             </div>
           </div>
 
-          {/* Level step indicators */}
+          {/* Level step indicators — colour-coordinated per level */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 18 }}>
             {levels.map((lvl, i) => {
               const lvlMeta = LEVEL_META.find(m => m.number === lvl.levelNumber)!;
               const isDone = lvl.status === 'completed';
               const isCurrent = lvl.levelNumber === currentLevel.levelNumber;
+              // Connector line uses the PREVIOUS level's accent colour when that level is done
+              const prevMeta = i > 0 ? LEVEL_META.find(m => m.number === levels[i - 1].levelNumber)! : null;
+              const prevDone = i > 0 && levels[i - 1].status === 'completed';
               return (
                 <React.Fragment key={lvl.levelNumber}>
                   {i > 0 && (
                     <div style={{
                       flex: 1, height: 2,
-                      background: isDone ? '#38B2AC' : '#E2E8F0',
+                      background: prevDone ? (prevMeta?.accentDark || '#E2E8F0') : '#E2E8F0',
                     }} />
                   )}
                   <div
@@ -162,18 +166,18 @@ const AppJourney: React.FC = () => {
                     <div style={{
                       width: isCurrent ? 30 : 24, height: isCurrent ? 30 : 24,
                       borderRadius: '50%', flexShrink: 0,
-                      background: isDone ? '#38B2AC' : isCurrent ? lvlMeta.accentColor : '#F7FAFC',
-                      border: isDone ? 'none' : isCurrent ? `2px solid ${lvlMeta.accentDark}` : '1.5px solid #E2E8F0',
+                      background: isDone ? lvlMeta.accentColor : isCurrent ? lvlMeta.accentColor : '#F7FAFC',
+                      border: isDone ? `2px solid ${lvlMeta.accentDark}` : isCurrent ? `2.5px solid ${lvlMeta.accentDark}` : '1.5px solid #E2E8F0',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: isCurrent ? 12 : 10, fontWeight: 800,
-                      color: isDone ? '#FFFFFF' : isCurrent ? lvlMeta.accentDark : '#A0AEC0',
+                      color: isDone ? lvlMeta.accentDark : isCurrent ? lvlMeta.accentDark : '#A0AEC0',
                       transition: 'all 0.2s ease',
                     }}>
-                      {isDone ? <Check size={12} strokeWidth={3} color="#FFFFFF" /> : lvl.levelNumber}
+                      {isDone ? <Check size={12} strokeWidth={3} color={lvlMeta.accentDark} /> : lvl.levelNumber}
                     </div>
                     <span style={{
-                      fontSize: 9, fontWeight: isCurrent ? 700 : 500,
-                      color: isDone ? '#38B2AC' : isCurrent ? lvlMeta.accentDark : '#A0AEC0',
+                      fontSize: 9, fontWeight: isCurrent || isDone ? 700 : 500,
+                      color: isDone ? lvlMeta.accentDark : isCurrent ? lvlMeta.accentDark : '#A0AEC0',
                       whiteSpace: 'nowrap',
                     }}>
                       {lvlMeta.shortName}

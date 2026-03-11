@@ -1,164 +1,381 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ArrowRight, ArrowDown, Sparkles, Puzzle, Mic, MicOff, Copy, Check, RotateCcw, Code, Library, Download, Info, ChevronRight } from 'lucide-react';
-import { EXAMPLE_PROMPTS, PROMPT_BLUEPRINT, BLUEPRINT_EDUCATION } from '../../../data/playground-content';
-import { useGeminiApi } from '../../../hooks/useGeminiApi';
-import { useSpeechRecognition } from '../../../hooks/useSpeechRecognition';
-import { BuildWizard } from '../../playground/BuildWizard';
-import type { PromptResult, WizardAnswers } from '../../../types';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  ArrowRight, ArrowDown, Copy, Check, Download, RotateCcw,
+  ChevronRight, ChevronDown, Library, Code, Eye, Info,
+} from 'lucide-react';
+import { usePlaygroundApi } from '../../../hooks/usePlaygroundApi';
+import type { PlaygroundResult, PlaygroundStrategy, StrategyId } from '../../../types';
+import {
+  STRATEGY_DEFINITIONS, STRATEGY_ACCENT_COLORS, PLAYGROUND_EXAMPLE_CHIPS,
+} from '../../../data/playground-content';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
 
-type Mode = 'enhance' | 'build' | null;
-
 const FONT = "'DM Sans', sans-serif";
+const MONO = "'JetBrains Mono', 'Fira Code', monospace";
+
+/* ── Level 1 accent colours ── */
+const LEVEL_ACCENT = '#A8F0E0';
+const LEVEL_ACCENT_DARK = '#1A6B5F';
+
+/* ── Strategy accent colours by ID ── */
+const STRATEGY_COLORS: Record<StrategyId, string> = {
+  STRUCTURED_BLUEPRINT: '#C3D0F5',
+  CHAIN_OF_THOUGHT: '#FBE8A6',
+  PERSONA_EXPERT_ROLE: '#A8F0E0',
+  OUTPUT_FORMAT_SPECIFICATION: '#38B2AC',
+  CONSTRAINT_FRAMING: '#FBCEB1',
+  FEW_SHOT_EXAMPLES: '#E6FFFA',
+  ITERATIVE_DECOMPOSITION: '#C3D0F5',
+  TONE_AND_VOICE: '#FBE8A6',
+};
+
+const DRAFT_KEY = 'oxygy_prompt_playground_draft';
+
+/* ── Loading progress steps ── */
+const INITIAL_LOADING_STEPS = [
+  'Analysing your task…',
+  'Selecting prompting strategies…',
+  'Crafting your prompt…',
+  'Applying quality checks…',
+  'Preparing strategy breakdown…',
+  'Generating refinement questions…',
+  'Finalising output…',
+];
+const REFINE_LOADING_STEPS = [
+  'Processing your additional context…',
+  'Re-evaluating strategies…',
+  'Weaving in new specifics…',
+  'Refining prompt structure…',
+  'Running quality checks…',
+  'Generating deeper questions…',
+  'Finalising refined output…',
+];
+// Front-loaded timing: early steps fast, later steps slower
+const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
 
 const AppPromptPlayground: React.FC = () => {
   const { user } = useAuth();
-  const [activeMode, setActiveMode] = useState<Mode>(null);
-  const [inputPrompt, setInputPrompt] = useState('');
-  const [result, setResult] = useState<PromptResult | null>(null);
-  const [originalPrompt, setOriginalPrompt] = useState('');
-  const [resultMode, setResultMode] = useState<Mode>(null);
-  const [copied, setCopied] = useState(false);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
-  const [savedToLibrary, setSavedToLibrary] = useState(false);
-  const [showMarkdown, setShowMarkdown] = useState(false);
-  const [visibleBlocks, setVisibleBlocks] = useState(0);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const step2Ref = useRef<HTMLDivElement>(null);
-  const step3Ref = useRef<HTMLDivElement>(null);
-  const { enhance, isLoading, error, clearError } = useGeminiApi();
-  const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition();
+  const { generate, isLoading, error, clearError } = usePlaygroundApi();
 
-  // Staggered block appearance
+  /* ── State ── */
+  const [userInput, setUserInput] = useState('');
+  const [result, setResult] = useState<PlaygroundResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [savedToLibrary, setSavedToLibrary] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null); // strategy ID whose excerpt to highlight
+  const [validationError, setValidationError] = useState(false);
+  const [textareaFlash, setTextareaFlash] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'markdown'>('cards');
+  const [visibleBlocks, setVisibleBlocks] = useState(0);
+  const [hasTrackedUsage, setHasTrackedUsage] = useState(false);
+  const [refinementAnswers, setRefinementAnswers] = useState<Record<number, string>>({});
+  const [additionalContext, setAdditionalContext] = useState('');
+  const [refinementCount, setRefinementCount] = useState(0);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [isRefineLoading, setIsRefineLoading] = useState(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const outputRef = useRef<HTMLDivElement>(null);
+
+  /* ── Derived step state ── */
+  const step1Done = result !== null;
+  const step2Done = false; // output step is never "done" per se
+
+  /* ── Draft persistence ── */
+  useEffect(() => {
+    const draft = localStorage.getItem(DRAFT_KEY);
+    if (draft) {
+      setUserInput(draft);
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userInput.trim() && !result) {
+      localStorage.setItem(DRAFT_KEY, userInput);
+    }
+  }, [userInput, result]);
+
+  /* ── Loading step progression ── */
+  useEffect(() => {
+    if (!isLoading) {
+      // When loading finishes, jump to last step briefly then reset
+      if (loadingStep > 0) {
+        const steps = isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS;
+        setLoadingStep(steps.length);
+        const timer = setTimeout(() => setLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    STEP_DELAYS.forEach((delay, i) => {
+      cumulative += delay;
+      timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [isLoading]);
+
+  /* ── Toast auto-dismiss ── */
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 2500);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  /* ── Staggered block animation ── */
   useEffect(() => {
     if (!result) return;
     setVisibleBlocks(0);
+    const totalSections = result.strategies_used.length + 1 + (result.refinement_questions?.length ? 1 : 0); // prompt + strategies + refinement card
     const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < totalSections; i++) {
       timers.push(setTimeout(() => setVisibleBlocks(v => v + 1), 150 + i * 80));
     }
     return () => timers.forEach(clearTimeout);
   }, [result]);
 
-  // Toast auto-dismiss
-  useEffect(() => {
-    if (!toastMessage) return;
-    const t = setTimeout(() => setToastMessage(null), 2500);
-    return () => clearTimeout(t);
-  }, [toastMessage]);
+  /* ── Auto-grow textarea ── */
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setUserInput(e.target.value);
+    if (validationError) setValidationError(false);
+    const ta = e.target;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(300, Math.max(120, ta.scrollHeight)) + 'px';
+  };
 
-  // Restore draft
-  useEffect(() => {
-    try {
-      const draft = localStorage.getItem('oxygy_playground_draft');
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        if (parsed.result) { setResult(parsed.result); setActiveMode('enhance'); }
-        if (parsed.originalPrompt) setOriginalPrompt(parsed.originalPrompt);
-        if (parsed.resultMode) setResultMode(parsed.resultMode);
-        localStorage.removeItem('oxygy_playground_draft');
+  /* ── Example chip click ── */
+  const handleChipClick = (text: string) => {
+    setUserInput(text);
+    if (validationError) setValidationError(false);
+    setTextareaFlash(true);
+    setTimeout(() => setTextareaFlash(false), 300);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(300, Math.max(120, textareaRef.current.scrollHeight)) + 'px';
+    }
+  };
+
+  /* ── Submit ── */
+  const handleSubmit = async () => {
+    if (isLoading) return;
+    if (!userInput.trim()) {
+      setValidationError(true);
+      return;
+    }
+    setValidationError(false);
+    const data = await generate(userInput);
+    if (data) {
+      setResult(data);
+      localStorage.removeItem(DRAFT_KEY);
+      // Track first usage
+      if (!hasTrackedUsage && user) {
+        upsertToolUsed(user.id, 1);
+        setHasTrackedUsage(true);
       }
-    } catch {}
+      setTimeout(() => {
+        outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  };
+
+  /* ── Copy prompt ── */
+  const copyToClipboard = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
   }, []);
 
-  const selectMode = (mode: Mode) => {
-    setActiveMode(mode);
-    setResult(null);
-    clearError();
-    setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-  };
-
-  const copyToClipboard = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
-    }
-  };
-
-  const buildMarkdownPrompt = (r: PromptResult): string =>
-    `# Role\n${r.role}\n\n# Context\n${r.context}\n\n# Task\n${r.task}\n\n# Format & Structure\n${r.format}\n\n# Steps & Process\n${r.steps}\n\n# Quality Checks\n${r.quality}`;
-
-  const handleEnhance = async () => {
-    if (!inputPrompt.trim() || isLoading) return;
-    setOriginalPrompt(inputPrompt);
-    const data = await enhance({ mode: 'enhance', prompt: inputPrompt });
-    if (data) {
-      setResult(data); setResultMode('enhance');
-      if (user) upsertToolUsed(user.id, 1);
-      setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-    }
-  };
-
-  const handleBuildGenerate = async (answers: WizardAnswers) => {
-    const data = await enhance({ mode: 'build', wizardAnswers: answers });
-    if (data) {
-      setResult(data); setResultMode('build');
-      if (user) upsertToolUsed(user.id, 1);
-      setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-    }
-  };
-
-  const handleReset = () => {
-    setActiveMode(null); setResult(null); setInputPrompt(''); setOriginalPrompt('');
-    setSavedToLibrary(false); setShowMarkdown(false); clearError();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCopyFull = async () => {
+  const handleCopyPrompt = async () => {
     if (!result) return;
-    await copyToClipboard(buildMarkdownPrompt(result));
-    setCopied(true); setToastMessage('Full prompt copied to clipboard');
-    setTimeout(() => setCopied(false), 2500);
+    await copyToClipboard(result.prompt);
+    setCopied(true);
+    setToastMessage('Prompt copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCopySection = async (key: string, label: string, content: string) => {
-    await copyToClipboard(`## ${label}\n${content}`);
-    setCopiedSection(key); setToastMessage(`${label} copied`);
-    setTimeout(() => setCopiedSection(null), 2500);
-  };
-
+  /* ── Download as .md ── */
   const handleDownload = () => {
     if (!result) return;
-    const md = buildMarkdownPrompt(result);
-    const blob = new Blob([md], { type: 'text/markdown' });
+    const date = new Date().toISOString().split('T')[0];
+    const strategyNames = result.strategies_used.map(s => s.name).join(', ');
+    const content = [
+      '# Optimised Prompt',
+      '',
+      `> Generated by OXYGY Prompt Playground on ${date}`,
+      `> Strategies used: ${strategyNames}`,
+      '',
+      '---',
+      '',
+      result.prompt,
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'prompt.md'; a.click();
+    a.href = url;
+    a.download = `oxygy-prompt-${date}.md`;
+    a.click();
     URL.revokeObjectURL(url);
-    setToastMessage('Downloaded as prompt.md');
+    setToastMessage('Downloaded as .md');
   };
 
-  const handleSaveToLibrary = () => {
+  /* ── Save to Prompt Library ── */
+  const handleSaveToLibrary = async () => {
     if (!result || !user) return;
-    const fullPrompt = buildMarkdownPrompt(result);
-    const title = result.task.slice(0, 60) + (result.task.length > 60 ? '...' : '');
-    dbSavePrompt(user.id, { level: 1, title, content: fullPrompt, source_tool: 'prompt-playground' });
-    setSavedToLibrary(true); setToastMessage('Saved to your Prompt Library');
-    setTimeout(() => setSavedToLibrary(false), 3000);
-  };
-
-  const handleMicToggle = () => {
-    if (isListening) { stopListening(); } else {
-      startListening((text: string) => setInputPrompt(prev => prev + (prev ? ' ' : '') + text));
+    const title = userInput.length > 60 ? userInput.slice(0, 60) + '…' : userInput;
+    const saved = await dbSavePrompt(user.id, {
+      level: 1,
+      title,
+      content: result.prompt,
+      source_tool: 'prompt-playground',
+    });
+    if (saved) {
+      setSavedToLibrary(true);
+      setToastMessage('Saved to Prompt Library');
     }
   };
 
-  // Step indicators
-  const step1Done = activeMode !== null;
-  const step2Done = result !== null;
+  /* ── Start Over ── */
+  const handleStartOver = () => {
+    setResult(null);
+    setUserInput('');
+    setExpandedCards(new Set());
+    setActiveHighlight(null);
+    setCopied(false);
+    setSavedToLibrary(false);
+    setViewMode('cards');
+    setVisibleBlocks(0);
+    setRefinementAnswers({});
+    setAdditionalContext('');
+    setRefinementCount(0);
+    clearError();
+    localStorage.removeItem(DRAFT_KEY);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      if (textareaRef.current) textareaRef.current.style.height = '120px';
+    }, 100);
+  };
+
+  /* ── Build refinement message ── */
+  const buildRefinementMessage = (): string => {
+    const answeredQuestions = (result?.refinement_questions || [])
+      .map((q, i) => {
+        const answer = refinementAnswers[i]?.trim();
+        return answer ? `Q: ${q}\nA: ${answer}` : null;
+      })
+      .filter(Boolean)
+      .join('\n\n');
+
+    const parts = [
+      `[REFINEMENT]\n\nOriginal task: ${userInput}`,
+      answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+      additionalContext.trim() ? `\nAdditional context: ${additionalContext.trim()}` : '',
+    ];
+
+    return parts.filter(Boolean).join('\n');
+  };
+
+  /* ── Handle refinement ── */
+  const handleRefine = async () => {
+    const hasAnswers = Object.values(refinementAnswers).some(a => (a as string).trim());
+    if (!hasAnswers && !additionalContext.trim()) return;
+
+    const enrichedInput = buildRefinementMessage();
+    const data = await generate(enrichedInput);
+    if (data) {
+      setResult(data);
+      setSavedToLibrary(false);
+      setCopied(false);
+      setRefinementAnswers({});
+      setAdditionalContext('');
+      setRefinementCount(c => c + 1);
+      setExpandedCards(new Set());
+      setActiveHighlight(null);
+      setTimeout(() => {
+        outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  };
+
+  const hasRefinementInput = Object.values(refinementAnswers).some(a => (a as string).trim()) || additionalContext.trim();
+
+  /* ── Render prompt with highlighted excerpt ── */
+  const renderHighlightedPrompt = (prompt: string): React.ReactNode => {
+    if (!activeHighlight || !result) return prompt;
+    const strategy = result.strategies_used.find(s => s.id === activeHighlight);
+    if (!strategy?.prompt_excerpt) return prompt;
+
+    const excerpt = strategy.prompt_excerpt;
+    const idx = prompt.indexOf(excerpt);
+    if (idx === -1) return prompt; // fallback if excerpt doesn't match
+
+    const accentColor = STRATEGY_COLORS[strategy.id] || '#A8F0E0';
+    const before = prompt.slice(0, idx);
+    const match = prompt.slice(idx, idx + excerpt.length);
+    const after = prompt.slice(idx + excerpt.length);
+
+    return (
+      <>
+        {before}
+        <span style={{
+          background: `${accentColor}40`,
+          borderBottom: `2px solid ${accentColor}`,
+          borderRadius: 3,
+          padding: '1px 0',
+          transition: 'background 0.3s',
+        }}>
+          {match}
+        </span>
+        {after}
+      </>
+    );
+  };
+
+  /* ── Toggle strategy card ── */
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        setActiveHighlight(h => h === id ? null : h);
+      } else {
+        next.add(id);
+        setActiveHighlight(id);
+      }
+      return next;
+    });
+  };
 
   return (
-    <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT, background: '#F7FAFC' }}>
+    <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT }}>
       <style>{`
         @keyframes ppSpin { to { transform: rotate(360deg); } }
         @keyframes ppPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
-        @keyframes ppFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes ppFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes ppConnectorFlow {
           0% { background-position: 0 0; }
           100% { background-position: 0 20px; }
+        }
+        @keyframes ppSlideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
@@ -166,522 +383,754 @@ const AppPromptPlayground: React.FC = () => {
       <h1 style={{
         fontSize: 28, fontWeight: 800, color: '#1A202C',
         letterSpacing: '-0.4px', margin: 0, marginBottom: 6,
+        fontFamily: FONT,
       }}>
         Prompt Playground
       </h1>
-      <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, margin: 0, marginBottom: 20 }}>
-        The quality of your AI output is directly determined by the quality of your prompt. Most people lose time going back and forth with vague instructions that produce generic results. The Prompt Playground helps you structure any request into a proven 6-part framework — giving you clearer, more actionable AI responses on the first try, whether you're drafting communications, building plans, or solving complex problems.
+      <p style={{
+        fontSize: 14, color: '#718096', lineHeight: 1.7,
+        margin: 0, marginBottom: 20, fontFamily: FONT,
+      }}>
+        The quality of your AI output is directly determined by the quality of your prompt. Most people lose time going back and forth with vague instructions that produce generic results. The Prompt Playground analyses your task and selects from 8 proven prompting strategies to build a structured, optimised prompt — giving you clearer, more actionable AI responses on the first try.
       </p>
 
       {/* ═══ How It Works — Overview Strip ═══ */}
       <ToolOverview
         steps={[
-          { number: 1, label: 'Choose your mode', detail: 'Enhance an existing prompt or build one from scratch', done: step1Done },
-          { number: 2, label: 'Provide your input', detail: 'Paste a prompt or answer 6 guided questions', done: step2Done },
-          { number: 3, label: 'Get your output', detail: 'Copy, download, or save your structured prompt', done: false },
+          { number: 1, label: 'Describe your task', detail: 'Tell us what you need the AI to help you with', done: step1Done },
+          { number: 2, label: 'Your optimised prompt', detail: 'Review your prompt and the strategies behind it', done: step2Done },
         ]}
-        outcome="A structured prompt across 6 sections (Role, Context, Task, Format, Steps, Quality) — ready to copy into any AI tool."
+        outcome="A ready-to-use, strategy-optimised prompt tailored to your specific task — plus an explanation of which prompting strategies were applied and why."
       />
 
       {/* ════════════════════════════════════════════════════════ */}
-      {/* STEP 1 — Choose Your Mode                              */}
+      {/* STEP 1 — Describe your task                            */}
       {/* ════════════════════════════════════════════════════════ */}
       <StepCard
         stepNumber={1}
-        title="Choose your mode"
-        subtitle="How would you like to create your prompt?"
+        title="Describe your task"
+        subtitle="Tell us what you need the AI to help you with — the more specific, the better the prompt."
         done={step1Done}
-        collapsed={step1Done && step2Done}
+        collapsed={step1Done}
       >
-        <div style={{ display: 'flex', gap: 16 }}>
-          {/* Enhance card */}
-          <ModeCard
-            icon={<Sparkles size={20} color="#FFFFFF" />}
-            iconBg="#38B2AC"
-            title="Enhance a Prompt"
-            description="Already have a prompt? Paste it in and we'll transform it into a structured, optimised version using the 6-part Prompt Blueprint."
-            selected={activeMode === 'enhance'}
-            accentColor="#38B2AC"
-            onClick={() => selectMode('enhance')}
-          />
-          {/* Build card */}
-          <ModeCard
-            icon={<Puzzle size={20} color="#92700C" />}
-            iconBg="#FBE8A6"
-            title="Build from Scratch"
-            description="Not sure where to start? Answer 6 guided questions and we'll assemble a structured prompt for you — step by step."
-            selected={activeMode === 'build'}
-            accentColor="#D4A017"
-            onClick={() => selectMode('build')}
+        {/* Example chips */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: '#718096', marginBottom: 8, fontFamily: FONT }}>Try an example:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {PLAYGROUND_EXAMPLE_CHIPS.map((chip, i) => (
+              <button
+                key={i}
+                onClick={() => handleChipClick(chip)}
+                style={{
+                  padding: '7px 14px', borderRadius: 10,
+                  fontSize: 13, color: LEVEL_ACCENT_DARK,
+                  background: `${LEVEL_ACCENT}12`,
+                  border: `1px solid ${LEVEL_ACCENT}`,
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, background 0.15s',
+                  textAlign: 'left', lineHeight: 1.4, fontFamily: FONT,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK;
+                  e.currentTarget.style.background = `${LEVEL_ACCENT}30`;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = LEVEL_ACCENT;
+                  e.currentTarget.style.background = `${LEVEL_ACCENT}12`;
+                }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Textarea */}
+        <div style={{ position: 'relative', marginBottom: 4 }}>
+          <textarea
+            ref={textareaRef}
+            value={userInput}
+            onChange={handleTextareaChange}
+            placeholder="e.g., I need to write a project status update for my leadership team, or Help me design a workshop for a sceptical audience, or Summarise a long research report into three key recommendations..."
+            style={{
+              width: '100%',
+              minHeight: 120,
+              maxHeight: 300,
+              resize: 'none',
+              overflow: 'auto',
+              background: textareaFlash ? `${LEVEL_ACCENT}20` : '#FFFFFF',
+              border: `1px solid ${validationError ? '#FC8181' : '#E2E8F0'}`,
+              borderRadius: 12,
+              padding: 16,
+              fontSize: 14,
+              color: '#1A202C',
+              fontFamily: FONT,
+              lineHeight: 1.6,
+              outline: 'none',
+              transition: 'border-color 0.15s, background 0.3s',
+              boxSizing: 'border-box',
+            }}
+            onFocus={e => {
+              if (!validationError) e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK;
+            }}
+            onBlur={e => {
+              if (!validationError) e.currentTarget.style.borderColor = '#E2E8F0';
+            }}
           />
         </div>
+
+        {/* Validation + char count */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 16, minHeight: 18,
+        }}>
+          <div>
+            {validationError && (
+              <span style={{ fontSize: 13, color: '#C53030', fontFamily: FONT }}>
+                Please describe your task first
+              </span>
+            )}
+          </div>
+          <span style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT }}>
+            {userInput.length} characters
+          </span>
+        </div>
+
+        {/* CTA Button */}
+        <button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          style={{
+            background: isLoading ? '#A0AEC0' : '#38B2AC',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: 24,
+            padding: '8px 16px',
+            fontSize: 14,
+            fontWeight: 600,
+            fontFamily: FONT,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            transition: 'background 0.15s',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+          }}
+          onMouseEnter={e => { if (!isLoading) e.currentTarget.style.background = '#2C9A94'; }}
+          onMouseLeave={e => { if (!isLoading) e.currentTarget.style.background = '#38B2AC'; }}
+        >
+          {isLoading ? (
+            <>
+              <div style={{
+                width: 14, height: 14, border: '2px solid #FFFFFF40',
+                borderTopColor: '#FFFFFF', borderRadius: '50%',
+                animation: 'ppSpin 0.6s linear infinite',
+              }} />
+              Building your prompt…
+            </>
+          ) : (
+            <>Build My Prompt</>
+          )}
+        </button>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            marginTop: 16,
+            padding: '12px 16px',
+            borderRadius: 10,
+            background: '#FFF5F5',
+            border: '1px solid #FC8181',
+            fontSize: 13,
+            color: '#C53030',
+            fontFamily: FONT,
+            lineHeight: 1.5,
+          }}>
+            {error}
+          </div>
+        )}
       </StepCard>
 
-      {/* Connector 1→2 */}
+      {/* ── Connector ── */}
       <StepConnector />
 
       {/* ════════════════════════════════════════════════════════ */}
-      {/* STEP 2 — Provide Your Input                            */}
+      {/* STEP 2 — Your optimised prompt                         */}
       {/* ════════════════════════════════════════════════════════ */}
-      <div ref={step2Ref}>
+      <div ref={outputRef}>
         <StepCard
           stepNumber={2}
-          title={step1Done
-            ? (activeMode === 'enhance' ? 'Paste your prompt' : 'Answer the questions')
-            : 'Provide your input'}
-          subtitle={step1Done
-            ? (activeMode === 'enhance'
-              ? 'Type or paste your existing prompt below. Try an example to see how it works.'
-              : 'Work through each question to build your prompt step by step.')
-            : ''}
-          done={step2Done}
-          collapsed={step1Done && step2Done}
-        >
-          {!step1Done ? (
-            /* Placeholder — waiting for Step 1 */
-            <StepPlaceholder
-              icon={<ArrowRight size={16} color="#A0AEC0" />}
-              message="Choose your mode above to unlock this step"
-              detail="Select whether you want to enhance an existing prompt or build one from scratch. This area will then show the appropriate input method."
-            />
-          ) : (
-            /* Active content */
-            <>
-              {activeMode === 'enhance' ? (
-                <>
-                  {/* Example pills */}
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, color: '#718096', marginBottom: 8 }}>Try an example:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {EXAMPLE_PROMPTS.map((ex, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setInputPrompt(ex)}
-                          style={{
-                            padding: '7px 14px', borderRadius: 10,
-                            fontSize: 13, color: '#4A5568', background: '#F7FAFC',
-                            border: '1px solid #E2E8F0', cursor: 'pointer',
-                            transition: 'border-color 0.15s, background 0.15s',
-                            textAlign: 'left', lineHeight: 1.4,
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#38B2AC'; e.currentTarget.style.background = '#E6FFFA'; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F7FAFC'; }}
-                        >
-                          {ex}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Textarea — auto-grows with content */}
-                  <div style={{ position: 'relative', marginBottom: 16 }}>
-                    <textarea
-                      ref={textareaRef}
-                      value={inputPrompt}
-                      onChange={e => {
-                        setInputPrompt(e.target.value);
-                        const ta = e.target;
-                        ta.style.height = 'auto';
-                        ta.style.height = Math.max(80, ta.scrollHeight) + 'px';
-                      }}
-                      placeholder="e.g., Help me write a summary of our last team meeting for my manager..."
-                      style={{
-                        width: '100%', minHeight: 80, maxHeight: 320,
-                        resize: 'none', overflow: 'auto',
-                        border: '1px solid #E2E8F0', borderRadius: 12,
-                        padding: '14px 16px', fontSize: 15, color: '#1A202C',
-                        fontFamily: FONT, lineHeight: 1.6, outline: 'none',
-                        transition: 'border-color 0.15s',
-                      }}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#38B2AC')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
-                    />
-                    {isSupported && (
-                      <button
-                        onClick={handleMicToggle}
-                        style={{
-                          position: 'absolute', top: 12, right: 12,
-                          width: 36, height: 36, borderRadius: '50%',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          border: '1px solid #E2E8F0', cursor: 'pointer',
-                          background: isListening ? '#38B2AC' : '#FFFFFF',
-                          transition: 'background 0.15s',
-                        }}
-                      >
-                        {isListening ? <MicOff size={16} color="#FFFFFF" /> : <Mic size={16} color="#718096" />}
-                      </button>
-                    )}
-                  </div>
-                  {isListening && (
-                    <div style={{ fontSize: 12, color: '#38B2AC', marginBottom: 8 }}>Listening...</div>
-                  )}
-
-                  {/* Enhance button */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button
-                      onClick={handleEnhance}
-                      disabled={!inputPrompt.trim() || isLoading}
-                      style={{
-                        padding: '12px 28px', borderRadius: 24,
-                        background: !inputPrompt.trim() || isLoading ? '#CBD5E0' : '#38B2AC',
-                        color: '#FFFFFF', border: 'none',
-                        fontSize: 14, fontWeight: 700,
-                        cursor: !inputPrompt.trim() || isLoading ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      {isLoading ? (
-                        <>
-                          <span style={{
-                            width: 16, height: 16,
-                            border: '2px solid #FFFFFF', borderTopColor: 'transparent',
-                            borderRadius: '50%', display: 'inline-block',
-                            animation: 'ppSpin 0.7s linear infinite',
-                          }} />
-                          Enhancing...
-                        </>
-                      ) : (
-                        <>Enhance My Prompt <ArrowRight size={16} /></>
-                      )}
-                    </button>
-                    {!isLoading && (
-                      <button
-                        onClick={() => { setActiveMode(null); setResult(null); setInputPrompt(''); clearError(); }}
-                        style={{
-                          padding: '12px 20px', borderRadius: 24,
-                          background: 'transparent', color: '#718096',
-                          border: '1px solid #E2E8F0', fontSize: 13, fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Back
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                /* Build wizard */
-                !result ? (
-                  <div>
-                    <BuildWizard onGenerate={handleBuildGenerate} isLoading={isLoading} />
-                    <div style={{ marginTop: 12 }}>
-                      <button
-                        onClick={() => { setActiveMode(null); setResult(null); clearError(); }}
-                        style={{
-                          padding: '10px 20px', borderRadius: 24,
-                          background: 'transparent', color: '#718096',
-                          border: '1px solid #E2E8F0', fontSize: 13, fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Back to mode selection
-                      </button>
-                    </div>
-                  </div>
-                ) : null
-              )}
-
-              {/* Error */}
-              {error && (
-                <div style={{
-                  marginTop: 14, padding: '12px 16px', borderRadius: 10,
-                  background: '#FFF5F5', border: '1px solid #FC8181',
-                  fontSize: 13, color: '#C53030',
-                }}>
-                  {error}
-                </div>
-              )}
-            </>
-          )}
-        </StepCard>
-      </div>
-
-      {/* Connector 2→3 */}
-      <StepConnector />
-
-      {/* ════════════════════════════════════════════════════════ */}
-      {/* STEP 3 — Your Output                                   */}
-      {/* ════════════════════════════════════════════════════════ */}
-      <div ref={step3Ref} style={result ? { animation: 'ppFadeIn 0.3s ease both' } : undefined}>
-        <StepCard
-          stepNumber={3}
-          title={result
-            ? (resultMode === 'enhance' ? 'Your enhanced prompt' : 'Your generated prompt')
-            : 'Get your output'}
-          subtitle={result
-            ? 'Copy the full prompt, download it, or save it to your Prompt Library.'
-            : 'Here\'s what your structured prompt will look like — each section plays a specific role.'}
+          title="Your optimised prompt"
+          subtitle="Review your AI-ready prompt and the strategies that shaped it."
           done={false}
           collapsed={false}
         >
-          {!result ? (
-            /* Educational preview or loading skeleton */
-            isLoading && step1Done ? (
-              /* Loading skeleton */
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#38B2AC', marginBottom: 16 }}>
-                  Generating your prompt...
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {PROMPT_BLUEPRINT.map(block => (
-                    <div key={block.key} style={{
-                      height: 80, borderRadius: 10, borderLeft: `4px solid ${block.color}`,
-                      background: '#F0F0F0', animation: 'ppPulse 1.5s ease-in-out infinite',
-                    }} />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Educational Blueprint preview */
-              <div>
-                <div style={{
-                  fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 16,
-                }}>
-                  Your output will be structured using the <strong style={{ color: '#1A202C' }}>6-part Prompt Blueprint</strong> — a proven framework that transforms any request into a high-quality AI prompt. Complete the steps above and each section below will be filled with content tailored to your specific needs.
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {PROMPT_BLUEPRINT.map((block, idx) => {
-                    const edu = BLUEPRINT_EDUCATION.find(e => e.key === block.key);
-                    return (
-                      <div
-                        key={block.key}
-                        style={{
-                          borderLeft: `4px solid ${block.color}`,
-                          background: `${block.color}08`,
-                          borderRadius: 10, padding: '16px 18px',
-                        }}
-                      >
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
-                        }}>
-                          <span style={{ fontSize: 15 }}>{block.icon}</span>
-                          <span style={{
-                            fontSize: 12, fontWeight: 700, color: '#1A202C',
-                            textTransform: 'uppercase', letterSpacing: '0.04em',
-                          }}>
-                            {block.label}
-                          </span>
-                          <span style={{ fontSize: 11, color: '#A0AEC0', marginLeft: 'auto' }}>
-                            {idx + 1}/6
-                          </span>
-                        </div>
-                        {edu && (
-                          <>
-                            <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 10 }}>
-                              {edu.why}
-                            </div>
-                            <div style={{
-                              background: `${block.color}18`, borderRadius: 8,
-                              padding: '10px 12px', borderLeft: `3px solid ${block.color}`,
-                            }}>
-                              <div style={{
-                                fontSize: 10, fontWeight: 700, color: '#A0AEC0',
-                                textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4,
-                              }}>
-                                Example
-                              </div>
-                              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic' }}>
-                                {edu.example}
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Summary footer */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 16, marginTop: 16, padding: '10px 0',
-                  borderTop: '1px solid #EDF2F7',
-                }}>
-                  {PROMPT_BLUEPRINT.map(block => (
-                    <div key={block.key} style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 11, color: '#718096',
-                    }}>
-                      <span style={{ fontSize: 13 }}>{block.icon}</span>
-                      {block.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          ) : (
-            /* Active output content */
-            <>
-              {/* View toggle + actions */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 20, flexWrap: 'wrap', gap: 10,
+          {!result && !isLoading ? (
+            /* ── Educational default ── */
+            <div>
+              <p style={{
+                fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 16,
+                fontFamily: FONT,
               }}>
-                {/* View toggle — prominent with info tooltip for markdown */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{
-                    display: 'flex', background: '#F7FAFC', borderRadius: 10,
-                    border: '1px solid #E2E8F0', overflow: 'hidden',
+                Your prompt will be built using a combination of <strong>8 proven prompting strategies</strong> — selected dynamically based on your specific task. Complete the step above and each section below will be filled with content tailored to your needs.
+              </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 12,
+              }}>
+                {STRATEGY_DEFINITIONS.map((strat, idx) => (
+                  <div key={strat.id} style={{
+                    borderLeft: `4px solid ${strat.color}`,
+                    background: `${strat.color}08`,
+                    borderRadius: 10,
+                    padding: '16px 18px',
+                    opacity: 1,
+                    animation: 'ppFadeIn 0.3s ease both',
+                    animationDelay: `${idx * 60}ms`,
                   }}>
-                    <ToggleBtn
-                      icon={<Sparkles size={13} />}
-                      label="Cards"
-                      active={!showMarkdown}
-                      onClick={() => setShowMarkdown(false)}
-                    />
-                    <ToggleBtn
-                      icon={<Code size={13} />}
-                      label="Markdown"
-                      active={showMarkdown}
-                      onClick={() => setShowMarkdown(true)}
-                      highlight
-                    />
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
+                    }}>
+                      <span style={{ fontSize: 16 }}>{strat.icon}</span>
+                      <span style={{
+                        fontSize: 12, fontWeight: 700, color: '#4A5568',
+                        textTransform: 'uppercase', letterSpacing: '0.04em',
+                        fontFamily: FONT,
+                      }}>
+                        {strat.name}
+                      </span>
+                      <span style={{
+                        fontSize: 11, color: '#A0AEC0', marginLeft: 'auto', fontFamily: FONT,
+                      }}>
+                        {idx + 1}/8
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT,
+                      marginBottom: 10,
+                    }}>
+                      {strat.definition}
+                    </div>
+                    <div style={{
+                      background: `${strat.color}18`,
+                      borderLeft: `3px solid ${strat.color}`,
+                      borderRadius: 6,
+                      padding: '8px 12px',
+                    }}>
+                      <div style={{
+                        fontSize: 12, color: '#718096', lineHeight: 1.5,
+                        fontStyle: 'italic', fontFamily: FONT,
+                      }}>
+                        Best for: {strat.whenToUse}
+                      </div>
+                    </div>
                   </div>
-                  <InfoTooltip text="Markdown preserves the structure (headings, bullets, formatting) when you paste your prompt into ChatGPT, Claude, or any AI tool — giving you better results than plain text." />
-                </div>
-
-                {/* Action buttons */}
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <ActionBtn
-                    icon={copied ? <Check size={13} /> : <Copy size={13} />}
-                    label={copied ? 'Copied!' : 'Copy'}
-                    onClick={handleCopyFull}
-                    primary
-                  />
-                  <ActionBtn
-                    icon={<Download size={13} />}
-                    label="Download"
-                    onClick={handleDownload}
-                  />
-                </div>
+                ))}
               </div>
 
-              {/* Original prompt (enhance mode) */}
-              {resultMode === 'enhance' && originalPrompt && !showMarkdown && (
+              {/* Summary footer */}
+              <div style={{
+                borderTop: '1px solid #EDF2F7',
+                padding: '10px 0 0',
+                marginTop: 16,
+                display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center',
+              }}>
+                {STRATEGY_DEFINITIONS.map(s => (
+                  <span key={s.id} style={{
+                    fontSize: 11, color: '#718096', fontFamily: FONT,
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span>{s.icon}</span> {s.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : isLoading ? (
+            /* ── Loading skeleton ── */
+            <div>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{
+                  height: i === 1 ? 120 : 60,
+                  background: '#F7FAFC',
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  animation: 'ppPulse 1.5s ease-in-out infinite',
+                }} />
+              ))}
+            </div>
+          ) : result ? (
+            /* ── Generated output ── */
+            <div>
+              {/* Top action row */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                justifyContent: 'flex-end', marginBottom: 16, flexWrap: 'wrap',
+              }}>
+                <ActionBtn
+                  icon={copied ? <Check size={13} /> : <Copy size={13} />}
+                  label={copied ? 'Copied!' : 'Copy Optimised Prompt'}
+                  onClick={handleCopyPrompt}
+                  primary
+                />
+                <ActionBtn
+                  icon={<Download size={13} />}
+                  label="Download (.md)"
+                  onClick={handleDownload}
+                />
+                <ActionBtn
+                  icon={<Library size={13} />}
+                  label="Save to Prompt Library"
+                  onClick={handleSaveToLibrary}
+                  accent
+                  disabled={savedToLibrary}
+                />
+              </div>
+
+              {/* View toggle */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+              }}>
                 <div style={{
-                  background: '#F7FAFC', borderRadius: 10,
-                  border: '1px solid #E2E8F0', padding: '12px 16px',
-                  marginBottom: 16,
+                  display: 'inline-flex',
+                  background: '#F7FAFC',
+                  borderRadius: 10,
+                  border: '1px solid #E2E8F0',
+                  overflow: 'hidden',
                 }}>
+                  <ToggleBtn
+                    icon={<Eye size={13} />}
+                    label="Cards"
+                    active={viewMode === 'cards'}
+                    onClick={() => setViewMode('cards')}
+                  />
+                  <ToggleBtn
+                    icon={<Code size={13} />}
+                    label="Markdown"
+                    active={viewMode === 'markdown'}
+                    onClick={() => setViewMode('markdown')}
+                    highlight
+                  />
+                </div>
+                <InfoTooltip text="Markdown view shows the cohesive prompt ready to paste directly into any AI tool. Cards view shows the prompt plus strategy explanations." />
+              </div>
+
+              {viewMode === 'markdown' ? (
+                /* ── Markdown view ── */
+                <div style={{
+                  background: '#1A202C',
+                  borderRadius: 12,
+                  padding: '22px 24px',
+                  fontFamily: MONO,
+                  fontSize: 13,
+                  lineHeight: 1.8,
+                  color: '#E2E8F0',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  opacity: visibleBlocks >= 1 ? 1 : 0,
+                  transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.3s, transform 0.3s',
+                }}>
+                  {result.prompt}
+                </div>
+              ) : (
+                /* ── Cards view ── */
+                <div>
+                  {/* Prompt card (full width) */}
+                  <div style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 12,
+                    padding: '20px 24px',
+                    marginBottom: 16,
+                    opacity: visibleBlocks >= 1 ? 1 : 0,
+                    transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    <div style={{
+                      fontSize: 11, fontWeight: 700, color: '#A0AEC0',
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      marginBottom: 12, fontFamily: FONT,
+                    }}>
+                      Your Prompt
+                    </div>
+                    <div style={{
+                      fontSize: 14, color: '#2D3748', lineHeight: 1.75,
+                      fontFamily: FONT, whiteSpace: 'pre-wrap',
+                    }}>
+                      {renderHighlightedPrompt(result.prompt)}
+                    </div>
+                    {activeHighlight && (() => {
+                      const s = result.strategies_used.find(st => st.id === activeHighlight);
+                      if (!s) return null;
+                      const ac = STRATEGY_COLORS[s.id] || '#A8F0E0';
+                      return (
+                        <div style={{
+                          marginTop: 12, padding: '8px 12px',
+                          background: `${ac}15`, borderLeft: `3px solid ${ac}`,
+                          borderRadius: 6, fontSize: 12, color: '#4A5568',
+                          lineHeight: 1.5, fontFamily: FONT,
+                        }}>
+                          <span style={{ fontWeight: 600 }}>{s.icon} {s.name}:</span> highlighted above
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Strategy cards heading */}
                   <div style={{
                     fontSize: 11, fontWeight: 700, color: '#A0AEC0',
-                    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    marginBottom: 10, fontFamily: FONT,
                   }}>
-                    Your original prompt
+                    Strategies Applied ({result.strategies_used.length})
                   </div>
-                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
-                    {originalPrompt}
-                  </div>
-                </div>
-              )}
 
-              {/* Markdown view */}
-              {showMarkdown && (
-                <div style={{
-                  background: '#1A202C', borderRadius: 12,
-                  padding: '22px 24px', overflow: 'auto',
-                }}>
-                  <pre style={{
-                    color: '#E2E8F0', fontSize: 13, lineHeight: 1.8,
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                    whiteSpace: 'pre-wrap', margin: 0,
+                  {/* Strategy cards — 2-col grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 12,
+                    marginBottom: 16,
                   }}>
-                    {buildMarkdownPrompt(result)}
-                  </pre>
-                </div>
-              )}
+                    {result.strategies_used.map((strategy: PlaygroundStrategy, idx: number) => {
+                      const isExpanded = expandedCards.has(strategy.id);
+                      const accentColor = STRATEGY_COLORS[strategy.id] || '#E2E8F0';
+                      const blockIdx = idx + 1; // offset by 1 for prompt block
 
-              {/* Card view — 2-column grid */}
-              {!showMarkdown && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {PROMPT_BLUEPRINT.map((block, idx) => {
-                    const key = block.key as keyof PromptResult;
-                    const content = result[key];
-                    const isVisible = idx < visibleBlocks;
-                    const isSectionCopied = copiedSection === block.key;
-
-                    return (
-                      <div
-                        key={block.key}
-                        style={{
-                          borderLeft: `4px solid ${block.color}`,
-                          background: `${block.color}12`,
-                          borderRadius: 10, padding: '16px 18px',
-                          opacity: isVisible ? 1 : 0,
-                          transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
-                          transition: 'opacity 0.3s ease, transform 0.3s ease',
-                        }}
-                      >
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          marginBottom: 8,
+                      return (
+                        <div key={strategy.id} style={{
+                          borderLeft: `4px solid ${accentColor}`,
+                          background: `${accentColor}12`,
+                          borderRadius: 10,
+                          overflow: 'hidden',
+                          opacity: visibleBlocks >= blockIdx + 1 ? 1 : 0,
+                          transform: visibleBlocks >= blockIdx + 1 ? 'translateY(0)' : 'translateY(8px)',
+                          transition: 'opacity 0.3s, transform 0.3s',
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 15 }}>{block.icon}</span>
-                            <span style={{
-                              fontSize: 12, fontWeight: 700, color: '#1A202C',
-                              textTransform: 'uppercase', letterSpacing: '0.04em',
-                            }}>
-                              {block.label}
-                            </span>
-                          </div>
                           <button
-                            onClick={() => handleCopySection(block.key, block.label, content)}
+                            onClick={() => toggleCard(strategy.id)}
                             style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              fontSize: 11, color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
-                              padding: '2px 6px', borderRadius: 6,
-                              transition: 'color 0.15s',
+                              width: '100%',
+                              background: 'transparent',
+                              border: 'none',
+                              padding: '14px 16px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              textAlign: 'left',
+                              fontFamily: FONT,
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#38B2AC')}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
                           >
-                            {isSectionCopied ? <Check size={11} /> : <Copy size={11} />}
-                            {isSectionCopied ? 'Copied' : 'Copy'}
+                            <span style={{ fontSize: 16, flexShrink: 0, alignSelf: 'flex-start', marginTop: 2 }}>{strategy.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: 13, fontWeight: 700, color: '#1A202C',
+                                fontFamily: FONT,
+                              }}>
+                                {strategy.name}
+                              </div>
+                              {strategy.how_applied && !isExpanded && (
+                                <div style={{
+                                  fontSize: 12, color: '#718096', lineHeight: 1.4,
+                                  fontFamily: FONT, marginTop: 3,
+                                  overflow: 'hidden', textOverflow: 'ellipsis',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                }}>
+                                  {strategy.how_applied}
+                                </div>
+                              )}
+                            </div>
+                            <ChevronDown
+                              size={14}
+                              color="#A0AEC0"
+                              style={{
+                                flexShrink: 0, alignSelf: 'flex-start', marginTop: 4,
+                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease',
+                              }}
+                            />
                           </button>
+
+                          {/* Expanded detail */}
+                          {isExpanded && (
+                            <div style={{
+                              padding: '0 16px 14px',
+                              animation: 'ppSlideDown 0.2s ease both',
+                            }}>
+                              {/* How it was applied (specific to this prompt) */}
+                              {strategy.how_applied && (
+                                <div style={{
+                                  marginBottom: 12,
+                                  padding: '10px 14px',
+                                  background: `${accentColor}15`,
+                                  borderRadius: 8,
+                                  borderLeft: `3px solid ${accentColor}`,
+                                }}>
+                                  <div style={{
+                                    fontSize: 10, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                                    marginBottom: 4, fontFamily: FONT,
+                                  }}>
+                                    How it was applied
+                                  </div>
+                                  <div style={{
+                                    fontSize: 13, color: '#2D3748',
+                                    lineHeight: 1.6, fontFamily: FONT,
+                                  }}>
+                                    {strategy.how_applied}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Why this was chosen */}
+                              <div style={{ marginBottom: 10 }}>
+                                <div style={{
+                                  fontSize: 10, fontWeight: 600, color: '#A0AEC0',
+                                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                                  marginBottom: 4, fontFamily: FONT,
+                                }}>
+                                  Why this strategy was chosen
+                                </div>
+                                <div style={{
+                                  fontSize: 13, color: '#4A5568',
+                                  lineHeight: 1.6, fontFamily: FONT,
+                                }}>
+                                  {strategy.why}
+                                </div>
+                              </div>
+
+                              {/* What this strategy does (general) */}
+                              <div>
+                                <div style={{
+                                  fontSize: 10, fontWeight: 600, color: '#A0AEC0',
+                                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                                  marginBottom: 4, fontFamily: FONT,
+                                }}>
+                                  What this strategy does
+                                </div>
+                                <div style={{
+                                  fontSize: 13, color: '#718096',
+                                  lineHeight: 1.6, fontFamily: FONT,
+                                }}>
+                                  {strategy.what}
+                                </div>
+                              </div>
+
+                              {/* Highlighted excerpt reference */}
+                              {strategy.prompt_excerpt && (
+                                <div style={{
+                                  marginTop: 10, padding: '6px 10px',
+                                  background: '#F7FAFC', borderRadius: 6,
+                                  border: '1px dashed #E2E8F0',
+                                  fontSize: 11, color: '#718096',
+                                  fontFamily: FONT, lineHeight: 1.5,
+                                  display: 'flex', alignItems: 'flex-start', gap: 6,
+                                }}>
+                                  <span style={{ flexShrink: 0, marginTop: 1 }}>↑</span>
+                                  <span>See the highlighted section in the prompt above</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.7 }}>
-                          {content}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  {/* Practitioner caveat */}
+                  <div style={{
+                    background: '#F7FAFC',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 10,
+                    borderLeft: '4px solid #A0AEC0',
+                    padding: '14px 16px',
+                    marginBottom: 16,
+                  }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600, color: '#1A202C',
+                      marginBottom: 4, fontFamily: FONT,
+                    }}>
+                      There's no single perfect prompt.
+                    </div>
+                    <div style={{
+                      fontSize: 12, color: '#718096',
+                      lineHeight: 1.6, fontFamily: FONT,
+                    }}>
+                      This is an optimised starting point built for your context — not the only valid approach.
+                      Adapt it, iterate on it, and make it yours. The strategies above are the craft behind it;
+                      understanding them is more valuable than any individual prompt.
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Bottom row: Start Over + Save to Library */}
+              {/* ── Refinement Card ── */}
+              {result.refinement_questions && result.refinement_questions.length > 0 && (() => {
+                const refIdx = result.strategies_used.length + 2; // after prompt + all strategies + 1
+                return (
+                  <div style={{
+                    background: '#F7FAFC',
+                    borderRadius: 14,
+                    border: '1px solid #E2E8F0',
+                    padding: '24px 28px',
+                    marginTop: 24,
+                    opacity: visibleBlocks >= refIdx ? 1 : 0,
+                    transform: visibleBlocks >= refIdx ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    {/* Header */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      marginBottom: 6,
+                    }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                        fontFamily: FONT,
+                      }}>
+                        Refine Your Prompt
+                      </div>
+                      {refinementCount > 0 && (
+                        <div style={{
+                          fontSize: 11, fontWeight: 600,
+                          background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                          borderRadius: 20, padding: '2px 10px',
+                          fontFamily: FONT,
+                        }}>
+                          Refinement #{refinementCount}
+                        </div>
+                      )}
+                    </div>
+                    <p style={{
+                      fontSize: 13, color: '#718096', lineHeight: 1.6,
+                      margin: '0 0 18px', fontFamily: FONT,
+                    }}>
+                      Answer any of these to add context and get a more targeted prompt. You don't need to answer all of them — even one helps.
+                    </p>
+
+                    {/* Questions */}
+                    {result.refinement_questions.map((question, i) => (
+                      <div key={i} style={{ marginBottom: 16 }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: 13, fontWeight: 600, color: '#2D3748',
+                          marginBottom: 6, fontFamily: FONT,
+                        }}>
+                          {question}
+                        </label>
+                        <input
+                          type="text"
+                          value={refinementAnswers[i] || ''}
+                          onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                          placeholder="Your answer…"
+                          style={{
+                            width: '100%',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                            fontSize: 13,
+                            fontFamily: FONT,
+                            color: '#1A202C',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                            transition: 'border-color 0.15s',
+                            background: '#FFFFFF',
+                          }}
+                          onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                          onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                        />
+                      </div>
+                    ))}
+
+                    {/* Open-ended additional context */}
+                    <div style={{ marginBottom: 18 }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: 13, fontWeight: 600, color: '#2D3748',
+                        marginBottom: 6, fontFamily: FONT,
+                      }}>
+                        Anything else to add?
+                      </label>
+                      <textarea
+                        value={additionalContext}
+                        onChange={e => setAdditionalContext(e.target.value)}
+                        placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                        style={{
+                          width: '100%',
+                          minHeight: 60,
+                          resize: 'none',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 10,
+                          padding: '10px 14px',
+                          fontSize: 13,
+                          fontFamily: FONT,
+                          color: '#1A202C',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          transition: 'border-color 0.15s',
+                          background: '#FFFFFF',
+                          lineHeight: 1.5,
+                        }}
+                        onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                        onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                      />
+                    </div>
+
+                    {/* Refine button */}
+                    <ActionBtn
+                      icon={isLoading ? (
+                        <div style={{
+                          width: 13, height: 13, border: '2px solid #FFFFFF40',
+                          borderTopColor: '#FFFFFF', borderRadius: '50%',
+                          animation: 'ppSpin 0.6s linear infinite',
+                        }} />
+                      ) : (
+                        <ArrowRight size={13} />
+                      )}
+                      label={isLoading ? 'Refining…' : 'Refine Prompt'}
+                      onClick={handleRefine}
+                      primary
+                      disabled={!hasRefinementInput || isLoading}
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* Bottom action row */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                marginTop: 20,
+                display: 'flex', alignItems: 'center', gap: 8, marginTop: 16,
+                flexWrap: 'wrap',
               }}>
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
-                  onClick={handleReset}
+                  onClick={handleStartOver}
                 />
-                {user && (
-                  <ActionBtn
-                    icon={savedToLibrary ? <Check size={13} /> : <Library size={13} />}
-                    label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                    onClick={handleSaveToLibrary}
-                    disabled={savedToLibrary}
-                    accent
-                  />
-                )}
+                <ActionBtn
+                  icon={<Library size={13} />}
+                  label="Save to Prompt Library"
+                  onClick={handleSaveToLibrary}
+                  accent
+                  disabled={savedToLibrary}
+                />
               </div>
-            </>
-          )}
+            </div>
+          ) : null}
         </StepCard>
       </div>
 
-      {/* Toast */}
+      {/* ═══ Toast Notification ═══ */}
       {toastMessage && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
           background: '#1A202C', color: '#FFFFFF', borderRadius: 10,
           padding: '10px 18px', fontSize: 13, fontWeight: 500,
           boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 50,
-          animation: 'ppFadeIn 0.15s ease both',
+          fontFamily: FONT,
+          animation: 'ppFadeIn 0.2s ease both',
         }}>
           {toastMessage} ✓
         </div>
@@ -690,7 +1139,28 @@ const AppPromptPlayground: React.FC = () => {
   );
 };
 
-/* ── Step Card wrapper ── */
+export default AppPromptPlayground;
+
+/* ═══════════════════════════════════════════════════════════ */
+/* Shared-style sub-components (per Toolkit Page Standard)    */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* ── Step Badge ── */
+const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
+  <div style={{
+    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+    background: done ? LEVEL_ACCENT : '#F7FAFC',
+    border: done ? 'none' : '2px solid #E2E8F0',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 13, fontWeight: 800,
+    color: done ? LEVEL_ACCENT_DARK : '#718096',
+    transition: 'background 0.2s, color 0.2s',
+  }}>
+    {done ? <Check size={14} /> : number}
+  </div>
+);
+
+/* ── Step Card ── */
 const StepCard: React.FC<{
   stepNumber: number;
   title: string;
@@ -701,57 +1171,39 @@ const StepCard: React.FC<{
 }> = ({ stepNumber, title, subtitle, done, collapsed, children }) => (
   <div style={{
     background: '#FFFFFF', borderRadius: 16,
-    border: `1px solid ${done ? '#38B2AC44' : '#E2E8F0'}`,
+    border: `1px solid ${done ? `${LEVEL_ACCENT}88` : '#E2E8F0'}`,
     padding: collapsed ? '16px 24px' : '24px 28px',
     transition: 'padding 0.2s ease, border-color 0.2s ease',
   }}>
-    {/* Header */}
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
       marginBottom: collapsed ? 0 : 20,
     }}>
       <StepBadge number={stepNumber} done={done} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: "'DM Sans', sans-serif" }}>
           {title}
         </div>
         {!collapsed && (
-          <div style={{ fontSize: 13, color: '#718096', marginTop: 2 }}>
+          <div style={{ fontSize: 13, color: '#718096', marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
             {subtitle}
           </div>
         )}
       </div>
       {done && collapsed && (
         <div style={{
-          fontSize: 11, fontWeight: 600, color: '#38B2AC',
+          fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK,
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
           <Check size={13} /> Done
         </div>
       )}
     </div>
-    {/* Body */}
     {!collapsed && children}
   </div>
 );
 
-/* ── Step badge circle ── */
-const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
-  <div style={{
-    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-    background: done ? '#38B2AC' : '#F7FAFC',
-    border: done ? 'none' : '2px solid #E2E8F0',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 13, fontWeight: 800,
-    color: done ? '#FFFFFF' : '#718096',
-    transition: 'background 0.2s, color 0.2s',
-  }}>
-    {done ? <Check size={14} /> : number}
-  </div>
-);
-
-/* ── Step connector (vertical line + animated arrow) ── */
-const LEVEL_ACCENT = '#38B2AC'; // Level 1 theme color for Prompt Playground
+/* ── Step Connector ── */
 const StepConnector: React.FC = () => (
   <div style={{
     display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -774,121 +1226,7 @@ const StepConnector: React.FC = () => (
   </div>
 );
 
-/* ── Mode selection card ── */
-const ModeCard: React.FC<{
-  icon: React.ReactNode;
-  iconBg: string;
-  title: string;
-  description: string;
-  selected: boolean;
-  accentColor: string;
-  onClick: () => void;
-}> = ({ icon, iconBg, title, description, selected, accentColor, onClick }) => {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        flex: 1, textAlign: 'left', cursor: 'pointer',
-        background: selected ? `${accentColor}10` : '#FFFFFF',
-        border: `2px solid ${selected ? accentColor : hovered ? '#CBD5E0' : '#E2E8F0'}`,
-        borderRadius: 14, padding: '22px 24px',
-        transition: 'border-color 0.15s, background 0.15s',
-        position: 'relative',
-      }}
-    >
-      {selected && (
-        <div style={{
-          position: 'absolute', top: 14, right: 14,
-          width: 10, height: 10, borderRadius: '50%', background: accentColor,
-        }} />
-      )}
-      <div style={{
-        width: 40, height: 40, borderRadius: 10, background: iconBg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 14,
-      }}>
-        {icon}
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', marginBottom: 6 }}>
-        {title}
-      </div>
-      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6 }}>
-        {description}
-      </div>
-    </button>
-  );
-};
-
-/* ── Toggle Button (Cards / Markdown) ── */
-const ToggleBtn: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  highlight?: boolean;
-}> = ({ icon, label, active, onClick, highlight }) => (
-  <button
-    onClick={onClick}
-    style={{
-      display: 'flex', alignItems: 'center', gap: 5,
-      padding: '8px 16px', border: 'none', cursor: 'pointer',
-      fontSize: 12, fontWeight: active ? 700 : 600,
-      background: active
-        ? (highlight ? '#2B6CB0' : '#1A202C')
-        : 'transparent',
-      color: active ? '#FFFFFF' : (highlight ? '#2B6CB0' : '#718096'),
-      transition: 'background 0.15s, color 0.15s',
-    }}
-  >
-    {icon} {label}
-  </button>
-);
-
-/* ── Info Tooltip ── */
-const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
-  const [show, setShow] = useState(false);
-  return (
-    <div style={{ position: 'relative', display: 'inline-flex' }}>
-      <button
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(s => !s)}
-        style={{
-          width: 22, height: 22, borderRadius: '50%',
-          background: '#EBF4FF', border: '1px solid #BEE3F8',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', padding: 0, flexShrink: 0,
-        }}
-        aria-label="Why use Markdown?"
-      >
-        <Info size={12} color="#3182CE" />
-      </button>
-      {show && (
-        <div style={{
-          position: 'absolute', top: 30, left: '50%', transform: 'translateX(-50%)',
-          background: '#1A202C', color: '#E2E8F0', borderRadius: 10,
-          padding: '10px 14px', fontSize: 12, lineHeight: 1.6,
-          width: 280, zIndex: 30, boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-          fontFamily: FONT,
-        }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, color: '#90CDF4' }}>
-            Why Markdown?
-          </div>
-          {text}
-          <div style={{
-            position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%) rotate(45deg)',
-            width: 10, height: 10, background: '#1A202C',
-          }} />
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* ── Tool Overview — standardised "How it works" strip ── */
+/* ── Tool Overview ── */
 const ToolOverview: React.FC<{
   steps: { number: number; label: string; detail: string; done: boolean }[];
   outcome: string;
@@ -900,6 +1238,7 @@ const ToolOverview: React.FC<{
     <div style={{
       fontSize: 11, fontWeight: 700, color: '#A0AEC0',
       textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14,
+      fontFamily: "'DM Sans', sans-serif",
     }}>
       How it works
     </div>
@@ -909,19 +1248,19 @@ const ToolOverview: React.FC<{
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
             <div style={{
               width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-              background: step.done ? '#38B2AC' : '#F7FAFC',
+              background: step.done ? LEVEL_ACCENT : '#F7FAFC',
               border: step.done ? 'none' : '2px solid #E2E8F0',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 12, fontWeight: 800,
-              color: step.done ? '#FFFFFF' : '#718096',
+              color: step.done ? LEVEL_ACCENT_DARK : '#718096',
             }}>
               {step.done ? <Check size={12} /> : step.number}
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 2 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 2, fontFamily: "'DM Sans', sans-serif" }}>
                 {step.label}
               </div>
-              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" }}>
                 {step.detail}
               </div>
             </div>
@@ -939,38 +1278,13 @@ const ToolOverview: React.FC<{
       <div style={{
         fontSize: 11, fontWeight: 700, color: '#276749',
         textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0, marginTop: 1,
+        fontFamily: "'DM Sans', sans-serif",
       }}>
         Outcome
       </div>
-      <div style={{ fontSize: 12, color: '#2F855A', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 12, color: '#2F855A', lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" }}>
         {outcome}
       </div>
-    </div>
-  </div>
-);
-
-/* ── Step Placeholder — shown when a prerequisite step isn't complete ── */
-const StepPlaceholder: React.FC<{
-  icon: React.ReactNode;
-  message: string;
-  detail: string;
-}> = ({ icon, message, detail }) => (
-  <div style={{
-    background: '#F7FAFC', borderRadius: 12, border: '1px dashed #E2E8F0',
-    padding: '24px 28px', textAlign: 'center',
-  }}>
-    <div style={{
-      width: 36, height: 36, borderRadius: '50%', background: '#EDF2F7',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      marginBottom: 10,
-    }}>
-      {icon}
-    </div>
-    <div style={{ fontSize: 14, fontWeight: 700, color: '#4A5568', marginBottom: 6 }}>
-      {message}
-    </div>
-    <div style={{ fontSize: 13, color: '#A0AEC0', lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
-      {detail}
     </div>
   </div>
 );
@@ -985,25 +1299,96 @@ const ActionBtn: React.FC<{
   disabled?: boolean;
 }> = ({ icon, label, onClick, primary, accent, disabled }) => {
   const bg = primary ? '#38B2AC' : accent ? '#5A67D8' : '#FFFFFF';
-  const fg = (primary || accent) ? '#FFFFFF' : '#4A5568';
-  const bdr = (primary || accent) ? 'none' : '1px solid #E2E8F0';
+  const color = primary || accent ? '#FFFFFF' : '#4A5568';
+  const border = primary || accent ? 'none' : '1px solid #E2E8F0';
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: 'flex', alignItems: 'center', gap: 5,
-        padding: '8px 16px', borderRadius: 24,
-        fontSize: 12, fontWeight: 600,
-        cursor: disabled ? 'default' : 'pointer',
-        background: bg, color: fg, border: bdr,
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        background: disabled ? '#E2E8F0' : bg,
+        color: disabled ? '#A0AEC0' : color,
+        border,
+        borderRadius: 24,
+        padding: '8px 16px',
+        fontSize: 12,
+        fontWeight: 600,
+        fontFamily: "'DM Sans', sans-serif",
+        cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'opacity 0.15s',
         opacity: disabled ? 0.6 : 1,
       }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.opacity = '0.85'; }}
+      onMouseLeave={e => { if (!disabled) e.currentTarget.style.opacity = '1'; }}
     >
-      {icon} {label}
+      {icon}
+      {label}
     </button>
   );
 };
 
-export default AppPromptPlayground;
+/* ── Toggle Button (Cards / Markdown) ── */
+const ToggleBtn: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  highlight?: boolean;
+}> = ({ icon, label, active, onClick, highlight }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 5,
+      padding: '6px 14px',
+      fontSize: 12, fontWeight: 600,
+      fontFamily: "'DM Sans', sans-serif",
+      border: 'none',
+      cursor: 'pointer',
+      borderRadius: 8,
+      background: active
+        ? highlight ? '#2B6CB0' : '#1A202C'
+        : 'transparent',
+      color: active ? '#FFFFFF' : '#718096',
+      transition: 'background 0.15s, color 0.15s',
+    }}
+  >
+    {icon}
+    {label}
+  </button>
+);
+
+/* ── Info Tooltip ── */
+const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        style={{
+          width: 22, height: 22, borderRadius: '50%',
+          background: '#F7FAFC', border: '1px solid #E2E8F0',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'help', padding: 0,
+        }}
+      >
+        <Info size={12} color="#A0AEC0" />
+      </button>
+      {show && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%',
+          transform: 'translateX(-50%)', marginBottom: 6,
+          background: '#1A202C', color: '#E2E8F0',
+          borderRadius: 8, padding: '8px 12px',
+          fontSize: 11, lineHeight: 1.5, width: 240,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 20, fontFamily: "'DM Sans', sans-serif",
+        }}>
+          {text}
+        </div>
+      )}
+    </div>
+  );
+};

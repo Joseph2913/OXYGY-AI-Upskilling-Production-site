@@ -7,7 +7,7 @@ import {
   Database, SlidersHorizontal, Smartphone, ShieldCheck, CheckSquare,
 } from 'lucide-react';
 import {
-  DASHBOARD_STEPS, EXAMPLE_BRIEFS, DASHBOARD_TYPE_OPTIONS,
+  DASHBOARD_STEPS, EXAMPLE_BRIEFS,
   VISUAL_STYLE_OPTIONS, PRD_SECTIONS, WHY_MOCKUP_TOOLTIP,
   INSPIRATION_SITES, INSPIRATION_TOOLTIP_CONTENT,
 } from '../../../data/dashboard-designer-content';
@@ -32,31 +32,17 @@ const INITIAL_BRIEF: DashboardBrief = {
 
 /* ─── PRD Section Icons ─── */
 const PRD_SECTION_ICONS: Record<string, React.ElementType> = {
-  dashboard_overview: LayoutDashboard,
-  target_users: Users,
-  information_architecture: Layers,
-  widget_specifications: BarChart3,
-  visual_design: Palette,
+  project_overview: LayoutDashboard,
   tech_stack: Code2,
-  data_integration: Database,
-  interactions_filtering: SlidersHorizontal,
-  responsive_behavior: Smartphone,
-  human_checkpoints: ShieldCheck,
-  acceptance_criteria: CheckSquare,
-};
-
-const PRD_SECTION_COLORS: Record<string, string> = {
-  dashboard_overview: '#38B2AC',
-  target_users: '#5B6DC2',
-  information_architecture: '#D69E2E',
-  widget_specifications: '#E53E3E',
-  visual_design: '#9F7AEA',
-  tech_stack: '#38A169',
-  data_integration: '#DD6B20',
-  interactions_filtering: '#3182CE',
-  responsive_behavior: '#D53F8C',
-  human_checkpoints: '#E53E3E',
-  acceptance_criteria: '#38B2AC',
+  file_structure: Layers,
+  data_models: Database,
+  feature_requirements: CheckSquare,
+  api_routes: SlidersHorizontal,
+  ui_specifications: Palette,
+  auth_permissions: ShieldCheck,
+  scope_boundaries: Users,
+  acceptance_criteria: BarChart3,
+  implementation_plan: ArrowRight,
 };
 
 /* ─── SVG Fallback ─── */
@@ -67,7 +53,7 @@ function generateDashboardSVG(metricsText: string, title: string): string {
   <rect width="1200" height="800" fill="#F8FAFC"/>
   <rect width="1200" height="70" fill="#FFFFFF"/>
   <rect width="1200" height="1" y="70" fill="#E2E8F0"/>
-  <text x="40" y="45" font-family="DM Sans, sans-serif" font-size="24" font-weight="800" fill="#1A202C">${title || 'Dashboard'}</text>
+  <text x="40" y="45" font-family="DM Sans, sans-serif" font-size="24" font-weight="800" fill="#1A202C">${title || 'App'}</text>
   ${metrics.map((m, i) => {
     const x = 40 + (i % 4) * 285;
     const y = 100 + Math.floor(i / 4) * 170;
@@ -93,44 +79,53 @@ function generateDashboardSVG(metricsText: string, title: string): string {
 }
 
 /* ─── JSON Prompt Builder ─── */
-function buildJsonPrompt(brief: DashboardBrief): object {
-  return {
+function buildJsonPrompt(brief: DashboardBrief, inspirationAnalysis?: string): object {
+  const prompt: Record<string, unknown> = {
     image_generation_prompt: {
-      subject: 'Professional dashboard / single-page application UI mockup',
-      dashboard_metadata: {
+      subject: 'Web application / single-page app UI mockup',
+      app_metadata: {
         title: brief.q1_purpose.slice(0, 80),
-        type: brief.q3_type || 'General Dashboard',
-        target_user: brief.q2_audience || 'Business users',
+        type: brief.q3_type || 'Web Application',
+        target_user: brief.q2_audience || 'End users',
         primary_purpose: brief.q1_purpose,
       },
       layout: {
         style: VISUAL_STYLE_OPTIONS.find(v => v.id === brief.q7_visualStyle)?.label || 'Clean & Minimal',
       },
-      metrics: brief.q4_metrics || 'Key business metrics',
+      key_features: brief.q4_metrics || 'Key features and screens',
       data_sources: brief.q5_dataSources.join(', ') || 'To be determined',
-      rendering_instructions: 'Render as a high-fidelity UI mockup screenshot of a web dashboard application. Show realistic placeholder data in all charts and metrics.',
+      ...(inspirationAnalysis ? {
+        design_reference: {
+          source: 'Extracted from uploaded inspiration image(s)',
+          patterns: inspirationAnalysis,
+          priority: 'CRITICAL — the visual design must closely follow these patterns',
+        },
+      } : {}),
+      rendering_instructions: 'Render as a high-fidelity UI mockup screenshot of a web application. Show realistic placeholder data and content.' +
+        (inspirationAnalysis ? ' Apply the design_reference patterns (colours, layout, typography, card styles, spacing) to this mockup.' : ''),
     },
   };
+  return prompt;
 }
 
 /* ─── Fallback PRD ─── */
 function generateFallbackPRD(brief: DashboardBrief): NewPRDResult {
-  const metrics = brief.q4_metrics || 'key metrics';
+  const features = brief.q4_metrics || 'key features';
   const dataSources = brief.q5_dataSources.join(', ') || 'To be determined';
   return {
-    prd_content: `PRD: ${brief.q1_purpose.slice(0, 60)} Dashboard`,
+    prd_content: `PRD: ${brief.q1_purpose.slice(0, 60)}`,
     sections: {
-      dashboard_overview: `This dashboard provides ${brief.q2_audience || 'business users'} with real-time visibility into ${metrics}. Its primary purpose is: ${brief.q1_purpose}`,
-      target_users: `Primary users: ${brief.q2_audience || 'Business stakeholders'}. As a user, I want to see ${metrics} so that I can make data-driven decisions.`,
-      information_architecture: `The dashboard uses a ${VISUAL_STYLE_OPTIONS.find(v => v.id === brief.q7_visualStyle)?.label || 'clean'} layout with KPI cards at the top, trend charts in the middle, and detailed data tables below.`,
-      widget_specifications: `Metrics to display: ${metrics}. Each metric should have a KPI card with current value, trend arrow, and sparkline.`,
-      visual_design: `Style: ${VISUAL_STYLE_OPTIONS.find(v => v.id === brief.q7_visualStyle)?.label || 'Clean & Minimal'}. Typography: DM Sans. Cards use 1px solid borders with 16px border radius.`,
-      tech_stack: 'React + TypeScript for frontend. Recharts or Tremor for charts. Supabase or similar for backend. Vercel for hosting.',
-      data_integration: `Data sources: ${dataSources}.`,
-      interactions_filtering: 'Date range picker, metric filtering dropdown, and drill-down capability on each widget.',
-      responsive_behavior: 'Desktop: 3-column grid. Tablet: 2-column grid. Mobile: single column stack with collapsible sections.',
-      human_checkpoints: 'Data accuracy review before publishing. Stakeholder sign-off on metric definitions. QA review of responsive behavior.',
-      acceptance_criteria: '1. All listed metrics display with current values. 2. Charts render with realistic placeholder data. 3. Page loads in under 2 seconds. 4. Responsive on mobile, tablet, desktop.',
+      project_overview: `This app provides ${brief.q2_audience || 'users'} with ${features}. Its primary purpose is: ${brief.q1_purpose}. Type: ${brief.q3_type || 'Web application'}.`,
+      tech_stack: 'React 18 + TypeScript strict + Vite. Supabase for auth and database. Vercel for hosting. Tailwind CSS or inline styles.',
+      file_structure: 'src/pages/ for routes, src/components/ for reusable UI, src/hooks/ for custom hooks, src/lib/ for utilities, src/types/ for TypeScript interfaces.',
+      data_models: `Core entities to be defined based on: ${features}. Each entity should have id, timestamps, and relationships.`,
+      feature_requirements: `Key features: ${features}. Each feature should have clear "When X, do Y" behaviour with error handling for edge cases.`,
+      api_routes: `Data sources: ${dataSources}. API routes or data layer to be defined based on features.`,
+      ui_specifications: `Style: ${VISUAL_STYLE_OPTIONS.find(v => v.id === brief.q7_visualStyle)?.label || 'Clean & Minimal'}. Typography: DM Sans. Cards: white bg, 16px radius, 1px #E2E8F0 border.`,
+      auth_permissions: 'Authentication approach to be determined based on project scope. Single-user apps may use localStorage.',
+      scope_boundaries: 'Phase 1 focuses on core functionality. Mobile native app, payment processing, and advanced analytics are out of scope.',
+      acceptance_criteria: '1. Core features work as described. 2. UI matches the approved mockup. 3. Page loads in <2s. 4. Responsive on mobile. 5. npm run build succeeds.',
+      implementation_plan: 'Phase 1: Project setup + core data model. Phase 2: Main CRUD features. Phase 3: Search, filter, polish. Phase 4: Responsive and deploy.',
     },
   };
 }
@@ -339,9 +334,9 @@ const InfoTooltip: React.FC<{ content: string }> = ({ content }) => {
 };
 
 /* ─── Educational defaults for PRD sections ─── */
-const EDUCATIONAL_PRD_SECTIONS = PRD_SECTIONS.map((s, i) => ({
+const EDUCATIONAL_PRD_SECTIONS = PRD_SECTIONS.map((s) => ({
   ...s,
-  color: Object.values(PRD_SECTION_COLORS)[i] || '#38B2AC',
+  color: LEVEL_ACCENT_DARK,
 }));
 
 /* ════════════════════════════════════════════════
@@ -383,6 +378,7 @@ const AppDashboardDesigner: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAnalyzingInspiration, setIsAnalyzingInspiration] = useState(false);
+  const [inspirationAnalysis, setInspirationAnalysis] = useState<string | null>(null);
 
   // ─── Refs ───
   const mockupRef = useRef<HTMLDivElement>(null);
@@ -491,6 +487,28 @@ const AppDashboardDesigner: React.FC = () => {
     return () => { uploadedImages.forEach(img => URL.revokeObjectURL(img.preview)); };
   }, []);
 
+  // ─── Clipboard paste handler for inspiration images ───
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        handleImageFiles(imageFiles);
+        toast('Image pasted from clipboard');
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handleImageFiles, toast]);
+
   // ─── Mockup generation ───
   const handleGenerateMockup = async () => {
     if (!canGenerate) return;
@@ -499,12 +517,12 @@ const AppDashboardDesigner: React.FC = () => {
     const updatedBrief = { ...brief, q5_dataSources: dataSourcesText.trim() ? [dataSourcesText.trim()] : [] };
     setBrief(updatedBrief);
 
-    const prompt = buildJsonPrompt(updatedBrief);
-    setJsonPrompt(prompt);
+    // Build initial JSON prompt (without inspiration — will be enriched after API returns)
+    setJsonPrompt(buildJsonPrompt(updatedBrief));
 
     setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
     setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
-    setPrdResult(null);
+    setPrdResult(null); setInspirationAnalysis(null);
 
     setTimeout(() => mockupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
@@ -517,6 +535,12 @@ const AppDashboardDesigner: React.FC = () => {
 
     if (result) {
       setImagePrompt(result.image_prompt || '');
+
+      // Always rebuild JSON prompt with inspiration analysis when available
+      const analysis = result.inspiration_analysis || null;
+      setInspirationAnalysis(analysis);
+      setJsonPrompt(buildJsonPrompt(updatedBrief, analysis || undefined));
+
       if ((result.generation_method === 'gemini-image' || result.generation_method === 'imagen') && result.image_url) {
         setImageUrl(result.image_url); setGenerationMethod(result.generation_method);
       } else if (result.html_content) {
@@ -526,12 +550,12 @@ const AppDashboardDesigner: React.FC = () => {
       } else {
         const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
         setDashboardSvg(svg); setGenerationMethod('svg');
-        setImagePrompt(`Dashboard mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
+        setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
       }
     } else {
       const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
       setDashboardSvg(svg); setGenerationMethod('svg');
-      setImagePrompt(`Dashboard mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
+      setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
     }
 
     setTimeout(() => mockupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
@@ -572,8 +596,8 @@ const AppDashboardDesigner: React.FC = () => {
 
     const updatedBrief = { ...brief, q5_dataSources: dataSourcesText.trim() ? [dataSourcesText.trim()] : [] };
     setBrief(updatedBrief);
-    const prompt = buildJsonPrompt(updatedBrief);
-    setJsonPrompt(prompt);
+    // Initial JSON prompt — carry forward previous inspiration analysis
+    setJsonPrompt(buildJsonPrompt(updatedBrief, inspirationAnalysis || undefined));
 
     setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
     setMockupApproved(false); setPrdResult(null);
@@ -588,6 +612,12 @@ const AppDashboardDesigner: React.FC = () => {
 
     if (result) {
       setImagePrompt(result.image_prompt || '');
+
+      // Always rebuild JSON prompt with inspiration analysis
+      const analysis = result.inspiration_analysis || inspirationAnalysis || null;
+      setInspirationAnalysis(analysis);
+      setJsonPrompt(buildJsonPrompt(updatedBrief, analysis || undefined));
+
       if ((result.generation_method === 'gemini-image' || result.generation_method === 'imagen') && result.image_url) {
         setImageUrl(result.image_url); setGenerationMethod(result.generation_method);
       } else if (result.html_content) {
@@ -597,12 +627,12 @@ const AppDashboardDesigner: React.FC = () => {
       } else {
         const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
         setDashboardSvg(svg); setGenerationMethod('svg');
-        setImagePrompt(`Dashboard mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
+        setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
       }
     } else {
       const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
       setDashboardSvg(svg); setGenerationMethod('svg');
-      setImagePrompt(`Dashboard mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
+      setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
     }
 
     setFeedbackText('');
@@ -628,7 +658,7 @@ const AppDashboardDesigner: React.FC = () => {
     setBrief({ ...INITIAL_BRIEF });
     setDataSourcesText('');
     setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
-    setImagePrompt(''); setJsonPrompt(null); setGenerationMethod(null);
+    setImagePrompt(''); setJsonPrompt(null); setGenerationMethod(null); setInspirationAnalysis(null);
     setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
     setPrdResult(null); setShowMarkdown(false);
     setUploadedImages(prev => { prev.forEach(img => URL.revokeObjectURL(img.preview)); return []; });
@@ -661,7 +691,7 @@ const AppDashboardDesigner: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'dashboard-prd.md';
+    a.download = 'app-prd.md';
     a.click();
     URL.revokeObjectURL(url);
     toast('PRD downloaded as Markdown');
@@ -672,7 +702,7 @@ const AppDashboardDesigner: React.FC = () => {
     const md = buildFullPRD(prdResult);
     await dbSavePrompt(user.id, {
       level: 4,
-      title: prdResult.prd_content || 'Dashboard PRD',
+      title: prdResult.prd_content || 'App PRD',
       content: md,
       source_tool: 'dashboard-designer',
     });
@@ -703,25 +733,31 @@ const AppDashboardDesigner: React.FC = () => {
         fontSize: 28, fontWeight: 800, color: '#1A202C',
         letterSpacing: '-0.4px', margin: 0, marginBottom: 6, fontFamily: FONT,
       }}>
-        Dashboard Designer
+        App Designer
       </h1>
 
       {/* ─── Description ─── */}
       <p style={{
         fontSize: 14, color: '#718096', lineHeight: 1.7,
+        margin: 0, marginBottom: 10, fontFamily: FONT,
+      }}>
+        A <strong style={{ color: '#2D3748' }}>Product Requirements Document (PRD)</strong> is the single most important artefact you need before building any app with AI coding tools. It's the detailed specification — covering purpose, users, layout, features, data, and tech stack — that you paste into tools like <strong style={{ color: '#2D3748' }}>Cursor, Lovable, Bolt.new, or V0</strong> so they know exactly what to build. Without a PRD, vibe coding tools guess; with one, they execute.
+      </p>
+      <p style={{
+        fontSize: 14, color: '#718096', lineHeight: 1.7,
         margin: 0, marginBottom: 20, fontFamily: FONT,
       }}>
-        Stakeholders need to see the impact of AI-driven processes, but translating data into clear, single-page interfaces is a skill gap for most teams. The Dashboard Designer guides you through a structured brief, generates a visual mockup you can approve or refine, and produces a comprehensive product requirements document — from layout and widgets to data sources and interaction patterns — ready for development handoff or AI coding tools.
+        The App Designer walks you through a structured brief, generates a visual mockup you can refine, and produces a production-ready PRD — whether you're building a professional dashboard, a personal side project, or just exploring what's possible. The goal isn't for us to build it for you; it's to give you the confidence and understanding to do it yourself.
       </p>
 
       {/* ─── How It Works Overview ─── */}
       <ToolOverview
         steps={[
-          { number: 1, label: 'Complete your brief', detail: 'Describe purpose, audience, metrics, and style', done: step1Done },
+          { number: 1, label: 'Complete your brief', detail: 'Describe what you\'re building, who it\'s for, and what it needs to do', done: step1Done },
           { number: 2, label: 'Review your mockup', detail: 'Approve, refine, or regenerate the visual design', done: step2Done },
-          { number: 3, label: 'Your dashboard PRD', detail: '11-section product requirements document', done: step3Done },
+          { number: 3, label: 'Your app PRD', detail: '11-section product requirements document', done: step3Done },
         ]}
-        outcome="A production-ready PRD you can hand to developers, paste into AI coding tools, or use as your single-page application specification."
+        outcome="A production-ready PRD you can paste directly into AI coding tools like Cursor, Lovable, or Bolt.new to build your app."
       />
 
       {/* ═══════════════════════════════════════════
@@ -730,7 +766,7 @@ const AppDashboardDesigner: React.FC = () => {
       <StepCard
         stepNumber={1}
         title="Complete your brief"
-        subtitle="Describe your dashboard's purpose, audience, and the key metrics it needs to display."
+        subtitle="Describe what you're building, who it's for, and what it needs to do."
         done={step1Done}
         collapsed={step1Done && step2Done}
       >
@@ -763,12 +799,12 @@ const AppDashboardDesigner: React.FC = () => {
           {/* Q1: Purpose */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              What is the purpose of this dashboard? <span style={{ color: '#E53E3E' }}>*</span>
+              What does this app or tool need to do? <span style={{ color: '#E53E3E' }}>*</span>
             </label>
             <textarea
               value={brief.q1_purpose}
               onChange={e => { updateBrief('q1_purpose', e.target.value); autoHeight(e.target); }}
-              placeholder="e.g., Track real-time sales performance across regions and flag underperforming territories..."
+              placeholder="e.g., Track my daily habits and show streaks over time, or Build a sales dashboard that flags underperforming regions..."
               rows={2}
               style={{
                 width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
@@ -781,15 +817,17 @@ const AppDashboardDesigner: React.FC = () => {
           {/* Q2: Audience */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Who is the target audience?
+              Who will use this? Describe the target users.
             </label>
-            <input
+            <textarea
               value={brief.q2_audience}
-              onChange={e => updateBrief('q2_audience', e.target.value)}
-              placeholder="e.g., Regional sales managers, VP of Sales"
+              onChange={e => { updateBrief('q2_audience', e.target.value); autoHeight(e.target); }}
+              placeholder="e.g., Just me — I want a simple personal tool, or HR managers who need to track team training progress"
+              rows={2}
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '10px 14px',
-                fontSize: 13, fontFamily: FONT, color: '#2D3748', outline: 'none', boxSizing: 'border-box',
+                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
+                fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
+                outline: 'none', boxSizing: 'border-box',
               }}
             />
           </div>
@@ -797,31 +835,30 @@ const AppDashboardDesigner: React.FC = () => {
           {/* Q3: Type */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Dashboard type
+              What type of app or tool is this?
             </label>
-            <select
+            <textarea
               value={brief.q3_type}
-              onChange={e => updateBrief('q3_type', e.target.value)}
+              onChange={e => { updateBrief('q3_type', e.target.value); autoHeight(e.target); }}
+              placeholder="e.g., A personal habit tracker with a calendar view, or An operational dashboard with KPI cards and charts"
+              rows={2}
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '10px 14px',
-                fontSize: 13, fontFamily: FONT, color: brief.q3_type ? '#2D3748' : '#A0AEC0',
-                outline: 'none', background: '#FFFFFF', boxSizing: 'border-box',
+                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
+                fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
+                outline: 'none', boxSizing: 'border-box',
               }}
-            >
-              <option value="">Select a type...</option>
-              {DASHBOARD_TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            />
           </div>
 
           {/* Q4: Metrics */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Key metrics to display
+              Key features, screens, or metrics
             </label>
             <textarea
               value={brief.q4_metrics}
               onChange={e => { updateBrief('q4_metrics', e.target.value); autoHeight(e.target); }}
-              placeholder="e.g., Revenue, Conversion Rate, Pipeline Value, Win Rate, Average Deal Size"
+              placeholder="e.g., Daily check-in view, streak counter, weekly summary chart — or Revenue, Conversion Rate, Pipeline Value"
               rows={2}
               style={{
                 width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
@@ -834,12 +871,12 @@ const AppDashboardDesigner: React.FC = () => {
           {/* Q5: Data sources */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Data sources
+              Where does the data come from? (optional)
             </label>
             <input
               value={dataSourcesText}
               onChange={e => setDataSourcesText(e.target.value)}
-              placeholder="e.g., CRM (Salesforce), SQL database, Google Sheets"
+              placeholder="e.g., User input, local storage, Supabase, Google Sheets, Salesforce API"
               style={{
                 width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '10px 14px',
                 fontSize: 13, fontFamily: FONT, color: '#2D3748', outline: 'none', boxSizing: 'border-box',
@@ -847,10 +884,10 @@ const AppDashboardDesigner: React.FC = () => {
             />
           </div>
 
-          {/* Q7: Visual style */}
+          {/* Q7: Visual style (optional) */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Visual style
+              Visual style <span style={{ fontWeight: 400, color: '#A0AEC0' }}>(optional)</span>
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {VISUAL_STYLE_OPTIONS.map(vs => (
@@ -915,7 +952,7 @@ const AppDashboardDesigner: React.FC = () => {
             >
               <Upload size={20} color="#A0AEC0" style={{ marginBottom: 4 }} />
               <div style={{ fontSize: 13, color: '#718096', fontFamily: FONT }}>
-                Drop screenshots here or click to upload
+                Drop screenshots here, click to upload, or <strong style={{ color: '#4A5568' }}>paste from clipboard</strong> (Ctrl+V / Cmd+V)
               </div>
               <input
                 ref={fileInputRef}
@@ -1006,7 +1043,7 @@ const AppDashboardDesigner: React.FC = () => {
             <StepPlaceholder
               icon={<ArrowRight size={16} color="#A0AEC0" />}
               message="Complete your brief above to generate a mockup"
-              detail="Once you describe your dashboard's purpose and metrics, we'll generate a visual mockup you can review and approve before generating the full PRD."
+              detail="Once you describe your app's purpose and features, we'll generate a visual mockup you can review and approve before generating the full PRD."
             />
           ) : (
             <>
@@ -1019,7 +1056,7 @@ const AppDashboardDesigner: React.FC = () => {
                     margin: '0 auto 16px',
                   }} />
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
-                    {isAnalyzingInspiration ? 'Analyzing inspiration images...' : 'Generating your dashboard mockup...'}
+                    {isAnalyzingInspiration ? 'Analyzing inspiration images...' : 'Generating your app mockup...'}
                   </div>
                   <div style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT, marginTop: 4 }}>
                     This typically takes 15-30 seconds
@@ -1030,51 +1067,126 @@ const AppDashboardDesigner: React.FC = () => {
               {/* Mockup display */}
               {hasMockup && !isLoading && (
                 <div>
-                  {/* Mockup container */}
+                  {/* Side-by-side: Mockup (left) + JSON Prompt (right) */}
                   <div style={{
-                    borderRadius: 12, overflow: 'hidden', border: '1px solid #E2E8F0',
-                    background: '#FFFFFF', marginBottom: 16,
+                    display: 'flex', gap: 16, marginBottom: 16,
                     ...(isFullScreen ? {
                       position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
-                      zIndex: 100, borderRadius: 0, margin: 0,
+                      zIndex: 100, margin: 0, background: '#FFFFFF', padding: 0,
                     } : {}),
                   }}>
-                    {/* Top bar */}
+                    {/* LEFT — Mockup */}
                     <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '8px 14px', background: '#F7FAFC', borderBottom: '1px solid #E2E8F0',
+                      flex: isFullScreen ? 1 : '0 0 62%',
+                      borderRadius: isFullScreen ? 0 : 12, overflow: 'hidden',
+                      border: '1px solid #E2E8F0', background: '#FFFFFF',
                     }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', fontFamily: FONT }}>
-                        {generationMethod === 'html' ? 'HTML Mockup' : generationMethod === 'svg' ? 'SVG Preview' : 'AI-Generated Mockup'}
-                      </span>
-                      <button
-                        onClick={() => setIsFullScreen(!isFullScreen)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', padding: 0 }}
-                      >
-                        {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                      </button>
+                      {/* Top bar */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 14px', background: '#F7FAFC', borderBottom: '1px solid #E2E8F0',
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', fontFamily: FONT }}>
+                          {generationMethod === 'html' ? 'HTML Mockup' : generationMethod === 'svg' ? 'SVG Preview' : 'AI-Generated Mockup'}
+                        </span>
+                        <button
+                          onClick={() => setIsFullScreen(!isFullScreen)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', padding: 0 }}
+                        >
+                          {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        </button>
+                      </div>
+
+                      {/* Mockup content */}
+                      <div style={{
+                        height: isFullScreen ? 'calc(100vh - 40px)' : 460, overflow: 'auto',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {imageUrl && (
+                          <img src={imageUrl} alt="App mockup" style={{ width: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+                        )}
+                        {dashboardHtml && (
+                          <iframe
+                            srcDoc={dashboardHtml}
+                            title="App mockup"
+                            style={{ width: '100%', height: '100%', border: 'none' }}
+                            sandbox="allow-scripts"
+                          />
+                        )}
+                        {dashboardSvg && (
+                          <div
+                            style={{ width: '100%', height: '100%' }}
+                            dangerouslySetInnerHTML={{ __html: dashboardSvg }}
+                          />
+                        )}
+                      </div>
                     </div>
 
-                    {/* Mockup content */}
-                    <div style={{ height: isFullScreen ? 'calc(100vh - 40px)' : 500, overflow: 'auto' }}>
-                      {imageUrl && (
-                        <img src={imageUrl} alt="Dashboard mockup" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                      )}
-                      {dashboardHtml && (
-                        <iframe
-                          srcDoc={dashboardHtml}
-                          title="Dashboard mockup"
-                          style={{ width: '100%', height: '100%', border: 'none' }}
-                          sandbox="allow-scripts"
-                        />
-                      )}
-                      {dashboardSvg && (
-                        <div
-                          style={{ width: '100%', height: '100%' }}
-                          dangerouslySetInnerHTML={{ __html: dashboardSvg }}
-                        />
-                      )}
-                    </div>
+                    {/* RIGHT — JSON Prompt */}
+                    {!isFullScreen && jsonPrompt && (
+                      <div style={{
+                        flex: '0 0 36%',
+                        borderRadius: 12, overflow: 'hidden',
+                        border: '1px solid #E2E8F0', background: '#1A202C',
+                        display: 'flex', flexDirection: 'column',
+                      }}>
+                        {/* Header */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '8px 14px', background: '#2D3748', borderBottom: '1px solid #4A5568',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Code size={13} color="#A0AEC0" />
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT }}>
+                              JSON Prompt
+                            </span>
+                            <InfoTooltip content="A structured JSON prompt is the most effective way to instruct image generation models. Unlike free-text prompts, JSON organises your requirements into clear fields — purpose, layout, features, style — so the AI can interpret each dimension precisely. This is the exact prompt that was sent to generate your mockup." />
+                          </div>
+                          <button
+                            onClick={async () => {
+                              await copyText(JSON.stringify(jsonPrompt, null, 2));
+                              toast('JSON prompt copied');
+                            }}
+                            style={{
+                              background: '#4A5568', color: '#E2E8F0', border: 'none', borderRadius: 6,
+                              padding: '3px 8px', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT,
+                            }}
+                          >
+                            <Copy size={10} /> Copy
+                          </button>
+                        </div>
+
+                        {/* JSON content */}
+                        <div style={{ flex: 1, overflow: 'auto', padding: '14px 16px' }}>
+                          <pre style={{
+                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                            fontSize: 11, lineHeight: 1.7, color: '#E2E8F0',
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
+                          }}>
+                            {JSON.stringify(jsonPrompt, null, 2)}
+                          </pre>
+                        </div>
+
+                        {/* Image prompt (text) if different from JSON */}
+                        {imagePrompt && (
+                          <div style={{
+                            borderTop: '1px solid #4A5568', padding: '10px 16px',
+                            background: '#2D3748',
+                          }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontFamily: FONT }}>
+                              Generated text prompt
+                            </div>
+                            <div style={{
+                              fontSize: 11, color: '#A0AEC0', lineHeight: 1.5, fontFamily: FONT,
+                              maxHeight: 80, overflow: 'auto',
+                            }}>
+                              {imagePrompt.length > 300 ? imagePrompt.slice(0, 300) + '...' : imagePrompt}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* "Why mockup first?" tooltip */}
@@ -1181,12 +1293,12 @@ const AppDashboardDesigner: React.FC = () => {
       <StepConnector />
 
       {/* ═══════════════════════════════════════════
-          STEP 3 — Your dashboard PRD
+          STEP 3 — Your app PRD
       ═══════════════════════════════════════════ */}
       <div ref={prdRef}>
         <StepCard
           stepNumber={3}
-          title="Your dashboard PRD"
+          title="Your app PRD"
           subtitle="A comprehensive product requirements document for development handoff."
           done={step3Done}
           collapsed={false}
@@ -1195,7 +1307,7 @@ const AppDashboardDesigner: React.FC = () => {
             /* ─── Educational default ─── */
             <div>
               <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, marginBottom: 16, fontFamily: FONT }}>
-                Your PRD will be structured using <strong>11 production-grade sections</strong> — covering everything from layout specifications and widget definitions to data integration and acceptance criteria. Approve your mockup above and each section below will be filled with content tailored to your specific dashboard.
+                Your PRD will be structured using <strong>11 production-grade sections</strong> optimised for AI coding tools like Cursor, Lovable, Bolt.new, and V0. Each section gives the AI the exact constraints and specifications it needs — tech stack, data models, feature behaviours, and acceptance criteria. Approve your mockup above and each section will be filled with content tailored to your specific app.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {EDUCATIONAL_PRD_SECTIONS.map((s, i) => {
@@ -1356,7 +1468,7 @@ const AppDashboardDesigner: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {Object.entries(prdResult.sections).map(([key, val], i) => {
                     const def = PRD_SECTIONS.find(s => s.key === key);
-                    const color = PRD_SECTION_COLORS[key] || '#38B2AC';
+                    const color = LEVEL_ACCENT_DARK;
                     const Icon = PRD_SECTION_ICONS[key];
                     const isVisible = i < visibleBlocks;
                     return (

@@ -1,33 +1,35 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const HTML_FALLBACK_PROMPT = `You are an elite UI designer AND data strategist creating stunning, modern dashboard mockups. Your dashboards should look like they belong on Dribbble or Behance — minimal, airy, and visually refined.
+const HTML_FALLBACK_PROMPT = `You are an elite UI designer creating stunning, modern web application mockups. Your designs should look like they belong on Dribbble or Behance — minimal, airy, and visually refined.
 
-METRIC REQUIREMENTS: Include EVERY metric the user listed. Infer 3-5 additional relevant metrics. Use realistic sample data with % change indicators.
+The user may be building anything from a professional dashboard to a personal side project (habit tracker, recipe organiser, portfolio, etc.). Adapt your design to match their description.
 
-DESIGN AESTHETIC: MINIMAL and AIRY. Font: 'DM Sans'. Background: #F8FAFC. Cards: white, border-radius: 16px, border: 1px solid #E2E8F0. Colors: Primary #38B2AC, Secondary #5B6DC2, Accent #D47B5A. NO sidebars, NO navigation menus, NO buttons. Content only.
+FEATURE REQUIREMENTS: Include EVERY feature, screen, or metric the user listed. Infer 3-5 additional relevant UI elements. Use realistic sample data and placeholder content.
+
+DESIGN AESTHETIC: MINIMAL and AIRY. Font: 'DM Sans'. Background: #F8FAFC. Cards: white, border-radius: 16px, border: 1px solid #E2E8F0. Colors: Primary #38B2AC, Secondary #5B6DC2, Accent #D47B5A. Keep the layout clean and focused on the core functionality.
 
 RESPONSE FORMAT (JSON only, no markdown):
 {
   "image_url": "",
-  "image_prompt": "A description of the dashboard",
+  "image_prompt": "A description of the app",
   "html_content": "<!DOCTYPE html><html>...</html>"
 }
 
-The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "html, body { margin: 0; padding: 24px; overflow: hidden; height: 100%; box-sizing: border-box; }" to CSS. Use viewBox for SVG charts. Keep compact: max 4-5 KPI cards, max 2 charts side by side.`;
+The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "html, body { margin: 0; padding: 24px; overflow: hidden; height: 100%; box-sizing: border-box; }" to CSS. Use viewBox for SVG charts. Keep compact and focused on the main view of the application.`;
 
-const INSPIRATION_ANALYSIS_PROMPT = `You are an expert UI/UX analyst specializing in dashboard design. Analyze the provided dashboard screenshot(s) and extract the key design patterns. Focus on:
+const INSPIRATION_ANALYSIS_PROMPT = `You are an expert UI/UX analyst specializing in web application design. Analyze the provided app screenshot(s) and extract the key design patterns. Focus on:
 
-1. LAYOUT STRUCTURE: How are widgets arranged? Grid layout, column count, section grouping
+1. LAYOUT STRUCTURE: How are components arranged? Grid layout, column count, section grouping, navigation patterns
 2. COLOR SCHEME: Primary colors, accent colors, background tones, card styling
-3. CHART TYPES: What visualization types are used (bar, line, donut, gauge, heatmap, sparkline, etc.)
-4. INFORMATION DENSITY: Is it data-dense or spacious? How many KPIs/widgets are visible?
+3. COMPONENT TYPES: What UI components are used (cards, tables, charts, forms, lists, modals, etc.)
+4. INFORMATION DENSITY: Is it data-dense or spacious? How many elements are visible?
 5. TYPOGRAPHY: Font style, heading sizes relative to body text, label formatting
-6. CARD DESIGN: Border radius, shadows, borders, padding style
-7. SPECIAL ELEMENTS: Any unique design patterns like progress bars, status indicators, alerts, tabs
+6. CARD/CONTAINER DESIGN: Border radius, shadows, borders, padding style
+7. SPECIAL ELEMENTS: Any unique design patterns like progress bars, status indicators, navigation, tabs, sidebars
 
-Output a concise paragraph (3-5 sentences) describing these patterns as design instructions that could guide generating a similar dashboard. Be specific about colors, layout ratios, and widget types. Do NOT describe the data — only the visual design patterns.`;
+Output a concise paragraph (3-5 sentences) describing these patterns as design instructions that could guide generating a similar app interface. Be specific about colors, layout ratios, and component types. Do NOT describe the data — only the visual design patterns.`;
 
-const REFINEMENT_PROMPT = `You are an expert at refining image generation prompts for dashboard mockups. You will receive the original prompt that generated a dashboard image, the user's feedback about what they want changed, and optionally design patterns extracted from the user's inspiration images. Your job is to produce a NEW, complete image generation prompt that incorporates the user's feedback and the inspiration design patterns while keeping all the good parts of the original prompt. Output ONLY the refined prompt text, nothing else. Keep all formatting instructions (crisp text, 16:9 ratio, DM Sans font, etc.) from the original. If design reference patterns from inspiration images are provided, make sure they are incorporated into the new prompt.`;
+const REFINEMENT_PROMPT = `You are an expert at refining image generation prompts for web application UI mockups. You will receive the original prompt that generated an app mockup image, the user's feedback about what they want changed, and optionally design patterns extracted from the user's inspiration images. Your job is to produce a NEW, complete image generation prompt that incorporates the user's feedback and the inspiration design patterns while keeping all the good parts of the original prompt. Output ONLY the refined prompt text, nothing else. Keep all formatting instructions (crisp text, 16:9 ratio, DM Sans font, etc.) from the original. If design reference patterns from inspiration images are provided, make sure they are incorporated into the new prompt.`;
 
 // ─── Retry helper for OpenRouter API calls ───
 
@@ -143,7 +145,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 {
                   role: 'user',
                   content: [
-                    { type: 'text', text: 'Analyze these dashboard screenshot(s) and extract the key design patterns:' },
+                    { type: 'text', text: 'Analyze these app screenshot(s) and extract the key design patterns:' },
                     ...imageUrls,
                   ],
                 },
@@ -208,7 +210,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         imagePrompt = `${previous_prompt} IMPORTANT CHANGES REQUESTED: ${refinement_feedback}${inspirationPatterns ? ` DESIGN REFERENCE: ${inspirationPatterns}` : ''}`;
       }
     } else {
-      imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || 'business users'}. The dashboard shows: ${key_metrics || 'key business metrics'}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''} The dashboard has KPI metric cards at the top showing exact numbers with percentage change indicators, followed by line charts and bar charts below with clearly labeled axes. Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text, numbers, labels, and axis values crisp, sharp, and perfectly readable. 16:9 aspect ratio. This should look like a real production web application screenshot.${inspirationPatterns ? `\n\nIMPORTANT DESIGN REFERENCE — The user provided inspiration images. Match these design patterns closely: ${inspirationPatterns}` : ''}`;
+      if (inspirationPatterns) {
+        // When inspiration images are provided, they MUST drive the visual design
+        imagePrompt = `Generate a high-fidelity professional web application UI screenshot mockup. CRITICAL — the visual design MUST closely match the following design reference extracted from the user's inspiration images:\n\n${inspirationPatterns}\n\nApp details — Target users: ${target_audience || 'users'}. Features: ${key_metrics || 'key features and screens'}. Purpose: ${user_needs}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''}\n\nApply the design patterns above (colours, layout, typography, card styles, spacing) to this app's content. DM Sans font. Make ALL text, numbers, labels, and values crisp, sharp, and perfectly readable. 16:9 aspect ratio. This should look like a real production web application screenshot that follows the design reference.`;
+      } else {
+        imagePrompt = `Generate a high-fidelity professional web application UI screenshot mockup for ${target_audience || 'users'}. The app includes: ${key_metrics || 'key features and screens'}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''} The interface should have a clear layout with appropriate UI components (cards, lists, charts, forms, navigation) matching the described functionality. Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text, numbers, labels, and values crisp, sharp, and perfectly readable. 16:9 aspect ratio. This should look like a real production web application screenshot.`;
+      }
     }
 
     console.log('Generating dashboard via OpenRouter...');
@@ -248,6 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               image_url: imagePart.image_url.url,
               image_prompt: imagePrompt,
               generation_method: 'gemini-image',
+              ...(inspirationPatterns ? { inspiration_analysis: inspirationPatterns } : {}),
             });
           }
         }
@@ -262,6 +270,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               image_url: contentImg.image_url.url,
               image_prompt: imagePrompt,
               generation_method: 'gemini-image',
+              ...(inspirationPatterns ? { inspiration_analysis: inspirationPatterns } : {}),
             });
           }
         }
@@ -277,13 +286,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ─── Strategy 2: Fall back to HTML dashboard generation ───
     console.log('Strategy 2: Generating HTML dashboard with', textModel);
     const userMessage = [
-      `DASHBOARD PURPOSE: ${user_needs}`,
-      target_audience ? `TARGET AUDIENCE: ${target_audience}` : '',
-      key_metrics ? `KEY METRICS: ${key_metrics}` : '',
+      `APP PURPOSE: ${user_needs}`,
+      target_audience ? `TARGET USERS: ${target_audience}` : '',
+      key_metrics ? `KEY FEATURES / METRICS: ${key_metrics}` : '',
       data_sources ? `DATA SOURCES: ${data_sources}` : '',
-      dashboard_type ? `DASHBOARD TYPE: ${dashboard_type}` : '',
+      dashboard_type ? `APP TYPE: ${dashboard_type}` : '',
       visual_style ? `VISUAL STYLE: ${visual_style}` : '',
-      inspiration_url ? `INSPIRATION URL: ${inspiration_url} — Use this website's layout, style, and visual approach as design inspiration for the dashboard.` : '',
+      inspiration_url ? `INSPIRATION URL: ${inspiration_url} — Use this website's layout, style, and visual approach as design inspiration.` : '',
+      inspirationPatterns ? `\nCRITICAL DESIGN REFERENCE — The user provided inspiration images. You MUST match these design patterns closely (colours, layout, typography, card styles, spacing):\n${inspirationPatterns}` : '',
     ].filter(Boolean).join('\n');
 
     const htmlModelId = textModel.startsWith('google/') ? textModel : `google/${textModel}`;
@@ -320,6 +330,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const parsed = JSON.parse(cleaned);
     parsed.generation_method = 'html';
+    if (inspirationPatterns) parsed.inspiration_analysis = inspirationPatterns;
 
     return res.status(200).json(parsed);
   } catch (err) {

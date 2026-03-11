@@ -625,6 +625,102 @@ Every tool page should include these base animations in a `<style>` tag:
 | `ppFadeIn` | Step card entrance, toast entrance |
 | `ppConnectorFlow` | Dashed connector line flowing downward |
 
+### 9.5 Processing Progress Indicator
+
+**Every API call that takes more than ~1 second must show an interactive progress indicator** — not a generic spinner or pulsing skeleton. The progress indicator communicates to the user that real, multi-step work is happening behind the scenes, keeps them engaged during the wait, and sets expectations for how long it will take.
+
+**Structure:**
+
+```
+┌──────────────────────────────────────────────────────┐
+│  [Tool-specific header, e.g. "Building your prompt"] │
+│                                                      │
+│  ● Analysing your task…                     ✓        │
+│  ● Selecting prompting strategies…          ✓        │
+│  ◉ Crafting your prompt…                    ⟳        │ ← active step (spinning)
+│  ○ Applying quality checks…                          │
+│  ○ Preparing strategy breakdown…                     │
+│  ○ Generating refinement questions…                  │
+│  ○ Finalising output…                                │
+│                                                      │
+│  ━━━━━━━━━━━━━━━━━━━░░░░░░░░░  4 of 7               │ ← progress bar
+└──────────────────────────────────────────────────────┘
+```
+
+**Specifications:**
+
+- **Container**: Replaces the skeleton/placeholder content inside the active step card. White background, `borderRadius: 14`, `border: 1px solid #E2E8F0`, `padding: 28px 32px`.
+- **Header**: `fontSize: 15`, `fontWeight: 700`, `color: #1A202C`. Tool-specific — e.g., "Building your prompt…", "Designing your agent…", "Generating your workflow…". Changes for refinement passes (e.g., "Refining your prompt…").
+- **Subtext**: `fontSize: 12`, `color: #A0AEC0`. Brief context — e.g., "This usually takes 15–20 seconds".
+- **Step list**: 5–8 contextual steps, each with:
+  - **Step indicator**: 18px circle.
+    - Pending: `background: #F7FAFC`, `border: 2px solid #E2E8F0`
+    - Active: `border: 2px solid ${LEVEL_ACCENT}`, spinning inner arc animation
+    - Complete: `background: ${LEVEL_ACCENT}`, checkmark icon in `LEVEL_ACCENT_DARK`
+  - **Step label**: `fontSize: 13`, `color: #2D3748` (active/complete) or `#A0AEC0` (pending). `fontWeight: 600` for active step, `400` for others.
+  - Vertical spacing: `gap: 10px` between steps
+- **Progress bar**: Full width, `height: 4px`, `borderRadius: 2`, `background: #EDF2F7`. Fill uses `LEVEL_ACCENT`, width = `(completedSteps / totalSteps) * 100%`, `transition: width 0.3s ease`.
+- **Step counter**: Right-aligned below bar, `fontSize: 11`, `color: #A0AEC0`, "N of M".
+
+**Timing pattern:**
+
+Steps advance on a timed schedule that approximates the expected API duration. The schedule should be front-loaded (early steps advance quickly to give immediate feedback) and back-loaded (later steps take longer to avoid finishing before the API responds).
+
+```typescript
+// Example: 7 steps over ~18 seconds
+const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+// Cumulative: 0.8s, 2.3s, 5.3s, 8.8s, 12.3s, 15.3s, 17.8s
+```
+
+If the API returns before all steps complete, immediately jump to the final step and then reveal the output. If the API takes longer than expected, the last step stays active with the spinner — it never goes backwards.
+
+**Step content is tool-specific.** Each tool defines its own step labels that describe what the AI is actually doing for that tool. Examples:
+
+| Tool | Steps |
+|------|-------|
+| Prompt Playground (initial) | Analysing your task → Selecting strategies → Crafting prompt → Applying quality checks → Preparing strategy breakdown → Generating refinement questions → Finalising output |
+| Prompt Playground (refine) | Processing context → Re-evaluating strategies → Weaving in specifics → Refining structure → Quality checks → Deeper questions → Finalising |
+| Agent Builder | Evaluating readiness → Designing output format → Writing system prompt → Adding accountability → Scoring criteria → Finalising design |
+| Workflow Canvas | Parsing workflow description → Mapping node types → Defining connections → Adding decision points → Generating export → Finalising |
+| Dashboard Designer | Analysing brief → Generating layout → Designing widgets → Mapping data sources → Defining interactions → Building specification |
+| App Builder | Analysing requirements → Mapping architecture → Designing features → Planning integrations → Generating specification → Finalising PRD |
+
+**Implementation pattern:**
+
+```typescript
+const LOADING_STEPS = [
+  'Analysing your task…',
+  'Selecting prompting strategies…',
+  'Crafting your prompt…',
+  'Applying quality checks…',
+  'Preparing strategy breakdown…',
+  'Generating refinement questions…',
+  'Finalising output…',
+];
+const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+
+// In component:
+const [loadingStep, setLoadingStep] = useState(0);
+
+useEffect(() => {
+  if (!isLoading) { setLoadingStep(0); return; }
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  let cumulative = 0;
+  STEP_DELAYS.forEach((delay, i) => {
+    cumulative += delay;
+    timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
+  });
+  return () => timers.forEach(clearTimeout);
+}, [isLoading]);
+```
+
+**Rules:**
+- Never show a generic spinner or pulsing skeleton for API calls — always use the progress indicator
+- Steps must be tool-specific and describe plausible processing stages
+- The progress indicator lives inside the output step card (not a modal or overlay)
+- If the API errors, immediately show the error state — do not leave the progress indicator spinning
+- The last step label should always be "Finalising…" or equivalent — it acts as a buffer for variable API times
+
 ---
 
 ## 10. Responsive Considerations

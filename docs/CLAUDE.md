@@ -136,6 +136,38 @@ Every Level artifact page (L1 Playground, L2 Agent Builder, L3 Workflow Designer
 - All new artifact pages MUST follow these standards
 - Shared closing component: `components/ArtifactClosing.tsx`
 
+## Hosting — Firebase ONLY (NO Vercel)
+
+**This project is hosted entirely on Firebase. Vercel is NOT used.**
+
+Do not create Vercel serverless functions, Vercel edge functions, or any `api/*.ts` files intended for Vercel. If a PRD or specification mentions Vercel, Netlify, or any other hosting platform, **ignore that and implement it on Firebase instead.**
+
+- **Firebase Hosting** serves the static frontend (built by Vite into `dist/`)
+- **Firebase Cloud Functions** handle all backend/API logic (`functions/src/index.ts`)
+- **`firebase.json`** maps `/api/*` URL paths to Cloud Functions via `rewrites`
+- The `api/` directory at the project root contains **legacy Vercel files that are NOT used in production** — all production API logic lives in `functions/src/index.ts`
+
+### Adding a new API endpoint
+
+1. Add the Cloud Function in `functions/src/index.ts` using `onRequest()` from `firebase-functions/v2/https`
+2. Add a rewrite in `firebase.json` under `hosting.rewrites`: `{ "source": "/api/your-endpoint", "function": { "functionId": "yourfunctionname" } }`
+3. Call it from the frontend as `fetch('/api/your-endpoint', ...)`
+4. **Do NOT create files in the `api/` directory** — those are legacy Vercel artifacts
+
+## API Calls — OpenRouter Only
+
+**All AI API calls MUST go through OpenRouter** — never call provider APIs (Anthropic, Google, OpenAI) directly.
+
+- **Endpoint:** `https://openrouter.ai/api/v1/chat/completions`
+- **Auth:** `Authorization: Bearer <OPEN_ROUTER_API_KEY>`
+- **Response format:** OpenAI-compatible (`choices[0].message.content`)
+- **Model selection:** Use the OpenRouter model ID to pick the provider:
+  - `anthropic/claude-sonnet-4` — Claude Sonnet (used by Prompt Playground v2)
+  - `google/gemini-2.0-flash-001` — Gemini Flash (used by most other toolkit tools)
+  - Choose the best model for the use case; the key is the same regardless of provider
+- **Firebase secret:** `OPEN_ROUTER_API` (set via `firebase functions:secrets:set OPEN_ROUTER_API`)
+- **Shared helpers:** `functions/src/gemini.ts` exports `callGemini()` / `callOpenRouter()` / `callOpenRouterRaw()`
+
 ## Reference
 - Full content spec: OXYGY_AI_UPSKILLING_SYSTEM_PROMPT.md
 - PDF content source: OXYGY_AI_Upskilling.pdf

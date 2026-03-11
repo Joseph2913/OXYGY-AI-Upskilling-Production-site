@@ -188,6 +188,7 @@ export function buildIntermediate(
   workflowName: string,
   workflowDescription: string,
   nodes: WorkflowNode[],
+  richContext?: WorkflowIntermediate['context'],
 ): WorkflowIntermediate {
   const intermediateNodes: N8nIntermediateNode[] = nodes.map((node, i) => {
     const def = NODE_MAP[node.node_id];
@@ -239,5 +240,6 @@ export function buildIntermediate(
     estimatedRunTime,
     humanInTheLoop,
     nodes: intermediateNodes,
+    ...(richContext ? { context: richContext } : {}),
   };
 }

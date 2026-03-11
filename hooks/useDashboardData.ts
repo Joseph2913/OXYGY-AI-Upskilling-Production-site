@@ -13,6 +13,18 @@ export interface LeaderboardMember {
   isCurrentUser: boolean;
 }
 
+export interface LevelProgress {
+  level: number;
+  phasesCompleted: boolean[];  // [elearn, read, watch, practise]
+  artefactCount: number;
+}
+
+export interface ToolUsage {
+  toolId: string;
+  artefactsCreated: number;
+  lastUsedAt: Date | null;
+}
+
 export interface DashboardData {
   currentLevel: number;
   completedTopics: number;
@@ -26,6 +38,12 @@ export interface DashboardData {
   overallCompletedTopics: number;
   overallTotalTopics: number;
   levelsCompleted: number;
+
+  // Per-level topic progress and artefact counts
+  levelProgress: Record<number, LevelProgress>;
+
+  // Per-tool usage stats
+  toolUsage: Record<string, ToolUsage>;
 
   streakDays: number;
   activeDaysThisWeek: boolean[];
@@ -123,6 +141,22 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         overallCompletedTopics: 4, // levels 1-4 done (1 topic each)
         overallTotalTopics: 5,     // 5 levels, 1 topic each
         levelsCompleted: 4,
+
+        levelProgress: {
+          1: { level: 1, phasesCompleted: [true, true, true, true], artefactCount: 2 },
+          2: { level: 2, phasesCompleted: [true, true, true, true], artefactCount: 2 },
+          3: { level: 3, phasesCompleted: [true, true, true, true], artefactCount: 2 },
+          4: { level: 4, phasesCompleted: [true, true, true, true], artefactCount: 1 },
+          5: { level: 5, phasesCompleted: [false, false, false, false], artefactCount: 1 },
+        },
+
+        toolUsage: {
+          'prompt-playground': { toolId: 'prompt-playground', artefactsCreated: 2, lastUsedAt: new Date('2026-03-07T10:30:00') },
+          'agent-builder':     { toolId: 'agent-builder',     artefactsCreated: 2, lastUsedAt: new Date('2026-03-04T15:00:00') },
+          'workflow-canvas':   { toolId: 'workflow-canvas',   artefactsCreated: 2, lastUsedAt: new Date('2026-03-02T14:00:00') },
+          'dashboard-designer':{ toolId: 'dashboard-designer',artefactsCreated: 1, lastUsedAt: new Date('2026-02-28T11:00:00') },
+          'ai-app-evaluator':  { toolId: 'ai-app-evaluator',  artefactsCreated: 1, lastUsedAt: new Date('2026-02-25T09:00:00') },
+        },
 
         streakDays: 5,
         activeDaysThisWeek: activeDays,
