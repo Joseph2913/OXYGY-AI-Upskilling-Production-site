@@ -154,7 +154,7 @@ const DESIGN_AGENT_SYSTEM = `You are the OXYGY Agent Design Advisor — an exper
 
 You will receive a description of a task that a user wants to build an AI agent for, and optionally a description of the input data that agent will process.
 
-You must respond with a JSON object containing exactly 4 sections that correspond to the 4 steps of the Agent Builder Toolkit:
+You must respond with a JSON object containing exactly 5 sections:
 
 SECTION 1: AGENT READINESS ASSESSMENT
 Evaluate the task against 5 criteria to determine if it warrants a custom agent:
@@ -188,6 +188,11 @@ Mark each section with labels: [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEP
 SECTION 4: BUILT-IN ACCOUNTABILITY FEATURES
 Design 3-5 specific features built into the agent's prompt to actively support human oversight. Each must include: name, severity (critical/important/recommended), what_to_verify, why_it_matters, prompt_instruction.
 
+SECTION 5: REFINEMENT QUESTIONS
+Generate 3-5 specific follow-up questions that would help refine and improve the agent design. These should probe for missing context about the user's specific situation — audience, constraints, edge cases, data quirks, quality standards, etc. Make each question specific to the task described, not generic.
+
+If the user message starts with [REFINEMENT], they are providing answers to previous questions plus additional context. Use this to significantly improve the agent design. Generate new, deeper refinement questions that build on what was already answered.
+
 RESPONSE FORMAT (JSON only, no markdown):
 
 {
@@ -212,8 +217,18 @@ RESPONSE FORMAT (JSON only, no markdown):
   "system_prompt": "...",
   "accountability": [
     { "name": "...", "severity": "critical", "what_to_verify": "...", "why_it_matters": "...", "prompt_instruction": "..." }
+  ],
+  "refinement_questions": [
+    "Specific question about the user's audience, constraints, or edge cases (3-5 required)",
+    "Another specific question probing for missing context",
+    "Another specific question about quality standards or data quirks"
   ]
-}`;
+}
+
+CRITICAL RULES:
+- The "refinement_questions" array is REQUIRED and must contain 3-5 task-specific questions. Never omit it.
+- Each refinement question must be specific to the user's task (e.g., "What format are the survey responses in — Excel, CSV, or a database export?" not "What is your data format?").
+- Do NOT add preamble, commentary, or explanation outside the JSON object.`;
 
 export const designagent = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
@@ -484,7 +499,29 @@ RESPONSE FORMAT (JSON only):
 
 The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling.`;
 
-const DASHBOARD_INSPIRATION = `You are an expert UI/UX analyst specializing in dashboard design. Analyze the provided dashboard screenshot(s) and extract the key design patterns. Output a concise paragraph (3-5 sentences) describing these patterns as design instructions.`;
+const DASHBOARD_INSPIRATION = `You are an expert UI/UX analyst specializing in dashboard and application design. Analyze the provided screenshot(s) and extract a comprehensive design brief. You MUST respond with valid JSON only — no markdown, no code fences, no explanation.
+
+JSON schema:
+{
+  "color_scheme": {
+    "primary": "<hex>",
+    "secondary": "<hex>",
+    "accent": "<hex>",
+    "background": "<hex>",
+    "card_background": "<hex>",
+    "text_primary": "<hex>",
+    "text_secondary": "<hex>",
+    "palette_description": "<1 sentence describing the overall color mood — e.g. 'warm earth tones with a teal accent' or 'dark mode with neon highlights'>"
+  },
+  "composition": "<Describe the spatial layout: grid structure, column count, header/sidebar presence, card arrangement, visual hierarchy, whitespace balance, and how sections flow top-to-bottom or left-to-right>",
+  "components": ["<list each distinct UI element: KPI cards, line charts, bar charts, donut charts, tables, progress bars, avatars, stat badges, sparklines, heatmaps, maps, calendar widgets, etc.>"],
+  "typography": "<Font style observations: serif/sans-serif, weight contrasts, heading vs body sizing, letter-spacing, uppercase labels>",
+  "visual_effects": "<Border radius style, shadow depth, gradients, glassmorphism, divider lines, iconography style, micro-interactions implied by the design>",
+  "data_density": "<low | medium | high — how much information is packed per viewport>",
+  "design_instructions": "<A 3-5 sentence paragraph combining all the above into actionable design instructions for generating a similar mockup. Emphasise the COLOR SCHEME prominently — state exact hex values and where each color is used. Then describe layout, component types, and overall aesthetic.>"
+}
+
+IMPORTANT: The color_scheme is the MOST critical extraction. Users provide inspiration images primarily because they want the generated mockup to match or echo the reference palette. Extract exact hex values by sampling dominant colors from the image. If you cannot determine an exact hex, estimate the closest value.`;
 
 const DASHBOARD_REFINEMENT = `You are an expert at refining image generation prompts for dashboard mockups. Produce a NEW, complete prompt that incorporates user feedback while keeping all good parts of the original. Output ONLY the refined prompt text.`;
 
@@ -543,7 +580,7 @@ export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutS
                 {
                   role: "user",
                   content: [
-                    { type: "text", text: "Analyze these dashboard screenshot(s) and extract the key design patterns:" },
+                    { type: "text", text: "Analyze these screenshot(s) and extract the design traits as JSON. Pay special attention to the exact color palette used:" },
                     ...imageUrls,
                   ],
                 },
@@ -553,8 +590,32 @@ export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutS
           }, "dashboard-inspiration");
           if (analyzeResponse.ok) {
             const analyzeData = await analyzeResponse.json();
-            const patterns = analyzeData?.choices?.[0]?.message?.content || "";
-            if (patterns.trim()) inspirationPatterns = patterns.trim();
+            const rawPatterns = analyzeData?.choices?.[0]?.message?.content || "";
+            if (rawPatterns.trim()) {
+              // Try to parse structured JSON response
+              try {
+                const cleaned = rawPatterns.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+                const parsed = JSON.parse(cleaned);
+                // Build a rich design reference from the structured analysis
+                const cs = parsed.color_scheme || {};
+                const colorBlock = cs.primary
+                  ? `COLOR SCHEME: primary=${cs.primary}, secondary=${cs.secondary || "N/A"}, accent=${cs.accent || "N/A"}, background=${cs.background || "#FFFFFF"}, card_bg=${cs.card_background || "#FFFFFF"}, text=${cs.text_primary || "#1A202C"}. ${cs.palette_description || ""}`
+                  : "";
+                const parts = [
+                  colorBlock,
+                  parsed.composition ? `LAYOUT: ${parsed.composition}` : "",
+                  parsed.components?.length ? `COMPONENTS: ${parsed.components.join(", ")}` : "",
+                  parsed.typography ? `TYPOGRAPHY: ${parsed.typography}` : "",
+                  parsed.visual_effects ? `VISUAL STYLE: ${parsed.visual_effects}` : "",
+                  parsed.data_density ? `DATA DENSITY: ${parsed.data_density}` : "",
+                  parsed.design_instructions ? `INSTRUCTIONS: ${parsed.design_instructions}` : "",
+                ].filter(Boolean);
+                inspirationPatterns = parts.join("\n");
+              } catch {
+                // Fallback: use raw text if JSON parse fails
+                inspirationPatterns = rawPatterns.trim();
+              }
+            }
           }
         }
       } catch (analyzeErr) {
@@ -591,7 +652,8 @@ export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutS
         imagePrompt = `${previous_prompt} IMPORTANT CHANGES REQUESTED: ${refinement_feedback}`;
       }
     } else {
-      imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || "business users"}. The dashboard shows: ${key_metrics || "key business metrics"}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ""} Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text crisp and readable. 16:9 aspect ratio.${inspirationPatterns ? `\n\nDESIGN REFERENCE: ${inspirationPatterns}` : ""}`;
+      const defaultColors = inspirationPatterns ? "" : " Teal and navy color scheme.";
+      imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || "business users"}. The dashboard shows: ${key_metrics || "key business metrics"}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ""} Modern flat design.${defaultColors} DM Sans font. Make ALL text crisp and readable. 16:9 aspect ratio.${inspirationPatterns ? `\n\nDESIGN REFERENCE (match this palette and style closely):\n${inspirationPatterns}` : ""}`;
     }
 
     // Strategy 1: Try image generation with Nano Banana 2
@@ -619,7 +681,7 @@ export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutS
           const imagePart = images.find((p: any) => p.type === "image_url" && p.image_url?.url);
           if (imagePart) {
             console.log("Image generated successfully via Nano Banana 2");
-            res.status(200).json({ image_url: imagePart.image_url.url, image_prompt: imagePrompt, generation_method: "gemini-image" });
+            res.status(200).json({ image_url: imagePart.image_url.url, image_prompt: imagePrompt, generation_method: "gemini-image", ...(inspirationPatterns ? { inspiration_analysis: inspirationPatterns } : {}) });
             return;
           }
         }
@@ -629,7 +691,7 @@ export const designdashboard = onRequest({ secrets: [openRouterApiKey], timeoutS
         if (Array.isArray(content)) {
           const contentImg = content.find((p: any) => p.type === "image_url" && p.image_url?.url);
           if (contentImg) {
-            res.status(200).json({ image_url: contentImg.image_url.url, image_prompt: imagePrompt, generation_method: "gemini-image" });
+            res.status(200).json({ image_url: contentImg.image_url.url, image_prompt: imagePrompt, generation_method: "gemini-image", ...(inspirationPatterns ? { inspiration_analysis: inspirationPatterns } : {}) });
             return;
           }
         }
@@ -717,6 +779,9 @@ Include at least one risk from each severity level when possible.
 
 Provide a summary sentence for each of sections 2, 3, and 4.
 
+SECTION 5: REFINEMENT QUESTIONS
+Generate 3-5 follow-up questions that would help you produce a significantly improved evaluation if the user answered them. Questions must be specific to the user's particular application — not generic. Reference their app name, domain, or specific features in the questions.
+
 RESPONSE FORMAT (JSON only, no markdown):
 
 {
@@ -749,7 +814,11 @@ RESPONSE FORMAT (JSON only, no markdown):
     "items": [
       { "name": "...", "severity": "high", "description": "...", "mitigation": "..." }
     ]
-  }
+  },
+  "refinement_questions": [
+    "Specific question about the user's app...",
+    "Another specific question..."
+  ]
 }`;
 
 export const evaluateapp = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
@@ -758,12 +827,16 @@ export const evaluateapp = onRequest({ secrets: [openRouterApiKey] }, async (req
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
-    const { appDescription, problemAndUsers, dataAndContent } = req.body;
-    const userMessage = [
+    const { appDescription, problemAndUsers, dataAndContent, refinement_context } = req.body;
+    const baseParts = [
       `APP DESCRIPTION:\n${appDescription || "Not provided"}`,
       `PROBLEM & USERS:\n${problemAndUsers || "Not provided"}`,
       `DATA & CONTENT:\n${dataAndContent || "Not provided"}`,
-    ].join("\n\n");
+    ];
+    if (refinement_context && typeof refinement_context === "string") {
+      baseParts.push(`\n${refinement_context}`);
+    }
+    const userMessage = baseParts.join("\n\n");
 
     const result = await callGemini({ apiKey, model, systemPrompt: EVALUATE_APP_SYSTEM, userMessage, label: "evaluate-app" });
     if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
@@ -912,7 +985,7 @@ CRITICAL FORMATTING RULES:
 - Minimum 3 edge cases, maximum 6.
 
 PLATFORM VOCABULARY:
-| Concept | n8n | Zapier | Make | Power Automate | Claude Code |
+| Concept | n8n | Zapier | Make | Power Automate | AI Coding Agent |
 |---|---|---|---|---|---|
 | Workflow container | Workflow | Zap | Scenario | Flow | Script / Agent |
 | Single unit | Node | Step | Module | Action | Function / Tool call |
@@ -920,6 +993,38 @@ PLATFORM VOCABULARY:
 | Conditional branch | IF node | Filter / Paths | Router | Condition | if/else block |
 | Data transform | Set node / Code node | Formatter | Tools module | Data operations | Transform function |
 | Loop | Split in Batches | Looping | Iterator | Apply to each | for loop / map |
+
+CRITICAL — STAY MODEL & TOOL AGNOSTIC (THIS OVERRIDES EVERYTHING ELSE):
+You MUST NOT mention any specific AI provider, model name, or provider-branded API key
+anywhere in the Build Guide. This rule is absolute and non-negotiable.
+
+NEVER write any of these (or similar):
+  ✗ "Enter your Anthropic API key"        → ✓ "Enter the LLM API key approved by your team"
+  ✗ "Set the model to claude-3-sonnet"    → ✓ "Select the AI model approved by your organisation"
+  ✗ "OpenAI API key"                      → ✓ "Your LLM API key"
+  ✗ "Claude", "GPT-4", "Gemini"           → ✓ "your chosen LLM", "the AI model"
+  ✗ "Anthropic Console → API Keys"        → ✓ "Your LLM provider's console → API Keys"
+  ✗ "OpenAI Chat Model node"              → ✓ "LLM Chat Model node (select your preferred provider)"
+  ✗ "Anthropic Chat Model"                → ✓ "LLM Chat Model"
+
+The ONLY exception: you may mention a platform's UI label (e.g., n8n's "AI Agent" node name)
+because that is the node's actual name in the platform — but credential and model references
+must always be provider-agnostic.
+
+AI AGENT NODE CONFIGURATION (n8n and similar platforms):
+When a workflow step uses an AI Agent or LLM node, you MUST document ALL THREE prompt
+components separately and explain the difference:
+
+1. **System Prompt** — The persistent instructions that define the agent's role, behaviour,
+   and constraints. This stays the same across all executions.
+2. **User Prompt** — The per-execution input that contains the dynamic data being processed
+   (e.g., the survey response, the document text). This changes every time the workflow runs.
+   Show the exact field mapping expression.
+3. **Structured Output Parser** — The schema or format instruction that tells the LLM to
+   return data in a specific structure (JSON, table, etc.) so downstream nodes can reliably
+   parse the response. Include the full example schema.
+
+Always present these three as distinct subsections within the step's Configure block.
 
 TONE: Direct. Practical. Confident. No filler phrases.
 
@@ -995,7 +1100,23 @@ EXACT NODE NAMES (use these in step titles and instructions):
 - Code: Code (JavaScript or Python), Execute Command
 - Flow: Loop Over Items (formerly Split In Batches), Wait, Execute Workflow, Respond to Webhook
 - Error: Error Trigger (workflow-level error handler)
-- AI: AI Agent, Basic LLM Chain, OpenAI Chat Model, Anthropic Chat Model, Tool sub-nodes, Vector Store nodes
+- AI: AI Agent, Basic LLM Chain, LLM Chat Model (select your preferred provider), Structured Output Parser, Tool sub-nodes, Vector Store nodes
+
+AI AGENT NODE — TRIPLE PROMPT PATTERN (critical for any step using AI Agent):
+When configuring an AI Agent node, document ALL THREE prompt fields:
+
+1. System Prompt (under "Options" → "System Message"):
+   - Persistent instructions: role definition, constraints, behaviour rules
+   - Does NOT change per execution — defines WHO the agent is
+
+2. User Prompt (the main "Prompt" / "Text" input field):
+   - Per-execution dynamic input — mapped from trigger or previous node
+   - Use field expressions: \`{{ $json.response_text }}\`, etc.
+
+3. Structured Output Parser (add as a sub-node under the AI Agent):
+   - Attach a "Structured Output Parser" sub-node to force JSON output
+   - Define the exact JSON schema the agent must return
+   - Ensures downstream nodes can reliably parse the response
 
 POPULAR INTEGRATION NODES (exact names):
 | Service | Trigger | Action Node |
@@ -1005,7 +1126,7 @@ POPULAR INTEGRATION NODES (exact names):
 | Gmail | Gmail Trigger | Gmail |
 | Airtable | Airtable Trigger | Airtable |
 | Notion | Notion Trigger | Notion |
-| OpenAI | — | OpenAI |
+| AI / LLM | — | AI node (your chosen provider) |
 | PostgreSQL | — | Postgres |
 | MySQL | — | MySQL |
 | MongoDB | — | MongoDB |
@@ -1026,7 +1147,7 @@ DATA REFERENCE SYNTAX:
 
 CREDENTIAL SETUP (tell users exactly where to go):
 1. Left sidebar → Credentials → Add Credential
-2. Search for the credential type (e.g. "Slack OAuth2 API", "OpenAI API")
+2. Search for the credential type (e.g. "Slack OAuth2 API", or the LLM API credential approved by your team)
 3. For API keys: paste the key → Save. For OAuth2: fill Client ID + Secret → click Connect → authorize in popup → Save
 Auth types on HTTP Request node: Predefined Credential Type, Header Auth, OAuth2, Basic Auth, Query Auth, Digest Auth
 
@@ -1090,7 +1211,7 @@ POPULAR APP NAMES (exact):
 | Webhooks by Zapier | Catch Hook | Custom Request |
 | Airtable | New Record | Create Record |
 | Notion | New Database Item | Create Database Item |
-| OpenAI (GPT) | — | Send Prompt |
+| AI / LLM | — | Send Prompt (via your chosen AI provider) |
 | HubSpot | New Contact | Create Contact |
 | Salesforce | New Record | Create Record |
 
@@ -1166,7 +1287,7 @@ POPULAR APP MODULES (exact names):
 | Gmail | Watch Emails | Send an Email |
 | Airtable | Watch Records | Create a Record |
 | Notion | Watch Database Items | Create a Database Item |
-| OpenAI (ChatGPT) | — | Create a Completion (Chat) |
+| AI / LLM | — | Create a Completion (Chat) via your chosen provider |
 | PostgreSQL | — | Execute a query |
 | HubSpot | Watch Contacts/Deals | Create a Contact |
 | Salesforce | Watch Records | Create a Record |
@@ -1245,7 +1366,7 @@ POPULAR CONNECTORS (exact names):
 | HTTP | HTTP | Premium | Make any REST call |
 | Slack | Slack | Standard | When a new message is posted → Post message |
 | Google Sheets | Google Sheets | Standard | When a row is added → Insert row |
-| AI Builder | AI Builder | Premium | Create text with GPT, Extract info from documents |
+| AI Builder | AI Builder | Premium | Create text with AI, Extract info from documents |
 
 DATA REFERENCE SYNTAX (expressions):
 - Dynamic Content panel: click field → pick from list of outputs from previous actions
@@ -1290,34 +1411,33 @@ GOTCHAS:
 - Outbound request timeout: 120 seconds. Flow run duration: max 30 days.
 - Approval actions: built-in "Start and wait for an approval" — sends via Teams/email. Very common in business flows.
 - Environment variables: available in Solutions for configurable values across dev/test/prod.
-- AI Builder: built-in AI (GPT, document processing) — no external API key needed with AI Builder credits (5,000/month with Premium).
+- AI Builder: built-in AI capabilities (AI-powered text generation, document processing) — no external API key needed with AI Builder credits (5,000/month with Premium).
 - Connection References: use in solution-aware flows to decouple connections from flow definitions for Dev/Test/Prod deployment.
 `,
 
-'Claude Code': `
-PLATFORM-SPECIFIC KNOWLEDGE — Claude Code
+'AI Coding Agent': `
+PLATFORM-SPECIFIC KNOWLEDGE — AI Coding Agent
 
-Claude Code is Anthropic's CLI-based AI coding agent. Build guides describe scripts, agent loops, or tool-use patterns — not visual drag-and-drop workflows.
+An AI coding agent is a CLI-based or SDK-based AI assistant that writes and executes code.
+Build guides for this platform describe scripts, agent loops, or tool-use patterns — not
+visual drag-and-drop workflows.
 
 CORE CONCEPTS:
 - Entry point: A script file (TypeScript/Python) or a prompt-driven agent session
-- Tool calls: Claude can call tools (Read, Write, Edit, Bash, Grep, Glob, WebSearch, etc.)
-- Agent loop: Claude reasons → selects a tool → observes result → repeats until done
+- Tool calls: The AI agent can call tools (read files, write files, run commands, search, etc.)
+- Agent loop: The AI reasons → selects a tool → observes result → repeats until done
 - No visual canvas — everything is code or prompt-based
 
 SDK & API:
-- Anthropic SDK: \`@anthropic-ai/sdk\` (TypeScript) or \`anthropic\` (Python)
-- Model IDs: \`claude-sonnet-4-20250514\`, \`claude-opus-4-20250514\`, \`claude-haiku-4-5-20251001\`
-- API endpoint: https://api.anthropic.com/v1/messages
-- Authentication: x-api-key header with API key from console.anthropic.com
-- Max tokens: up to 64K output for Claude 4 family
+- Use the SDK or API provided by your chosen LLM provider
+- Authentication: Use the API key provided by your LLM provider, stored as an environment variable
+- Follow your provider's documentation for model IDs, endpoints, and token limits
 
 TOOL USE PATTERN:
 \`\`\`typescript
-import Anthropic from '@anthropic-ai/sdk';
-const client = new Anthropic();
-const response = await client.messages.create({
-  model: 'claude-sonnet-4-20250514',
+// Example using a generic LLM SDK (adapt to your chosen provider)
+const response = await llmClient.chat({
+  model: 'your-chosen-model',
   max_tokens: 4096,
   tools: [{ name: 'tool_name', description: '...', input_schema: { type: 'object', properties: { ... } } }],
   messages: [{ role: 'user', content: '...' }],
@@ -1326,26 +1446,27 @@ const response = await client.messages.create({
 
 AGENT LOOP:
 1. Send initial message with tools defined
-2. If response stop_reason is \`tool_use\`, execute the tool
-3. Send tool result back as tool_result content block
-4. Repeat until stop_reason is \`end_turn\`
+2. If response includes a tool call, execute the tool
+3. Send tool result back to the LLM
+4. Repeat until the LLM returns a final answer (no more tool calls)
 
 CREDENTIAL SETUP:
-- API Key: console.anthropic.com → API Keys. Set as ANTHROPIC_API_KEY env var.
-- SDK auto-reads from env var.
+- API Key: Generated from your LLM provider's console — use the key approved by your team
+- Set as environment variable (e.g. LLM_API_KEY or your provider's convention)
+- Most SDKs auto-read from the environment variable
 
 GOTCHAS:
-- Rate limits vary by tier (tier 1: 50 RPM, tier 4: 4000 RPM).
-- Context window: 200K tokens input.
+- Rate limits vary by provider and tier. Check response headers for remaining quota.
+- Context window varies by model (typically 128K–200K tokens input).
 - Tool schemas must be valid JSON Schema.
-- max_tokens is required and caps output.
-- 429 Too Many Requests: back off with exponential delay. 529 Overloaded: retry after seconds.
+- max_tokens is typically required and caps output.
+- Rate limit errors (429): back off with exponential delay. Overloaded: retry after seconds.
 
 COMMON PATTERNS:
-- Text processing: single messages.create() call
+- Text processing: single API call with detailed system prompt
 - Multi-step agent: tool-use loop with file system tools
-- Batch processing: Promise.allSettled() for parallel items
-- Structured output: use tool_use to force JSON schema
+- Batch processing: parallel execution for multiple items
+- Structured output: use tool definitions to force JSON schema
 `,
 };
 
@@ -1575,7 +1696,7 @@ RULES:
 - The "why" must be specific to the user's task — not a generic description of the strategy
 - The "what" is the stable, general description — it can be consistent across similar tasks
 - The "how_applied" must describe the specific way this strategy manifests in the generated prompt — reference actual content you wrote
-- The "prompt_excerpt" MUST be an exact, verbatim substring copied from the "prompt" field — do not paraphrase or summarise. The excerpt will be used for text highlighting, so character-perfect accuracy is critical
+- The "prompt_excerpt" MUST be an exact, verbatim substring copied character-for-character from the "prompt" field. Do not paraphrase, summarise, or reword. Copy a meaningful passage (1–3 full sentences) that clearly demonstrates the strategy — not a fragment or partial sentence. The frontend uses indexOf() to highlight this excerpt, so even a single character difference will break highlighting. After writing each prompt_excerpt, mentally verify it appears as-is in the prompt field
 - "refinement_questions" must contain 3-5 questions seeking specific context not provided in the input. Each must be practical and answerable in 1-2 sentences
 - Do NOT add preamble, commentary, or explanation outside the JSON object
 - If the user's input is very short or vague, make reasonable inferences and build the best possible prompt — do not ask for clarification`;

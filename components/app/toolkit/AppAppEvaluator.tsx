@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowRight, ArrowDown, Copy, Check, RotateCcw, Code, Library, Download,
-  Info, ChevronRight, ChevronDown, ChevronUp, Sparkles,
+  Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, X,
 } from 'lucide-react';
 import {
   EVALUATOR_SECTIONS, EXAMPLE_APPS, SCORE_CRITERIA_LABELS,
@@ -14,10 +14,42 @@ import type {
 } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import OutputActionsPanel from '../workflow/OutputActionsPanel';
 
 const FONT = "'DM Sans', sans-serif";
 const LEVEL_ACCENT = '#C3D0F5';
 const LEVEL_ACCENT_DARK = '#2E3F8F';
+
+/* ─── Loading step definitions (§9.5) ─── */
+const INITIAL_LOADING_STEPS = [
+  'Analysing your application design…',
+  'Evaluating across 5 criteria…',
+  'Scoring design readiness…',
+  'Mapping architecture components…',
+  'Building implementation plan…',
+  'Identifying risks & gaps…',
+  'Generating refinement questions…',
+  'Finalising evaluation…',
+];
+const REFINE_LOADING_STEPS = [
+  'Processing your additional context…',
+  'Re-evaluating design criteria…',
+  'Updating architecture mapping…',
+  'Revising implementation phases…',
+  'Reassessing risks…',
+  'Generating deeper questions…',
+  'Finalising refined evaluation…',
+];
+const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500, 2000];
+
+/* ─── Fallback refinement questions ─── */
+const FALLBACK_REFINEMENT_QUESTIONS = [
+  'What specific user workflows or journeys should the app prioritise?',
+  'Are there particular integrations or APIs the architecture must support?',
+  'What are the most critical performance or scalability constraints?',
+  'Are there compliance, security, or data residency requirements?',
+  'What is the team size and technical skill level for implementation?',
+];
 
 /* ─── Helpers ─── */
 
@@ -74,6 +106,75 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
   );
 };
 
+/* ─── ProcessingProgress (§9.5) ─── */
+
+const ProcessingProgress: React.FC<{
+  steps: string[];
+  currentStep: number;
+  header: string;
+  subtext: string;
+}> = ({ steps, currentStep, header, subtext }) => (
+  <div style={{
+    background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+    padding: '28px 32px',
+  }}>
+    <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
+      {header}
+    </div>
+    <div style={{ fontSize: 12, color: '#A0AEC0', marginBottom: 20, fontFamily: FONT }}>
+      {subtext}
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+      {steps.map((label, i) => {
+        const stepNum = i + 1;
+        const isComplete = stepNum < currentStep;
+        const isActive = stepNum === currentStep;
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+              background: isComplete ? LEVEL_ACCENT : 'transparent',
+              border: isActive
+                ? `2px solid ${LEVEL_ACCENT}`
+                : isComplete ? 'none' : '2px solid #E2E8F0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative',
+            }}>
+              {isComplete && <Check size={10} color={LEVEL_ACCENT_DARK} />}
+              {isActive && (
+                <div style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  border: `2px solid ${LEVEL_ACCENT_DARK}`, borderTopColor: 'transparent',
+                  animation: 'ppSpin 0.7s linear infinite',
+                }} />
+              )}
+            </div>
+            <span style={{
+              fontSize: 13, fontFamily: FONT,
+              color: isActive || isComplete ? '#2D3748' : '#A0AEC0',
+              fontWeight: isActive ? 600 : 400,
+            }}>
+              {label}
+            </span>
+            {isComplete && <Check size={12} color={LEVEL_ACCENT_DARK} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
+          </div>
+        );
+      })}
+    </div>
+    {/* Progress bar */}
+    <div style={{ height: 4, borderRadius: 2, background: '#EDF2F7', overflow: 'hidden' }}>
+      <div style={{
+        height: '100%', borderRadius: 2, background: LEVEL_ACCENT,
+        width: `${(Math.max(0, currentStep - 1) / steps.length) * 100}%`,
+        transition: 'width 0.3s ease',
+      }} />
+    </div>
+    <div style={{ fontSize: 11, color: '#A0AEC0', textAlign: 'right', marginTop: 4, fontFamily: FONT }}>
+      {Math.min(currentStep, steps.length)} of {steps.length}
+    </div>
+  </div>
+);
+
 /* ─── Main Component ─── */
 
 const AppAppEvaluator: React.FC = () => {
@@ -96,21 +197,30 @@ const AppAppEvaluator: React.FC = () => {
   const [architectureExpanded, setArchitectureExpanded] = useState(true);
   const [planExpanded, setPlanExpanded] = useState(true);
 
+  // Loading progress state (§9.5)
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [isRefineLoading, setIsRefineLoading] = useState(false);
+
+  // Refinement state
+  const [refineExpanded, setRefineExpanded] = useState(false);
+  const [refinementAnswers, setRefinementAnswers] = useState<Record<number, string>>({});
+  const [refinementAdditional, setRefinementAdditional] = useState('');
+  const [refinementCount, setRefinementCount] = useState(0);
+
   // Refs
   const step1Ref = useRef<HTMLDivElement>(null);
   const step2Ref = useRef<HTMLDivElement>(null);
-  const step3Ref = useRef<HTMLDivElement>(null);
 
   // API
   const { evaluateApp, isLoading, error, clearError } = useAppEvaluatorApi();
 
-  // Staggered block appearance (4 sections)
+  // Staggered block appearance (4 output sections + OutputActionsPanel)
   useEffect(() => {
     if (!result) return;
     setVisibleBlocks(0);
     setScoreAnimated(false);
     const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       timers.push(setTimeout(() => {
         setVisibleBlocks(v => v + 1);
         if (i === 0) setScoreAnimated(true);
@@ -125,6 +235,27 @@ const AppAppEvaluator: React.FC = () => {
     const t = setTimeout(() => setToastMessage(null), 2500);
     return () => clearTimeout(t);
   }, [toastMessage]);
+
+  // ProcessingProgress step progression (§9.5)
+  useEffect(() => {
+    if (!isLoading) {
+      if (loadingStep > 0) {
+        const steps = isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS;
+        setLoadingStep(steps.length);
+        const timer = setTimeout(() => setLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    STEP_DELAYS.forEach((delay, i) => {
+      cumulative += delay;
+      timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [isLoading]);
 
   // Restore draft
   useEffect(() => {
@@ -157,6 +288,7 @@ const AppAppEvaluator: React.FC = () => {
     setShowMarkdown(false);
     setArchitectureExpanded(true);
     setPlanExpanded(true);
+    setIsRefineLoading(false);
 
     const data = await evaluateApp({
       appDescription: appDescription.trim(),
@@ -181,8 +313,63 @@ const AppAppEvaluator: React.FC = () => {
     setCopiedSection(null);
     setSavedToLibrary(false);
     setShowMarkdown(false);
+    setRefineExpanded(false);
+    setRefinementAnswers({});
+    setRefinementAdditional('');
+    setRefinementCount(0);
+    setLoadingStep(0);
+    setIsRefineLoading(false);
     clearError();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Dynamic refinement questions from API, with fallback
+  const refinementQuestions = result?.refinement_questions?.length
+    ? result.refinement_questions
+    : FALLBACK_REFINEMENT_QUESTIONS;
+
+  const hasRefinementInput = Object.values(refinementAnswers).some(a => typeof a === 'string' && a.trim()) || refinementAdditional.trim() !== '';
+
+  const handleRefineEvaluation = async () => {
+    if (!hasRefinementInput || isLoading) return;
+    clearError();
+    setIsRefineLoading(true);
+
+    const answeredQuestions = refinementQuestions
+      .map((q, i) => {
+        const answer = refinementAnswers[i]?.trim();
+        return answer ? `Q: ${q}\nA: ${answer}` : null;
+      })
+      .filter(Boolean).join('\n\n');
+
+    const parts = [
+      `[REFINEMENT]\n\nOriginal task: ${appDescription}`,
+      answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+      refinementAdditional.trim() ? `\nAdditional context: ${refinementAdditional.trim()}` : '',
+    ];
+    const refinementContext = parts.filter(Boolean).join('\n');
+
+    setResult(null);
+    setVisibleBlocks(0);
+    setScoreAnimated(false);
+    setSavedToLibrary(false);
+    setShowMarkdown(false);
+
+    const data = await evaluateApp({
+      appDescription: appDescription.trim(),
+      problemAndUsers: problemAndUsers.trim() || 'Not specified',
+      dataAndContent: dataAndContent.trim() || 'Not specified',
+      refinement_context: refinementContext,
+    });
+
+    if (data) {
+      setResult(data);
+      setRefinementCount(c => c + 1);
+      setRefinementAnswers({});
+      setRefinementAdditional('');
+      setRefineExpanded(false);
+      setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
   };
 
   const copyToClipboard = useCallback(async (text: string) => {
@@ -193,7 +380,7 @@ const AppAppEvaluator: React.FC = () => {
     }
   }, []);
 
-  /** Build the cohesive deliverable — Product Specification combining architecture, implementation plan, and risks. */
+  /** Build the cohesive deliverable — Product Specification combining architecture, implementation plan, and risks (§4.4). Design score excluded — informational only. */
   const buildProductSpec = (r: AppEvaluatorResult): string => {
     const lines: string[] = [];
 
@@ -268,17 +455,6 @@ const AppAppEvaluator: React.FC = () => {
     setTimeout(() => setCopiedSection(null), 2500);
   };
 
-  const handleDownload = () => {
-    if (!result) return;
-    const md = buildProductSpec(result);
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'product-specification.md'; a.click();
-    URL.revokeObjectURL(url);
-    setToastMessage('Downloaded as product-specification.md');
-  };
-
   const handleSaveToLibrary = () => {
     if (!result || !user) return;
     const fullContent = buildProductSpec(result);
@@ -288,9 +464,21 @@ const AppAppEvaluator: React.FC = () => {
     setTimeout(() => setSavedToLibrary(false), 3000);
   };
 
+  const handleDownload = () => {
+    if (!result) return;
+    const date = new Date().toISOString().split('T')[0];
+    const content = buildProductSpec(result);
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `app-evaluation-${date}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Step indicators
   const step1Done = appDescription.trim().length > 0 && result !== null;
-  const step2Done = false; // Output step is never "done" in the collapsed sense
 
   /* ─── Build section-specific copy content ─── */
   const getSectionCopyContent = (key: string): string => {
@@ -324,24 +512,29 @@ const AppAppEvaluator: React.FC = () => {
           0% { background-position: 0 0; }
           100% { background-position: 0 20px; }
         }
+        @keyframes ppSlideDown {
+          from { opacity: 0; max-height: 0; transform: translateY(-8px); }
+          to { opacity: 1; max-height: 800px; transform: translateY(0); }
+        }
       `}</style>
 
-      {/* ═══ Page Title ═══ */}
+      {/* ═══ Page Title (§3.1) ═══ */}
       <h1 style={{
         fontSize: 28, fontWeight: 800, color: '#1A202C',
         letterSpacing: '-0.4px', margin: 0, marginBottom: 6,
+        fontFamily: FONT,
       }}>
         AI App Evaluator
       </h1>
-      <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, margin: 0, marginBottom: 20 }}>
+      <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, margin: 0, marginBottom: 20, fontFamily: FONT }}>
         Building an AI-powered product requires decisions across architecture, data, personalisation, and user experience that most teams make ad-hoc. The App Evaluator walks you through a structured design process and produces a comprehensive product specification — covering everything from component architecture to implementation planning and risk assessment.
       </p>
 
-      {/* ═══ How It Works — Overview Strip ═══ */}
+      {/* ═══ How It Works — Overview Strip (§3.3) ═══ */}
       <ToolOverview
         steps={[
           { number: 1, label: 'Describe your application', detail: 'Define what your app does, who it serves, and what data it uses', done: step1Done },
-          { number: 2, label: 'Review your evaluation', detail: 'Design score, architecture, implementation plan, and risk assessment', done: step2Done },
+          { number: 2, label: 'Review your evaluation', detail: 'Design score, architecture, implementation plan, and risk assessment', done: false },
         ]}
         outcome="A complete product specification — design score, component architecture with tool mapping, phased implementation plan, and risk assessment — ready to guide your build."
       />
@@ -357,23 +550,27 @@ const AppAppEvaluator: React.FC = () => {
           done={step1Done}
           collapsed={step1Done}
         >
-          {/* Example pills */}
+          {/* Example chips (§4.6) */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: '#718096', marginBottom: 8 }}>Try an example:</div>
+            <div style={{ fontSize: 12, color: '#A0AEC0', fontWeight: 500, marginBottom: 8, fontFamily: FONT }}>
+              Try an example:
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {EXAMPLE_APPS.map((ex) => (
                 <button
                   key={ex.name}
                   onClick={() => handleExampleClick(ex)}
                   style={{
-                    padding: '7px 14px', borderRadius: 10,
-                    fontSize: 13, color: LEVEL_ACCENT_DARK, background: `${LEVEL_ACCENT}15`,
-                    border: `1px solid ${LEVEL_ACCENT}`, cursor: 'pointer',
-                    transition: 'border-color 0.15s, background 0.15s',
+                    padding: '6px 14px', borderRadius: 20,
+                    fontSize: 12, fontWeight: 500, color: '#4A5568',
+                    background: '#F7FAFC',
+                    border: '1px solid #E2E8F0', cursor: 'pointer',
+                    transition: 'border-color 0.15s, background 0.15s, color 0.15s',
                     textAlign: 'left', lineHeight: 1.4,
+                    fontFamily: FONT,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK; e.currentTarget.style.background = `${LEVEL_ACCENT}30`; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.background = `${LEVEL_ACCENT}15`; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.background = `${LEVEL_ACCENT}18`; e.currentTarget.style.color = LEVEL_ACCENT_DARK; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F7FAFC'; e.currentTarget.style.color = '#4A5568'; }}
                 >
                   {ex.name}
                 </button>
@@ -383,7 +580,7 @@ const AppAppEvaluator: React.FC = () => {
 
           {/* Input 1: App Description */}
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 6, fontFamily: FONT }}>
               What does your application do?
             </label>
             <textarea
@@ -401,7 +598,7 @@ const AppAppEvaluator: React.FC = () => {
                 border: '1px solid #E2E8F0', borderRadius: 12,
                 padding: '14px 16px', fontSize: 15, color: '#1A202C',
                 fontFamily: FONT, lineHeight: 1.6, outline: 'none',
-                transition: 'border-color 0.15s',
+                transition: 'border-color 0.15s', boxSizing: 'border-box',
               }}
               onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
               onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
@@ -410,7 +607,7 @@ const AppAppEvaluator: React.FC = () => {
 
           {/* Input 2: Problem & Users */}
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 6, fontFamily: FONT }}>
               Who is this for and what problem does it solve?
               <span style={{
                 fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK,
@@ -434,7 +631,7 @@ const AppAppEvaluator: React.FC = () => {
                 border: '1px solid #E2E8F0', borderRadius: 12,
                 padding: '14px 16px', fontSize: 15, color: '#1A202C',
                 fontFamily: FONT, lineHeight: 1.6, outline: 'none',
-                transition: 'border-color 0.15s',
+                transition: 'border-color 0.15s', boxSizing: 'border-box',
               }}
               onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
               onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
@@ -443,7 +640,7 @@ const AppAppEvaluator: React.FC = () => {
 
           {/* Input 3: Data & Content */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 6, fontFamily: FONT }}>
               What data or content will it work with?
               <span style={{
                 fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK,
@@ -467,7 +664,7 @@ const AppAppEvaluator: React.FC = () => {
                 border: '1px solid #E2E8F0', borderRadius: 12,
                 padding: '14px 16px', fontSize: 15, color: '#1A202C',
                 fontFamily: FONT, lineHeight: 1.6, outline: 'none',
-                transition: 'border-color 0.15s',
+                transition: 'border-color 0.15s', boxSizing: 'border-box',
               }}
               onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
               onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
@@ -483,7 +680,7 @@ const AppAppEvaluator: React.FC = () => {
                 padding: '12px 28px', borderRadius: 24,
                 background: !appDescription.trim() || isLoading ? '#CBD5E0' : '#38B2AC',
                 color: '#FFFFFF', border: 'none',
-                fontSize: 14, fontWeight: 700,
+                fontSize: 14, fontWeight: 700, fontFamily: FONT,
                 cursor: !appDescription.trim() || isLoading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: 8,
                 transition: 'background 0.15s',
@@ -510,7 +707,7 @@ const AppAppEvaluator: React.FC = () => {
             <div style={{
               marginTop: 14, padding: '12px 16px', borderRadius: 10,
               background: '#FFF5F5', border: '1px solid #FC8181',
-              fontSize: 13, color: '#C53030',
+              fontSize: 13, color: '#C53030', fontFamily: FONT,
             }}>
               {error}
             </div>
@@ -535,26 +732,19 @@ const AppAppEvaluator: React.FC = () => {
           collapsed={false}
         >
           {!result ? (
-            /* Educational preview or loading skeleton */
+            /* Educational preview or ProcessingProgress */
             isLoading ? (
-              /* Loading skeleton */
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: LEVEL_ACCENT_DARK, marginBottom: 16 }}>
-                  Evaluating your application...
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {EVALUATOR_SECTIONS.map(block => (
-                    <div key={block.key} style={{
-                      height: 100, borderRadius: 10, borderLeft: `4px solid ${block.color}`,
-                      background: '#F0F0F0', animation: 'ppPulse 1.5s ease-in-out infinite',
-                    }} />
-                  ))}
-                </div>
-              </div>
+              /* ProcessingProgress indicator (§9.5) */
+              <ProcessingProgress
+                steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
+                currentStep={loadingStep}
+                header={isRefineLoading ? 'Refining your evaluation…' : 'Evaluating your application…'}
+                subtext="This usually takes 15–25 seconds"
+              />
             ) : (
-              /* Educational default — 4-section preview */
+              /* Educational default — 4-section preview (§3.7) using LEVEL_ACCENT_DARK */
               <div>
-                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 16, fontFamily: FONT }}>
                   Your output will be structured using the <strong style={{ color: '#1A202C' }}>4-part Application Evaluation Framework</strong> — a comprehensive assessment that transforms your idea into an actionable product specification. Complete Step 1 above and each section below will be filled with content tailored to your specific application.
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -562,9 +752,11 @@ const AppAppEvaluator: React.FC = () => {
                     <div
                       key={block.key}
                       style={{
-                        borderLeft: `4px solid ${block.color}`,
-                        background: `${block.color}08`,
+                        borderLeft: `4px solid ${LEVEL_ACCENT_DARK}`,
+                        background: `${LEVEL_ACCENT_DARK}08`,
                         borderRadius: 10, padding: '16px 18px',
+                        animation: 'ppFadeIn 0.3s ease both',
+                        animationDelay: `${idx * 80}ms`,
                       }}
                     >
                       <div style={{
@@ -574,6 +766,7 @@ const AppAppEvaluator: React.FC = () => {
                         <span style={{
                           fontSize: 12, fontWeight: 700, color: '#1A202C',
                           textTransform: 'uppercase', letterSpacing: '0.04em',
+                          fontFamily: FONT,
                         }}>
                           {block.label}
                         </span>
@@ -581,20 +774,21 @@ const AppAppEvaluator: React.FC = () => {
                           {idx + 1}/4
                         </span>
                       </div>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 10 }}>
+                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 10, fontFamily: FONT }}>
                         {block.why}
                       </div>
                       <div style={{
-                        background: `${block.color}18`, borderRadius: 8,
-                        padding: '10px 12px', borderLeft: `3px solid ${block.color}`,
+                        background: `${LEVEL_ACCENT_DARK}18`, borderRadius: 8,
+                        padding: '10px 12px', borderLeft: `3px solid ${LEVEL_ACCENT_DARK}`,
                       }}>
                         <div style={{
                           fontSize: 10, fontWeight: 700, color: '#A0AEC0',
                           textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4,
+                          fontFamily: FONT,
                         }}>
                           Example
                         </div>
-                        <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic', fontFamily: FONT }}>
                           {block.example}
                         </div>
                       </div>
@@ -610,7 +804,7 @@ const AppAppEvaluator: React.FC = () => {
                   {EVALUATOR_SECTIONS.map(block => (
                     <div key={block.key} style={{
                       display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 11, color: '#718096',
+                      fontSize: 11, color: '#718096', fontFamily: FONT,
                     }}>
                       <span style={{ fontSize: 13 }}>{block.icon}</span>
                       {block.label}
@@ -622,7 +816,7 @@ const AppAppEvaluator: React.FC = () => {
           ) : (
             /* ═══ Active Output Content ═══ */
             <>
-              {/* View toggle + actions */}
+              {/* Top row: toggle (left) + Copy button (right) — §4.2 */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: 20, flexWrap: 'wrap', gap: 10,
@@ -649,31 +843,29 @@ const AppAppEvaluator: React.FC = () => {
                   <InfoTooltip text="Markdown preserves the structure (headings, bullets, formatting) when you paste your product specification into ChatGPT, Claude, or any AI tool — giving you better results than plain text." />
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <ActionBtn
                     icon={copied ? <Check size={13} /> : <Copy size={13} />}
-                    label={copied ? 'Copied!' : 'Copy Full Product Spec'}
+                    label={copied ? 'Copied!' : 'Copy Product Specification'}
                     onClick={handleCopyFull}
                     primary
                   />
                   <ActionBtn
                     icon={<Download size={13} />}
-                    label="Download"
+                    label="Download (.md)"
                     onClick={handleDownload}
                   />
-                  {user && (
-                    <ActionBtn
-                      icon={savedToLibrary ? <Check size={13} /> : <Library size={13} />}
-                      label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                      onClick={handleSaveToLibrary}
-                      disabled={savedToLibrary}
-                      accent
-                    />
-                  )}
+                  <ActionBtn
+                    icon={<Library size={13} />}
+                    label={savedToLibrary ? 'Saved!' : 'Save to Library'}
+                    onClick={handleSaveToLibrary}
+                    accent
+                    disabled={savedToLibrary}
+                  />
                 </div>
               </div>
 
-              {/* Markdown view — shows the cohesive deliverable */}
+              {/* Markdown view — shows the cohesive deliverable (§4.4) */}
               {showMarkdown && (
                 <div style={{
                   background: '#1A202C', borderRadius: 12,
@@ -689,7 +881,7 @@ const AppAppEvaluator: React.FC = () => {
                 </div>
               )}
 
-              {/* Card view — 4 sections */}
+              {/* Card view — 4 sections using LEVEL_ACCENT_DARK (§4.1) */}
               {!showMarkdown && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {/* Section 1: Design Score (informational — excluded from deliverable) */}
@@ -711,11 +903,11 @@ const AppAppEvaluator: React.FC = () => {
                           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
                           borderBottom: '1px solid #F7FAFC',
                         }}>
-                          <div style={{ width: 140, flexShrink: 0, fontSize: 13, fontWeight: 700, color: '#1A202C', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 140, flexShrink: 0, fontSize: 13, fontWeight: 700, color: '#1A202C', display: 'flex', alignItems: 'center', gap: 6, fontFamily: FONT }}>
                             <span style={{ fontSize: 14 }}>{SCORE_CRITERIA_LABELS[key]?.icon || ''}</span>
                             {SCORE_CRITERIA_LABELS[key]?.label || key}
                           </div>
-                          <div style={{ flex: 1, fontSize: 13, color: '#4A5568' }}>{val.assessment}</div>
+                          <div style={{ flex: 1, fontSize: 13, color: '#4A5568', fontFamily: FONT }}>{val.assessment}</div>
                           <div style={{ width: 100, flexShrink: 0 }}>
                             <div style={{ height: 6, borderRadius: 3, background: '#E2E8F0', overflow: 'hidden' }}>
                               <div style={{
@@ -733,10 +925,10 @@ const AppAppEvaluator: React.FC = () => {
                       background: '#F7FAFC', borderRadius: 10, padding: 16,
                       border: '1px solid #E2E8F0',
                     }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', marginBottom: 6, fontFamily: FONT }}>
                         Assessment Summary
                       </div>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6 }}>
+                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>
                         {result.design_score.rationale}
                       </div>
                     </div>
@@ -755,7 +947,7 @@ const AppAppEvaluator: React.FC = () => {
                       background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, marginBottom: 12,
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>
                           {result.architecture.summary}
                         </div>
                         <button
@@ -764,6 +956,7 @@ const AppAppEvaluator: React.FC = () => {
                             display: 'flex', alignItems: 'center', gap: 4,
                             fontSize: 12, color: '#718096', background: 'none',
                             border: 'none', cursor: 'pointer', transition: 'color 0.15s',
+                            fontFamily: FONT,
                           }}
                           onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
                           onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
@@ -783,16 +976,16 @@ const AppAppEvaluator: React.FC = () => {
                               borderLeft: `4px solid ${comp.priority === 'essential' ? '#38B2AC' : comp.priority === 'recommended' ? '#D69E2E' : '#A0AEC0'}`,
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{comp.name}</span>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{comp.name}</span>
                                 <span style={{
                                   fontSize: 10, fontWeight: 600, borderRadius: 10, padding: '2px 8px',
                                   background: priority.bg, color: priority.color, border: `1px solid ${priority.border}`,
-                                  textTransform: 'capitalize',
+                                  textTransform: 'capitalize', fontFamily: FONT,
                                 }}>
                                   {comp.priority}
                                 </span>
                               </div>
-                              <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8 }}>
+                              <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8, fontFamily: FONT }}>
                                 {comp.description}
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
@@ -800,12 +993,13 @@ const AppAppEvaluator: React.FC = () => {
                                   <span key={i} style={{
                                     fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK,
                                     background: `${LEVEL_ACCENT}30`, borderRadius: 8, padding: '3px 8px',
+                                    fontFamily: FONT,
                                   }}>
                                     {tool}
                                   </span>
                                 ))}
                               </div>
-                              <div style={{ fontSize: 11, color: '#718096' }}>
+                              <div style={{ fontSize: 11, color: '#718096', fontFamily: FONT }}>
                                 Level {comp.level_connection} connection
                               </div>
                             </div>
@@ -828,7 +1022,7 @@ const AppAppEvaluator: React.FC = () => {
                       background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, marginBottom: 12,
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>
                           {result.implementation_plan.summary}
                         </div>
                         <button
@@ -837,6 +1031,7 @@ const AppAppEvaluator: React.FC = () => {
                             display: 'flex', alignItems: 'center', gap: 4,
                             fontSize: 12, color: '#718096', background: 'none',
                             border: 'none', cursor: 'pointer', transition: 'color 0.15s',
+                            fontFamily: FONT,
                           }}
                           onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
                           onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
@@ -862,28 +1057,28 @@ const AppAppEvaluator: React.FC = () => {
                                 }}>
                                   {idx + 1}
                                 </div>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{step.phase}</span>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{step.phase}</span>
                               </div>
                               <span style={{
                                 fontSize: 11, fontWeight: 600, color: '#718096',
                                 background: '#F7FAFC', borderRadius: 8, padding: '3px 8px',
-                                border: '1px solid #E2E8F0',
+                                border: '1px solid #E2E8F0', fontFamily: FONT,
                               }}>
                                 {step.duration_estimate}
                               </span>
                             </div>
-                            <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8 }}>
+                            <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8, fontFamily: FONT }}>
                               {step.description}
                             </div>
                             <div style={{ paddingLeft: 4 }}>
                               {step.tasks.map((task: string, i: number) => (
-                                <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, display: 'flex', gap: 6, marginBottom: 3 }}>
+                                <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, display: 'flex', gap: 6, marginBottom: 3, fontFamily: FONT }}>
                                   <span style={{ color: LEVEL_ACCENT_DARK, flexShrink: 0 }}>&bull;</span>{task}
                                 </div>
                               ))}
                             </div>
                             {step.dependencies.length > 0 && (
-                              <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 6 }}>
+                              <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 6, fontFamily: FONT }}>
                                 Depends on: {step.dependencies.join(', ')}
                               </div>
                             )}
@@ -905,7 +1100,7 @@ const AppAppEvaluator: React.FC = () => {
                     <div style={{
                       background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, marginBottom: 12,
                     }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>
                         {result.risks_and_gaps.summary}
                       </div>
                     </div>
@@ -919,26 +1114,26 @@ const AppAppEvaluator: React.FC = () => {
                             borderLeft: `4px solid ${severity.border}`,
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{item.name}</span>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{item.name}</span>
                               <span style={{
                                 fontSize: 10, fontWeight: 600, borderRadius: 10, padding: '2px 8px',
                                 background: severity.bg, color: severity.color, border: `1px solid ${severity.border}`,
-                                textTransform: 'capitalize',
+                                textTransform: 'capitalize', fontFamily: FONT,
                               }}>
                                 {item.severity}
                               </span>
                             </div>
-                            <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8 }}>
+                            <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8, fontFamily: FONT }}>
                               {item.description}
                             </div>
                             <div style={{
                               background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 8,
                               padding: '8px 12px',
                             }}>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: '#276749', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#276749', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: FONT }}>
                                 Mitigation
                               </div>
-                              <div style={{ fontSize: 12, color: '#2F855A', lineHeight: 1.6 }}>
+                              <div style={{ fontSize: 12, color: '#2F855A', lineHeight: 1.6, fontFamily: FONT }}>
                                 {item.mitigation}
                               </div>
                             </div>
@@ -950,32 +1145,226 @@ const AppAppEvaluator: React.FC = () => {
                 </div>
               )}
 
-              {/* Bottom row: Start Over + Save to Library */}
+              {/* ── Output Actions Panel (§4.2 — separate section between output and refinement) ── */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
                 marginTop: 20,
+                opacity: visibleBlocks >= 5 ? 1 : 0,
+                transform: visibleBlocks >= 5 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+              }}>
+                <OutputActionsPanel
+                  workflowName={`app-evaluation-${appDescription.slice(0, 30).replace(/\s+/g, '-').toLowerCase()}`}
+                  fullMarkdown={buildProductSpec(result)}
+                  onSaveToArtefacts={handleSaveToLibrary}
+                  isSaved={savedToLibrary}
+                />
+              </div>
+
+              {/* ── Combined Caveat + Refinement Card (§4.5 — collapsed by default) ── */}
+              <div style={{
+                background: '#F7FAFC',
+                borderRadius: 14,
+                border: '1px solid #E2E8F0',
+                padding: '20px 24px',
+                marginTop: 20,
+                marginBottom: 20,
+                opacity: visibleBlocks >= 6 ? 1 : 0,
+                transform: visibleBlocks >= 6 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+              }}>
+                {/* Practitioner caveat — always visible */}
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  marginBottom: refineExpanded ? 16 : 12,
+                }}>
+                  <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                    This product specification is a strong starting point, but every project environment is different.
+                    Validate the architecture against your actual infrastructure, team capabilities, and timeline constraints.
+                  </div>
+                </div>
+
+                {/* Expand CTA — shown only when collapsed */}
+                {!refineExpanded && (
+                  <button
+                    onClick={() => setRefineExpanded(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: 0, fontSize: 13, fontWeight: 600,
+                      color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                  >
+                    <ChevronDown size={14} />
+                    Would you like to refine this evaluation further?
+                    {refinementCount > 0 && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                        borderRadius: 20, padding: '2px 10px',
+                        marginLeft: 6,
+                      }}>
+                        Refinement #{refinementCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Expanded refinement section */}
+                {refineExpanded && (
+                  <div style={{
+                    borderTop: '1px solid #E2E8F0',
+                    paddingTop: 16,
+                    animation: 'ppSlideDown 0.3s ease-out both',
+                  }}>
+                    {/* Section header with close button */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      marginBottom: 6,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{
+                          fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                          textTransform: 'uppercase', letterSpacing: '0.06em',
+                          fontFamily: FONT,
+                        }}>
+                          Refine Your Evaluation
+                        </div>
+                        {refinementCount > 0 && (
+                          <div style={{
+                            fontSize: 11, fontWeight: 600,
+                            background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                            borderRadius: 20, padding: '2px 10px',
+                            fontFamily: FONT,
+                          }}>
+                            Refinement #{refinementCount}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setRefineExpanded(false)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: 4, borderRadius: 6, display: 'flex',
+                          color: '#A0AEC0', transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#4A5568')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <p style={{
+                      fontSize: 13, color: '#718096', lineHeight: 1.6,
+                      margin: '0 0 18px', fontFamily: FONT,
+                    }}>
+                      Answer any of these to add context and get a more targeted evaluation. You don't need to answer all of them — even one helps.
+                    </p>
+
+                    {refinementQuestions.map((question, i) => (
+                      <div key={i} style={{ marginBottom: 16 }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: 13, fontWeight: 600, color: '#2D3748',
+                          marginBottom: 6, fontFamily: FONT,
+                        }}>
+                          {question}
+                        </label>
+                        <input
+                          type="text"
+                          value={refinementAnswers[i] || ''}
+                          onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                          placeholder="Your answer…"
+                          style={{
+                            width: '100%',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                            fontSize: 13,
+                            fontFamily: FONT,
+                            color: '#1A202C',
+                            outline: 'none',
+                            boxSizing: 'border-box' as const,
+                            transition: 'border-color 0.15s',
+                            background: '#FFFFFF',
+                          }}
+                          onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                          onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                        />
+                      </div>
+                    ))}
+
+                    <div style={{ marginBottom: 18 }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: 13, fontWeight: 600, color: '#2D3748',
+                        marginBottom: 6, fontFamily: FONT,
+                      }}>
+                        Anything else to add?
+                      </label>
+                      <textarea
+                        value={refinementAdditional}
+                        onChange={e => setRefinementAdditional(e.target.value)}
+                        placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                        style={{
+                          width: '100%',
+                          minHeight: 60,
+                          resize: 'none',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 10,
+                          padding: '10px 14px',
+                          fontSize: 13,
+                          fontFamily: FONT,
+                          color: '#1A202C',
+                          outline: 'none',
+                          boxSizing: 'border-box' as const,
+                          transition: 'border-color 0.15s',
+                          background: '#FFFFFF',
+                          lineHeight: 1.5,
+                        }}
+                        onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                        onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                      />
+                    </div>
+
+                    <ActionBtn
+                      icon={isLoading ? (
+                        <div style={{
+                          width: 13, height: 13, border: '2px solid #FFFFFF40',
+                          borderTopColor: '#FFFFFF', borderRadius: '50%',
+                          animation: 'ppSpin 0.6s linear infinite',
+                        }} />
+                      ) : (
+                        <ArrowRight size={13} />
+                      )}
+                      label={isLoading ? 'Refining…' : 'Refine Evaluation'}
+                      onClick={handleRefineEvaluation}
+                      primary
+                      disabled={!hasRefinementInput || isLoading}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom navigation row (per PRD §4.2) */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginTop: 20,
+                flexWrap: 'wrap',
               }}>
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
                   onClick={handleReset}
                 />
-                {user && (
-                  <ActionBtn
-                    icon={savedToLibrary ? <Check size={13} /> : <Library size={13} />}
-                    label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                    onClick={handleSaveToLibrary}
-                    disabled={savedToLibrary}
-                    accent
-                  />
-                )}
               </div>
             </>
           )}
         </StepCard>
       </div>
 
-      {/* Toast */}
+      {/* Toast (§3.9) */}
       {toastMessage && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
@@ -983,6 +1372,7 @@ const AppAppEvaluator: React.FC = () => {
           padding: '10px 18px', fontSize: 13, fontWeight: 500,
           boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 50,
           animation: 'ppFadeIn 0.15s ease both',
+          fontFamily: FONT,
         }}>
           {toastMessage} ✓
         </div>
@@ -991,7 +1381,7 @@ const AppAppEvaluator: React.FC = () => {
   );
 };
 
-/* ─── Output Section Card ─── */
+/* ─── Output Section Card — uses LEVEL_ACCENT_DARK for all sections (§4.1, §13) ─── */
 const OutputSection: React.FC<{
   section: typeof EVALUATOR_SECTIONS[number];
   index: number;
@@ -1004,8 +1394,8 @@ const OutputSection: React.FC<{
   const isSectionCopied = copiedSection === section.key;
   return (
     <div style={{
-      borderLeft: `4px solid ${section.color}`,
-      background: `${section.color}08`,
+      borderLeft: `4px solid ${LEVEL_ACCENT_DARK}`,
+      background: `${LEVEL_ACCENT_DARK}12`,
       borderRadius: 10, padding: '18px 20px',
       opacity: visible ? 1 : 0,
       transform: visible ? 'translateY(0)' : 'translateY(8px)',
@@ -1020,6 +1410,7 @@ const OutputSection: React.FC<{
           <span style={{
             fontSize: 12, fontWeight: 700, color: '#1A202C',
             textTransform: 'uppercase', letterSpacing: '0.04em',
+            fontFamily: FONT,
           }}>
             {section.label}
           </span>
@@ -1033,8 +1424,9 @@ const OutputSection: React.FC<{
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 11, color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
             padding: '2px 6px', borderRadius: 6, transition: 'color 0.15s',
+            fontFamily: FONT,
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#38B2AC')}
+          onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
           onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
         >
           {isSectionCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -1046,7 +1438,7 @@ const OutputSection: React.FC<{
   );
 };
 
-/* ── Step Card wrapper ── */
+/* ── Step Card wrapper (§3.4) ── */
 const StepCard: React.FC<{
   stepNumber: number;
   title: string;
@@ -1067,15 +1459,16 @@ const StepCard: React.FC<{
     }}>
       <StepBadge number={stepNumber} done={done} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>{title}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{title}</div>
         {!collapsed && (
-          <div style={{ fontSize: 13, color: '#718096', marginTop: 2 }}>{subtitle}</div>
+          <div style={{ fontSize: 13, color: '#718096', marginTop: 2, fontFamily: FONT }}>{subtitle}</div>
         )}
       </div>
       {done && collapsed && (
         <div style={{
           fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK,
           display: 'flex', alignItems: 'center', gap: 4,
+          fontFamily: FONT,
         }}>
           <Check size={13} /> Done
         </div>
@@ -1085,7 +1478,7 @@ const StepCard: React.FC<{
   </div>
 );
 
-/* ── Step badge circle — uses Level 5 accent color ── */
+/* ── Step badge circle — uses Level 5 accent color (§3.4) ── */
 const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -1100,7 +1493,7 @@ const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }
   </div>
 );
 
-/* ── Step connector ── */
+/* ── Step connector (§3.5) ── */
 const StepConnector: React.FC = () => (
   <div style={{
     display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -1123,7 +1516,7 @@ const StepConnector: React.FC = () => (
   </div>
 );
 
-/* ── Tool Overview — standardised "How it works" strip ── */
+/* ── Tool Overview — standardised "How it works" strip (§3.3) ── */
 const ToolOverview: React.FC<{
   steps: { number: number; label: string; detail: string; done: boolean }[];
   outcome: string;
@@ -1135,6 +1528,7 @@ const ToolOverview: React.FC<{
     <div style={{
       fontSize: 11, fontWeight: 700, color: '#A0AEC0',
       textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14,
+      fontFamily: FONT,
     }}>
       How it works
     </div>
@@ -1153,10 +1547,10 @@ const ToolOverview: React.FC<{
               {step.done ? <Check size={12} /> : step.number}
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 2 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 2, fontFamily: FONT }}>
                 {step.label}
               </div>
-              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT }}>
                 {step.detail}
               </div>
             </div>
@@ -1174,17 +1568,18 @@ const ToolOverview: React.FC<{
       <div style={{
         fontSize: 11, fontWeight: 700, color: '#276749',
         textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0, marginTop: 1,
+        fontFamily: FONT,
       }}>
         Outcome
       </div>
-      <div style={{ fontSize: 12, color: '#2F855A', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 12, color: '#2F855A', lineHeight: 1.5, fontFamily: FONT }}>
         {outcome}
       </div>
     </div>
   </div>
 );
 
-/* ── Toggle Button (Cards / Markdown) ── */
+/* ── Toggle Button — Cards / Markdown (§4.1) ── */
 const ToggleBtn: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -1201,13 +1596,14 @@ const ToggleBtn: React.FC<{
       background: active ? (highlight ? '#2B6CB0' : '#1A202C') : 'transparent',
       color: active ? '#FFFFFF' : (highlight ? '#2B6CB0' : '#718096'),
       transition: 'background 0.15s, color 0.15s',
+      fontFamily: FONT,
     }}
   >
     {icon} {label}
   </button>
 );
 
-/* ── Info Tooltip ── */
+/* ── Info Tooltip (§6.1) ── */
 const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
   const [show, setShow] = useState(false);
   return (
@@ -1248,7 +1644,7 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-/* ── Action Button ── */
+/* ── Action Button (§3.8) ── */
 const ActionBtn: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -1272,6 +1668,7 @@ const ActionBtn: React.FC<{
         background: bg, color: fg, border: bdr,
         transition: 'opacity 0.15s',
         opacity: disabled ? 0.6 : 1,
+        fontFamily: FONT,
       }}
     >
       {icon} {label}

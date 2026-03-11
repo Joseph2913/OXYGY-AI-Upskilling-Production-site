@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, Copy, Check, RotateCcw, Code, Library, Download,
+  ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code, Library, Download,
   Info, ChevronRight, ChevronDown, Sparkles, ThumbsUp, MessageSquare,
-  Upload, X, Plus, Maximize2, Minimize2,
+  Upload, X, Plus, Maximize2, Minimize2, Eye,
   LayoutDashboard, Users, Layers, BarChart3, Palette, Code2,
   Database, SlidersHorizontal, Smartphone, ShieldCheck, CheckSquare,
 } from 'lucide-react';
@@ -18,10 +18,42 @@ import {
 import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import OutputActionsPanel from '../workflow/OutputActionsPanel';
 
 const FONT = "'DM Sans', sans-serif";
 const LEVEL_ACCENT = '#F5B8A0';
 const LEVEL_ACCENT_DARK = '#8C3A1A';
+
+/* ─── ProcessingProgress step labels ─── */
+const MOCKUP_LOADING_STEPS = [
+  'Analysing your brief and requirements…',
+  'Processing inspiration references…',
+  'Generating visual layout and components…',
+  'Rendering your app mockup…',
+  'Applying design tokens and polish…',
+  'Finalising mockup…',
+];
+const PRD_LOADING_STEPS = [
+  'Analysing your brief and mockup…',
+  'Defining tech stack and architecture…',
+  'Mapping features and data models…',
+  'Writing API routes and UI specs…',
+  'Generating acceptance criteria…',
+  'Building implementation phases…',
+  'Finalising your PRD…',
+];
+const PRD_REFINE_LOADING_STEPS = [
+  'Processing your refinement feedback…',
+  'Re-evaluating architecture decisions…',
+  'Updating features and data models…',
+  'Refining API routes and UI specs…',
+  'Revising acceptance criteria…',
+  'Rebuilding implementation phases…',
+  'Finalising refined PRD…',
+];
+// Front-loaded: early steps fast, later steps slower
+const MOCKUP_STEP_DELAYS = [800, 2000, 4000, 5000, 4000, 3000];
+const PRD_STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
 
 const INITIAL_BRIEF: DashboardBrief = {
   q1_purpose: '', q2_audience: '', q3_type: '',
@@ -132,14 +164,18 @@ function generateFallbackPRD(brief: DashboardBrief): NewPRDResult {
 
 /* ─── Build cohesive PRD deliverable (Markdown) ─── */
 function buildFullPRD(result: NewPRDResult): string {
-  return [
-    `# ${result.prd_content}`,
-    '',
-    ...Object.entries(result.sections).map(([key, val]) => {
-      const def = PRD_SECTIONS.find(s => s.key === key);
-      return `## ${def?.title || key}\n\n${val}`;
-    }).join('\n\n---\n\n'),
-  ].join('\n');
+  const sectionBlocks = Object.entries(result.sections).map(([key, val]) => {
+    const def = PRD_SECTIONS.find(s => s.key === key);
+    return `## ${def?.title || key}\n\n${val}`;
+  });
+  return [`# ${result.prd_content}`, '', ...sectionBlocks].join('\n\n---\n\n');
+}
+
+function summariseSection(val: string): string {
+  // Return first meaningful line, truncated to ~120 chars
+  const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#'));
+  const first = lines[0] || '';
+  return first.length > 120 ? first.slice(0, 117) + '…' : first;
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -370,8 +406,20 @@ const AppDashboardDesigner: React.FC = () => {
   const [visibleBlocks, setVisibleBlocks] = useState(0);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [expandedPrdSections, setExpandedPrdSections] = useState<Set<string>>(new Set());
   const [savedToLibrary, setSavedToLibrary] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // ─── Loading step progression ───
+  const [mockupLoadingStep, setMockupLoadingStep] = useState(0);
+  const [prdLoadingStep, setPrdLoadingStep] = useState(0);
+  const [isPrdRefineLoading, setIsPrdRefineLoading] = useState(false);
+
+  // ─── PRD refinement ───
+  const [prdRefinementAnswers, setPrdRefinementAnswers] = useState<Record<number, string>>({});
+  const [prdAdditionalContext, setPrdAdditionalContext] = useState('');
+  const [prdRefinementCount, setPrdRefinementCount] = useState(0);
+  const [prdRefineExpanded, setPrdRefineExpanded] = useState(false);
 
   // ─── Image upload ───
   const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
@@ -379,6 +427,7 @@ const AppDashboardDesigner: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAnalyzingInspiration, setIsAnalyzingInspiration] = useState(false);
   const [inspirationAnalysis, setInspirationAnalysis] = useState<string | null>(null);
+  const [jsonPromptExpanded, setJsonPromptExpanded] = useState(false);
 
   // ─── Refs ───
   const mockupRef = useRef<HTMLDivElement>(null);
@@ -418,6 +467,47 @@ const AppDashboardDesigner: React.FC = () => {
       localStorage.setItem('oxygy_dashboard-designer_draft', JSON.stringify({ brief, dataSourcesText }));
     }
   }, [brief, dataSourcesText]);
+
+  // ─── Mockup loading step progression ───
+  useEffect(() => {
+    if (!isLoading) {
+      if (mockupLoadingStep > 0) {
+        setMockupLoadingStep(MOCKUP_LOADING_STEPS.length);
+        const timer = setTimeout(() => setMockupLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setMockupLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    MOCKUP_STEP_DELAYS.forEach((delay, i) => {
+      cumulative += delay;
+      timers.push(setTimeout(() => setMockupLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [isLoading]);
+
+  // ─── PRD loading step progression ───
+  useEffect(() => {
+    if (!isPrdLoading) {
+      if (prdLoadingStep > 0) {
+        const steps = isPrdRefineLoading ? PRD_REFINE_LOADING_STEPS : PRD_LOADING_STEPS;
+        setPrdLoadingStep(steps.length);
+        const timer = setTimeout(() => setPrdLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setPrdLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    PRD_STEP_DELAYS.forEach((delay, i) => {
+      cumulative += delay;
+      timers.push(setTimeout(() => setPrdLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [isPrdLoading]);
 
   // ─── PRD staggered animation ───
   useEffect(() => {
@@ -653,6 +743,26 @@ const AppDashboardDesigner: React.FC = () => {
     setDataSourcesText(example.q5_dataSources);
   };
 
+  // ─── Step-back navigation ───
+  const handleGoBackToStep1 = () => {
+    setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
+    setImagePrompt(''); setJsonPrompt(null); setGenerationMethod(null);
+    setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
+    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
+    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
+    setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
+    setSavedToLibrary(false); setJsonPromptExpanded(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleGoBackToStep2 = () => {
+    setMockupApproved(false);
+    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
+    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
+    setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
+    setSavedToLibrary(false);
+  };
+
   // ─── Start over ───
   const handleStartOver = () => {
     setBrief({ ...INITIAL_BRIEF });
@@ -660,11 +770,65 @@ const AppDashboardDesigner: React.FC = () => {
     setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
     setImagePrompt(''); setJsonPrompt(null); setGenerationMethod(null); setInspirationAnalysis(null);
     setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
-    setPrdResult(null); setShowMarkdown(false);
+    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
     setUploadedImages(prev => { prev.forEach(img => URL.revokeObjectURL(img.preview)); return []; });
+    setPrdRefinementAnswers({});
+    setPrdAdditionalContext('');
+    setPrdRefinementCount(0);
+    setIsPrdRefineLoading(false);
+    setPrdRefineExpanded(false);
+    setJsonPromptExpanded(false);
     resetCounts();
     localStorage.removeItem('oxygy_dashboard-designer_draft');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ─── PRD refinement handler ───
+  const hasPrdRefinementInput = Object.values(prdRefinementAnswers).some(a => typeof a === 'string' && a.trim()) || prdAdditionalContext.trim() !== '';
+
+  const handleRefinePRD = async () => {
+    if (!hasPrdRefinementInput || !prdResult || isPrdLoading) return;
+
+    // Build refinement context from answered questions + additional context
+    const questions = [
+      'Are there specific features or screens that need more detail in the PRD?',
+      'What third-party integrations or APIs should be included?',
+      'Are there specific performance requirements or constraints?',
+      'What authentication or permission model does the app need?',
+      'Any design system preferences (colors, typography, component library)?',
+    ];
+    const answeredQuestions = questions
+      .map((q, i) => {
+        const answer = prdRefinementAnswers[i]?.trim();
+        return answer ? `Q: ${q}\nA: ${answer}` : null;
+      })
+      .filter(Boolean).join('\n\n');
+
+    const refinementMsg = [
+      `[REFINEMENT]\n\nOriginal brief: ${brief.q1_purpose}`,
+      answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+      prdAdditionalContext.trim() ? `\nAdditional context: ${prdAdditionalContext.trim()}` : '',
+    ].filter(Boolean).join('\n');
+
+    setIsPrdRefineLoading(true);
+    clearError();
+    setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+    // Pass refinement as enriched image prompt
+    const enrichedPrompt = `${imagePrompt}\n\n--- REFINEMENT FEEDBACK ---\n${refinementMsg}`;
+    const result = await generatePRD(brief, enrichedPrompt);
+
+    if (result) {
+      setPrdResult(result as NewPRDResult);
+    }
+
+    setPrdRefinementCount(prev => prev + 1);
+    setPrdRefinementAnswers({});
+    setPrdAdditionalContext('');
+    setIsPrdRefineLoading(false);
+    setCopied(false);
+    setSavedToLibrary(false);
+    setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
   };
 
   // ─── Copy / Download / Save handlers ───
@@ -726,6 +890,7 @@ const AppDashboardDesigner: React.FC = () => {
         @keyframes ppPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
         @keyframes ppFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes ppConnectorFlow { 0% { background-position: 0 0; } 100% { background-position: 0 20px; } }
+        @keyframes ppSlideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
       {/* ─── Page Title ─── */}
@@ -772,21 +937,19 @@ const AppDashboardDesigner: React.FC = () => {
       >
         {/* Example quick-fills */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, fontFamily: FONT }}>
-            Quick-fill from an example
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#A0AEC0', fontWeight: 600, fontFamily: FONT }}>Try an example:</span>
             {EXAMPLE_BRIEFS.map(ex => (
               <button
                 key={ex.label}
                 onClick={() => handleExampleClick(ex)}
                 style={{
-                  background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 20,
-                  padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#4A5568',
-                  cursor: 'pointer', fontFamily: FONT, transition: 'border-color 0.2s',
+                  background: `${LEVEL_ACCENT}12`, border: `1px solid ${LEVEL_ACCENT}`, borderRadius: 10,
+                  padding: '7px 14px', fontSize: 13, fontWeight: 500, color: LEVEL_ACCENT_DARK,
+                  cursor: 'pointer', fontFamily: FONT, transition: 'border-color 0.15s, background 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT)}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK; e.currentTarget.style.background = `${LEVEL_ACCENT}30`; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.background = `${LEVEL_ACCENT}12`; }}
               >
                 {ex.label}
               </button>
@@ -1049,35 +1212,27 @@ const AppDashboardDesigner: React.FC = () => {
             <>
               {/* Loading state */}
               {isLoading && (
-                <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                  <div style={{
-                    width: 40, height: 40, border: '3px solid #E2E8F0', borderTopColor: LEVEL_ACCENT,
-                    borderRadius: '50%', animation: 'ppSpin 0.7s linear infinite',
-                    margin: '0 auto 16px',
-                  }} />
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
-                    {isAnalyzingInspiration ? 'Analyzing inspiration images...' : 'Generating your app mockup...'}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT, marginTop: 4 }}>
-                    This typically takes 15-30 seconds
-                  </div>
-                </div>
+                <ProcessingProgress
+                  steps={MOCKUP_LOADING_STEPS}
+                  currentStep={mockupLoadingStep}
+                  header={isAnalyzingInspiration ? 'Analysing inspiration images…' : 'Generating your app mockup…'}
+                  subtext="This typically takes 15–30 seconds"
+                />
               )}
 
               {/* Mockup display */}
               {hasMockup && !isLoading && (
                 <div>
-                  {/* Side-by-side: Mockup (left) + JSON Prompt (right) */}
+                  {/* Mockup display */}
                   <div style={{
-                    display: 'flex', gap: 16, marginBottom: 16,
+                    marginBottom: 16,
                     ...(isFullScreen ? {
                       position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
                       zIndex: 100, margin: 0, background: '#FFFFFF', padding: 0,
                     } : {}),
                   }}>
-                    {/* LEFT — Mockup */}
+                    {/* Mockup */}
                     <div style={{
-                      flex: isFullScreen ? 1 : '0 0 62%',
                       borderRadius: isFullScreen ? 0 : 12, overflow: 'hidden',
                       border: '1px solid #E2E8F0', background: '#FFFFFF',
                     }}>
@@ -1122,71 +1277,6 @@ const AppDashboardDesigner: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* RIGHT — JSON Prompt */}
-                    {!isFullScreen && jsonPrompt && (
-                      <div style={{
-                        flex: '0 0 36%',
-                        borderRadius: 12, overflow: 'hidden',
-                        border: '1px solid #E2E8F0', background: '#1A202C',
-                        display: 'flex', flexDirection: 'column',
-                      }}>
-                        {/* Header */}
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '8px 14px', background: '#2D3748', borderBottom: '1px solid #4A5568',
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <Code size={13} color="#A0AEC0" />
-                            <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT }}>
-                              JSON Prompt
-                            </span>
-                            <InfoTooltip content="A structured JSON prompt is the most effective way to instruct image generation models. Unlike free-text prompts, JSON organises your requirements into clear fields — purpose, layout, features, style — so the AI can interpret each dimension precisely. This is the exact prompt that was sent to generate your mockup." />
-                          </div>
-                          <button
-                            onClick={async () => {
-                              await copyText(JSON.stringify(jsonPrompt, null, 2));
-                              toast('JSON prompt copied');
-                            }}
-                            style={{
-                              background: '#4A5568', color: '#E2E8F0', border: 'none', borderRadius: 6,
-                              padding: '3px 8px', fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT,
-                            }}
-                          >
-                            <Copy size={10} /> Copy
-                          </button>
-                        </div>
-
-                        {/* JSON content */}
-                        <div style={{ flex: 1, overflow: 'auto', padding: '14px 16px' }}>
-                          <pre style={{
-                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                            fontSize: 11, lineHeight: 1.7, color: '#E2E8F0',
-                            whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
-                          }}>
-                            {JSON.stringify(jsonPrompt, null, 2)}
-                          </pre>
-                        </div>
-
-                        {/* Image prompt (text) if different from JSON */}
-                        {imagePrompt && (
-                          <div style={{
-                            borderTop: '1px solid #4A5568', padding: '10px 16px',
-                            background: '#2D3748',
-                          }}>
-                            <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontFamily: FONT }}>
-                              Generated text prompt
-                            </div>
-                            <div style={{
-                              fontSize: 11, color: '#A0AEC0', lineHeight: 1.5, fontFamily: FONT,
-                              maxHeight: 80, overflow: 'auto',
-                            }}>
-                              {imagePrompt.length > 300 ? imagePrompt.slice(0, 300) + '...' : imagePrompt}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   {/* "Why mockup first?" tooltip */}
@@ -1195,9 +1285,122 @@ const AppDashboardDesigner: React.FC = () => {
                     <InfoTooltip content={WHY_MOCKUP_TOOLTIP} />
                   </div>
 
+                  {/* Collapsible JSON Prompt Card */}
+                  {!isFullScreen && jsonPrompt && (
+                    <div style={{
+                      borderRadius: 12, overflow: 'hidden',
+                      border: '1px solid #E2E8F0',
+                      marginBottom: 16,
+                      background: jsonPromptExpanded ? '#1A202C' : '#F7FAFC',
+                    }}>
+                      {/* Collapsed CTA */}
+                      {!jsonPromptExpanded && (
+                        <button
+                          onClick={() => setJsonPromptExpanded(true)}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '12px 16px', background: 'none', border: 'none',
+                            cursor: 'pointer', fontFamily: FONT,
+                          }}
+                        >
+                          <Code size={14} color={LEVEL_ACCENT_DARK} />
+                          <span style={{ fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK }}>
+                            See the JSON prompt used to generate this mockup
+                          </span>
+                          <ChevronDown size={14} color={LEVEL_ACCENT_DARK} />
+                          <div style={{ flex: 1 }} />
+                          <InfoTooltip content="A structured JSON prompt is the most effective way to instruct image generation models. Unlike free-text prompts, JSON organises your requirements into clear fields — purpose, layout, features, style — so the AI can interpret each dimension precisely." />
+                        </button>
+                      )}
+
+                      {/* Expanded JSON content */}
+                      {jsonPromptExpanded && (
+                        <div style={{ animation: 'ppSlideDown 0.3s ease-out both' }}>
+                          {/* Header */}
+                          <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '8px 14px', background: '#2D3748', borderBottom: '1px solid #4A5568',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <Code size={13} color="#A0AEC0" />
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT }}>
+                                JSON Prompt
+                              </span>
+                              <InfoTooltip content="A structured JSON prompt is the most effective way to instruct image generation models. Unlike free-text prompts, JSON organises your requirements into clear fields — purpose, layout, features, style — so the AI can interpret each dimension precisely. This is the exact prompt that was sent to generate your mockup." />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <button
+                                onClick={async () => {
+                                  await copyText(JSON.stringify(jsonPrompt, null, 2));
+                                  toast('JSON prompt copied');
+                                }}
+                                style={{
+                                  background: '#4A5568', color: '#E2E8F0', border: 'none', borderRadius: 6,
+                                  padding: '3px 8px', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT,
+                                }}
+                              >
+                                <Copy size={10} /> Copy
+                              </button>
+                              <button
+                                onClick={() => setJsonPromptExpanded(false)}
+                                style={{
+                                  background: 'none', border: 'none', cursor: 'pointer',
+                                  padding: 2, display: 'flex', color: '#A0AEC0',
+                                }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* JSON content */}
+                          <div style={{ maxHeight: 360, overflow: 'auto', padding: '14px 16px' }}>
+                            <pre style={{
+                              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                              fontSize: 11, lineHeight: 1.7, color: '#E2E8F0',
+                              whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
+                            }}>
+                              {JSON.stringify(jsonPrompt, null, 2)}
+                            </pre>
+                          </div>
+
+                          {/* Generated text prompt */}
+                          {imagePrompt && (
+                            <div style={{
+                              borderTop: '1px solid #4A5568', padding: '10px 16px',
+                              background: '#2D3748',
+                            }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontFamily: FONT }}>
+                                Generated text prompt
+                              </div>
+                              <div style={{
+                                fontSize: 11, color: '#A0AEC0', lineHeight: 1.5, fontFamily: FONT,
+                                maxHeight: 80, overflow: 'auto',
+                              }}>
+                                {imagePrompt.length > 300 ? imagePrompt.slice(0, 300) + '...' : imagePrompt}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Action buttons */}
                   {!mockupApproved && (
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button
+                        onClick={handleGoBackToStep1}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24,
+                          padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <ArrowLeft size={15} /> Back to Brief
+                      </button>
                       <button
                         onClick={handleApproveMockup}
                         disabled={isPrdLoading}
@@ -1361,31 +1564,54 @@ const AppDashboardDesigner: React.FC = () => {
               </div>
             </div>
           ) : isPrdLoading ? (
-            /* ─── PRD Loading skeleton ─── */
-            <div style={{ padding: '20px 0' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#4A5568', fontFamily: FONT, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 18, height: 18, border: '2px solid #E2E8F0', borderTopColor: LEVEL_ACCENT, borderRadius: '50%', animation: 'ppSpin 0.7s linear infinite' }} />
-                Generating your PRD...
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {PRD_SECTIONS.map((s, i) => (
-                  <div key={s.key} style={{
-                    borderRadius: 10, padding: '16px 18px', background: '#F7FAFC',
-                    border: '1px solid #E2E8F0', animation: 'ppPulse 1.5s ease-in-out infinite',
-                    animationDelay: `${i * 0.1}s`,
-                  }}>
-                    <div style={{ width: 120, height: 12, borderRadius: 4, background: '#E2E8F0', marginBottom: 8 }} />
-                    <div style={{ width: '90%', height: 10, borderRadius: 4, background: '#EDF2F7' }} />
-                    <div style={{ width: '70%', height: 10, borderRadius: 4, background: '#EDF2F7', marginTop: 4 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
+            /* ─── PRD Loading — ProcessingProgress ─── */
+            <ProcessingProgress
+              steps={isPrdRefineLoading ? PRD_REFINE_LOADING_STEPS : PRD_LOADING_STEPS}
+              currentStep={prdLoadingStep}
+              header={isPrdRefineLoading ? 'Refining your PRD…' : 'Generating your PRD…'}
+              subtext="This usually takes 15–20 seconds"
+            />
           ) : prdResult ? (
             /* ─── PRD Result ─── */
             <div>
-              {/* Top action row */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              {/* Top action row — toggle + buttons on same line */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                {/* Cards / Markdown toggle */}
+                <div style={{
+                  display: 'inline-flex', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0',
+                  overflow: 'hidden',
+                }}>
+                  <button
+                    onClick={() => setShowMarkdown(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                      border: 'none', cursor: 'pointer', borderRadius: 8,
+                      background: !showMarkdown ? '#1A202C' : 'transparent',
+                      color: !showMarkdown ? '#FFFFFF' : '#718096',
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                  >
+                    <Eye size={13} /> Cards
+                  </button>
+                  <button
+                    onClick={() => setShowMarkdown(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                      border: 'none', cursor: 'pointer', borderRadius: 8,
+                      background: showMarkdown ? '#2B6CB0' : 'transparent',
+                      color: showMarkdown ? '#FFFFFF' : '#718096',
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                  >
+                    <Code size={13} /> Markdown
+                  </button>
+                </div>
+                <InfoTooltip content="Markdown view shows the cohesive PRD deliverable — ready to paste into AI coding tools like Cursor, Lovable, or Bolt.new. Cards view shows all sections for individual review." />
+
+                <div style={{ flex: 1 }} />
+
                 <ActionBtn
                   icon={copied ? <Check size={13} /> : <Copy size={13} />}
                   label={copied ? 'Copied!' : 'Copy Full PRD'}
@@ -1404,38 +1630,6 @@ const AppDashboardDesigner: React.FC = () => {
                   accent
                   disabled={savedToLibrary}
                 />
-              </div>
-
-              {/* Cards / Markdown toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <div style={{
-                  display: 'inline-flex', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0',
-                  overflow: 'hidden',
-                }}>
-                  <button
-                    onClick={() => setShowMarkdown(false)}
-                    style={{
-                      padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                      border: 'none', cursor: 'pointer',
-                      background: !showMarkdown ? '#1A202C' : 'transparent',
-                      color: !showMarkdown ? '#FFFFFF' : '#718096',
-                    }}
-                  >
-                    Cards
-                  </button>
-                  <button
-                    onClick={() => setShowMarkdown(true)}
-                    style={{
-                      padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                      border: 'none', cursor: 'pointer',
-                      background: showMarkdown ? '#2B6CB0' : 'transparent',
-                      color: showMarkdown ? '#FFFFFF' : '#718096',
-                    }}
-                  >
-                    Markdown
-                  </button>
-                </div>
-                <InfoTooltip content="Markdown view shows the cohesive PRD deliverable — ready to paste into AI coding tools like Cursor, Lovable, or Bolt.new. Cards view shows all sections for individual review." />
               </div>
 
               {showMarkdown ? (
@@ -1464,72 +1658,302 @@ const AppDashboardDesigner: React.FC = () => {
                   </pre>
                 </div>
               ) : (
-                /* ─── Cards view ─── */
+                /* ─── Cards view — collapsible ─── */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {Object.entries(prdResult.sections).map(([key, val], i) => {
+                  {Object.entries(prdResult.sections).map(([key, rawVal], i) => {
+                    const val = rawVal as string;
                     const def = PRD_SECTIONS.find(s => s.key === key);
                     const color = LEVEL_ACCENT_DARK;
                     const Icon = PRD_SECTION_ICONS[key];
                     const isVisible = i < visibleBlocks;
+                    const isExpanded = expandedPrdSections.has(key);
                     return (
                       <div
                         key={key}
                         style={{
                           borderLeft: `4px solid ${color}`,
                           background: `${color}12`,
-                          borderRadius: 10, padding: '16px 18px',
+                          borderRadius: 10, padding: '14px 16px',
                           position: 'relative',
                           opacity: isVisible ? 1 : 0,
                           transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
                           transition: 'opacity 0.3s, transform 0.3s',
                         }}
                       >
-                        {/* Section header */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        {/* Section header — clickable to expand/collapse */}
+                        <button
+                          onClick={() => setExpandedPrdSections(prev => {
+                            const next = new Set(prev);
+                            if (next.has(key)) next.delete(key); else next.add(key);
+                            return next;
+                          })}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                            textAlign: 'left',
+                          }}
+                        >
                           {Icon && <Icon size={14} color={color} />}
                           <span style={{
                             fontSize: 12, fontWeight: 700, color, textTransform: 'uppercase',
-                            letterSpacing: '0.04em', fontFamily: FONT,
+                            letterSpacing: '0.04em', fontFamily: FONT, flex: 1,
                           }}>
                             {def?.title || key}
                           </span>
                           {/* Copy section button */}
-                          <button
-                            onClick={() => handleCopySection(key, val)}
-                            style={{
-                              marginLeft: 'auto', background: 'none', border: 'none',
-                              cursor: 'pointer', padding: 2, color: '#A0AEC0',
-                            }}
+                          <span
+                            onClick={e => { e.stopPropagation(); handleCopySection(key, val); }}
+                            style={{ color: '#A0AEC0', padding: 2, flexShrink: 0, display: 'flex' }}
                           >
                             {copiedSection === key ? <Check size={13} color="#38A169" /> : <Copy size={13} />}
-                          </button>
-                        </div>
-                        {/* Section content */}
-                        <div style={{
-                          fontSize: 13, color: '#2D3748', lineHeight: 1.7, fontFamily: FONT,
-                          whiteSpace: 'pre-wrap',
-                        }}>
-                          {val}
-                        </div>
+                          </span>
+                          <ChevronDown size={14} color="#A0AEC0" style={{
+                            flexShrink: 0,
+                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease',
+                          }} />
+                        </button>
+
+                        {/* Collapsed summary */}
+                        {!isExpanded && (
+                          <div style={{
+                            fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT,
+                            marginTop: 6,
+                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+                          }}>
+                            {summariseSection(val)}
+                          </div>
+                        )}
+
+                        {/* Expanded content */}
+                        {isExpanded && (
+                          <div style={{
+                            fontSize: 13, color: '#2D3748', lineHeight: 1.7, fontFamily: FONT,
+                            whiteSpace: 'pre-wrap', marginTop: 10,
+                            animation: 'ppSlideDown 0.2s ease both',
+                          }}>
+                            {val}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
 
+              {/* ── Output Actions Panel (per PRD §4.2) ── */}
+              <div style={{ marginTop: 24 }}>
+                <OutputActionsPanel
+                  workflowName={`PRD: ${prdResult.prd_content?.slice(0, 50) || 'App PRD'}`}
+                  fullMarkdown={buildFullPRD(prdResult)}
+                  onSaveToArtefacts={handleSaveToLibrary}
+                  isSaved={savedToLibrary}
+                />
+              </div>
+
+              {/* ── Combined Caveat + Refinement Card (collapsible per standard §4.5) ── */}
+              <div style={{
+                background: '#F7FAFC',
+                borderRadius: 14,
+                border: '1px solid #E2E8F0',
+                padding: '20px 24px',
+                marginTop: 20,
+                marginBottom: 20,
+              }}>
+                {/* Practitioner caveat — always visible */}
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  marginBottom: prdRefineExpanded ? 16 : 12,
+                }}>
+                  <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                    This PRD is a strong starting point built from your brief and mockup — not the final word.
+                    Review each section, refine the areas that matter most, and adapt it to your specific tools and constraints.
+                  </div>
+                </div>
+
+                {/* Expand CTA — shown only when collapsed */}
+                {!prdRefineExpanded && (
+                  <button
+                    onClick={() => setPrdRefineExpanded(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: 0, fontSize: 13, fontWeight: 600,
+                      color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                  >
+                    <ChevronDown size={14} />
+                    Would you like to refine this PRD further?
+                    {prdRefinementCount > 0 && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                        borderRadius: 20, padding: '2px 10px',
+                        marginLeft: 6,
+                      }}>
+                        Refinement #{prdRefinementCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Expanded refinement section */}
+                {prdRefineExpanded && (
+                  <div style={{
+                    borderTop: '1px solid #E2E8F0',
+                    paddingTop: 16,
+                    animation: 'ppSlideDown 0.3s ease-out both',
+                  }}>
+                    {/* Section header with close button */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      marginBottom: 6,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{
+                          fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                          textTransform: 'uppercase', letterSpacing: '0.06em',
+                          fontFamily: FONT,
+                        }}>
+                          Refine Your PRD
+                        </div>
+                        {prdRefinementCount > 0 && (
+                          <div style={{
+                            fontSize: 11, fontWeight: 600,
+                            background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                            borderRadius: 20, padding: '2px 10px',
+                            fontFamily: FONT,
+                          }}>
+                            Refinement #{prdRefinementCount}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setPrdRefineExpanded(false)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: 4, borderRadius: 6, display: 'flex',
+                          color: '#A0AEC0', transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#4A5568')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <p style={{
+                      fontSize: 13, color: '#718096', lineHeight: 1.6,
+                      margin: '0 0 18px', fontFamily: FONT,
+                    }}>
+                      Answer any of these to add context and get a more targeted PRD. You don't need to answer all of them — even one helps.
+                    </p>
+
+                    {[
+                      'Are there specific features or screens that need more detail in the PRD?',
+                      'What third-party integrations or APIs should be included?',
+                      'Are there specific performance requirements or constraints?',
+                      'What authentication or permission model does the app need?',
+                      'Any design system preferences (colors, typography, component library)?',
+                    ].map((question, i) => (
+                      <div key={i} style={{ marginBottom: 16 }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: 13, fontWeight: 600, color: '#2D3748',
+                          marginBottom: 6, fontFamily: FONT,
+                        }}>
+                          {question}
+                        </label>
+                        <input
+                          type="text"
+                          value={prdRefinementAnswers[i] || ''}
+                          onChange={e => setPrdRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                          placeholder="Your answer…"
+                          style={{
+                            width: '100%',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                            fontSize: 13,
+                            fontFamily: FONT,
+                            color: '#1A202C',
+                            outline: 'none',
+                            boxSizing: 'border-box' as const,
+                            transition: 'border-color 0.15s',
+                            background: '#FFFFFF',
+                          }}
+                          onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                          onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                        />
+                      </div>
+                    ))}
+
+                    <div style={{ marginBottom: 18 }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: 13, fontWeight: 600, color: '#2D3748',
+                        marginBottom: 6, fontFamily: FONT,
+                      }}>
+                        Anything else to add?
+                      </label>
+                      <textarea
+                        value={prdAdditionalContext}
+                        onChange={e => setPrdAdditionalContext(e.target.value)}
+                        placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                        style={{
+                          width: '100%',
+                          minHeight: 60,
+                          resize: 'none',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 10,
+                          padding: '10px 14px',
+                          fontSize: 13,
+                          fontFamily: FONT,
+                          color: '#1A202C',
+                          outline: 'none',
+                          boxSizing: 'border-box' as const,
+                          transition: 'border-color 0.15s',
+                          background: '#FFFFFF',
+                          lineHeight: 1.5,
+                        }}
+                        onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                        onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                      />
+                    </div>
+
+                    <ActionBtn
+                      icon={isPrdLoading ? (
+                        <div style={{
+                          width: 13, height: 13, border: '2px solid #FFFFFF40',
+                          borderTopColor: '#FFFFFF', borderRadius: '50%',
+                          animation: 'ppSpin 0.6s linear infinite',
+                        }} />
+                      ) : (
+                        <ArrowRight size={13} />
+                      )}
+                      label={isPrdLoading ? 'Refining…' : 'Refine PRD'}
+                      onClick={handleRefinePRD}
+                      primary
+                      disabled={!hasPrdRefinementInput || isPrdLoading}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Bottom action row */}
               <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+                <ActionBtn
+                  icon={<ArrowLeft size={13} />}
+                  label="Back to Mockup"
+                  onClick={handleGoBackToStep2}
+                />
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
                   onClick={handleStartOver}
-                />
-                <ActionBtn
-                  icon={<Library size={13} />}
-                  label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                  onClick={handleSaveToLibrary}
-                  accent
-                  disabled={savedToLibrary}
                 />
               </div>
             </div>
@@ -1549,6 +1973,105 @@ const AppDashboardDesigner: React.FC = () => {
           {toastMessage} ✓
         </div>
       )}
+    </div>
+  );
+};
+
+/* ─── ProcessingProgress (matches L1 Prompt Playground pattern) ─── */
+const ProcessingProgress: React.FC<{
+  steps: string[];
+  currentStep: number;
+  header: string;
+  subtext: string;
+}> = ({ steps, currentStep, header, subtext }) => {
+  const completedSteps = Math.min(currentStep, steps.length);
+  const progressPercent = (completedSteps / steps.length) * 100;
+
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      borderRadius: 14,
+      border: '1px solid #E2E8F0',
+      padding: '28px 32px',
+    }}>
+      <div style={{
+        fontSize: 15, fontWeight: 700, color: '#1A202C',
+        marginBottom: 4, fontFamily: FONT,
+      }}>
+        {header}
+      </div>
+      <div style={{
+        fontSize: 12, color: '#A0AEC0',
+        marginBottom: 24, fontFamily: FONT,
+      }}>
+        {subtext}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {steps.map((label, i) => {
+          const stepNum = i + 1;
+          const isComplete = stepNum <= completedSteps;
+          const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
+          const isPending = !isComplete && !isActive;
+
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'opacity 0.2s',
+              opacity: isPending ? 0.5 : 1,
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
+                border: isActive
+                  ? `2px solid ${LEVEL_ACCENT}`
+                  : isComplete ? 'none' : '2px solid #E2E8F0',
+                position: 'relative',
+              }}>
+                {isComplete && <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />}
+                {isActive && (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: '2px solid transparent',
+                    borderTopColor: LEVEL_ACCENT_DARK,
+                    animation: 'ppSpin 0.7s linear infinite',
+                    position: 'absolute', top: -2, left: -2,
+                  }} />
+                )}
+              </div>
+              <div style={{
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                color: isPending ? '#A0AEC0' : '#2D3748',
+                fontFamily: FONT,
+                transition: 'color 0.2s, font-weight 0.2s',
+              }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{
+        width: '100%', height: 4, borderRadius: 2,
+        background: '#EDF2F7', overflow: 'hidden',
+      }}>
+        <div style={{
+          height: '100%', borderRadius: 2,
+          background: LEVEL_ACCENT,
+          width: `${progressPercent}%`,
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+      <div style={{
+        fontSize: 11, color: '#A0AEC0',
+        textAlign: 'right', marginTop: 6,
+        fontFamily: FONT,
+      }}>
+        {completedSteps} of {steps.length}
+      </div>
     </div>
   );
 };

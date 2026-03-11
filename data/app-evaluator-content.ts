@@ -65,6 +65,18 @@ export const EXAMPLE_APPS = [
     problemAndUsers: 'Consultants spend 8+ hours per client report manually compiling data, writing summaries, and formatting documents. Serves a team of 30 consultants producing 15–20 reports per month.',
     dataAndContent: 'Project metrics from spreadsheets, client feedback surveys, financial data, and benchmark comparisons. Output includes formatted PDF reports with charts, tables, and branded templates.',
   },
+  {
+    name: 'Customer Support Copilot',
+    appDescription: 'An AI assistant embedded in the support dashboard that drafts replies to customer tickets by matching the query against product documentation, past resolutions, and account history — with tone-matching and escalation detection.',
+    problemAndUsers: 'Support agents handle 80+ tickets per day with inconsistent response quality and slow resolution times. Serves a 12-person support team covering 3 product lines with different SLAs.',
+    dataAndContent: 'Product documentation, historical ticket data and resolutions, customer account details, SLA rules, and brand tone guidelines. Integrates with Zendesk and internal knowledge base.',
+  },
+  {
+    name: 'Recruitment Screening Assistant',
+    appDescription: 'A platform where hiring managers paste job descriptions and the AI evaluates incoming CVs against role requirements, generating structured candidate scorecards with strengths, gaps, and recommended interview questions.',
+    problemAndUsers: 'HR teams spend 15+ hours per role manually screening 200+ applications with no consistent scoring framework. Serves 5 hiring managers across engineering, marketing, and operations teams.',
+    dataAndContent: 'Job descriptions, CV/resume documents (PDF and text), competency frameworks per role, and historical hiring decisions. Output includes ranked candidate lists and structured interview guides.',
+  },
 ];
 
 /* ─── Priority badge styling ─── */

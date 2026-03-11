@@ -192,7 +192,7 @@ function agentDesignProxyPlugin(apiKey: string, model: string): Plugin {
 
 You will receive a description of a task that a user wants to build an AI agent for, and optionally a description of the input data that agent will process.
 
-You must respond with a JSON object containing exactly 4 sections that correspond to the 4 steps of the Agent Builder Toolkit:
+You must respond with a JSON object containing exactly 5 sections:
 
 SECTION 1: AGENT READINESS ASSESSMENT
 Evaluate the task against 5 criteria to determine if it warrants a custom agent:
@@ -208,73 +208,65 @@ Provide a verdict, a rationale paragraph, and specific bullet points for why Lev
 
 SECTION 2: OUTPUT FORMAT DESIGN
 Based on the task, design a structured output format in two representations:
-a) A human-readable version — formatted as clean, professional output that a team member would want to read. Use clear headings, sections, and structure.
-b) A JSON template — the exact JSON schema that the agent should produce. Include all fields, nested objects, arrays where appropriate, and use descriptive key names. Add brief comments (as string values) explaining what each field should contain.
-
-The JSON template should be comprehensive and production-ready.
+a) A human-readable version — formatted as clean, professional output that a team member would want to read.
+b) A JSON template — the exact JSON schema that the agent should produce.
 
 SECTION 3: SYSTEM PROMPT
 Generate a complete, ready-to-use system prompt for this agent that incorporates:
 - A clear role definition
 - Context about the task and domain
 - Explicit task instructions
-- The JSON output format from Section 2 (embedded in the prompt)
+- The JSON output format from Section 2
 - Step-by-step processing instructions
 - Quality checks and constraints
 - Human-in-the-loop requirements from Section 4
 
-Mark each section of the prompt with labels: [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS] — so the frontend can apply color-coding.
+Mark each section with labels: [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS].
 
 SECTION 4: BUILT-IN ACCOUNTABILITY FEATURES
-The goal here is NOT to remind humans to "review the output" — that's obvious and expected. Instead, design 3-5 specific features that are built into the agent's prompt to actively support human oversight. Each feature should describe how the agent itself is designed to make verification easy and effective.
+Design 3-5 specific features built into the agent's prompt to actively support human oversight. Each must include: name, severity (critical/important/recommended), what_to_verify, why_it_matters, prompt_instruction.
 
-Focus on what the agent PROVIDES to support the reviewer:
-- Source citations (row numbers, timestamps, page references, speaker names)
-- Confidence scores or uncertainty flags for each conclusion
-- Reasoning trails that show how the agent arrived at its conclusions
-- Data coverage summaries (what was analyzed vs. what was skipped)
-- Alternative interpretations or dissenting patterns the agent considered
+SECTION 5: REFINEMENT QUESTIONS
+Generate 3-5 specific follow-up questions that would help refine and improve the agent design. These should probe for missing context about the user's specific situation — audience, constraints, edge cases, data quirks, quality standards, etc. Make each question specific to the task described, not generic.
 
-Each accountability feature must include:
-- name: A short, clear name for this agent behavior (e.g., "Source Citation", "Confidence Scoring", "Reasoning Trail")
-- severity: "critical", "important", or "recommended"
-- what_to_verify: 1-2 sentences describing what the agent provides or does (NOT what the human should check — frame it as "The agent includes...", "The agent flags...", "The agent provides...")
-- why_it_matters: 1-2 sentences on how this specific agent behavior helps the reviewer do their job faster and more effectively
-- prompt_instruction: The exact text to add to the agent's prompt to enforce this behavior
+If the user message starts with [REFINEMENT], they are providing answers to previous questions plus additional context. Use this to significantly improve the agent design. Generate new, deeper refinement questions that build on what was already answered.
 
-RESPONSE FORMAT:
-You must respond with the following JSON structure ONLY — no markdown, no extra text:
+RESPONSE FORMAT (JSON only, no markdown):
 
 {
   "readiness": {
     "overall_score": 85,
     "verdict": "Strong candidate for a custom agent",
-    "rationale": "This task is performed frequently...",
+    "rationale": "...",
     "criteria": {
-      "frequency": { "score": 90, "assessment": "Weekly or more frequent task" },
-      "consistency": { "score": 85, "assessment": "Output structure must be consistent for team use" },
-      "shareability": { "score": 80, "assessment": "Multiple team members would benefit" },
-      "complexity": { "score": 75, "assessment": "Requires domain knowledge in..." },
-      "standardization_risk": { "score": 90, "assessment": "Variable outputs would cause..." }
+      "frequency": { "score": 90, "assessment": "..." },
+      "consistency": { "score": 85, "assessment": "..." },
+      "shareability": { "score": 80, "assessment": "..." },
+      "complexity": { "score": 75, "assessment": "..." },
+      "standardization_risk": { "score": 90, "assessment": "..." }
     },
-    "level1_points": ["Point about when ad-hoc prompting would suffice"],
-    "level2_points": ["Point about why a custom agent is recommended"]
+    "level1_points": ["..."],
+    "level2_points": ["..."]
   },
   "output_format": {
-    "human_readable": "The formatted output as a string with newlines",
-    "json_template": { "example": "nested object" }
+    "human_readable": "...",
+    "json_template": {}
   },
-  "system_prompt": "The full system prompt text with [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS] section markers",
+  "system_prompt": "...",
   "accountability": [
-    {
-      "name": "Source Row References",
-      "severity": "critical",
-      "what_to_verify": "Description...",
-      "why_it_matters": "Description...",
-      "prompt_instruction": "The exact prompt text..."
-    }
+    { "name": "...", "severity": "critical", "what_to_verify": "...", "why_it_matters": "...", "prompt_instruction": "..." }
+  ],
+  "refinement_questions": [
+    "Specific question about the user's audience, constraints, or edge cases (3-5 required)",
+    "Another specific question probing for missing context",
+    "Another specific question about quality standards or data quirks"
   ]
-}`;
+}
+
+CRITICAL RULES:
+- The "refinement_questions" array is REQUIRED and must contain 3-5 task-specific questions. Never omit it.
+- Each refinement question must be specific to the user's task (e.g., "What format are the survey responses in — Excel, CSV, or a database export?" not "What is your data format?").
+- Do NOT add preamble, commentary, or explanation outside the JSON object.`;
 
   return {
     name: 'agent-design-proxy',
@@ -1033,11 +1025,11 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
                     body: JSON.stringify({
                       model: inspModel,
                       messages: [
-                        { role: 'system', content: `You are an expert UI/UX analyst specializing in dashboard design. Analyze the provided dashboard screenshot(s) and extract the key design patterns. Focus on layout structure, color scheme, chart types, information density, typography, card design, and special elements. Output a concise paragraph (3-5 sentences) describing these patterns as design instructions. Be specific about colors, layout ratios, and widget types. Do NOT describe the data — only the visual design patterns.` },
+                        { role: 'system', content: `You are an expert UI/UX analyst specializing in dashboard and application design. Analyze the provided screenshot(s) and extract a comprehensive design brief. You MUST respond with valid JSON only — no markdown, no code fences, no explanation.\n\nJSON schema:\n{\n  "color_scheme": {\n    "primary": "<hex>",\n    "secondary": "<hex>",\n    "accent": "<hex>",\n    "background": "<hex>",\n    "card_background": "<hex>",\n    "text_primary": "<hex>",\n    "text_secondary": "<hex>",\n    "palette_description": "<1 sentence describing the overall color mood>"\n  },\n  "composition": "<layout description>",\n  "components": ["<list UI elements>"],\n  "typography": "<font style observations>",\n  "visual_effects": "<border radius, shadows, gradients, icons>",\n  "data_density": "<low | medium | high>",\n  "design_instructions": "<3-5 sentence paragraph combining all above into actionable design instructions. Emphasise COLOR SCHEME prominently with exact hex values.>"\n}\n\nIMPORTANT: The color_scheme is the MOST critical extraction. Extract exact hex values by sampling dominant colors from the image.` },
                         {
                           role: 'user',
                           content: [
-                            { type: 'text', text: 'Analyze these dashboard screenshot(s) and extract the key design patterns:' },
+                            { type: 'text', text: 'Analyze these screenshot(s) and extract the design traits as JSON. Pay special attention to the exact color palette used:' },
                             ...imageUrls,
                           ],
                         },
@@ -1048,9 +1040,28 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
 
                   if (analyzeResponse.ok) {
                     const analyzeData = await analyzeResponse.json();
-                    const patterns = analyzeData?.choices?.[0]?.message?.content || '';
-                    if (patterns.trim()) {
-                      inspirationPatterns = patterns.trim();
+                    const rawPatterns = analyzeData?.choices?.[0]?.message?.content || '';
+                    if (rawPatterns.trim()) {
+                      try {
+                        const cleaned = rawPatterns.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                        const parsed = JSON.parse(cleaned);
+                        const cs = parsed.color_scheme || {};
+                        const colorBlock = cs.primary
+                          ? `COLOR SCHEME: primary=${cs.primary}, secondary=${cs.secondary || 'N/A'}, accent=${cs.accent || 'N/A'}, background=${cs.background || '#FFFFFF'}, card_bg=${cs.card_background || '#FFFFFF'}, text=${cs.text_primary || '#1A202C'}. ${cs.palette_description || ''}`
+                          : '';
+                        const parts = [
+                          colorBlock,
+                          parsed.composition ? `LAYOUT: ${parsed.composition}` : '',
+                          parsed.components?.length ? `COMPONENTS: ${parsed.components.join(', ')}` : '',
+                          parsed.typography ? `TYPOGRAPHY: ${parsed.typography}` : '',
+                          parsed.visual_effects ? `VISUAL STYLE: ${parsed.visual_effects}` : '',
+                          parsed.data_density ? `DATA DENSITY: ${parsed.data_density}` : '',
+                          parsed.design_instructions ? `INSTRUCTIONS: ${parsed.design_instructions}` : '',
+                        ].filter(Boolean);
+                        inspirationPatterns = parts.join('\n');
+                      } catch {
+                        inspirationPatterns = rawPatterns.trim();
+                      }
                       console.log('✅ Inspiration image analysis complete');
                     }
                   } else {
@@ -1099,7 +1110,8 @@ The html_content MUST fit inside a 1100x700px iframe WITHOUT scrolling. Add "htm
                 imagePrompt = `${previous_prompt} IMPORTANT CHANGES REQUESTED: ${refinement_feedback}${inspirationPatterns ? ` DESIGN REFERENCE: ${inspirationPatterns}` : ''}`;
               }
             } else {
-              imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || 'business users'}. The dashboard shows: ${key_metrics || 'key business metrics'}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''} The dashboard has KPI metric cards at the top showing exact numbers with percentage change indicators, followed by line charts and bar charts below with clearly labeled axes. Modern flat design, white background with subtle gray borders, teal and navy color scheme. DM Sans font. Make ALL text, numbers, labels, and axis values crisp, sharp, and perfectly readable. 16:9 aspect ratio. This should look like a real production web application screenshot.${inspirationPatterns ? `\n\nIMPORTANT DESIGN REFERENCE — The user provided inspiration images. Match these design patterns closely: ${inspirationPatterns}` : ''}`;
+              const defaultColors = inspirationPatterns ? '' : ' Teal and navy color scheme.';
+              imagePrompt = `Generate a high-fidelity professional dashboard UI screenshot mockup for ${target_audience || 'business users'}. The dashboard shows: ${key_metrics || 'key business metrics'}. Purpose: ${user_needs}. Style: ${styleDesc}. ${dashboard_type ? `Type: ${dashboard_type}.` : ''} Modern flat design.${defaultColors} DM Sans font. Make ALL text crisp and readable. 16:9 aspect ratio.${inspirationPatterns ? `\n\nDESIGN REFERENCE (match this palette and style closely):\n${inspirationPatterns}` : ''}`;
             }
 
             console.log('Generating dashboard via OpenRouter...');

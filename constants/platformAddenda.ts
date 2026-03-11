@@ -24,7 +24,26 @@ EXACT NODE NAMES (use these in step titles and instructions):
 - Code: Code (JavaScript or Python), Execute Command
 - Flow: Loop Over Items (formerly Split In Batches), Wait, Execute Workflow, Respond to Webhook
 - Error: Error Trigger (workflow-level error handler)
-- AI: AI Agent, Basic LLM Chain, OpenAI Chat Model, Anthropic Chat Model, Tool sub-nodes, Vector Store nodes
+- AI: AI Agent, Basic LLM Chain, LLM Chat Model (select your preferred provider), Structured Output Parser, Tool sub-nodes, Vector Store nodes
+
+AI AGENT NODE — TRIPLE PROMPT PATTERN (critical for any step using AI Agent):
+When configuring an AI Agent node, there are THREE distinct prompt fields. Document all three:
+
+1. System Prompt (under "Options" → "System Message"):
+   - The persistent instructions: role definition, constraints, behaviour rules
+   - This does NOT change per execution — it defines WHO the agent is
+   - Example: "You are an expert at analysing client feedback. Always provide structured analysis."
+
+2. User Prompt (the main "Prompt" / "Text" input field):
+   - The per-execution dynamic input — mapped from the trigger or previous node
+   - Use field expressions: \`{{ $json.response_text }}\`, \`{{ $('Webhook').item.json.body }}\`
+   - This is what the agent processes each time the workflow runs
+
+3. Structured Output Parser (add as a sub-node under the AI Agent):
+   - Attach a "Structured Output Parser" sub-node to force JSON output
+   - Define the exact JSON schema the agent must return
+   - This ensures downstream nodes can reliably parse the response
+   - Without this, the agent returns free-text which is fragile to parse
 
 POPULAR INTEGRATION NODES (exact names):
 | Service | Trigger | Action Node |
@@ -34,7 +53,7 @@ POPULAR INTEGRATION NODES (exact names):
 | Gmail | Gmail Trigger | Gmail |
 | Airtable | Airtable Trigger | Airtable |
 | Notion | Notion Trigger | Notion |
-| OpenAI | — | OpenAI |
+| AI / LLM | — | AI node (your chosen provider) |
 | PostgreSQL | — | Postgres |
 | MySQL | — | MySQL |
 | MongoDB | — | MongoDB |
@@ -56,7 +75,7 @@ DATA REFERENCE SYNTAX:
 
 CREDENTIAL SETUP (tell users exactly where to go):
 1. Left sidebar → Credentials → Add Credential
-2. Search for the credential type (e.g. "Slack OAuth2 API", "OpenAI API")
+2. Search for the credential type (e.g. "Slack OAuth2 API", or the LLM API credential approved by your team)
 3. For API keys: paste the key into the API Key field → Save
 4. For OAuth2: fill Client ID + Secret → click Connect → authorize in popup → Save
 5. Credentials are encrypted at rest (AES-256-CBC)
@@ -133,7 +152,7 @@ POPULAR APP NAMES (exact as they appear in Zapier's app directory):
 | Webhooks by Zapier | Catch Hook (receive) | Custom Request (send) |
 | Airtable | New Record, New or Updated Record | Create Record |
 | Notion | New Database Item, Updated Database Item | Create Database Item |
-| OpenAI (GPT) | — | Send Prompt, Create Image |
+| AI / LLM | — | Send Prompt (via your chosen AI provider) |
 | HubSpot | New Contact, New Deal | Create Contact, Create Deal |
 | Salesforce | New Record, Updated Record | Create Record |
 | Microsoft Excel | New Row | Add Row |
@@ -152,7 +171,7 @@ CREDENTIAL SETUP (tell users exactly where to go):
 1. When you add a step and select an app, Zapier prompts "Connect [App Name]"
 2. Click "Sign in to [App]" → OAuth popup or API key entry form
 3. For OAuth apps (Slack, Google, etc.): authorise in popup → connection stored
-4. For API key apps (OpenAI, etc.): paste API key → Zapier tests the connection
+4. For API key apps: paste your API key → Zapier tests the connection
 5. Manage connections: Settings (top-right avatar) → Connections → shows all connected accounts
 6. You can have multiple accounts per app and choose which one each step uses
 
@@ -257,7 +276,7 @@ POPULAR APP MODULES (exact names in Make):
 | Gmail | Watch Emails | Send an Email |
 | Airtable | Watch Records | Create a Record |
 | Notion | Watch Database Items | Create a Database Item |
-| OpenAI (ChatGPT) | — | Create a Completion (Chat), Create an Image |
+| AI / LLM | — | Create a Completion (Chat) via your chosen provider |
 | PostgreSQL | — | Execute a query (Select/Insert/Update/Delete) |
 | HubSpot | Watch Contacts/Deals | Create a Contact, Create a Deal |
 | Salesforce | Watch Records | Create a Record |
@@ -381,8 +400,8 @@ POPULAR CONNECTORS (exact names):
 | HTTP | HTTP | Premium | — → HTTP (make any REST call) |
 | Slack | Slack | Standard | When a new message is posted → Post message |
 | Google Sheets | Google Sheets | Standard | When a row is added → Get rows, Insert row |
-| OpenAI | OpenAI (or AI Builder) | Premium | — → Get chat completions |
-| AI Builder | AI Builder | Premium | — → Create text with GPT, Extract info from documents |
+| AI / LLM | AI connector (or AI Builder) | Premium | — → Get chat completions via your chosen provider |
+| AI Builder | AI Builder | Premium | — → Create text with AI, Extract info from documents |
 | Custom Connector | Custom | Premium | User-defined triggers/actions for any REST API |
 
 DATA REFERENCE SYNTAX (expressions):
@@ -452,39 +471,36 @@ GOTCHAS:
 - **Null handling**: always use the ?\`[]\` safe navigation. \`body('Action')['field']\` throws on null; \`body('Action')?['field']\` returns null safely.
 - **Child flows**: use "Run a Child Flow" action to call solution-aware flows as subroutines. Useful for reusable logic.
 - **Environment variables**: available in Solutions → Environment Variables. Use for configurable values across environments (dev/test/prod).
-- **AI Builder**: built-in AI capabilities — GPT prompts, document processing, entity extraction. No external API key needed if you have AI Builder credits.
+- **AI Builder**: built-in AI capabilities — AI-powered text generation, document processing, entity extraction. No external API key needed if you have AI Builder credits.
 - **Approval actions**: built-in "Start and wait for an approval" action — sends approval requests via Teams/email. Very commonly used in business workflows.
 `,
 
 // ═══════════════════════════════════════════════════════════════
-// CLAUDE CODE
+// AI CODING AGENT (code-based automation)
 // ═══════════════════════════════════════════════════════════════
-'Claude Code': `
-PLATFORM-SPECIFIC KNOWLEDGE — Claude Code
+'AI Coding Agent': `
+PLATFORM-SPECIFIC KNOWLEDGE — AI Coding Agent
 
-Claude Code is Anthropic's CLI-based AI coding agent. Build guides for Claude Code
-describe scripts, agent loops, or tool-use patterns — not visual drag-and-drop workflows.
+An AI coding agent is a CLI-based or SDK-based AI assistant that writes and executes code.
+Build guides for this platform describe scripts, agent loops, or tool-use patterns — not
+visual drag-and-drop workflows.
 
 CORE CONCEPTS:
 - Entry point: A script file (TypeScript/Python) or a prompt-driven agent session
-- Tool calls: Claude can call tools (Read, Write, Edit, Bash, Grep, Glob, WebSearch, etc.)
-- Agent loop: Claude reasons → selects a tool → observes result → repeats until done
+- Tool calls: The AI agent can call tools (read files, write files, run commands, search, etc.)
+- Agent loop: The AI reasons → selects a tool → observes result → repeats until done
 - No visual canvas — everything is code or prompt-based
 
 SDK & API:
-- Anthropic SDK: \`@anthropic-ai/sdk\` (TypeScript) or \`anthropic\` (Python)
-- Model IDs: \`claude-sonnet-4-20250514\`, \`claude-opus-4-20250514\`, \`claude-haiku-4-5-20251001\`
-- API endpoint: \`https://api.anthropic.com/v1/messages\`
-- Authentication: \`x-api-key\` header with API key from console.anthropic.com
-- Max tokens: up to 64K output for Claude 4 family
+- Use the SDK or API provided by your chosen LLM provider
+- Authentication: Use the API key provided by your LLM provider, stored as an environment variable
+- Follow your provider's documentation for model IDs, endpoints, and token limits
 
 TOOL USE PATTERN:
 \`\`\`typescript
-import Anthropic from '@anthropic-ai/sdk';
-const client = new Anthropic();
-
-const response = await client.messages.create({
-  model: 'claude-sonnet-4-20250514',
+// Example using a generic LLM SDK (adapt to your chosen provider)
+const response = await llmClient.chat({
+  model: 'your-chosen-model',
   max_tokens: 4096,
   tools: [{ name: 'tool_name', description: '...', input_schema: { type: 'object', properties: { ... } } }],
   messages: [{ role: 'user', content: '...' }],
@@ -493,37 +509,37 @@ const response = await client.messages.create({
 
 AGENT LOOP PATTERN:
 1. Send initial message with tools defined
-2. If response has \`tool_use\` stop reason, execute the tool
-3. Send tool result back as \`tool_result\` content block
-4. Repeat until response has \`end_turn\` stop reason
+2. If response includes a tool call, execute the tool
+3. Send tool result back to the LLM
+4. Repeat until the LLM returns a final answer (no more tool calls)
 
 CREDENTIAL SETUP:
-- API Key: Generated at console.anthropic.com → API Keys
-- Set as environment variable: \`ANTHROPIC_API_KEY\`
-- SDK auto-reads from env var — no need to pass explicitly
+- API Key: Generated from your LLM provider's console — use the key approved by your team
+- Set as an environment variable (e.g. \`LLM_API_KEY\` or your provider's convention)
+- Most SDKs auto-read from the environment variable
 
 DATA REFERENCE:
-- Input: \`response.content[0].text\` for text, \`response.content[i].input\` for tool calls
-- Tool results: \`{ type: 'tool_result', tool_use_id: '...', content: '...' }\`
-- Streaming: \`client.messages.stream()\` for real-time output
+- Input: Access the text response or tool call arguments from the LLM response object
+- Tool results: Return structured data back to the LLM for the next reasoning step
+- Streaming: Use your SDK's streaming method for real-time output
 
 GOTCHAS:
-- Rate limits: Vary by tier (tier 1: 50 RPM, tier 4: 4000 RPM). Check headers for remaining.
-- Context window: 200K tokens input. Plan for long conversations to hit limits.
-- Tool schemas must be valid JSON Schema. Invalid schemas cause 400 errors.
-- \`max_tokens\` is required and caps output — set it high enough for your use case.
+- Rate limits: Vary by provider and tier. Check response headers for remaining quota.
+- Context window: Varies by model (typically 128K–200K tokens input). Plan for long conversations.
+- Tool schemas must be valid JSON Schema. Invalid schemas cause errors.
+- \`max_tokens\` is typically required and caps output — set it high enough for your use case.
 - Streaming recommended for long outputs to avoid timeout perception.
-- Cost: Input tokens are cheaper than output tokens. Minimise unnecessary output.
+- Cost: Input tokens are generally cheaper than output tokens. Minimise unnecessary output.
 
 ERROR HANDLING:
-- 429 Too Many Requests: Back off and retry with exponential delay
-- 529 Overloaded: Temporary, retry after a few seconds
+- Rate limit errors (429): Back off and retry with exponential delay
+- Overloaded errors: Temporary — retry after a few seconds
 - Always wrap API calls in try/catch and handle rate limits gracefully
 
 COMMON PATTERNS:
-- **Text processing**: Single messages.create() call with detailed system prompt
+- **Text processing**: Single API call with a detailed system prompt
 - **Multi-step agent**: Tool-use loop with file system tools
-- **Batch processing**: Process items in sequence or with Promise.allSettled()
-- **Structured output**: Use tool_use to force JSON output schema
+- **Batch processing**: Process items in sequence or with parallel execution
+- **Structured output**: Use tool definitions to force JSON output schema
 `,
 };

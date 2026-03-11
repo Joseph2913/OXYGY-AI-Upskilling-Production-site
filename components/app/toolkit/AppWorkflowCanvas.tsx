@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, ArrowLeft, Check, RotateCcw, Download,
-  Info, ChevronRight, Sparkles, Wrench, Plus, Undo2, Trash2, X,
-  Lightbulb, Loader2,
+  ArrowRight, ArrowDown, ArrowLeft, Check, RotateCcw, Copy, Download, Library,
+  Info, ChevronRight, ChevronDown, Sparkles, Wrench, Plus, Undo2, Trash2, X,
+  Lightbulb, Loader2, Eye, Code,
+  FileText, Key, ListChecks, Clock, Layers, GitBranch,
 } from 'lucide-react';
 import type {
   WorkflowNode, WorkflowPath, WorkflowGenerateResult, WorkflowFeedbackResult,
@@ -24,8 +25,76 @@ import FeedbackItemRow from '../workflow/FeedbackItemRow';
 /* ─── Constants ─── */
 
 const FONT = "'DM Sans', sans-serif";
+const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 const LEVEL_ACCENT = '#38B2AC';
 const LEVEL_ACCENT_DARK = '#1A7A76';
+
+/* ── Loading progress steps (matches L1 pattern) ── */
+const INITIAL_LOADING_STEPS = [
+  'Analysing your workflow nodes and connections…',
+  'Translating to platform terminology…',
+  'Writing step-by-step configuration instructions…',
+  'Generating credential requirements…',
+  'Building test checklist…',
+  'Documenting edge cases…',
+  'Finalising your Build Guide…',
+];
+const REFINE_LOADING_STEPS = [
+  'Processing your refinement context…',
+  'Re-evaluating workflow steps…',
+  'Updating configuration instructions…',
+  'Revising credential requirements…',
+  'Refreshing test checklist…',
+  'Applying quality checks…',
+  'Finalising refined Build Guide…',
+];
+const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+
+/* ── Educational sections for Build Guide (Step 4 default) ── */
+const BUILD_GUIDE_SECTIONS = [
+  {
+    key: 'overview',
+    icon: FileText,
+    label: 'Workflow Overview',
+    description: 'A plain-language summary of what the automation does, the trigger event, and the expected output — so anyone reading the guide can quickly understand the purpose.',
+    example: 'e.g. "When a new survey response is submitted, extract key themes, score sentiment, and email a summary to the team lead."',
+  },
+  {
+    key: 'credentials',
+    icon: Key,
+    label: 'Credentials & Prerequisites',
+    description: 'A table of every API key, OAuth token, or service account needed — with where to find it, which step uses it, and why it\'s required.',
+    example: 'e.g. Google Sheets API key → OAuth consent screen → Used in "Read Survey" step',
+  },
+  {
+    key: 'steps',
+    icon: Layers,
+    label: 'Step-by-Step Instructions',
+    description: 'Numbered configuration instructions for each node in your workflow — from trigger setup through to the final output step, with field-level detail.',
+    example: 'e.g. Step 1 — Configure Webhook trigger: Set URL to /survey-complete, method POST, authentication: Header Auth',
+  },
+  {
+    key: 'connections',
+    icon: GitBranch,
+    label: 'Connection Map',
+    description: 'How each node connects to the next — including data mapping, field references, and any transformations applied between steps.',
+    example: 'e.g. Webhook → AI Agent: Pass {{$json.response_text}} as the input prompt field',
+  },
+  {
+    key: 'testing',
+    icon: ListChecks,
+    label: 'Test Checklist',
+    description: 'A pre-flight checklist of items to verify before going live — covering data flow, error handling, edge cases, and expected outputs.',
+    example: 'e.g. [ ] Verify webhook fires on form submit  [ ] Check AI output contains expected JSON fields',
+  },
+  {
+    key: 'timing',
+    icon: Clock,
+    label: 'Build Time & Complexity',
+    description: 'An estimated build time and complexity rating based on the number of nodes, integrations, and conditional logic in your workflow.',
+    example: 'e.g. Estimated build time: 45–60 minutes | Complexity: Intermediate (6 nodes, 2 API integrations)',
+  },
+];
 
 const NODE_W = 140;
 const NODE_H = 72;
@@ -329,6 +398,130 @@ const StepPlaceholder: React.FC<{ icon: React.ReactNode; message: string; detail
   </div>
 );
 
+/* ── Processing Progress Indicator (matches L1 pattern) ── */
+const ProcessingProgress: React.FC<{
+  steps: string[];
+  currentStep: number;
+  header: string;
+  subtext: string;
+}> = ({ steps, currentStep, header, subtext }) => {
+  const completedSteps = Math.min(currentStep, steps.length);
+  const progressPercent = (completedSteps / steps.length) * 100;
+
+  return (
+    <div style={{
+      background: '#FFFFFF', borderRadius: 14,
+      border: '1px solid #E2E8F0', padding: '28px 32px',
+    }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
+        {header}
+      </div>
+      <div style={{ fontSize: 12, color: '#A0AEC0', marginBottom: 24, fontFamily: FONT }}>
+        {subtext}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {steps.map((label, i) => {
+          const stepNum = i + 1;
+          const isComplete = stepNum <= completedSteps;
+          const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
+          const isPending = !isComplete && !isActive;
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'opacity 0.2s', opacity: isPending ? 0.5 : 1,
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
+                border: isActive ? `2px solid ${LEVEL_ACCENT}` : isComplete ? 'none' : '2px solid #E2E8F0',
+                position: 'relative',
+              }}>
+                {isComplete && <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />}
+                {isActive && (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: '2px solid transparent', borderTopColor: LEVEL_ACCENT_DARK,
+                    animation: 'ppSpin 0.7s linear infinite',
+                    position: 'absolute', top: -2, left: -2,
+                  }} />
+                )}
+              </div>
+              <div style={{
+                fontSize: 13, fontWeight: isActive ? 600 : 400,
+                color: isPending ? '#A0AEC0' : '#2D3748', fontFamily: FONT,
+                transition: 'color 0.2s',
+              }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ width: '100%', height: 4, borderRadius: 2, background: '#EDF2F7', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: 2, background: LEVEL_ACCENT,
+          width: `${progressPercent}%`, transition: 'width 0.3s ease',
+        }} />
+      </div>
+      <div style={{ fontSize: 11, color: '#A0AEC0', textAlign: 'right' as const, marginTop: 6, fontFamily: FONT }}>
+        {completedSteps} of {steps.length}
+      </div>
+    </div>
+  );
+};
+
+/* ── Toggle Button (Cards / Markdown) ── */
+const ToggleBtn: React.FC<{
+  icon: React.ReactNode; label: string; active: boolean;
+  onClick: () => void; highlight?: boolean;
+}> = ({ icon, label, active, onClick, highlight }) => (
+  <button onClick={onClick} style={{
+    display: 'flex', alignItems: 'center', gap: 5,
+    padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+    border: 'none', cursor: 'pointer', borderRadius: 8,
+    background: active ? (highlight ? '#2B6CB0' : '#1A202C') : 'transparent',
+    color: active ? '#FFFFFF' : '#718096',
+    transition: 'background 0.15s, color 0.15s',
+  }}>
+    {icon}{label}
+  </button>
+);
+
+/* ── Info Tooltip ── */
+const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        style={{
+          width: 22, height: 22, borderRadius: '50%',
+          background: '#F7FAFC', border: '1px solid #E2E8F0',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'help', padding: 0,
+        }}
+      >
+        <Info size={12} color="#A0AEC0" />
+      </button>
+      {show && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%',
+          transform: 'translateX(-50%)', marginBottom: 6,
+          background: '#1A202C', color: '#E2E8F0',
+          borderRadius: 8, padding: '8px 12px',
+          fontSize: 11, lineHeight: 1.5, width: 240,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 20, fontFamily: FONT,
+        }}>
+          {text}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ─── Canvas sub-components ─── */
 
 const CanvasNode: React.FC<{
@@ -569,6 +762,17 @@ const AppWorkflowCanvas: React.FC = () => {
   const [exportLoadingMsg, setExportLoadingMsg] = useState('');
   const [savedToArtefacts, setSavedToArtefacts] = useState(false);
 
+  /* ── Step 4 output state (matches L1 pattern) ── */
+  const [viewMode, setViewMode] = useState<'cards' | 'markdown'>('cards');
+  const [visibleBlocks, setVisibleBlocks] = useState(0);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [isRefineLoading, setIsRefineLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [refinementAnswers, setRefinementAnswers] = useState<Record<number, string>>({});
+  const [additionalContext, setAdditionalContext] = useState('');
+  const [refinementCount, setRefinementCount] = useState(0);
+  const [refineExpanded, setRefineExpanded] = useState(false);
+
   /* ── Shared State ── */
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -648,6 +852,39 @@ const AppWorkflowCanvas: React.FC = () => {
     setNodesAnimated(0);
     setConnectionsAnimated(0);
   }, [comparisonView]);
+
+  /* ── Loading step progression (matches L1 pattern) ── */
+  useEffect(() => {
+    if (!exportLoading) {
+      if (loadingStep > 0) {
+        const steps = isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS;
+        setLoadingStep(steps.length);
+        const timer = setTimeout(() => setLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    STEP_DELAYS.forEach((delay, i) => {
+      cumulative += delay;
+      timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [exportLoading]);
+
+  /* ── Staggered block animation for Step 4 output ── */
+  useEffect(() => {
+    if (!buildGuideMarkdown) return;
+    setVisibleBlocks(0);
+    const totalSections = BUILD_GUIDE_SECTIONS.length + 2; // summary + sections + refinement
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < totalSections; i++) {
+      timers.push(setTimeout(() => setVisibleBlocks(v => v + 1), 150 + i * 80));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [buildGuideMarkdown]);
 
   /* ── Build Guide generation (triggered after platform selection) ── */
   const handleGenerateBuildGuide = useCallback(async () => {
@@ -1009,6 +1246,15 @@ const AppWorkflowCanvas: React.FC = () => {
     setPathAFeedbackText('');
     setPathAFeedbackResult(null);
     setPathAShowingRevised(false);
+    setViewMode('cards');
+    setVisibleBlocks(0);
+    setLoadingStep(0);
+    setIsRefineLoading(false);
+    setCopied(false);
+    setRefinementAnswers({});
+    setAdditionalContext('');
+    setRefinementCount(0);
+    setRefineExpanded(false);
     clearError();
     localStorage.removeItem(DRAFT_KEY);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1051,6 +1297,14 @@ const AppWorkflowCanvas: React.FC = () => {
     setSavedToArtefacts(false);
     setExportLoading(false);
     setExportLoadingMsg('');
+    setViewMode('cards');
+    setVisibleBlocks(0);
+    setLoadingStep(0);
+    setCopied(false);
+    setRefinementAnswers({});
+    setAdditionalContext('');
+    setRefinementCount(0);
+    setRefineExpanded(false);
   };
 
   const handleSaveToArtefacts = async () => {
@@ -1082,6 +1336,97 @@ const AppWorkflowCanvas: React.FC = () => {
   };
 
 
+  /* ── Copy / Download handlers (matches L1 pattern) ── */
+  const handleCopyBuildGuide = useCallback(() => {
+    if (!buildGuideMarkdown) return;
+    navigator.clipboard.writeText(buildGuideMarkdown);
+    setCopied(true);
+    toast('Copied Build Guide');
+    setTimeout(() => setCopied(false), 2000);
+  }, [buildGuideMarkdown, toast]);
+
+  const handleDownloadBuildGuide = useCallback(() => {
+    if (!buildGuideMarkdown) return;
+    const date = new Date().toISOString().split('T')[0];
+    const blob = new Blob([buildGuideMarkdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `build-guide-${date}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Downloaded as .md');
+  }, [buildGuideMarkdown, toast]);
+
+  /* ── Refinement handler (matches L1 pattern) ── */
+  const hasRefinementInput = Object.values(refinementAnswers).some((v: string) => v.trim()) || additionalContext.trim();
+
+  const handleRefine = useCallback(async () => {
+    if (!hasRefinementInput || !buildGuideMarkdown || !buildGuideIntermediate || !selectedPlatform) return;
+
+    // Build refinement message
+    const answeredQuestions = (buildGuideRefinementQuestions || [])
+      .map((q: string, i: number) => {
+        const answer = refinementAnswers[i]?.trim();
+        return answer ? `Q: ${q}\nA: ${answer}` : null;
+      })
+      .filter(Boolean).join('\n\n');
+
+    const refinementContext = [
+      `[REFINEMENT]\n\nOriginal workflow: ${workflowName}`,
+      `Platform: ${selectedPlatform}`,
+      answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+      additionalContext.trim() ? `\nAdditional context: ${additionalContext.trim()}` : '',
+    ].filter(Boolean).join('\n');
+
+    setIsRefineLoading(true);
+    setExportLoading(true);
+    setExportLoadingMsg('');
+
+    try {
+      const intermediate = buildGuideIntermediate;
+      const enrichedIntermediate = {
+        ...intermediate,
+        context: {
+          ...intermediate.context,
+          refinementContext,
+        },
+      };
+
+      const response = await fetch('/api/generate-build-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intermediate: enrichedIntermediate, platform: selectedPlatform }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setBuildGuideMarkdown(data.markdown || '');
+      setRefinementCount(prev => prev + 1);
+      setRefinementAnswers({});
+      setAdditionalContext('');
+    } catch (err) {
+      console.error('[build-guide] Refinement error:', err);
+      toast('Refinement failed — please try again');
+    } finally {
+      setExportLoading(false);
+      setIsRefineLoading(false);
+    }
+  }, [hasRefinementInput, buildGuideMarkdown, buildGuideIntermediate, selectedPlatform, refinementAnswers, additionalContext, workflowName, toast]);
+
+  // Derive refinement questions from build guide markdown
+  const buildGuideRefinementQuestions = buildGuideMarkdown ? [
+    `Are there specific error scenarios for this ${selectedPlatform || 'platform'} workflow you want the guide to address?`,
+    'Should any steps include alternative approaches or fallback options?',
+    'Are there team-specific naming conventions or folder structures to follow?',
+    `What level of detail do you need for the ${selectedPlatform || 'platform'} configuration — beginner-friendly or advanced?`,
+    'Are there any compliance or security requirements to document?',
+  ] : [];
+
   /* ── Render helper: layer label ── */
   // layerLabel removed — no longer needed in n8n export view
 
@@ -1096,6 +1441,7 @@ const AppWorkflowCanvas: React.FC = () => {
         @keyframes ppPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
         @keyframes ppFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes ppConnectorFlow { 0% { background-position: 0 0; } 100% { background-position: 0 20px; } }
+        @keyframes ppSlideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
       `}</style>
 
       {/* Page Title */}
@@ -1751,57 +2097,12 @@ const AppWorkflowCanvas: React.FC = () => {
             detail="Approve your workflow design to choose a platform."
           />
         ) : platformStepDone && exportLoading ? (
-          (() => {
-            let parsedSteps: { steps: { label: string; delay: number }[]; activeIndex: number } | null = null;
-            try { parsedSteps = JSON.parse(exportLoadingMsg); } catch { /* ignore */ }
-            const stepsData = parsedSteps?.steps || [];
-            const activeIdx = parsedSteps?.activeIndex ?? 0;
-            return (
-              <div style={{ padding: '16px 0', fontFamily: FONT }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                  <Loader2 size={18} color={LEVEL_ACCENT} style={{ animation: 'ppSpin 0.7s linear infinite' }} />
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>Generating your Build Guide</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {stepsData.map((s: { label: string }, i: number) => {
-                    const isDone = i < activeIdx;
-                    const isActive = i === activeIdx;
-                    return (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                        borderRadius: 10,
-                        background: isDone ? '#F0FFF4' : isActive ? `${LEVEL_ACCENT}08` : '#F7FAFC',
-                        border: `1px solid ${isDone ? '#C6F6D5' : isActive ? `${LEVEL_ACCENT}30` : '#E2E8F0'}`,
-                        transition: 'all 0.3s ease',
-                      }}>
-                        <div style={{
-                          width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                          background: isDone ? '#48BB78' : isActive ? LEVEL_ACCENT : '#E2E8F0',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.3s ease',
-                        }}>
-                          {isDone ? (
-                            <Check size={13} color="#fff" />
-                          ) : isActive ? (
-                            <Loader2 size={13} color="#fff" style={{ animation: 'ppSpin 0.7s linear infinite' }} />
-                          ) : (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0' }}>{i + 1}</span>
-                          )}
-                        </div>
-                        <span style={{
-                          fontSize: 13, fontWeight: isActive ? 600 : 400,
-                          color: isDone ? '#38A169' : isActive ? '#1A202C' : '#A0AEC0',
-                          transition: 'color 0.3s ease',
-                        }}>
-                          {s.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()
+          <ProcessingProgress
+            steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
+            currentStep={loadingStep}
+            header={isRefineLoading ? 'Refining your Build Guide…' : 'Generating your Build Guide…'}
+            subtext="This usually takes 20–30 seconds"
+          />
         ) : !platformStepDone ? (
           <div style={{ animation: 'ppFadeIn 0.4s ease-out' }}>
             <button
@@ -1839,33 +2140,149 @@ const AppWorkflowCanvas: React.FC = () => {
           done={!!buildGuideMarkdown}
           collapsed={false}
         >
-          {!platformStepDone ? (
-            <StepPlaceholder
-              icon={<Download size={18} color="#A0AEC0" />}
-              message="Your Build Guide will appear here"
-              detail="Complete the steps above and choose your platform to generate a Build Guide tailored to your automation tool."
-            />
+          {!buildGuideMarkdown ? (
+            /* ── Educational default — shown until build guide is generated ── */
+            <div>
+              <p style={{
+                fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 16, fontFamily: FONT,
+              }}>
+                Your Build Guide will be a comprehensive, platform-specific implementation document structured around <strong>6 key sections</strong> — covering everything from credentials to testing. Complete the steps above and each section below will be filled with content tailored to your workflow.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {BUILD_GUIDE_SECTIONS.map((section, idx) => {
+                  const IconComp = section.icon;
+                  return (
+                    <div key={section.key} style={{
+                      borderLeft: `4px solid ${LEVEL_ACCENT_DARK}`,
+                      background: `${LEVEL_ACCENT_DARK}08`,
+                      borderRadius: 10, padding: '16px 18px',
+                      animation: 'ppFadeIn 0.3s ease both',
+                      animationDelay: `${idx * 60}ms`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <IconComp size={16} color={LEVEL_ACCENT_DARK} />
+                        <span style={{
+                          fontSize: 12, fontWeight: 700, color: '#4A5568',
+                          textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontFamily: FONT,
+                        }}>
+                          {section.label}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#A0AEC0', marginLeft: 'auto', fontFamily: FONT }}>
+                          {idx + 1}/{BUILD_GUIDE_SECTIONS.length}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT, marginBottom: 10 }}>
+                        {section.description}
+                      </div>
+                      <div style={{
+                        background: `${LEVEL_ACCENT_DARK}18`, borderLeft: `3px solid ${LEVEL_ACCENT_DARK}`,
+                        borderRadius: 6, padding: '8px 12px',
+                      }}>
+                        <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic', fontFamily: FONT }}>
+                          {section.example}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Summary footer */}
+              <div style={{
+                borderTop: '1px solid #EDF2F7', padding: '10px 0 0', marginTop: 16,
+                display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center',
+              }}>
+                {BUILD_GUIDE_SECTIONS.map(s => {
+                  const SIcon = s.icon;
+                  return (
+                    <span key={s.key} style={{ fontSize: 11, color: '#718096', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <SIcon size={12} color={LEVEL_ACCENT_DARK} /> {s.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           ) : buildGuideMarkdown && buildGuideIntermediate ? (
-            <div style={{
-              fontFamily: FONT,
-              animation: 'ppFadeIn 0.5s ease-out',
-            }}>
-              {/* Full-width Summary Card */}
-              <ExportSummaryCard
-                workflowName={workflowName}
-                platform={selectedPlatform || 'Not sure yet'}
-                overview={extractOverview(buildGuideMarkdown)}
-                stepCount={extractStepCount(buildGuideMarkdown)}
-                complexity={buildGuideIntermediate.complexity}
-                estimatedBuildTime={extractBuildTime(buildGuideMarkdown)}
-                credentials={extractCredentials(buildGuideMarkdown)}
-                steps={extractSteps(buildGuideMarkdown)}
-                testChecklist={extractTestChecklist(buildGuideMarkdown)}
-                fullMarkdown={buildGuideMarkdown}
-              />
+            /* ── Generated output (matches L1 pattern) ── */
+            <div>
+              {/* Top row: View toggle (left) + Copy (right) */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 16, flexWrap: 'wrap', gap: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    display: 'inline-flex', background: '#F7FAFC',
+                    borderRadius: 10, border: '1px solid #E2E8F0', overflow: 'hidden',
+                  }}>
+                    <ToggleBtn icon={<Eye size={13} />} label="Cards" active={viewMode === 'cards'} onClick={() => setViewMode('cards')} />
+                    <ToggleBtn icon={<Code size={13} />} label="Markdown" active={viewMode === 'markdown'} onClick={() => setViewMode('markdown')} highlight />
+                  </div>
+                  <InfoTooltip text="Markdown view shows the raw Build Guide ready to paste into any tool or docs system. Cards view provides an interactive breakdown of each section." />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <ActionBtn
+                    icon={copied ? <Check size={13} /> : <Copy size={13} />}
+                    label={copied ? 'Copied!' : 'Copy Build Guide'}
+                    onClick={handleCopyBuildGuide}
+                    primary
+                  />
+                  <ActionBtn
+                    icon={<Download size={13} />}
+                    label="Download (.md)"
+                    onClick={handleDownloadBuildGuide}
+                  />
+                  <ActionBtn
+                    icon={<Library size={13} />}
+                    label={savedToArtefacts ? 'Saved!' : 'Save to Library'}
+                    onClick={handleSaveToArtefacts}
+                    accent
+                    disabled={savedToArtefacts}
+                  />
+                </div>
+              </div>
 
-              {/* Output Actions — full width below */}
-              <div style={{ marginTop: 20 }}>
+              {viewMode === 'markdown' ? (
+                /* ── Markdown view ── */
+                <div style={{
+                  background: '#1A202C', borderRadius: 12, padding: '22px 24px',
+                  fontFamily: MONO, fontSize: 13, lineHeight: 1.8, color: '#E2E8F0',
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const,
+                  opacity: visibleBlocks >= 1 ? 1 : 0,
+                  transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.3s, transform 0.3s',
+                  maxHeight: 600, overflow: 'auto',
+                }}>
+                  {buildGuideMarkdown}
+                </div>
+              ) : (
+                /* ── Cards view ── */
+                <div style={{
+                  opacity: visibleBlocks >= 1 ? 1 : 0,
+                  transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.3s, transform 0.3s',
+                }}>
+                  <ExportSummaryCard
+                    workflowName={workflowName}
+                    platform={selectedPlatform || 'Not sure yet'}
+                    overview={extractOverview(buildGuideMarkdown)}
+                    stepCount={extractStepCount(buildGuideMarkdown)}
+                    complexity={buildGuideIntermediate.complexity}
+                    estimatedBuildTime={extractBuildTime(buildGuideMarkdown)}
+                    credentials={extractCredentials(buildGuideMarkdown)}
+                    steps={extractSteps(buildGuideMarkdown)}
+                    testChecklist={extractTestChecklist(buildGuideMarkdown)}
+                    fullMarkdown={buildGuideMarkdown}
+                  />
+                </div>
+              )}
+
+              {/* ── Output Actions Panel (download .md, .doc, save to library) ── */}
+              <div style={{
+                marginTop: 20,
+                opacity: visibleBlocks >= 2 ? 1 : 0,
+                transform: visibleBlocks >= 2 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
                 <OutputActionsPanel
                   workflowName={workflowName}
                   fullMarkdown={buildGuideMarkdown}
@@ -1874,8 +2291,160 @@ const AppWorkflowCanvas: React.FC = () => {
                 />
               </div>
 
-              {/* Bottom action row */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              {/* ── Caveat + Refinement (collapsed card) ── */}
+              {visibleBlocks >= 3 && buildGuideRefinementQuestions.length > 0 && (
+                <div style={{
+                  background: '#F7FAFC', borderRadius: 14, border: '1px solid #E2E8F0',
+                  padding: '20px 24px', marginTop: 20,
+                  opacity: visibleBlocks >= 3 ? 1 : 0,
+                  transform: visibleBlocks >= 3 ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.3s, transform 0.3s',
+                }}>
+                  {/* Caveat text */}
+                  <div style={{ display: 'flex', gap: 10, marginBottom: refineExpanded ? 20 : 0 }}>
+                    <Info size={16} color="#A0AEC0" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                        This Build Guide is a strong starting point, but every environment is different.
+                        Test each step in your actual {selectedPlatform || 'platform'} workspace, and adjust
+                        field mappings or credentials as needed.
+                      </div>
+
+                      {/* Expand CTA */}
+                      {!refineExpanded && (
+                        <button
+                          onClick={() => setRefineExpanded(true)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'none', border: 'none', padding: '8px 0 0',
+                            fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                            cursor: 'pointer', fontFamily: FONT,
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = LEVEL_ACCENT; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = LEVEL_ACCENT_DARK; }}
+                        >
+                          Would you like to refine this Build Guide further?
+                          <ChevronDown size={14} />
+                          {refinementCount > 0 && (
+                            <span style={{
+                              fontSize: 11, fontWeight: 600,
+                              background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                              borderRadius: 20, padding: '2px 10px', fontFamily: FONT,
+                              marginLeft: 4,
+                            }}>
+                              Refinement #{refinementCount}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded refinement questions */}
+                  {refineExpanded && (
+                    <div style={{ animation: 'ppSlideDown 0.3s ease-out' }}>
+                      <div style={{
+                        borderTop: '1px solid #E2E8F0', paddingTop: 16,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{
+                            fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                            textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontFamily: FONT,
+                          }}>
+                            Refine Your Build Guide
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {refinementCount > 0 && (
+                              <div style={{
+                                fontSize: 11, fontWeight: 600,
+                                background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                                borderRadius: 20, padding: '2px 10px', fontFamily: FONT,
+                              }}>
+                                Refinement #{refinementCount}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setRefineExpanded(false)}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                                color: '#A0AEC0', display: 'flex', alignItems: 'center',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#4A5568'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = '#A0AEC0'; }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
+                          Answer any of these to add context and get a more targeted Build Guide. You don't need to answer all of them — even one helps.
+                        </p>
+
+                        {buildGuideRefinementQuestions.map((question: string, i: number) => (
+                          <div key={i} style={{ marginBottom: 16 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                              {question}
+                            </label>
+                            <input
+                              type="text"
+                              value={refinementAnswers[i] || ''}
+                              onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                              placeholder="Your answer…"
+                              style={{
+                                width: '100%', border: '1px solid #E2E8F0', borderRadius: 10,
+                                padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C',
+                                outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+                                background: '#FFFFFF',
+                              }}
+                              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                            />
+                          </div>
+                        ))}
+
+                        <div style={{ marginBottom: 18 }}>
+                          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                            Anything else to add?
+                          </label>
+                          <textarea
+                            value={additionalContext}
+                            onChange={e => setAdditionalContext(e.target.value)}
+                            placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                            style={{
+                              width: '100%', minHeight: 60, resize: 'none',
+                              border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px',
+                              fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none',
+                              boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+                              background: '#FFFFFF', lineHeight: 1.5,
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                            onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                          />
+                        </div>
+
+                        <ActionBtn
+                          icon={exportLoading ? (
+                            <div style={{
+                              width: 13, height: 13, border: '2px solid #FFFFFF40',
+                              borderTopColor: '#FFFFFF', borderRadius: '50%',
+                              animation: 'ppSpin 0.6s linear infinite',
+                            }} />
+                          ) : (
+                            <ArrowRight size={13} />
+                          )}
+                          label={exportLoading ? 'Refining…' : 'Refine Build Guide'}
+                          onClick={handleRefine}
+                          primary
+                          disabled={!hasRefinementInput || exportLoading}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom navigation row (per PRD §4.2) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
                 <ActionBtn icon={<ArrowLeft size={14} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
                 <ActionBtn icon={<RotateCcw size={14} />} label="Start Over" onClick={handleStartOver} />
               </div>

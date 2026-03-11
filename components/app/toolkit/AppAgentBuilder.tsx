@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, Copy, Check, RotateCcw, Code, Library, Download,
-  Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, Eye, Square, CheckSquare,
+  ArrowRight, ArrowDown, Copy, Check, RotateCcw, Code, Download, Library,
+  Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, Eye, Square, CheckSquare, X,
 } from 'lucide-react';
 import {
   GOOD_EXAMPLES, NOT_RECOMMENDED_EXAMPLES, CRITERIA_LABELS,
@@ -11,10 +11,36 @@ import { useAgentDesignApi } from '../../../hooks/useAgentDesignApi';
 import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import OutputActionsPanel from '../workflow/OutputActionsPanel';
 
 const FONT = "'DM Sans', sans-serif";
+const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 const LEVEL_ACCENT = '#F7E8A4';
 const LEVEL_ACCENT_DARK = '#8A6A00';
+
+/* ── Loading progress steps (per PRD §9.5) ── */
+const INITIAL_LOADING_STEPS = [
+  'Evaluating readiness…',
+  'Designing output format…',
+  'Writing system prompt…',
+  'Adding accountability features…',
+  'Scoring criteria…',
+  'Generating refinement questions…',
+  'Finalising design…',
+];
+const REFINE_LOADING_STEPS = [
+  'Processing your additional context…',
+  'Re-evaluating readiness…',
+  'Refining output format…',
+  'Strengthening system prompt…',
+  'Updating accountability…',
+  'Generating deeper questions…',
+  'Finalising refined design…',
+];
+// Front-loaded timing: early steps fast, later steps slower
+const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+
+const DRAFT_KEY = 'oxygy_agent-builder_draft';
 
 /* ─── Educational content for the 4 output sections ─── */
 const DESIGN_SECTIONS = [
@@ -22,7 +48,7 @@ const DESIGN_SECTIONS = [
     key: 'readiness',
     label: 'Readiness Score',
     icon: '🔍',
-    color: '#38B2AC',
+    color: LEVEL_ACCENT_DARK,
     why: 'Not every task needs a custom agent. This section evaluates your task across five dimensions — frequency, consistency, shareability, complexity, and standardization risk — to determine whether building a reusable agent is the right investment.',
     example: 'A task scored 85% overall: high frequency (weekly), strong consistency needs, and shared across 3 departments — making it a strong candidate for a Level 2 agent.',
   },
@@ -30,7 +56,7 @@ const DESIGN_SECTIONS = [
     key: 'output_format',
     label: 'Output Format',
     icon: '📐',
-    color: '#5B6DC2',
+    color: LEVEL_ACCENT_DARK,
     why: 'The difference between Level 1 prompting and a Level 2 agent is structure. By defining an explicit output format (both human-readable and JSON), your agent produces identical results every time — enabling dashboards, reports, and automated workflows.',
     example: 'A JSON template with fields for summary, key_themes[], sentiment_scores{}, and recommendations[] — so every survey analysis follows the same structure.',
   },
@@ -38,7 +64,7 @@ const DESIGN_SECTIONS = [
     key: 'system_prompt',
     label: 'System Prompt',
     icon: '📝',
-    color: '#D69E2E',
+    color: LEVEL_ACCENT_DARK,
     why: 'A system prompt is the instruction set that defines how your agent behaves. It incorporates the Prompt Blueprint framework from Level 1 — Role, Context, Task, Format, Steps, and Quality Checks — into a single, comprehensive prompt ready for any AI platform.',
     example: '[ROLE] You are a survey analysis specialist... [TASK] Analyze the provided survey data to identify... [QUALITY CHECKS] Cross-reference themes against raw responses...',
   },
@@ -46,7 +72,7 @@ const DESIGN_SECTIONS = [
     key: 'accountability',
     label: 'Built-In Accountability',
     icon: '✅',
-    color: '#E53E3E',
+    color: LEVEL_ACCENT_DARK,
     why: 'A well-built agent cites specific sources (row numbers, timestamps, page references), provides confidence scores, explains its reasoning, and flags areas of uncertainty — so the human reviewer can verify quickly rather than starting from scratch.',
     example: 'The agent includes row-level references for every theme it identifies, confidence scores per conclusion, and a data coverage summary showing what was analyzed vs. skipped.',
   },
@@ -198,6 +224,15 @@ const AppAgentBuilder: React.FC = () => {
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [selectedChecks, setSelectedChecks] = useState<Record<number, boolean>>({});
   const [showJsonTooltip, setShowJsonTooltip] = useState(false);
+  const [hasTrackedUsage, setHasTrackedUsage] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [isRefineLoading, setIsRefineLoading] = useState(false);
+
+  // Refinement state
+  const [refinementAnswers, setRefinementAnswers] = useState<Record<number, string>>({});
+  const [additionalContext, setAdditionalContext] = useState('');
+  const [refinementCount, setRefinementCount] = useState(0);
+  const [refineExpanded, setRefineExpanded] = useState(false);
 
   // Refs
   const step1Ref = useRef<HTMLDivElement>(null);
@@ -206,13 +241,35 @@ const AppAgentBuilder: React.FC = () => {
   // API
   const { designAgent, isLoading, error, clearError } = useAgentDesignApi();
 
-  // Staggered block appearance (4 sections)
+  // Loading step progression (per PRD §9.5)
+  useEffect(() => {
+    if (!isLoading) {
+      if (loadingStep > 0) {
+        const steps = isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS;
+        setLoadingStep(steps.length);
+        const timer = setTimeout(() => setLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    STEP_DELAYS.forEach((delay, i) => {
+      cumulative += delay;
+      timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [isLoading]);
+
+  // Staggered block appearance (4 sections + refinement card)
   useEffect(() => {
     if (!result) return;
     setVisibleBlocks(0);
     setScoreAnimated(false);
+    const totalSections = 7; // 4 output sections + OutputActionsPanel + refinement card + buffer
     const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < totalSections; i++) {
       timers.push(setTimeout(() => {
         setVisibleBlocks(v => v + 1);
         if (i === 0) setScoreAnimated(true);
@@ -237,20 +294,24 @@ const AppAgentBuilder: React.FC = () => {
     return () => clearTimeout(t);
   }, [toastMessage]);
 
-  // Restore draft
+  // Draft persistence
   useEffect(() => {
     try {
-      const draft = localStorage.getItem('oxygy_agent-builder_draft');
+      const draft = localStorage.getItem(DRAFT_KEY);
       if (draft) {
         const parsed = JSON.parse(draft);
-        if (parsed.result) setResult(parsed.result);
         if (parsed.taskDescription) setTaskDescription(parsed.taskDescription);
         if (parsed.inputDataDescription) setInputDataDescription(parsed.inputDataDescription);
-        if (parsed.selectedChecks) setSelectedChecks(parsed.selectedChecks);
-        localStorage.removeItem('oxygy_agent-builder_draft');
+        localStorage.removeItem(DRAFT_KEY);
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if ((taskDescription.trim() || inputDataDescription.trim()) && !result) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ taskDescription, inputDataDescription }));
+    }
+  }, [taskDescription, inputDataDescription, result]);
 
   // Close JSON tooltip on outside click / Escape
   useEffect(() => {
@@ -277,6 +338,10 @@ const AppAgentBuilder: React.FC = () => {
     setSelectedChecks({});
     setSavedToLibrary(false);
     setShowMarkdown(false);
+    setIsRefineLoading(false);
+    setRefinementAnswers({});
+    setAdditionalContext('');
+    setRefineExpanded(false);
 
     const data = await designAgent({
       task_description: taskDescription.trim(),
@@ -285,7 +350,11 @@ const AppAgentBuilder: React.FC = () => {
 
     if (data) {
       setResult(data);
-      if (user) upsertToolUsed(user.id, 2);
+      localStorage.removeItem(DRAFT_KEY);
+      if (!hasTrackedUsage && user) {
+        upsertToolUsed(user.id, 2);
+        setHasTrackedUsage(true);
+      }
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
   };
@@ -301,9 +370,63 @@ const AppAgentBuilder: React.FC = () => {
     setSelectedChecks({});
     setSavedToLibrary(false);
     setShowMarkdown(false);
+    setRefinementAnswers({});
+    setAdditionalContext('');
+    setRefinementCount(0);
+    setRefineExpanded(false);
     clearError();
+    localStorage.removeItem(DRAFT_KEY);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  /* ── Build refinement message ── */
+  const buildRefinementMessage = (): string => {
+    const answeredQuestions = (result?.refinement_questions || [])
+      .map((q, i) => {
+        const answer = refinementAnswers[i]?.trim();
+        return answer ? `Q: ${q}\nA: ${answer}` : null;
+      })
+      .filter(Boolean)
+      .join('\n\n');
+
+    const parts = [
+      `[REFINEMENT]\n\nOriginal task: ${taskDescription}\nInput data: ${inputDataDescription || 'Not specified'}`,
+      answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+      additionalContext.trim() ? `\nAdditional context: ${additionalContext.trim()}` : '',
+    ];
+
+    return parts.filter(Boolean).join('\n');
+  };
+
+  /* ── Handle refinement ── */
+  const handleRefine = async () => {
+    const hasAnswers = Object.values(refinementAnswers).some(a => (a as string).trim());
+    if (!hasAnswers && !additionalContext.trim()) return;
+
+    setIsRefineLoading(true);
+    setVisibleBlocks(0);
+    setScoreAnimated(false);
+    setPromptExpanded(false);
+    setSavedToLibrary(false);
+    setCopied(false);
+
+    const enrichedInput = buildRefinementMessage();
+    const data = await designAgent({
+      task_description: enrichedInput,
+      input_data_description: '',
+    });
+
+    if (data) {
+      setResult(data);
+      setRefinementAnswers({});
+      setAdditionalContext('');
+      setRefinementCount(c => c + 1);
+      setShowMarkdown(false);
+      setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  };
+
+  const hasRefinementInput = Object.values(refinementAnswers).some(a => (a as string).trim()) || additionalContext.trim();
 
   const copyToClipboard = useCallback(async (text: string) => {
     try { await navigator.clipboard.writeText(text); } catch {
@@ -313,7 +436,9 @@ const AppAgentBuilder: React.FC = () => {
     }
   }, []);
 
-  /** Build a single cohesive system prompt combining sections 2 (output format), 3 (system prompt), and 4 (accountability). */
+  /** Build a single cohesive system prompt combining the system prompt (which already includes
+   *  [OUTPUT FORMAT]) and accountability features. The output format is NOT appended separately
+   *  because the system prompt's [OUTPUT FORMAT] section already defines it. */
   const buildFullSystemPrompt = (r: AgentDesignResult): string => {
     const selectedInstructions = r.accountability
       .filter((_, idx) => selectedChecks[idx])
@@ -322,14 +447,6 @@ const AppAgentBuilder: React.FC = () => {
 
     return [
       r.system_prompt,
-      ``,
-      `--- OUTPUT FORMAT ---`,
-      ``,
-      `You must respond using the following JSON structure:`,
-      ``,
-      '```json',
-      JSON.stringify(r.output_format.json_template, null, 2),
-      '```',
       ``,
       `--- BUILT-IN ACCOUNTABILITY FEATURES ---`,
       ``,
@@ -350,17 +467,6 @@ const AppAgentBuilder: React.FC = () => {
     setTimeout(() => setCopiedSection(null), 2500);
   };
 
-  const handleDownload = () => {
-    if (!result) return;
-    const md = buildFullSystemPrompt(result);
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'system-prompt.md'; a.click();
-    URL.revokeObjectURL(url);
-    setToastMessage('Downloaded as system-prompt.md');
-  };
-
   const handleSaveToLibrary = () => {
     if (!result || !user) return;
     const fullContent = buildFullSystemPrompt(result);
@@ -368,6 +474,19 @@ const AppAgentBuilder: React.FC = () => {
     dbSavePrompt(user.id, { level: 2, title, content: fullContent, source_tool: 'agent-builder' });
     setSavedToLibrary(true); setToastMessage('System prompt saved to your Prompt Library');
     setTimeout(() => setSavedToLibrary(false), 3000);
+  };
+
+  const handleDownload = () => {
+    if (!result) return;
+    const date = new Date().toISOString().split('T')[0];
+    const content = buildFullSystemPrompt(result);
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agent-design-${date}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleCheck = (idx: number) => {
@@ -379,14 +498,21 @@ const AppAgentBuilder: React.FC = () => {
   const step2Done = false; // Output step is never "done" in the collapsed sense
 
   return (
-    <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT, background: '#F7FAFC' }}>
+    <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT }}>
       <style>{`
         @keyframes ppSpin { to { transform: rotate(360deg); } }
         @keyframes ppPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
-        @keyframes ppFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes ppFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes ppConnectorFlow {
           0% { background-position: 0 0; }
           100% { background-position: 0 20px; }
+        }
+        @keyframes ppSlideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
@@ -431,13 +557,15 @@ const AppAgentBuilder: React.FC = () => {
                   onClick={() => handleExampleClick(ex.task, ex.inputData)}
                   style={{
                     padding: '7px 14px', borderRadius: 10,
-                    fontSize: 13, color: '#2C7A7B', background: 'rgba(168,240,224,0.08)',
-                    border: '1px solid #A8F0E0', cursor: 'pointer',
+                    fontSize: 13, color: LEVEL_ACCENT_DARK,
+                    background: `${LEVEL_ACCENT}12`,
+                    border: `1px solid ${LEVEL_ACCENT}`,
+                    cursor: 'pointer',
                     transition: 'border-color 0.15s, background 0.15s',
-                    textAlign: 'left', lineHeight: 1.4,
+                    textAlign: 'left', lineHeight: 1.4, fontFamily: FONT,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#38B2AC'; e.currentTarget.style.background = 'rgba(168,240,224,0.2)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#A8F0E0'; e.currentTarget.style.background = 'rgba(168,240,224,0.08)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK; e.currentTarget.style.background = `${LEVEL_ACCENT}30`; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.background = `${LEVEL_ACCENT}12`; }}
                 >
                   {ex.name}
                 </button>
@@ -451,7 +579,7 @@ const AppAgentBuilder: React.FC = () => {
                     fontSize: 13, color: '#B7791F', background: 'rgba(251,206,177,0.08)',
                     border: '1px solid #FBCEB1', cursor: 'pointer',
                     transition: 'border-color 0.15s, background 0.15s',
-                    textAlign: 'left', lineHeight: 1.4,
+                    textAlign: 'left', lineHeight: 1.4, fontFamily: FONT,
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#E57A5A'; e.currentTarget.style.background = 'rgba(251,206,177,0.2)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = '#FBCEB1'; e.currentTarget.style.background = 'rgba(251,206,177,0.08)'; }}
@@ -582,24 +710,7 @@ const AppAgentBuilder: React.FC = () => {
           done={false}
           collapsed={false}
         >
-          {!result ? (
-            /* Educational preview or loading skeleton */
-            isLoading ? (
-              /* Loading skeleton */
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: LEVEL_ACCENT_DARK, marginBottom: 16 }}>
-                  Designing your agent...
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {DESIGN_SECTIONS.map(block => (
-                    <div key={block.key} style={{
-                      height: 100, borderRadius: 10, borderLeft: `4px solid ${block.color}`,
-                      background: '#F0F0F0', animation: 'ppPulse 1.5s ease-in-out infinite',
-                    }} />
-                  ))}
-                </div>
-              </div>
-            ) : (
+          {!result && !isLoading ? (
               /* Educational default — 4-section preview */
               <div>
                 <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 16 }}>
@@ -666,8 +777,15 @@ const AppAgentBuilder: React.FC = () => {
                   ))}
                 </div>
               </div>
-            )
-          ) : (
+          ) : isLoading ? (
+            /* ── Processing Progress Indicator ── */
+            <ProcessingProgress
+              steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
+              currentStep={loadingStep}
+              header={isRefineLoading ? 'Refining your agent design…' : 'Designing your agent…'}
+              subtext="This usually takes 15–20 seconds"
+            />
+          ) : result ? (
             /* ═══ Active Output Content ═══ */
             <>
               {/* View toggle + actions */}
@@ -697,7 +815,7 @@ const AppAgentBuilder: React.FC = () => {
                   <InfoTooltip text="Markdown preserves the structure (headings, bullets, formatting) when you paste your agent design into ChatGPT, Claude, or any AI tool — giving you better results than plain text." />
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <ActionBtn
                     icon={copied ? <Check size={13} /> : <Copy size={13} />}
                     label={copied ? 'Copied!' : 'Copy Full System Prompt'}
@@ -706,18 +824,16 @@ const AppAgentBuilder: React.FC = () => {
                   />
                   <ActionBtn
                     icon={<Download size={13} />}
-                    label="Download"
+                    label="Download (.md)"
                     onClick={handleDownload}
                   />
-                  {user && (
-                    <ActionBtn
-                      icon={savedToLibrary ? <Check size={13} /> : <Library size={13} />}
-                      label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                      onClick={handleSaveToLibrary}
-                      disabled={savedToLibrary}
-                      accent
-                    />
-                  )}
+                  <ActionBtn
+                    icon={<Library size={13} />}
+                    label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
+                    onClick={handleSaveToLibrary}
+                    accent
+                    disabled={savedToLibrary}
+                  />
                 </div>
               </div>
 
@@ -729,7 +845,7 @@ const AppAgentBuilder: React.FC = () => {
                 }}>
                   <pre style={{
                     color: '#E2E8F0', fontSize: 13, lineHeight: 1.8,
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                    fontFamily: MONO,
                     whiteSpace: 'pre-wrap', margin: 0,
                   }}>
                     {buildFullSystemPrompt(result)}
@@ -767,7 +883,7 @@ const AppAgentBuilder: React.FC = () => {
                             <div style={{ height: 6, borderRadius: 3, background: '#E2E8F0', overflow: 'hidden' }}>
                               <div style={{
                                 height: '100%', borderRadius: 3,
-                                width: `${val.score}%`, background: '#38B2AC',
+                                width: `${val.score}%`, background: LEVEL_ACCENT_DARK,
                                 transition: 'width 0.7s ease',
                               }} />
                             </div>
@@ -789,12 +905,12 @@ const AppAgentBuilder: React.FC = () => {
                       </div>
                       <div style={{
                         background: '#F7FAFC', borderRadius: 10, padding: 16,
-                        border: result.readiness.overall_score >= 50 ? '2px solid #5B6DC2' : '1px solid #E2E8F0',
+                        border: result.readiness.overall_score >= 50 ? `2px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
                       }}>
                         {result.readiness.overall_score >= 50 && (
                           <span style={{
                             display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#FFFFFF',
-                            background: '#5B6DC2', borderRadius: 10, padding: '2px 8px', marginBottom: 8,
+                            background: LEVEL_ACCENT_DARK, borderRadius: 10, padding: '2px 8px', marginBottom: 8,
                           }}>
                             Recommended
                           </span>
@@ -804,7 +920,7 @@ const AppAgentBuilder: React.FC = () => {
                         </div>
                         {result.readiness.level2_points.map((point, i) => (
                           <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, display: 'flex', gap: 6, marginBottom: 4 }}>
-                            <span style={{ color: '#5B6DC2', flexShrink: 0 }}>&bull;</span>{point}
+                            <span style={{ color: LEVEL_ACCENT_DARK, flexShrink: 0 }}>&bull;</span>{point}
                           </div>
                         ))}
                       </div>
@@ -855,7 +971,7 @@ const AppAgentBuilder: React.FC = () => {
                               border: '1px solid #E2E8F0', borderRadius: 4, padding: '2px 6px',
                               cursor: 'pointer', transition: 'color 0.15s',
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#5B6DC2')}
+                            onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
                             onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
                           >
                             Why JSON?
@@ -878,7 +994,7 @@ const AppAgentBuilder: React.FC = () => {
                         <div style={{
                           background: '#1A202C', borderRadius: 10,
                           padding: 16, maxHeight: 320, overflowY: 'auto',
-                          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                          fontFamily: MONO,
                         }}>
                           <pre style={{ fontSize: 12, lineHeight: 1.6, margin: 0, overflowX: 'auto' }}>
                             {JSON.stringify(result.output_format.json_template, null, 2).split('\n').map((line, i) => (
@@ -957,7 +1073,7 @@ const AppAgentBuilder: React.FC = () => {
                             style={{
                               background: '#FFFFFF', borderRadius: 10,
                               padding: '14px 16px', border: '1px solid #E2E8F0',
-                              borderLeft: `4px solid ${isSelected ? '#5B6DC2' : '#A0AEC0'}`,
+                              borderLeft: `4px solid ${isSelected ? LEVEL_ACCENT_DARK : '#A0AEC0'}`,
                               opacity: isSelected ? 1 : 0.6,
                               transition: 'opacity 0.2s, border-color 0.2s',
                             }}
@@ -969,7 +1085,7 @@ const AppAgentBuilder: React.FC = () => {
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}
                                 >
                                   {isSelected
-                                    ? <CheckSquare size={18} color="#5B6DC2" />
+                                    ? <CheckSquare size={18} color={LEVEL_ACCENT_DARK} />
                                     : <Square size={18} color="#A0AEC0" />
                                   }
                                 </button>
@@ -1005,7 +1121,7 @@ const AppAgentBuilder: React.FC = () => {
                                 </div>
                                 <div style={{
                                   fontSize: 12, color: '#2D3748', lineHeight: 1.6,
-                                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                  fontFamily: MONO,
                                 }}>
                                   {check.prompt_instruction}
                                 </div>
@@ -1019,28 +1135,233 @@ const AppAgentBuilder: React.FC = () => {
                 </div>
               )}
 
-              {/* Bottom row: Start Over + Save to Library */}
+              {/* ── Output Actions Panel (per PRD §4.2) ── */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                marginTop: 20,
+                marginTop: 24,
+                opacity: visibleBlocks >= 5 ? 1 : 0,
+                transform: visibleBlocks >= 5 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
+                <OutputActionsPanel
+                  workflowName={`Agent: ${taskDescription.slice(0, 50)}`}
+                  fullMarkdown={buildFullSystemPrompt(result)}
+                  onSaveToArtefacts={handleSaveToLibrary}
+                  isSaved={savedToLibrary}
+                />
+              </div>
+
+              {/* ── Combined Caveat + Refinement Card (per PRD §4.5) ── */}
+              {(() => {
+                const refIdx = 6; // after 4 output sections + OutputActionsPanel + 1
+                const questions = result.refinement_questions || [];
+                return (
+                  <div style={{
+                    background: '#F7FAFC',
+                    borderRadius: 14,
+                    border: '1px solid #E2E8F0',
+                    padding: '20px 24px',
+                    marginTop: 24,
+                    opacity: visibleBlocks >= refIdx ? 1 : 0,
+                    transform: visibleBlocks >= refIdx ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    {/* Practitioner caveat — always visible */}
+                    <div style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10,
+                      marginBottom: refineExpanded ? 16 : 12,
+                    }}>
+                      <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                        This agent design is a strong starting point, but every environment is different.
+                        Test the system prompt in your actual AI platform, verify the output format works with your data,
+                        and adjust the accountability checks to match your review process.
+                      </div>
+                    </div>
+
+                    {/* Expand CTA — shown only when collapsed */}
+                    {!refineExpanded && (
+                      <button
+                        onClick={() => setRefineExpanded(true)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: 0, fontSize: 13, fontWeight: 600,
+                          color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      >
+                        <ChevronDown size={14} />
+                        Would you like to refine this agent design further?
+                        {refinementCount > 0 && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 600,
+                            background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                            borderRadius: 20, padding: '2px 10px',
+                            marginLeft: 6,
+                          }}>
+                            Refinement #{refinementCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Expanded refinement section */}
+                    {refineExpanded && (
+                      <div style={{
+                        borderTop: '1px solid #E2E8F0',
+                        paddingTop: 16,
+                        animation: 'ppSlideDown 0.3s ease-out both',
+                      }}>
+                        {/* Section header with close button */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          marginBottom: 6,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                              fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                              textTransform: 'uppercase', letterSpacing: '0.06em',
+                              fontFamily: FONT,
+                            }}>
+                              Refine Your Agent Design
+                            </div>
+                            {refinementCount > 0 && (
+                              <div style={{
+                                fontSize: 11, fontWeight: 600,
+                                background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                                borderRadius: 20, padding: '2px 10px',
+                                fontFamily: FONT,
+                              }}>
+                                Refinement #{refinementCount}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setRefineExpanded(false)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              padding: 4, borderRadius: 6, display: 'flex',
+                              color: '#A0AEC0', transition: 'color 0.15s',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#4A5568')}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                        <p style={{
+                          fontSize: 13, color: '#718096', lineHeight: 1.6,
+                          margin: '0 0 18px', fontFamily: FONT,
+                        }}>
+                          {questions.length > 0
+                            ? "Answer any of these to add context and get a more targeted agent design. You don't need to answer all of them — even one helps."
+                            : 'Add any additional context below to refine your agent design.'}
+                        </p>
+
+                        {/* Questions */}
+                        {questions.map((question, i) => (
+                          <div key={i} style={{ marginBottom: 16 }}>
+                            <label style={{
+                              display: 'block',
+                              fontSize: 13, fontWeight: 600, color: '#2D3748',
+                              marginBottom: 6, fontFamily: FONT,
+                            }}>
+                              {question}
+                            </label>
+                            <input
+                              type="text"
+                              value={refinementAnswers[i] || ''}
+                              onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                              placeholder="Your answer…"
+                              style={{
+                                width: '100%',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: 10,
+                                padding: '10px 14px',
+                                fontSize: 13,
+                                fontFamily: FONT,
+                                color: '#1A202C',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                transition: 'border-color 0.15s',
+                                background: '#FFFFFF',
+                              }}
+                              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                            />
+                          </div>
+                        ))}
+
+                        {/* Open-ended additional context */}
+                        <div style={{ marginBottom: 18 }}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: 13, fontWeight: 600, color: '#2D3748',
+                            marginBottom: 6, fontFamily: FONT,
+                          }}>
+                            Anything else to add?
+                          </label>
+                          <textarea
+                            value={additionalContext}
+                            onChange={e => setAdditionalContext(e.target.value)}
+                            placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                            style={{
+                              width: '100%',
+                              minHeight: 60,
+                              resize: 'none',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: 10,
+                              padding: '10px 14px',
+                              fontSize: 13,
+                              fontFamily: FONT,
+                              color: '#1A202C',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              transition: 'border-color 0.15s',
+                              background: '#FFFFFF',
+                              lineHeight: 1.5,
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                            onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                          />
+                        </div>
+
+                        {/* Refine button */}
+                        <ActionBtn
+                          icon={isLoading ? (
+                            <div style={{
+                              width: 13, height: 13, border: '2px solid #FFFFFF40',
+                              borderTopColor: '#FFFFFF', borderRadius: '50%',
+                              animation: 'ppSpin 0.6s linear infinite',
+                            }} />
+                          ) : (
+                            <ArrowRight size={13} />
+                          )}
+                          label={isLoading ? 'Refining…' : 'Refine Agent Design'}
+                          onClick={handleRefine}
+                          primary
+                          disabled={!hasRefinementInput || isLoading}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Bottom navigation row (per PRD §4.2) */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginTop: 20,
+                flexWrap: 'wrap',
               }}>
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
                   onClick={handleReset}
                 />
-                {user && (
-                  <ActionBtn
-                    icon={savedToLibrary ? <Check size={13} /> : <Library size={13} />}
-                    label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                    onClick={handleSaveToLibrary}
-                    disabled={savedToLibrary}
-                    accent
-                  />
-                )}
               </div>
             </>
-          )}
+          ) : null}
         </StepCard>
       </div>
 
@@ -1051,7 +1372,8 @@ const AppAgentBuilder: React.FC = () => {
           background: '#1A202C', color: '#FFFFFF', borderRadius: 10,
           padding: '10px 18px', fontSize: 13, fontWeight: 500,
           boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 50,
-          animation: 'ppFadeIn 0.15s ease both',
+          fontFamily: FONT,
+          animation: 'ppFadeIn 0.2s ease both',
         }}>
           {toastMessage} ✓
         </div>
@@ -1103,7 +1425,7 @@ const OutputSection: React.FC<{
             fontSize: 11, color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
             padding: '2px 6px', borderRadius: 6, transition: 'color 0.15s',
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#38B2AC')}
+          onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
           onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
         >
           {isSectionCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -1353,24 +1675,133 @@ const ActionBtn: React.FC<{
   disabled?: boolean;
 }> = ({ icon, label, onClick, primary, accent, disabled }) => {
   const bg = primary ? '#38B2AC' : accent ? '#5A67D8' : '#FFFFFF';
-  const fg = (primary || accent) ? '#FFFFFF' : '#4A5568';
-  const bdr = (primary || accent) ? 'none' : '1px solid #E2E8F0';
+  const color = primary || accent ? '#FFFFFF' : '#4A5568';
+  const border = primary || accent ? 'none' : '1px solid #E2E8F0';
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: 'flex', alignItems: 'center', gap: 5,
-        padding: '8px 16px', borderRadius: 24,
-        fontSize: 12, fontWeight: 600,
-        cursor: disabled ? 'default' : 'pointer',
-        background: bg, color: fg, border: bdr,
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        background: disabled ? '#E2E8F0' : bg,
+        color: disabled ? '#A0AEC0' : color,
+        border,
+        borderRadius: 24,
+        padding: '8px 16px',
+        fontSize: 12,
+        fontWeight: 600,
+        fontFamily: FONT,
+        cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'opacity 0.15s',
         opacity: disabled ? 0.6 : 1,
       }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.opacity = '0.85'; }}
+      onMouseLeave={e => { if (!disabled) e.currentTarget.style.opacity = '1'; }}
     >
       {icon} {label}
     </button>
+  );
+};
+
+/* ── Processing Progress Indicator (per PRD §9.5) ── */
+const ProcessingProgress: React.FC<{
+  steps: string[];
+  currentStep: number;
+  header: string;
+  subtext: string;
+}> = ({ steps, currentStep, header, subtext }) => {
+  const completedSteps = Math.min(currentStep, steps.length);
+  const progressPercent = (completedSteps / steps.length) * 100;
+
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      borderRadius: 14,
+      border: '1px solid #E2E8F0',
+      padding: '28px 32px',
+    }}>
+      <div style={{
+        fontSize: 15, fontWeight: 700, color: '#1A202C',
+        marginBottom: 4, fontFamily: FONT,
+      }}>
+        {header}
+      </div>
+      <div style={{
+        fontSize: 12, color: '#A0AEC0',
+        marginBottom: 24, fontFamily: FONT,
+      }}>
+        {subtext}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {steps.map((label, i) => {
+          const stepNum = i + 1;
+          const isComplete = stepNum <= completedSteps;
+          const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
+          const isPending = !isComplete && !isActive;
+
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'opacity 0.2s',
+              opacity: isPending ? 0.5 : 1,
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
+                border: isActive
+                  ? `2px solid ${LEVEL_ACCENT}`
+                  : isComplete ? 'none' : '2px solid #E2E8F0',
+                position: 'relative',
+              }}>
+                {isComplete && (
+                  <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />
+                )}
+                {isActive && (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: '2px solid transparent',
+                    borderTopColor: LEVEL_ACCENT_DARK,
+                    animation: 'ppSpin 0.7s linear infinite',
+                    position: 'absolute', top: -2, left: -2,
+                  }} />
+                )}
+              </div>
+
+              <div style={{
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                color: isPending ? '#A0AEC0' : '#2D3748',
+                fontFamily: FONT,
+                transition: 'color 0.2s, font-weight 0.2s',
+              }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{
+        width: '100%', height: 4, borderRadius: 2,
+        background: '#EDF2F7', overflow: 'hidden',
+      }}>
+        <div style={{
+          height: '100%', borderRadius: 2,
+          background: LEVEL_ACCENT,
+          width: `${progressPercent}%`,
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+      <div style={{
+        fontSize: 11, color: '#A0AEC0',
+        textAlign: 'right', marginTop: 6,
+        fontFamily: FONT,
+      }}>
+        {completedSteps} of {steps.length}
+      </div>
+    </div>
   );
 };
 

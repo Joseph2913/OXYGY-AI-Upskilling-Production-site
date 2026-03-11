@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowRight, ArrowDown, Copy, Check, Download, RotateCcw,
-  ChevronRight, ChevronDown, Library, Code, Eye, Info,
+  ChevronRight, ChevronDown, Library, Code, Eye, Info, X,
 } from 'lucide-react';
 import { usePlaygroundApi } from '../../../hooks/usePlaygroundApi';
-import type { PlaygroundResult, PlaygroundStrategy, StrategyId } from '../../../types';
+import type { PlaygroundResult, PlaygroundStrategy } from '../../../types';
 import {
-  STRATEGY_DEFINITIONS, STRATEGY_ACCENT_COLORS, PLAYGROUND_EXAMPLE_CHIPS,
+  STRATEGY_DEFINITIONS, PLAYGROUND_EXAMPLE_CHIPS,
 } from '../../../data/playground-content';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import OutputActionsPanel from '../workflow/OutputActionsPanel';
 
 const FONT = "'DM Sans', sans-serif";
 const MONO = "'JetBrains Mono', 'Fira Code', monospace";
@@ -18,17 +19,8 @@ const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 const LEVEL_ACCENT = '#A8F0E0';
 const LEVEL_ACCENT_DARK = '#1A6B5F';
 
-/* ── Strategy accent colours by ID ── */
-const STRATEGY_COLORS: Record<StrategyId, string> = {
-  STRUCTURED_BLUEPRINT: '#C3D0F5',
-  CHAIN_OF_THOUGHT: '#FBE8A6',
-  PERSONA_EXPERT_ROLE: '#A8F0E0',
-  OUTPUT_FORMAT_SPECIFICATION: '#38B2AC',
-  CONSTRAINT_FRAMING: '#FBCEB1',
-  FEW_SHOT_EXAMPLES: '#E6FFFA',
-  ITERATIVE_DECOMPOSITION: '#C3D0F5',
-  TONE_AND_VOICE: '#FBE8A6',
-};
+/* ── Strategy accent colour — consistent LEVEL_ACCENT per toolkit standard §1.5 ── */
+const STRATEGY_COLOR = LEVEL_ACCENT;
 
 const DRAFT_KEY = 'oxygy_prompt_playground_draft';
 
@@ -74,6 +66,7 @@ const AppPromptPlayground: React.FC = () => {
   const [refinementAnswers, setRefinementAnswers] = useState<Record<number, string>>({});
   const [additionalContext, setAdditionalContext] = useState('');
   const [refinementCount, setRefinementCount] = useState(0);
+  const [refineExpanded, setRefineExpanded] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [isRefineLoading, setIsRefineLoading] = useState(false);
 
@@ -170,6 +163,7 @@ const AppPromptPlayground: React.FC = () => {
     }
     setValidationError(false);
     setIsRefineLoading(false);
+    setRefineExpanded(false);
     const data = await generate(userInput);
     if (data) {
       setResult(data);
@@ -263,6 +257,7 @@ const AppPromptPlayground: React.FC = () => {
     setRefinementAnswers({});
     setAdditionalContext('');
     setRefinementCount(0);
+    setRefineExpanded(false);
     clearError();
     localStorage.removeItem(DRAFT_KEY);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -315,20 +310,88 @@ const AppPromptPlayground: React.FC = () => {
 
   const hasRefinementInput = Object.values(refinementAnswers).some(a => (a as string).trim()) || additionalContext.trim();
 
+  /* ── Find excerpt in prompt with fuzzy whitespace matching ── */
+  const findExcerptRange = (prompt: string, excerpt: string): { start: number; end: number } | null => {
+    // 1. Exact match
+    const exactIdx = prompt.indexOf(excerpt);
+    if (exactIdx !== -1) return { start: exactIdx, end: exactIdx + excerpt.length };
+
+    // 2. Normalised whitespace match — collapse runs of whitespace in both strings
+    const normalise = (s: string) => s.replace(/\s+/g, ' ').trim();
+    const normExcerpt = normalise(excerpt);
+    const normPrompt = normalise(prompt);
+    const normIdx = normPrompt.indexOf(normExcerpt);
+    if (normIdx !== -1) {
+      // Map normalised index back to original prompt position
+      let origStart = -1;
+      let origEnd = -1;
+      let normPos = 0;
+      let origPos = 0;
+      const normPromptChars = normPrompt;
+      while (origPos <= prompt.length && normPos <= normPromptChars.length) {
+        if (normPos === normIdx && origStart === -1) origStart = origPos;
+        if (normPos === normIdx + normExcerpt.length && origEnd === -1) { origEnd = origPos; break; }
+        if (origPos < prompt.length && /\s/.test(prompt[origPos])) {
+          // Consume all whitespace in original
+          while (origPos < prompt.length && /\s/.test(prompt[origPos])) origPos++;
+          // Consume the single space in normalised (if present)
+          if (normPos < normPromptChars.length && normPromptChars[normPos] === ' ') normPos++;
+        } else {
+          origPos++;
+          normPos++;
+        }
+      }
+      if (origStart !== -1 && origEnd !== -1) return { start: origStart, end: origEnd };
+    }
+
+    // 3. Case-insensitive match
+    const lowerIdx = prompt.toLowerCase().indexOf(excerpt.toLowerCase());
+    if (lowerIdx !== -1) return { start: lowerIdx, end: lowerIdx + excerpt.length };
+
+    // 4. Try matching just the first ~60 characters (LLM may have truncated or extended)
+    if (excerpt.length > 60) {
+      const prefix = normalise(excerpt.slice(0, 60));
+      const prefIdx = normPrompt.indexOf(prefix);
+      if (prefIdx !== -1) {
+        // Find the end of the sentence/paragraph from that point in the original
+        let origStart2 = -1;
+        let normPos2 = 0;
+        let origPos2 = 0;
+        while (origPos2 <= prompt.length && normPos2 <= normPrompt.length) {
+          if (normPos2 === prefIdx && origStart2 === -1) { origStart2 = origPos2; break; }
+          if (origPos2 < prompt.length && /\s/.test(prompt[origPos2])) {
+            while (origPos2 < prompt.length && /\s/.test(prompt[origPos2])) origPos2++;
+            if (normPos2 < normPrompt.length && normPrompt[normPos2] === ' ') normPos2++;
+          } else {
+            origPos2++;
+            normPos2++;
+          }
+        }
+        if (origStart2 !== -1) {
+          // Extend to end of the paragraph or a reasonable chunk
+          const endSearch = prompt.indexOf('\n\n', origStart2 + 20);
+          const end = endSearch !== -1 ? endSearch : Math.min(origStart2 + excerpt.length + 50, prompt.length);
+          return { start: origStart2, end };
+        }
+      }
+    }
+
+    return null;
+  };
+
   /* ── Render prompt with highlighted excerpt ── */
   const renderHighlightedPrompt = (prompt: string): React.ReactNode => {
     if (!activeHighlight || !result) return prompt;
     const strategy = result.strategies_used.find(s => s.id === activeHighlight);
     if (!strategy?.prompt_excerpt) return prompt;
 
-    const excerpt = strategy.prompt_excerpt;
-    const idx = prompt.indexOf(excerpt);
-    if (idx === -1) return prompt; // fallback if excerpt doesn't match
+    const range = findExcerptRange(prompt, strategy.prompt_excerpt);
+    if (!range) return prompt;
 
-    const accentColor = STRATEGY_COLORS[strategy.id] || '#A8F0E0';
-    const before = prompt.slice(0, idx);
-    const match = prompt.slice(idx, idx + excerpt.length);
-    const after = prompt.slice(idx + excerpt.length);
+    const accentColor = STRATEGY_COLOR;
+    const before = prompt.slice(0, range.start);
+    const match = prompt.slice(range.start, range.end);
+    const after = prompt.slice(range.end);
 
     return (
       <>
@@ -582,8 +645,8 @@ const AppPromptPlayground: React.FC = () => {
               }}>
                 {STRATEGY_DEFINITIONS.map((strat, idx) => (
                   <div key={strat.id} style={{
-                    borderLeft: `4px solid ${strat.color}`,
-                    background: `${strat.color}08`,
+                    borderLeft: `4px solid ${LEVEL_ACCENT}`,
+                    background: `${LEVEL_ACCENT}08`,
                     borderRadius: 10,
                     padding: '16px 18px',
                     opacity: 1,
@@ -614,8 +677,8 @@ const AppPromptPlayground: React.FC = () => {
                       {strat.definition}
                     </div>
                     <div style={{
-                      background: `${strat.color}18`,
-                      borderLeft: `3px solid ${strat.color}`,
+                      background: `${LEVEL_ACCENT}18`,
+                      borderLeft: `3px solid ${LEVEL_ACCENT}`,
                       borderRadius: 6,
                       padding: '8px 12px',
                     }}>
@@ -658,35 +721,12 @@ const AppPromptPlayground: React.FC = () => {
           ) : result ? (
             /* ── Generated output ── */
             <div>
-              {/* Top action row */}
+              {/* Top action row — toggle + actions on one line */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                justifyContent: 'flex-end', marginBottom: 16, flexWrap: 'wrap',
+                marginBottom: 16, flexWrap: 'wrap',
               }}>
-                <ActionBtn
-                  icon={copied ? <Check size={13} /> : <Copy size={13} />}
-                  label={copied ? 'Copied!' : 'Copy Optimised Prompt'}
-                  onClick={handleCopyPrompt}
-                  primary
-                />
-                <ActionBtn
-                  icon={<Download size={13} />}
-                  label="Download (.md)"
-                  onClick={handleDownload}
-                />
-                <ActionBtn
-                  icon={<Library size={13} />}
-                  label="Save to Prompt Library"
-                  onClick={handleSaveToLibrary}
-                  accent
-                  disabled={savedToLibrary}
-                />
-              </div>
-
-              {/* View toggle */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
-              }}>
+                {/* View toggle (left) */}
                 <div style={{
                   display: 'inline-flex',
                   background: '#F7FAFC',
@@ -709,6 +749,29 @@ const AppPromptPlayground: React.FC = () => {
                   />
                 </div>
                 <InfoTooltip text="Markdown view shows the cohesive prompt ready to paste directly into any AI tool. Cards view shows the prompt plus strategy explanations." />
+
+                {/* Spacer pushes action buttons right */}
+                <div style={{ flex: 1 }} />
+
+                {/* Action buttons (right) */}
+                <ActionBtn
+                  icon={copied ? <Check size={13} /> : <Copy size={13} />}
+                  label={copied ? 'Copied!' : 'Copy Optimised Prompt'}
+                  onClick={handleCopyPrompt}
+                  primary
+                />
+                <ActionBtn
+                  icon={<Download size={13} />}
+                  label="Download (.md)"
+                  onClick={handleDownload}
+                />
+                <ActionBtn
+                  icon={<Library size={13} />}
+                  label="Save to Prompt Library"
+                  onClick={handleSaveToLibrary}
+                  accent
+                  disabled={savedToLibrary}
+                />
               </div>
 
               {viewMode === 'markdown' ? (
@@ -759,7 +822,7 @@ const AppPromptPlayground: React.FC = () => {
                     {activeHighlight && (() => {
                       const s = result.strategies_used.find(st => st.id === activeHighlight);
                       if (!s) return null;
-                      const ac = STRATEGY_COLORS[s.id] || '#A8F0E0';
+                      const ac = STRATEGY_COLOR;
                       return (
                         <div style={{
                           marginTop: 12, padding: '8px 12px',
@@ -791,7 +854,7 @@ const AppPromptPlayground: React.FC = () => {
                   }}>
                     {result.strategies_used.map((strategy: PlaygroundStrategy, idx: number) => {
                       const isExpanded = expandedCards.has(strategy.id);
-                      const accentColor = STRATEGY_COLORS[strategy.id] || '#E2E8F0';
+                      const accentColor = STRATEGY_COLOR;
                       const blockIdx = idx + 1; // offset by 1 for prompt block
 
                       return (
@@ -937,34 +1000,25 @@ const AppPromptPlayground: React.FC = () => {
                     })}
                   </div>
 
-                  {/* Practitioner caveat */}
-                  <div style={{
-                    background: '#F7FAFC',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: 10,
-                    borderLeft: '4px solid #A0AEC0',
-                    padding: '14px 16px',
-                    marginBottom: 16,
-                  }}>
-                    <div style={{
-                      fontSize: 13, fontWeight: 600, color: '#1A202C',
-                      marginBottom: 4, fontFamily: FONT,
-                    }}>
-                      There's no single perfect prompt.
-                    </div>
-                    <div style={{
-                      fontSize: 12, color: '#718096',
-                      lineHeight: 1.6, fontFamily: FONT,
-                    }}>
-                      This is an optimised starting point built for your context — not the only valid approach.
-                      Adapt it, iterate on it, and make it yours. The strategies above are the craft behind it;
-                      understanding them is more valuable than any individual prompt.
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* ── Refinement Card ── */}
+              {/* ── Output Actions Panel (per PRD §4.2) ── */}
+              <div style={{
+                marginTop: 24,
+                opacity: visibleBlocks >= (result.strategies_used.length + 1) ? 1 : 0,
+                transform: visibleBlocks >= (result.strategies_used.length + 1) ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
+                <OutputActionsPanel
+                  workflowName={`Prompt: ${userInput.slice(0, 50)}`}
+                  fullMarkdown={result.prompt}
+                  onSaveToArtefacts={handleSaveToLibrary}
+                  isSaved={savedToLibrary}
+                />
+              </div>
+
+              {/* ── Combined Caveat + Refinement Card (per PRD §4.5) ── */}
               {result.refinement_questions && result.refinement_questions.length > 0 && (() => {
                 const refIdx = result.strategies_used.length + 2; // after prompt + all strategies + 1
                 return (
@@ -972,146 +1026,203 @@ const AppPromptPlayground: React.FC = () => {
                     background: '#F7FAFC',
                     borderRadius: 14,
                     border: '1px solid #E2E8F0',
-                    padding: '24px 28px',
+                    padding: '20px 24px',
                     marginTop: 24,
                     opacity: visibleBlocks >= refIdx ? 1 : 0,
                     transform: visibleBlocks >= refIdx ? 'translateY(0)' : 'translateY(8px)',
                     transition: 'opacity 0.3s, transform 0.3s',
                   }}>
-                    {/* Header */}
+                    {/* Practitioner caveat — always visible */}
                     <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      marginBottom: 6,
+                      display: 'flex', alignItems: 'flex-start', gap: 10,
+                      marginBottom: refineExpanded ? 16 : 12,
                     }}>
-                      <div style={{
-                        fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
-                        textTransform: 'uppercase', letterSpacing: '0.06em',
-                        fontFamily: FONT,
-                      }}>
-                        Refine Your Prompt
+                      <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                        This is an optimised starting point built for your context — not the only valid approach.
+                        Adapt it, iterate on it, and make it yours. The strategies above are the craft behind it;
+                        understanding them is more valuable than any individual prompt.
                       </div>
-                      {refinementCount > 0 && (
-                        <div style={{
-                          fontSize: 11, fontWeight: 600,
-                          background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
-                          borderRadius: 20, padding: '2px 10px',
-                          fontFamily: FONT,
-                        }}>
-                          Refinement #{refinementCount}
-                        </div>
-                      )}
                     </div>
-                    <p style={{
-                      fontSize: 13, color: '#718096', lineHeight: 1.6,
-                      margin: '0 0 18px', fontFamily: FONT,
-                    }}>
-                      Answer any of these to add context and get a more targeted prompt. You don't need to answer all of them — even one helps.
-                    </p>
 
-                    {/* Questions */}
-                    {result.refinement_questions.map((question, i) => (
-                      <div key={i} style={{ marginBottom: 16 }}>
-                        <label style={{
-                          display: 'block',
-                          fontSize: 13, fontWeight: 600, color: '#2D3748',
-                          marginBottom: 6, fontFamily: FONT,
+                    {/* Expand CTA — shown only when collapsed */}
+                    {!refineExpanded && (
+                      <button
+                        onClick={() => setRefineExpanded(true)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: 0, fontSize: 13, fontWeight: 600,
+                          color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      >
+                        <ChevronDown size={14} />
+                        Would you like to refine this prompt further?
+                        {refinementCount > 0 && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 600,
+                            background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                            borderRadius: 20, padding: '2px 10px',
+                            marginLeft: 6,
+                          }}>
+                            Refinement #{refinementCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Expanded refinement section */}
+                    {refineExpanded && (
+                      <div style={{
+                        borderTop: '1px solid #E2E8F0',
+                        paddingTop: 16,
+                        animation: 'ppSlideDown 0.3s ease-out both',
+                      }}>
+                        {/* Section header with close button */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          marginBottom: 6,
                         }}>
-                          {question}
-                        </label>
-                        <input
-                          type="text"
-                          value={refinementAnswers[i] || ''}
-                          onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
-                          placeholder="Your answer…"
-                          style={{
-                            width: '100%',
-                            border: '1px solid #E2E8F0',
-                            borderRadius: 10,
-                            padding: '10px 14px',
-                            fontSize: 13,
-                            fontFamily: FONT,
-                            color: '#1A202C',
-                            outline: 'none',
-                            boxSizing: 'border-box',
-                            transition: 'border-color 0.15s',
-                            background: '#FFFFFF',
-                          }}
-                          onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
-                          onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                              fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                              textTransform: 'uppercase', letterSpacing: '0.06em',
+                              fontFamily: FONT,
+                            }}>
+                              Refine Your Prompt
+                            </div>
+                            {refinementCount > 0 && (
+                              <div style={{
+                                fontSize: 11, fontWeight: 600,
+                                background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                                borderRadius: 20, padding: '2px 10px',
+                                fontFamily: FONT,
+                              }}>
+                                Refinement #{refinementCount}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setRefineExpanded(false)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              padding: 4, borderRadius: 6, display: 'flex',
+                              color: '#A0AEC0', transition: 'color 0.15s',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#4A5568')}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                        <p style={{
+                          fontSize: 13, color: '#718096', lineHeight: 1.6,
+                          margin: '0 0 18px', fontFamily: FONT,
+                        }}>
+                          Answer any of these to add context and get a more targeted prompt. You don't need to answer all of them — even one helps.
+                        </p>
+
+                        {/* Questions */}
+                        {result.refinement_questions.map((question, i) => (
+                          <div key={i} style={{ marginBottom: 16 }}>
+                            <label style={{
+                              display: 'block',
+                              fontSize: 13, fontWeight: 600, color: '#2D3748',
+                              marginBottom: 6, fontFamily: FONT,
+                            }}>
+                              {question}
+                            </label>
+                            <input
+                              type="text"
+                              value={refinementAnswers[i] || ''}
+                              onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                              placeholder="Your answer…"
+                              style={{
+                                width: '100%',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: 10,
+                                padding: '10px 14px',
+                                fontSize: 13,
+                                fontFamily: FONT,
+                                color: '#1A202C',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                transition: 'border-color 0.15s',
+                                background: '#FFFFFF',
+                              }}
+                              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                            />
+                          </div>
+                        ))}
+
+                        {/* Open-ended additional context */}
+                        <div style={{ marginBottom: 18 }}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: 13, fontWeight: 600, color: '#2D3748',
+                            marginBottom: 6, fontFamily: FONT,
+                          }}>
+                            Anything else to add?
+                          </label>
+                          <textarea
+                            value={additionalContext}
+                            onChange={e => setAdditionalContext(e.target.value)}
+                            placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                            style={{
+                              width: '100%',
+                              minHeight: 60,
+                              resize: 'none',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: 10,
+                              padding: '10px 14px',
+                              fontSize: 13,
+                              fontFamily: FONT,
+                              color: '#1A202C',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              transition: 'border-color 0.15s',
+                              background: '#FFFFFF',
+                              lineHeight: 1.5,
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                            onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                          />
+                        </div>
+
+                        {/* Refine button */}
+                        <ActionBtn
+                          icon={isLoading ? (
+                            <div style={{
+                              width: 13, height: 13, border: '2px solid #FFFFFF40',
+                              borderTopColor: '#FFFFFF', borderRadius: '50%',
+                              animation: 'ppSpin 0.6s linear infinite',
+                            }} />
+                          ) : (
+                            <ArrowRight size={13} />
+                          )}
+                          label={isLoading ? 'Refining…' : 'Refine Prompt'}
+                          onClick={handleRefine}
+                          primary
+                          disabled={!hasRefinementInput || isLoading}
                         />
                       </div>
-                    ))}
-
-                    {/* Open-ended additional context */}
-                    <div style={{ marginBottom: 18 }}>
-                      <label style={{
-                        display: 'block',
-                        fontSize: 13, fontWeight: 600, color: '#2D3748',
-                        marginBottom: 6, fontFamily: FONT,
-                      }}>
-                        Anything else to add?
-                      </label>
-                      <textarea
-                        value={additionalContext}
-                        onChange={e => setAdditionalContext(e.target.value)}
-                        placeholder="Any additional requirements, constraints, or context you'd like to include…"
-                        style={{
-                          width: '100%',
-                          minHeight: 60,
-                          resize: 'none',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: 10,
-                          padding: '10px 14px',
-                          fontSize: 13,
-                          fontFamily: FONT,
-                          color: '#1A202C',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                          transition: 'border-color 0.15s',
-                          background: '#FFFFFF',
-                          lineHeight: 1.5,
-                        }}
-                        onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
-                        onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
-                      />
-                    </div>
-
-                    {/* Refine button */}
-                    <ActionBtn
-                      icon={isLoading ? (
-                        <div style={{
-                          width: 13, height: 13, border: '2px solid #FFFFFF40',
-                          borderTopColor: '#FFFFFF', borderRadius: '50%',
-                          animation: 'ppSpin 0.6s linear infinite',
-                        }} />
-                      ) : (
-                        <ArrowRight size={13} />
-                      )}
-                      label={isLoading ? 'Refining…' : 'Refine Prompt'}
-                      onClick={handleRefine}
-                      primary
-                      disabled={!hasRefinementInput || isLoading}
-                    />
+                    )}
                   </div>
                 );
               })()}
 
-              {/* Bottom action row */}
+              {/* Bottom navigation row (per PRD §4.2) */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, marginTop: 16,
+                display: 'flex', alignItems: 'center', gap: 8, marginTop: 20,
                 flexWrap: 'wrap',
               }}>
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
                   onClick={handleStartOver}
-                />
-                <ActionBtn
-                  icon={<Library size={13} />}
-                  label="Save to Prompt Library"
-                  onClick={handleSaveToLibrary}
-                  accent
-                  disabled={savedToLibrary}
                 />
               </div>
             </div>

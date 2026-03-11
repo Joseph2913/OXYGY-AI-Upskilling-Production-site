@@ -140,6 +140,7 @@ export interface AgentDesignResult {
   };
   system_prompt: string;
   accountability: AccountabilityCheck[];
+  refinement_questions?: string[];
 }
 
 // Workflow Designer types (Level 3)
@@ -239,6 +240,7 @@ export interface AppEvaluatorInputs {
   appDescription: string;
   problemAndUsers: string;
   dataAndContent: string;
+  refinement_context?: string;
 }
 
 export interface DesignScoreCriteria {
@@ -296,6 +298,7 @@ export interface AppEvaluatorResult {
     summary: string;
     items: RiskItem[];
   };
+  refinement_questions?: string[];
 }
 
 // Product Architecture types (Level 5)

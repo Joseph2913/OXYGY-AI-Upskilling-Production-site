@@ -250,13 +250,15 @@ Shown inside a step card when its prerequisite step hasn't been completed yet.
 
 When the output step has structured sections (e.g., Blueprint sections, agent config sections), show them in a **2-column grid** with educational content before the user generates output.
 
+**Section color rule:** All output section cards (educational defaults AND generated output) must use the tool's `LEVEL_ACCENT_DARK` as their accent color — not per-section custom colors. This keeps the page visually cohesive and reinforces the level identity. The only exception is the Prompt Playground's strategy cards, which use distinct colors per strategy because the strategies themselves are the educational content being differentiated.
+
 **Structure per section card:**
-- `borderLeft: 4px solid {sectionColor}`
-- `background: {sectionColor}08` (very subtle tint)
+- `borderLeft: 4px solid ${LEVEL_ACCENT_DARK}`
+- `background: ${LEVEL_ACCENT_DARK}08` (very subtle tint)
 - `borderRadius: 10`, `padding: 16px 18px`
 - Header: icon + label (uppercase, 12px, weight 700) + position indicator (e.g., "1/6")
 - Body: educational "why this matters" text (13px, `#4A5568`, `lineHeight: 1.6`)
-- Example block: tinted background (`{sectionColor}18`), `borderLeft: 3px solid {sectionColor}`, italic example text
+- Example block: tinted background (`${LEVEL_ACCENT_DARK}18`), `borderLeft: 3px solid ${LEVEL_ACCENT_DARK}`, italic example text
 
 **Intro text above the grid:**
 > "Your output will be structured using the **[Framework Name]** — [one-line description]. Complete the steps above and each section below will be filled with content tailored to your specific needs."
@@ -294,6 +296,40 @@ Fixed bottom-centre notification for action confirmations.
 
 Auto-dismiss after 2500ms.
 
+### 3.10 Step-Back Navigation
+
+For tools with **3 or more steps**, users must be able to navigate back to any previous step without regenerating content. This prevents the frustration of being locked into a linear flow when they want to revise an earlier decision.
+
+**Rules:**
+- Every step (except Step 1) must include a "Back to {Previous Step}" button
+- Back buttons use the **default** ActionBtn variant (white background, `ArrowLeft` icon)
+- Clicking "Back" resets the current step and all subsequent steps — but preserves the state of the step the user is returning to
+- The user's brief/input from Step 1 is always preserved unless "Start Over" is used
+- Back buttons are placed at the **left edge** of the action button row, before primary actions
+
+**Implementation pattern:**
+
+```typescript
+// Step-back handlers — reset current + downstream state, preserve upstream state
+const handleGoBackToStep1 = () => {
+  // Reset step 2 + step 3 state, keep step 1 (brief) intact
+  setStep2State(initial); setStep3State(initial);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const handleGoBackToStep2 = () => {
+  // Reset step 3 state, keep steps 1 + 2 intact
+  setStep3State(initial);
+};
+```
+
+**Placement:**
+- In Step 2 action row: `<ActionBtn icon={<ArrowLeft />} label="Back to Brief" onClick={handleGoBackToStep1} />`
+- In Step 3 action row: `<ActionBtn icon={<ArrowLeft />} label="Back to {Step 2 name}" onClick={handleGoBackToStep2} />`
+- In Step 4 (if present): `<ActionBtn icon={<ArrowLeft />} label="Back to {Step 3 name}" onClick={handleGoBackToStep3} />`
+
+**Note:** "Start Over" remains available as a separate action that resets ALL state including the Step 1 input.
+
 ---
 
 ## 4. Output Step Patterns
@@ -316,27 +352,55 @@ When the output consists of structured sections, provide a **view toggle** betwe
 
 **Cards view:**
 - 2-column grid (`gridTemplateColumns: '1fr 1fr'`, `gap: 12`)
-- Each card: `borderLeft: 4px solid {color}`, `background: {color}12`
+- Each card: `borderLeft: 4px solid ${LEVEL_ACCENT_DARK}`, `background: ${LEVEL_ACCENT_DARK}12` — uses the tool's level accent color for all section cards, not per-section custom colors
 - Per-section copy button (top-right corner of each card)
 - Cards view shows ALL output sections — both informational and actionable — for the user to review
 
-### 4.2 Action Rows
+### 4.2 Action Layout
 
-Output actions are split across **two locations** to ensure the user always has quick access to the key actions:
+Output actions are organised into **three zones**: a top action row, an Output Actions Panel, and a bottom navigation row. Every toolkit page must provide all three zones consistently.
 
-**Top action row (right-aligned, above output content):**
-- **Copy {Deliverable Name}** (primary) — e.g., "Copy Full System Prompt", "Copy Full Blueprint". Never use the generic label "Copy All". The button name must describe the specific cohesive deliverable the tool produces.
-- **Download** (.md) (default) — downloads the same cohesive deliverable as a Markdown file
-- **Save to Prompt Library** (accent, `#5A67D8`) — saves the cohesive deliverable
+**Zone 1 — Top row (above output content):**
+- **Left:** View toggle (Cards / Markdown) + InfoTooltip
+- **Right (inline, wrapped in a `<div style={{ display: 'flex', gap: 8 }}>`):**
+  1. **Copy {Deliverable Name}** — `primary` ActionBtn (teal). Label must name the specific deliverable, e.g., "Copy Full System Prompt", "Copy Build Guide". Never use generic labels like "Copy All".
+  2. **Download (.md)** — default ActionBtn (white). Downloads the cohesive deliverable as a `.md` file with a date-stamped filename.
+  3. **Save to Prompt Library** — `accent` ActionBtn (purple). Calls `dbSavePrompt()`. Shows disabled state with "Saved!" label after saving. Resets on new generation.
 
-**Bottom action row (left-aligned, below output content):**
-- **Start Over** (default) — resets the tool to its initial state
-- **Save to Prompt Library** (accent, `#5A67D8`) — duplicate of the top Save button for convenience
+**Zone 2 — Output Actions Panel (between output content and refinement card):**
+- Uses the `OutputActionsPanel` component (`components/app/workflow/OutputActionsPanel.tsx`)
+- Provides **Download Markdown** (.md), **Download Word** (.doc with branded OXYGY HTML), and **Save to Library** as large, prominent cards
+- Staggered animation via `visibleBlocks` counter
+- Props: `workflowName`, `fullMarkdown`, `onSaveToArtefacts`, `isSaved`
+- This zone is **required on every toolkit page** — it gives users a prominent, consistent location for export/save actions and adds Word document export that isn't available in the top row
+
+**Zone 3 — Bottom navigation row (below refinement card):**
+- **Back to previous step** (default ActionBtn) — only if the tool has a multi-step flow
+- **Start Over** (default ActionBtn)
+- No duplicate Copy/Download/Save here — they live in Zones 1 and 2
+- Standard style: `display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap'`
+
+**Download handler pattern:**
+```tsx
+const handleDownload = () => {
+  if (!result) return;
+  const date = new Date().toISOString().split('T')[0];
+  const content = buildFull{Deliverable}(result); // cohesive deliverable
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `{tool-name}-${date}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+```
 
 **Key rules:**
-- The Save to Prompt Library button must appear at **both** top and bottom
 - Copy/Download/Save all operate on the **cohesive deliverable**, not the full set of displayed sections
 - Never use generic labels like "Copy All" or "Copy Output" — always name the specific deliverable
+- All three actions must appear in every toolkit page's top action row (Zone 1) — this is not optional
+- The OutputActionsPanel (Zone 2) must appear on every toolkit page between output content and the refinement card
 
 ### 4.4 Output = Cohesive Deliverable
 
@@ -379,6 +443,117 @@ const buildFullSystemPrompt = (r: AgentDesignResult): string => {
 
 Each tool page must define its own `build{Deliverable}` function that composes the appropriate sections into a single, coherent output.
 
+### 4.5 Iterative Refinement
+
+Tools that generate AI output should support an **iterative refinement loop** — allowing the user to provide additional context and regenerate an improved version. This reinforces the learning principle that prompting is a conversation, not a one-shot task.
+
+**Collapsed refinement card structure (caveat + refinement combined):**
+
+This card is placed as the **last section** of the output area, after the OutputActionsPanel and before the bottom navigation row. It combines the practitioner caveat with the refinement questions in a single card that is **collapsed by default**.
+
+```
+┌──────────────────────────────────────────────────────┐
+│  ℹ️  This {Deliverable} is a strong starting point,   │
+│  but every environment is different. Test each step   │
+│  in your actual {platform} workspace.                 │
+│                                                       │
+│  ▸ Would you like to refine this further?             │
+│     [Refinement #N badge if applicable]               │
+└──────────────────────────────────────────────────────┘
+
+  ↓  (user clicks "Would you like to refine…")
+
+┌──────────────────────────────────────────────────────┐
+│  ℹ️  This {Deliverable} is a strong starting point…   │
+│                                                       │
+│  ─────────────────────────────────────────────────    │
+│  REFINE YOUR {DELIVERABLE}           [×] [#N badge]  │
+│  "Answer any of these to add context…"                │
+│                                                       │
+│  Q: Who is the primary audience for this output?      │
+│  [ Answer field                                    ]  │
+│                                                       │
+│  Q: Are there constraints on length or format?        │
+│  [ Answer field                                    ]  │
+│                                                       │
+│  Anything else to add?                                │
+│  [ Open-ended textarea                             ]  │
+│                                                       │
+│  [ → Refine {Deliverable} ]                           │
+└──────────────────────────────────────────────────────┘
+```
+
+**Specifications:**
+
+- **Container**: `background: #F7FAFC`, `borderRadius: 14`, `border: 1px solid #E2E8F0`, `padding: 20px 24px`
+- **Caveat text**: Always visible. ℹ️ icon + practitioner caveat text (`fontSize: 13`, `color: #718096`, `lineHeight: 1.6`)
+- **Expand CTA**: "Would you like to refine this {Deliverable} further?" — text link styled as `fontWeight: 600`, `color: LEVEL_ACCENT_DARK` with `ChevronDown` icon. Shown only when collapsed.
+- **Refinement counter badge**: Shown next to the CTA if `refinementCount > 0` — `fontSize: 11`, pill style with `LEVEL_ACCENT` background
+- **Expanded section**: Separated from caveat by `borderTop: 1px solid #E2E8F0`. Contains:
+  - Section header: "REFINE YOUR {DELIVERABLE}" uppercase label + close (×) button to collapse
+  - Refinement questions: 3–5 context-seeking questions with single-line input fields
+    - Question label: `fontSize: 13`, `fontWeight: 600`, `color: #2D3748`
+    - Input: `fontSize: 13`, `border: 1px solid #E2E8F0`, `borderRadius: 10`, `padding: 10px 14px`
+  - Open-ended textarea: "Anything else to add?" (`minHeight: 60`)
+  - Refine button: Primary ActionBtn, disabled until at least one input is provided
+- **Animation**: Expanded section uses `ppSlideDown` animation (0.3s ease-out)
+
+**State:** `const [refineExpanded, setRefineExpanded] = useState(false);` — reset to `false` in `handleStartOver` and step-back handlers.
+
+**How it works:**
+
+1. The AI generates `refinement_questions` as part of its output (3–5 questions)
+2. The user answers any subset of questions and/or adds open-ended context
+3. On "Refine", the frontend builds a `[REFINEMENT]` message containing the original task, answered questions, and additional context
+4. The API treats this as a refinement pass and generates a significantly improved output
+5. New refinement questions are generated that probe even deeper based on what's been answered
+6. The refinement counter increments — there is no limit on refinement passes
+
+**Implementation pattern:**
+
+```typescript
+const buildRefinementMessage = (): string => {
+  const answeredQuestions = (result?.refinement_questions || [])
+    .map((q, i) => {
+      const answer = refinementAnswers[i]?.trim();
+      return answer ? `Q: ${q}\nA: ${answer}` : null;
+    })
+    .filter(Boolean).join('\n\n');
+  const parts = [
+    `[REFINEMENT]\n\nOriginal task: ${userInput}`,
+    answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+    additionalContext.trim() ? `\nAdditional context: ${additionalContext.trim()}` : '',
+  ];
+  return parts.filter(Boolean).join('\n');
+};
+```
+
+**Rules:**
+- Refinement questions must be task-specific, not generic (e.g., "Who is the primary audience for this status update?" not "Who is your audience?")
+- The refine button must be disabled until the user provides at least one input
+- Previous answers are cleared after each refinement pass (the AI generates new questions)
+- The combined caveat + refinement card appears as the **last section** of the output area, above the bottom navigation row
+- The refinement questions are **hidden by default** — the user must click the "Would you like to refine…" CTA to expand them
+- The practitioner caveat is always visible (not collapsed) as the intro text of the card
+- During refinement, the ProcessingProgress indicator shows refinement-specific step labels (see §9.5)
+
+### 4.6 Example Chips
+
+For input steps where the user needs to describe a task or scenario, provide **example chips** — pre-written examples that populate the input field on click. These reduce the blank-page problem and give users a concrete starting point.
+
+**Specifications:**
+- Chips row: `display: flex`, `flexWrap: wrap`, `gap: 8px`, below the textarea
+- Each chip: `background: #F7FAFC`, `border: 1px solid #E2E8F0`, `borderRadius: 20px`, `padding: 6px 14px`
+- Text: `fontSize: 12`, `color: #4A5568`, `fontWeight: 500`
+- Hover: `background: ${LEVEL_ACCENT}18`, `borderColor: ${LEVEL_ACCENT}`, `color: LEVEL_ACCENT_DARK`
+- On click: populate the textarea with the chip text and trigger auto-resize
+- Label above chips: "Try an example:" — `fontSize: 12`, `color: #A0AEC0`, `fontWeight: 500`
+
+**Rules:**
+- 4–6 chips per tool, covering diverse use cases
+- Chip text should be complete enough to generate useful output on its own
+- Chips must be specific to the tool's domain (not generic)
+
 ### 4.3 Staggered Block Animation
 
 When output sections first appear, animate them in with a staggered delay:
@@ -405,11 +580,39 @@ Each block: `opacity` and `translateY(8px)` transition over 0.3s.
 
 | Step | Title | Content |
 |------|-------|---------|
-| 1 | Choose your mode | Two side-by-side ModeCards: "Enhance a Prompt" (teal) / "Build from Scratch" (gold) |
-| 2 | Paste your prompt / Answer the questions | Enhance: textarea + example pills. Build: BuildWizard 6-question survey |
-| 3 | Your enhanced/generated prompt | 6-section Blueprint output (Role, Context, Task, Format, Steps, Quality) with Cards/Markdown toggle |
+| 1 | Describe your task | Auto-growing textarea with example chips for quick-fill. Collapses to a summary card once output is generated. |
+| 2 | Your optimised prompt | Strategy-aware output: AI-generated prompt with strategy cards, prompt highlighting, practitioner caveat, and iterative refinement. |
 
-**Educational default (Step 3):** Show all 6 Blueprint sections with `BLUEPRINT_EDUCATION` content (why + example per section).
+**Input (Step 1):**
+- Auto-growing textarea (`minHeight: 120`, `maxHeight: 300`, `resize: none`) with character-level auto-height
+- Example chips below the textarea (`PLAYGROUND_EXAMPLE_CHIPS`) — clicking one populates the textarea
+- "Generate Prompt" button with validation (red flash on empty submit)
+- Step 1 collapses to a summary showing the user's input text with a "Done ✓" indicator once output is generated
+
+**Educational default (Step 2):** Show all 8 prompting strategies in a 2-column grid using `STRATEGY_DEFINITIONS`. Each card shows: icon + name (uppercase), definition text, and a "Best for:" block with `whenToUse` content. Summary footer below lists all 8 strategies with icons.
+
+**Generated output (Step 2) — structure from top to bottom:**
+
+1. **Top action row** (right-aligned): Copy Optimised Prompt (primary), Download .md (default), Save to Prompt Library (accent `#5A67D8`)
+2. **Cards / Markdown toggle** with info tooltip explaining when Markdown is better
+3. **Prompt card**: White card displaying the full generated prompt. Supports **prompt excerpt highlighting** — when a strategy card is clicked, the relevant excerpt is highlighted inline with the strategy's accent color (`background: {color}40`, `borderBottom: 2px solid {color}`)
+4. **Strategy cards** (2-column grid): One card per strategy used (2–4 cards). Each card shows:
+   - Header: strategy icon + name + accent-colored left border
+   - `why`: Practitioner rationale specific to this task
+   - `how_applied`: 1–2 sentences describing exactly how the strategy was applied, referencing actual prompt content
+   - `prompt_excerpt`: Verbatim excerpt shown in a tinted block. Clicking the card toggles highlight of this excerpt in the prompt above
+   - Expandable/collapsible via chevron toggle
+5. **Practitioner caveat**: Muted card with ℹ️ icon — "No prompt is perfect on the first pass…" — sets expectations for refinement
+6. **Iterative refinement card** (see §4.5)
+7. **Bottom action row** (left-aligned): Start Over (default), Save to Prompt Library (accent)
+
+**Strategy highlight interaction:**
+- Each strategy card is clickable. Clicking it sets `activeHighlight` to that strategy's ID
+- The prompt card's `renderHighlightedPrompt()` function finds the `prompt_excerpt` substring in the prompt and wraps it with a highlight span using the strategy's accent color from `STRATEGY_COLORS`
+- Clicking the same card again deactivates the highlight
+- Only one strategy can be highlighted at a time
+
+**Level accent:** `#A8F0E0` (light) / `#1A6B5F` (dark)
 
 ### 5.2 Agent Builder (Level 2)
 
@@ -479,6 +682,7 @@ The following components should be extracted and shared across all tool pages. T
 | `StepBadge` | Numbered circle indicator (done/not done) |
 | `StepConnector` | Animated vertical connector between steps |
 | `StepPlaceholder` | Dashed placeholder for locked steps |
+| `ProcessingProgress` | Step-by-step loading indicator for API calls (see §9.5) |
 | `ActionBtn` | Standardised button (primary/accent/default variants) |
 | `ToggleBtn` | Cards/Markdown toggle button |
 | `InfoTooltip` | Hover tooltip with info icon |
@@ -507,6 +711,14 @@ interface StepPlaceholderProps {
   icon: React.ReactNode;
   message: string;
   detail: string;
+}
+
+// ProcessingProgress
+interface ProcessingProgressProps {
+  steps: string[];        // Tool-specific step labels
+  currentStep: number;    // 0 = not started, 1-N = step in progress/complete
+  header: string;         // e.g., "Building your prompt…"
+  subtext: string;        // e.g., "This usually takes 15–20 seconds"
 }
 
 // ActionBtn
@@ -618,12 +830,20 @@ Every tool page should include these base animations in a `<style>` tag:
 }
 ```
 
+```css
+@keyframes ppSlideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 500px; }
+}
+```
+
 | Animation | Use |
 |-----------|-----|
-| `ppSpin` | Loading spinners in buttons |
-| `ppPulse` | Skeleton loading blocks |
-| `ppFadeIn` | Step card entrance, toast entrance |
+| `ppSpin` | Loading spinners in buttons, ProcessingProgress active step indicator |
+| `ppPulse` | Skeleton loading blocks (legacy — prefer ProcessingProgress for API calls) |
+| `ppFadeIn` | Step card entrance, toast entrance, educational default cards |
 | `ppConnectorFlow` | Dashed connector line flowing downward |
+| `ppSlideDown` | Expanding content sections (strategy card details, refinement card) |
 
 ### 9.5 Processing Progress Indicator
 
@@ -688,7 +908,7 @@ If the API returns before all steps complete, immediately jump to the final step
 **Implementation pattern:**
 
 ```typescript
-const LOADING_STEPS = [
+const INITIAL_LOADING_STEPS = [
   'Analysing your task…',
   'Selecting prompting strategies…',
   'Crafting your prompt…',
@@ -697,13 +917,35 @@ const LOADING_STEPS = [
   'Generating refinement questions…',
   'Finalising output…',
 ];
+const REFINE_LOADING_STEPS = [
+  'Processing your additional context…',
+  'Re-evaluating strategies…',
+  'Weaving in new specifics…',
+  'Refining prompt structure…',
+  'Running quality checks…',
+  'Generating deeper questions…',
+  'Finalising refined output…',
+];
+// Front-loaded timing: early steps fast, later steps slower
 const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
 
 // In component:
 const [loadingStep, setLoadingStep] = useState(0);
+const [isRefineLoading, setIsRefineLoading] = useState(false);
 
 useEffect(() => {
-  if (!isLoading) { setLoadingStep(0); return; }
+  if (!isLoading) {
+    // When loading finishes, jump to last step briefly then reset
+    if (loadingStep > 0) {
+      const steps = isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS;
+      setLoadingStep(steps.length);
+      const timer = setTimeout(() => setLoadingStep(0), 400);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }
+  // Start step progression
+  setLoadingStep(0);
   const timers: ReturnType<typeof setTimeout>[] = [];
   let cumulative = 0;
   STEP_DELAYS.forEach((delay, i) => {
@@ -713,6 +955,10 @@ useEffect(() => {
   return () => timers.forEach(clearTimeout);
 }, [isLoading]);
 ```
+
+**Completion behavior:** When `isLoading` transitions from `true` to `false` (API returns), the useEffect jumps `loadingStep` to `steps.length` (all steps complete with checkmarks), holds for 400ms so the user sees the completed state, then resets to 0 to reveal the output. This creates a satisfying "all done" moment before the results appear.
+
+**Refinement-aware steps:** Tools with iterative refinement (see §4.5) should define separate step arrays for initial generation vs refinement passes. The `isRefineLoading` flag controls which set of labels is displayed. Set `isRefineLoading = false` in `handleSubmit` and `isRefineLoading = true` in `handleRefine` before calling the API.
 
 **Rules:**
 - Never show a generic spinner or pulsing skeleton for API calls — always use the progress indicator
@@ -772,6 +1018,7 @@ components/app/toolkit/
 - [ ] `LEVEL_ACCENT` and `LEVEL_ACCENT_DARK` constants defined at top of file
 - [ ] Level accent color used for: connectors, step badges (done), overview badges (done), "Done ✓" labels, step card done borders
 - [ ] No hardcoded teal (`#38B2AC`) for completion indicators — always use level accent variables
+- [ ] Output section cards use `LEVEL_ACCENT_DARK` for left border, background tint, and interactive states — no per-section custom colors
 
 **Output & Deliverable:**
 - [ ] Cohesive deliverable defined — a `build{Deliverable}` function that combines only actionable sections
@@ -781,7 +1028,7 @@ components/app/toolkit/
 - [ ] Markdown view shows the cohesive deliverable, not a dump of all sections
 
 **Actions & Persistence:**
-- [ ] Save to Prompt Library button at **both** top and bottom of output
+- [ ] Save to Prompt Library in OutputActionsPanel section
 - [ ] Save to Library button uses accent variant (`#5A67D8`)
 - [ ] Download (.md) exports the cohesive deliverable
 - [ ] Start Over button at bottom of output
@@ -789,11 +1036,26 @@ components/app/toolkit/
 - [ ] Draft persistence via localStorage for significant input fields
 - [ ] Toast notifications for all user actions
 
+**Loading & Progress:**
+- [ ] `ProcessingProgress` indicator for all API calls (not generic spinners or skeletons) — see §9.5
+- [ ] Tool-specific step labels for both initial generation and refinement passes
+- [ ] Front-loaded timing pattern (`STEP_DELAYS`) that matches expected API duration
+- [ ] Completion jump behavior (all steps → checkmarks → 400ms hold → reveal output)
+
+**Iterative Refinement (if applicable):**
+- [ ] AI generates `refinement_questions` (3–5 task-specific questions) as part of output
+- [ ] Combined caveat + refinement card as the **last section** of the output area (see §4.5)
+- [ ] Refinement questions **collapsed by default** — user clicks CTA to expand
+- [ ] Practitioner caveat always visible as intro text of the card
+- [ ] Refine button disabled until at least one input is provided
+- [ ] Refinement counter badge displayed next to expand CTA
+- [ ] `[REFINEMENT]` message format sent to API with original task + answers + additional context
+
 **Polish:**
-- [ ] Loading skeleton with `ppPulse` animation
 - [ ] Staggered block reveal animation for output sections
 - [ ] Error state displayed within the relevant step card
 - [ ] `DM Sans` font throughout, inline styles (no CSS modules)
+- [ ] Example chips for input steps (4–6 domain-specific examples)
 
 ---
 
@@ -811,12 +1073,32 @@ components/app/toolkit/
 **Theming:**
 - **No hardcoded teal for completion indicators** — step badges, overview badges, done labels, and card borders must use `LEVEL_ACCENT` / `LEVEL_ACCENT_DARK`, not `#38B2AC`
 - **No hardcoded colors anywhere** — use level accent variables for all theme-dependent elements
+- **No per-section custom colors for output cards** — all output section cards (educational defaults and generated output) must use `LEVEL_ACCENT_DARK` as their accent color (left border, background tint, hover states). Using different colors per section (e.g., teal for section 1, indigo for section 2, red for section 3) creates visual noise and breaks the level identity. The only exception is the Prompt Playground strategy cards, where per-strategy colors are part of the educational framework being taught.
 
 **Output & Actions:**
 - **No generic "Copy All" button** — the copy button must name the specific cohesive deliverable (e.g., "Copy Full System Prompt", "Copy Full Blueprint")
 - **No dumping all sections into export** — informational sections (scores, assessments) are for display only and must NOT be included in copy/download/save. Only actionable sections go into the cohesive deliverable.
-- **No Save button at only one location** — Save to Prompt Library must appear at both the top and bottom of the output area
+- **No Save button missing from Output Actions Panel** — Save to Prompt Library must appear in the OutputActionsPanel section (between output content and refinement)
 - **No exporting raw API response** — always compose a polished, cohesive deliverable via a dedicated `build{Deliverable}` function
+
+**Loading & Progress:**
+- **No generic spinners or pulsing skeletons for API calls** — always use the `ProcessingProgress` indicator with tool-specific step labels (see §9.5)
+- **No progress indicators that finish before the API responds** — use front-loaded timing with a buffer step ("Finalising…") at the end
+- **No modals or overlays for loading** — the progress indicator lives inside the output step card
+
+**Refinement:**
+- **No one-shot-only tools** — if a tool generates AI output, it should support iterative refinement with context-seeking questions
+- **No generic refinement questions** — questions must be specific to the user's task (e.g., "Who is the primary audience for this status update?" not "Who is your audience?")
+- **No refinement questions visible by default** — the refinement section must be collapsed, expanded only when the user clicks the CTA
+- **No separate practitioner caveat and refinement cards** — these must be combined into a single card (caveat as intro text, refinement questions as expandable section)
+
+**AI Content — Model & Tool Agnostic (absolute rule):**
+- **No specific AI provider names** in generated content — never say "OpenAI", "Anthropic", "Claude", "GPT", "Gemini" in user-facing output. Use "AI agent", "LLM", "your chosen AI model", "AI model approved by your organisation".
+- **No specific API key references** — say "your LLM API key" or "the API key approved by your team", not "OpenAI API key" or "Anthropic API key".
+- **No specific model names** — say "select the AI model approved by your organisation", not "set the model to claude-3-sonnet" or "use GPT-4".
+- **No specific provider consoles** — say "your LLM provider's console → API Keys", not "Anthropic Console → API Keys".
+- **Platform node names are acceptable** — if a platform's UI calls a node "OpenAI Chat Model" (e.g., in n8n), you may reference that UI label, but always note the user can substitute their preferred provider.
+- **AI Agent nodes must document all three prompt components** — System Prompt, User Prompt, and Structured Output Parser as separate subsections (see system prompt rules).
 
 **Code:**
 - **No duplicate state** — derive step completion from existing state

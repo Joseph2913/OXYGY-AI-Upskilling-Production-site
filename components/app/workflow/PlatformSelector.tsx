@@ -13,7 +13,7 @@ const PLATFORMS = [
   { label: 'Zapier', sub: 'Zaps & steps' },
   { label: 'Make', sub: 'Scenarios & modules' },
   { label: 'Power Automate', sub: 'Flows & connectors' },
-  { label: 'Claude Code', sub: 'Functions & API calls' },
+  { label: 'AI Coding Agent', sub: 'Functions & API calls' },
   { label: 'Not sure yet', sub: 'Platform-agnostic language' },
 ];
 
