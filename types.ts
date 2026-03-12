@@ -143,6 +143,17 @@ export interface AgentDesignResult {
   refinement_questions?: string[];
 }
 
+export interface AgentSetupStep {
+  title: string;
+  instruction: string;
+}
+
+export interface AgentSetupGuide {
+  steps: AgentSetupStep[];
+  tips: string[];
+  limitations: string;
+}
+
 // Workflow Designer types (Level 3)
 export type NodeLayer = 'input' | 'processing' | 'output';
 export type NodeStatus = 'unchanged' | 'added' | 'removed';

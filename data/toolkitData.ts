@@ -173,7 +173,7 @@ export const ALL_TOOLS: Tool[] = [
     levelRequired: 5,
     levelName: "AI-Powered Applications",
     toolType: "Evaluator",
-    description: "Describe your AI application idea and get an expert evaluation of its architecture — covering user roles, data flows, personalisation, and tech stack — with an implementation readiness score.",
+    description: "Describe your AI application idea, get an expert evaluation of its architecture, and receive a design score. The evaluator guides you through the key fields — user roles, data flows, personalisation logic, and tech stack — then suggests tools and approaches to build it, with an implementation readiness score.",
     capabilities: [
       "Structured fields to describe your app's architecture and user experience",
       "AI-powered evaluation of your design with an implementation score",

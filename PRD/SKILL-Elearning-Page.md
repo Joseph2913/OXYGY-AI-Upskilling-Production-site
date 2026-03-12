@@ -12,6 +12,42 @@ Do NOT deviate from these specifications. Every e-learning page on this site mus
 
 ---
 
+## ⚠️ CRITICAL: Dashboard-First Rule
+
+**All course content MUST be built inside the app dashboard view, NOT on the marketing site.**
+
+- Courses are accessed via: **My Journey → Level N → Review** (inside `/app/` routes)
+- The orchestrating component is `pages/app/AppCurrentLevel.tsx`
+- Phase views live in `components/app/level/` — `ELearningView.tsx`, `ReadView.tsx`, `WatchView.tsx`, `PractiseView.tsx`
+- All topic-specific content (slides, articles, videos) is stored in `data/topicContent.ts` using the `TOPIC_CONTENT["${level}-${topicId}"]` registry pattern
+- **Never** create standalone marketing-site pages (e.g. `pages/learn/level-*`) for course content
+- The marketing site (`MarketingSite.tsx`, hash-based routing) is for promotional/landing pages only
+- Phase views receive content via props from `AppCurrentLevel.tsx`, which looks it up via `getTopicContent(level, topicId)`
+
+### Navigation & Level Selection
+
+The "Review →" and "Continue →" buttons on the My Journey page (`pages/app/AppJourney.tsx`) and the Level Cards (`components/app/LevelCard.tsx`) navigate to `/app/level?level={N}`, where `{N}` is the level number (1–5).
+
+`AppCurrentLevel.tsx` reads the `?level=` query parameter to determine which level's content to display. If no `?level=` param is present, it falls back to `userProfile.currentLevel`.
+
+**This is essential because:**
+- Users who have completed earlier levels must still be able to access and review that content at any time
+- The mock data currently sets the user's progress to Level 5 — without the `?level=` param, every navigation would show Level 5 content
+- When building or testing course content for a specific level, navigate directly via `/app/level?level=1` (or whichever level you are working on)
+
+**Rules for any component that navigates to the level page:**
+- Always include `?level={levelNumber}` in the URL
+- Never navigate to bare `/app/level` without the level param — this causes the page to show the user's current active level, which may not be the intended one
+
+### Adding content for a new topic
+
+1. Add slide, article, and video data to `data/topicContent.ts` under a new key (e.g. `"2-1"` for Level 2, Topic 1)
+2. Add/update topic metadata in `data/levelTopics.ts`
+3. The existing `AppCurrentLevel.tsx` → phase view pipeline handles rendering automatically — no new pages or routes needed
+4. Test by navigating to `/app/level?level={N}` where `{N}` is the level number
+
+---
+
 ## 1. What You Are Building
 
 Each e-learning page is a **self-contained learning journey page** for one level of the Oxygy AI Upskilling Framework. It is not a standalone SCORM file — it is a native React page embedded within the main Oxygy website.
@@ -105,6 +141,38 @@ Every scenario, example, prompt demonstration, and exercise must resonate across
 - If a slide references an industry (e.g., pharma, professional services), it must be in a context that any professional in that industry would recognise, not a context specific to one department.
 
 This rule applies to: Beat 1 scenario setups, Beat 3 worked examples, Beat 4 contrast scenarios, Beat 5 interactive exercises, and any prompt text shown on screen.
+
+### 2.5 Slide Presentation Rules
+
+These rules govern how slide content is rendered and composed. They apply to every course across all levels.
+
+**Rule 1: Every course starts with a Course Intro slide (type: `courseIntro`).**
+This is always slide 0 / slide 1. It shows the topic title, level badge, estimated time, a brief description, and a "What You'll Learn" objectives list. It sets expectations before the learner sees any content. The intro slide uses a dark navy gradient background to visually distinguish it from content slides.
+
+**Rule 2: Evidence slides must fill the vertical space.**
+Stats should use large, attention-grabbing values (42px+ font size). Include source badges with recognisable logos/branding where possible (McKinsey, Deloitte, MIT, etc.). Add a bottom insight bar to eliminate empty space and reinforce the key takeaway. Stats cards should flex to fill available height.
+
+**Rule 3: Fullscreen mode must be actively encouraged.**
+The inline player has limited vertical space. The fullscreen button must be visually prominent (glowing animation) with a tooltip on first load that says "View in full screen — Click here for the best learning experience." The tooltip auto-dismisses after 8 seconds or when the user enters fullscreen.
+
+**Rule 4: Examples should be shown by default, not hidden behind expand buttons.**
+On slides where examples are central to the learning (e.g., spectrum positions, prompt approaches), show the example text inline by default. Do not require a click to reveal examples. The user should see the full content immediately. Only use expand/collapse for supplementary context like "Why this matters for AI" explanations.
+
+**Rule 5: Framework components must explain WHY, not just WHAT.**
+When presenting framework elements (e.g., the six Prompt Blueprint components, modifier techniques), each component should have:
+- A definition (what it is)
+- An example (what it looks like in practice)
+- A "Why this matters for AI" explanation (available as a dropdown) that describes what changes in how the AI processes the request when this component is included
+
+**Rule 6: Gap/contrast diagrams must include real example prompts.**
+When showing a gap between generic and specific approaches, include actual prompt text on both sides — not just abstract labels. The learner should see concrete before/after prompts to understand what "adding context" actually looks like in practice.
+
+**Rule 7: Modifier techniques must explain the reasoning benefit, not just the technique.**
+For each modifier (Chain of Thought, Few-Shot, Iterative Refinement, etc.), explain:
+- What it does (definition)
+- Why it matters (how it changes the AI's reasoning or output quality)
+- A detailed, realistic example
+The "why" should explain the practical benefit: Chain of Thought = visible reasoning trace for validation; Few-Shot = steers the AI's style/taste to match yours; Iterative = narrows the gap between output and intent through specific feedback.
 
 ---
 
@@ -437,6 +505,61 @@ Each template card:
 - Header: name + tag pill + copy button (right-aligned, never floated/absolute)
 - Body: prompt text in monospace-ish style, full width
 - Copy button: on click, copies text, changes to "Copied ✓" for 2000ms then reverts
+
+### type: "personaCaseStudy"
+Persona-framed sliding card carousel. Used to present prompting approaches or techniques through fictional character case studies. Each persona demonstrates one technique applied to a real professional task.
+
+Required fields: `heading`, `body`, `personas` (array of 3–4: `{ name, role, icon, color, task, technique, prompt, outcome }`)
+
+Layout:
+- Heading + body paragraph at top
+- Optional `pullQuote` (teal left border)
+- Persona tab bar: clickable tabs with icon + name, active tab uses the persona's colour
+- Active persona card (slides in from right with `slideInRight` CSS animation):
+  - Avatar icon + name + role + technique badge (top row)
+  - Task description (white box, bordered)
+  - Prompt in prompt-box style with persona's colour as left border
+  - Outcome in dark "Key Insight" card (animated pulse)
+
+This slide type is mandatory for presenting:
+- Prompting approaches (Brain Dump, Conversational, Structured) — one persona per approach
+- Modifier techniques (Chain of Thought, Few-Shot, Iterative Refinement) — one persona per modifier
+- Any concept that benefits from seeing a real professional applying the technique in context
+
+Persona authoring rules:
+- Each persona must have a distinct name, role, and icon
+- Tasks must be universally recognisable (not function-specific)
+- Prompts must be complete and realistic — not abbreviated
+- Outcomes must describe a concrete result, not a generic benefit
+- Never reuse the same persona across different slide types within one course
+
+### type: "approachMatrix"
+Interactive hover-to-reveal matrix grid. Used as a summary/reference slide showing which prompting approach fits which situation.
+
+Required fields: `heading`, `body`, `matrixData` (object: `{ situations: [{ label, icon }], approaches: string[], cells: [{ rating, tip }[][]] }`)
+
+`rating` values: `"best"` | `"ok"` | `"weak"` — controls the cell icon and colour.
+
+Layout:
+- Heading + body at top
+- Legend row: ★ Best fit, ◐ Can work, ○ Not ideal
+- Responsive table grid with hover tooltips on each cell
+- Cells show colour-coded rating icons; tooltip reveals the reasoning
+
+This slide type is mandatory when a course needs to summarise multiple approaches, techniques, or frameworks and when each one is situationally appropriate. Place it after the individual approach/technique slides as a synthesis reference.
+
+### type: "toolkitOverview"
+Three-item vertical card stack showing how different layers of the prompting toolkit relate to each other.
+
+Required fields: `heading`, `body`, `toolkitItems` (array of 3: `{ label, icon, color, desc, whenToUse, relationship }`)
+
+Layout:
+- Heading + body at top
+- Three vertical cards with staggered `fadeInUp` animation
+- Each card: icon (in coloured box) + label + description + "When to use" + relationship note
+- Bottom "insight pulse" connector bar showing the relationship formula
+
+This slide type is used to establish the conceptual framework before diving into each layer individually. Place it after the gap/tension slides and before the detailed technique slides.
 
 ### Expandable Accordion Pattern
 
@@ -901,6 +1024,22 @@ These apply to every build. Check before considering the page complete.
 - Minimum 16px between heading and body text. Minimum 20–24px between body text and primary visual content.
 
 **Dense content must use the expandable accordion pattern** (defined in Section 6). Long prompt examples, full AI outputs, and multi-paragraph explanations must be collapsible. The slide's pedagogical point must be clear in the collapsed state — expansion is for optional depth.
+
+**Tension/statement slides must render headings on a single line.** When a slide's purpose is to deliver a single impactful statement (e.g., type `tensionStatement`), the heading and subheading must each fit on one line. Use `whiteSpace: "nowrap"` and ensure the text is short enough for the content area width. If the text is too long, shorten it — never allow it to wrap to a second line. The single-line constraint creates visual impact and prevents the statement from reading like a paragraph.
+
+**Key Insight cards must use the animated pulse style.** Whenever a slide includes a "Key Insight" or summary callout, it must use the dark gradient background (`linear-gradient(135deg, #1A3A38, #1A202C)`), teal border (`1px solid #38B2AC44`), enlarged padding (`14px 20px`), and the `insightPulse` CSS animation. The "KEY INSIGHT" label is always 10px, uppercase, teal, with `0.1em` letter-spacing. This creates a visually distinct, attention-drawing card that anchors the bottom of the slide.
+
+**Evidence slides must include source logos.** When stats reference a known source (McKinsey, Deloitte, MIT Sloan, etc.), include the actual logo image from `/public/logos/` using an `<img>` tag (height 24px, max-width 120px, `objectFit: contain`). Each stat card should also include a short description (1–2 sentences) explaining what the stat means in the context of the topic, not just the raw number and label.
+
+**Content must be vertically distributed, not top-heavy.** Use `display: flex`, `flexDirection: column`, `justifyContent: space-between` on the slide container to ensure content fills the vertical space. Headers stay compact at top, primary content fills the middle, and insight/summary cards anchor the bottom. This rule applies to all slide types, not just evidence slides.
+
+**Gap/contrast diagrams must annotate prompts with RCTF colours.** When showing a "rich context" prompt alongside a "limited context" prompt, the rich prompt must visually underline each component using the canonical RCTF colour (Role = #667EEA, Context = #38B2AC, Task = #ED8936, Format = #48BB78, Steps = #9F7AEA, Checks = #F6AD55). Include a colour legend below the prompt showing which component maps to which colour.
+
+**Bridge slides must use working internal routes.** The CTA link on bridge slides must always use a real internal route (e.g., `/app/toolkit/prompt-playground`), never a hash fragment like `#playground`. Verify the route exists in the app's route configuration before using it.
+
+**Situational judgment slides must support multi-step navigation.** When a `situationalJudgment` slide contains multiple scenarios, clicking the "Next" button must advance to the next scenario within the slide (not to the next slide) until all scenarios are exhausted. Include a progress indicator showing "Scenario X of Y" at the bottom of the slide. The slide advances to the next slide only after the final scenario.
+
+**RCTF slides must show all content without dropdowns.** Each RCTF element card must display the description, example, and "Why this matters" explanation inline — never behind a dropdown or expand button. Use a 3×2 grid layout (not 2×2) to fit all six elements with compact sizing. Include an icon per element for visual distinction.
 
 ---
 

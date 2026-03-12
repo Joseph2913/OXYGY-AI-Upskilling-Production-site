@@ -1,17 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, Copy, Check, RotateCcw, Code, Download, Library,
+  ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code, Download, Library,
   Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, Eye, Square, CheckSquare, X,
+  FileText, BookOpen,
 } from 'lucide-react';
 import {
   GOOD_EXAMPLES, NOT_RECOMMENDED_EXAMPLES, CRITERIA_LABELS,
   WHY_JSON_CONTENT, PROMPT_SECTION_COLORS,
+  AGENT_PLATFORMS, SETUP_LOADING_STEPS, SETUP_STEP_DELAYS,
 } from '../../../data/agent-builder-content';
 import { useAgentDesignApi } from '../../../hooks/useAgentDesignApi';
-import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck } from '../../../types';
+import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck, AgentSetupGuide } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
+import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const MONO = "'JetBrains Mono', 'Fira Code', monospace";
@@ -37,8 +40,8 @@ const REFINE_LOADING_STEPS = [
   'Generating deeper questions…',
   'Finalising refined design…',
 ];
-// Front-loaded timing: early steps fast, later steps slower
-const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+// Front-loaded timing: early steps fast, later steps slower (~21.8s total)
+const STEP_DELAYS = [800, 1500, 3000, 4000, 4500, 4000, 4000];
 
 const DRAFT_KEY = 'oxygy_agent-builder_draft';
 
@@ -219,7 +222,8 @@ const AppAgentBuilder: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [savedToLibrary, setSavedToLibrary] = useState(false);
-  const [showMarkdown, setShowMarkdown] = useState(false);
+  const [activeView, setActiveView] = useState<'cards' | 'markdown' | 'output_format' | 'accountability'>('cards');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['system_prompt']));
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [selectedChecks, setSelectedChecks] = useState<Record<number, boolean>>({});
@@ -234,12 +238,30 @@ const AppAgentBuilder: React.FC = () => {
   const [refinementCount, setRefinementCount] = useState(0);
   const [refineExpanded, setRefineExpanded] = useState(false);
 
+  // Step 3 — Choose Platform / Step 4 — Build Plan
+  const [step2Approved, setStep2Approved] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [setupGuide, setSetupGuide] = useState<AgentSetupGuide | null>(null);
+  const [setupLoadingStep, setSetupLoadingStep] = useState(0);
+
+  // Step 4 — Build Plan output (per BUILD-GUIDE-OUTPUT-STANDARD)
+  const [buildPlanViewMode, setBuildPlanViewMode] = useState<'cards' | 'markdown'>('cards');
+  const [buildPlanVisibleBlocks, setBuildPlanVisibleBlocks] = useState(0);
+  const [buildPlanCopied, setBuildPlanCopied] = useState(false);
+  const [expandedBuildSteps, setExpandedBuildSteps] = useState<Set<number>>(new Set());
+  const [buildPlanSaved, setBuildPlanSaved] = useState(false);
+  const [buildPlanRefineExpanded, setBuildPlanRefineExpanded] = useState(false);
+  const [buildPlanRefinementAnswers, setBuildPlanRefinementAnswers] = useState<Record<number, string>>({});
+  const [buildPlanAdditionalContext, setBuildPlanAdditionalContext] = useState('');
+
   // Refs
   const step1Ref = useRef<HTMLDivElement>(null);
   const step2Ref = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
+  const step4Ref = useRef<HTMLDivElement>(null);
 
   // API
-  const { designAgent, isLoading, error, clearError } = useAgentDesignApi();
+  const { designAgent, generateSetupGuide, isLoading, setupLoading, error, clearError } = useAgentDesignApi();
 
   // Loading step progression (per PRD §9.5)
   useEffect(() => {
@@ -256,11 +278,46 @@ const AppAgentBuilder: React.FC = () => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cumulative = 0;
     STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return; // -1 = open-ended buffer, don't auto-advance
       cumulative += delay;
       timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
     });
     return () => timers.forEach(clearTimeout);
   }, [isLoading]);
+
+  // Staggered block animation for Step 4 build plan output
+  useEffect(() => {
+    if (!setupGuide) return;
+    setBuildPlanVisibleBlocks(0);
+    setBuildPlanViewMode('cards');
+    const totalBlocks = 4; // content + actions + refinement + buffer
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < totalBlocks; i++) {
+      timers.push(setTimeout(() => setBuildPlanVisibleBlocks(v => v + 1), 150 + i * 80));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [setupGuide]);
+
+  // Setup guide loading step progression
+  useEffect(() => {
+    if (!setupLoading) {
+      if (setupLoadingStep > 0) {
+        setSetupLoadingStep(SETUP_LOADING_STEPS.length);
+        const timer = setTimeout(() => setSetupLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setSetupLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    SETUP_STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return;
+      cumulative += delay;
+      timers.push(setTimeout(() => setSetupLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [setupLoading]);
 
   // Staggered block appearance (4 sections + refinement card)
   useEffect(() => {
@@ -337,7 +394,7 @@ const AppAgentBuilder: React.FC = () => {
     setPromptExpanded(false);
     setSelectedChecks({});
     setSavedToLibrary(false);
-    setShowMarkdown(false);
+    setActiveView('cards');
     setIsRefineLoading(false);
     setRefinementAnswers({});
     setAdditionalContext('');
@@ -369,14 +426,40 @@ const AppAgentBuilder: React.FC = () => {
     setCopiedSection(null);
     setSelectedChecks({});
     setSavedToLibrary(false);
-    setShowMarkdown(false);
+    setActiveView('cards');
     setRefinementAnswers({});
     setAdditionalContext('');
     setRefinementCount(0);
     setRefineExpanded(false);
+    setStep2Approved(false);
+    setSelectedPlatform(null);
+    setSetupGuide(null);
+    setBuildPlanViewMode('cards');
+    setBuildPlanVisibleBlocks(0);
+    setBuildPlanCopied(false);
+    setExpandedBuildSteps(new Set());
+    setBuildPlanSaved(false);
+    setBuildPlanRefineExpanded(false);
+    setBuildPlanRefinementAnswers({});
+    setBuildPlanAdditionalContext('');
     clearError();
     localStorage.removeItem(DRAFT_KEY);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleGenerateSetupGuide = async () => {
+    if (!result || !selectedPlatform) return;
+    const platformLabel = AGENT_PLATFORMS.find(p => p.id === selectedPlatform)?.label || selectedPlatform;
+    const guide = await generateSetupGuide({
+      platform: platformLabel,
+      system_prompt: result.system_prompt,
+      output_format: result.output_format,
+      task_description: taskDescription,
+    });
+    if (guide) {
+      setSetupGuide(guide);
+      setTimeout(() => step4Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
   };
 
   /* ── Build refinement message ── */
@@ -421,7 +504,7 @@ const AppAgentBuilder: React.FC = () => {
       setRefinementAnswers({});
       setAdditionalContext('');
       setRefinementCount(c => c + 1);
-      setShowMarkdown(false);
+      setActiveView('cards');
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
   };
@@ -454,11 +537,77 @@ const AppAgentBuilder: React.FC = () => {
     ].join('\n');
   };
 
+  /** Build a full Build Plan markdown document combining setup guide steps, tips, system prompt */
+  const buildFullBuildPlan = (): string => {
+    if (!setupGuide || !result) return '';
+    const platformLabel = AGENT_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform';
+    const parts: string[] = [
+      `# Build Plan`,
+      `## Agent: ${taskDescription.slice(0, 80)}`,
+      ``,
+      `**Platform:** ${platformLabel}`,
+      `**Steps:** ${setupGuide.steps.length}`,
+      ``,
+      `---`,
+      ``,
+      `## Setup Steps`,
+      ``,
+    ];
+    setupGuide.steps.forEach((step: { title: string; instruction: string }, i: number) => {
+      parts.push(`### Step ${i + 1} — ${step.title}`);
+      parts.push(``);
+      parts.push(step.instruction);
+      parts.push(``);
+    });
+    if (setupGuide.tips.length > 0) {
+      parts.push(`---`);
+      parts.push(``);
+      parts.push(`## Pro Tips`);
+      parts.push(``);
+      setupGuide.tips.forEach((tip: string) => {
+        parts.push(`- ${tip}`);
+      });
+      parts.push(``);
+    }
+    if (setupGuide.limitations) {
+      parts.push(`> **Note:** ${setupGuide.limitations}`);
+      parts.push(``);
+    }
+    parts.push(`---`);
+    parts.push(``);
+    parts.push(`## System Prompt`);
+    parts.push(``);
+    parts.push('```');
+    parts.push(buildFullSystemPrompt(result));
+    parts.push('```');
+    return parts.join('\n');
+  };
+
   const handleCopyFull = async () => {
     if (!result) return;
     await copyToClipboard(buildFullSystemPrompt(result));
     setCopied(true); setToastMessage('Full system prompt copied to clipboard');
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  /** One-line summary for collapsed output sections */
+  const getSectionSummary = (key: string): string => {
+    if (!result) return '';
+    switch (key) {
+      case 'readiness': return `Score: ${result.readiness.overall_score}% — ${result.readiness.verdict}`;
+      case 'output_format': return result.output_format.human_readable.split('\n')[0] || 'Structured output format defined';
+      case 'system_prompt': return `${result.system_prompt.length} characters — ready to paste into your AI platform`;
+      case 'accountability': return `${result.accountability.length} built-in checks for verification and traceability`;
+      default: return '';
+    }
   };
 
   const handleCopySection = async (key: string, label: string, content: string) => {
@@ -474,6 +623,35 @@ const AppAgentBuilder: React.FC = () => {
     dbSavePrompt(user.id, { level: 2, title, content: fullContent, source_tool: 'agent-builder' });
     setSavedToLibrary(true); setToastMessage('System prompt saved to your Prompt Library');
     setTimeout(() => setSavedToLibrary(false), 3000);
+  };
+
+  const handleCopyBuildPlan = async () => {
+    const md = buildFullBuildPlan();
+    if (!md) return;
+    await copyToClipboard(md);
+    setBuildPlanCopied(true); setToastMessage('Build plan copied to clipboard');
+    setTimeout(() => setBuildPlanCopied(false), 2500);
+  };
+
+  const handleSaveBuildPlan = () => {
+    if (!result || !user || !setupGuide) return;
+    const fullContent = buildFullBuildPlan();
+    const title = `Build Plan: ${taskDescription.slice(0, 50)}${taskDescription.length > 50 ? '...' : ''}`;
+    dbSavePrompt(user.id, { level: 2, title, content: fullContent, source_tool: 'agent-builder' });
+    setBuildPlanSaved(true); setToastMessage('Build plan saved to your library');
+  };
+
+  const handleDownloadBuildPlan = () => {
+    const md = buildFullBuildPlan();
+    if (!md) return;
+    const date = new Date().toISOString().split('T')[0];
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agent-build-plan-${date}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDownload = () => {
@@ -494,8 +672,10 @@ const AppAgentBuilder: React.FC = () => {
   };
 
   // Step indicators
-  const step1Done = taskDescription.trim().length > 0 && result !== null;
-  const step2Done = false; // Output step is never "done" in the collapsed sense
+  const step1Done = taskDescription.trim().length > 0 && (result !== null || isLoading);
+  const step2Done = step1Done && step2Approved;
+  const step3Done = step2Done && selectedPlatform !== null && (setupGuide !== null || setupLoading);
+  const step4Done = setupGuide !== null;
 
   return (
     <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT }}>
@@ -532,8 +712,10 @@ const AppAgentBuilder: React.FC = () => {
         steps={[
           { number: 1, label: 'Describe your agent', detail: 'Define the task and the data your agent will process', done: step1Done },
           { number: 2, label: 'Review your agent design', detail: 'Readiness score, output format, system prompt, and accountability', done: step2Done },
+          { number: 3, label: 'Choose your platform', detail: 'Select where you want to deploy this agent', done: step3Done },
+          { number: 4, label: 'Build plan', detail: 'Get a tailored setup guide for your platform', done: step4Done },
         ]}
-        outcome="A complete agent design — readiness assessment, structured output format, production-ready system prompt, and built-in accountability features — ready to deploy in any AI platform."
+        outcome="A complete agent — system prompt, structured output format, accountability features, and step-by-step deployment guide for your chosen AI platform."
       />
 
       {/* ════════════════════════════════════════════════════════ */}
@@ -704,80 +886,13 @@ const AppAgentBuilder: React.FC = () => {
         <StepCard
           stepNumber={2}
           title={result ? 'Your agent design' : 'Review your agent design'}
-          subtitle={result
-            ? 'Your agent has been designed across 4 sections. Review, copy, or save the complete design.'
-            : "Here's what your agent design will include — each section addresses a critical aspect of agent design."}
-          done={false}
-          collapsed={false}
+          subtitle="Your agent has been designed across 4 sections. Review, copy, or save the complete design."
+          done={step2Done}
+          collapsed={step2Done}
+          locked={!result && !isLoading}
+          lockedMessage="Complete Step 1 to generate your agent design"
         >
-          {!result && !isLoading ? (
-              /* Educational default — 4-section preview */
-              <div>
-                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 16 }}>
-                  Your output will be structured using the <strong style={{ color: '#1A202C' }}>4-part Agent Design Framework</strong> — a comprehensive approach that transforms any task into a production-ready AI agent. Complete Step 1 above and each section below will be filled with content tailored to your specific needs.
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {DESIGN_SECTIONS.map((block, idx) => (
-                    <div
-                      key={block.key}
-                      style={{
-                        borderLeft: `4px solid ${block.color}`,
-                        background: `${block.color}08`,
-                        borderRadius: 10, padding: '16px 18px',
-                      }}
-                    >
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
-                      }}>
-                        <span style={{ fontSize: 15 }}>{block.icon}</span>
-                        <span style={{
-                          fontSize: 12, fontWeight: 700, color: '#1A202C',
-                          textTransform: 'uppercase', letterSpacing: '0.04em',
-                        }}>
-                          {block.label}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#A0AEC0', marginLeft: 'auto' }}>
-                          {idx + 1}/4
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 10 }}>
-                        {block.why}
-                      </div>
-                      <div style={{
-                        background: `${block.color}18`, borderRadius: 8,
-                        padding: '10px 12px', borderLeft: `3px solid ${block.color}`,
-                      }}>
-                        <div style={{
-                          fontSize: 10, fontWeight: 700, color: '#A0AEC0',
-                          textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4,
-                        }}>
-                          Example
-                        </div>
-                        <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic' }}>
-                          {block.example}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Summary footer */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 16, marginTop: 16, padding: '10px 0',
-                  borderTop: '1px solid #EDF2F7',
-                }}>
-                  {DESIGN_SECTIONS.map(block => (
-                    <div key={block.key} style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 11, color: '#718096',
-                    }}>
-                      <span style={{ fontSize: 13 }}>{block.icon}</span>
-                      {block.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-          ) : isLoading ? (
+          {isLoading ? (
             /* ── Processing Progress Indicator ── */
             <ProcessingProgress
               steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
@@ -786,574 +901,486 @@ const AppAgentBuilder: React.FC = () => {
               subtext="This usually takes 15–20 seconds"
             />
           ) : result ? (
-            /* ═══ Active Output Content ═══ */
+            /* ═══ Active Output — Simplified Layout ═══ */
             <>
-              {/* View toggle + actions */}
+              {/* ── Compact Readiness Score ── */}
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 20, flexWrap: 'wrap', gap: 10,
+                display: 'flex', alignItems: 'center', gap: 16,
+                background: '#F7FAFC', borderRadius: 14,
+                border: '1px solid #E2E8F0', padding: '18px 22px',
+                marginBottom: 16,
+                opacity: 0 < visibleBlocks ? 1 : 0,
+                transform: 0 < visibleBlocks ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                  background: `conic-gradient(${getScoreColor(result.readiness.overall_score)} ${result.readiness.overall_score * 3.6}deg, #E2E8F0 0deg)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
                   <div style={{
-                    display: 'flex', background: '#F7FAFC', borderRadius: 10,
-                    border: '1px solid #E2E8F0', overflow: 'hidden',
+                    width: 44, height: 44, borderRadius: '50%', background: '#F7FAFC',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, fontWeight: 800, color: getScoreColor(result.readiness.overall_score),
+                    fontFamily: FONT,
                   }}>
-                    <ToggleBtn
-                      icon={<Sparkles size={13} />}
-                      label="Cards"
-                      active={!showMarkdown}
-                      onClick={() => setShowMarkdown(false)}
-                    />
-                    <ToggleBtn
-                      icon={<Code size={13} />}
-                      label="Markdown"
-                      active={showMarkdown}
-                      onClick={() => setShowMarkdown(true)}
-                      highlight
-                    />
+                    {result.readiness.overall_score}%
                   </div>
-                  <InfoTooltip text="Markdown preserves the structure (headings, bullets, formatting) when you paste your agent design into ChatGPT, Claude, or any AI tool — giving you better results than plain text." />
                 </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <ActionBtn
-                    icon={copied ? <Check size={13} /> : <Copy size={13} />}
-                    label={copied ? 'Copied!' : 'Copy Full System Prompt'}
-                    onClick={handleCopyFull}
-                    primary
-                  />
-                  <ActionBtn
-                    icon={<Download size={13} />}
-                    label="Download (.md)"
-                    onClick={handleDownload}
-                  />
-                  <ActionBtn
-                    icon={<Library size={13} />}
-                    label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                    onClick={handleSaveToLibrary}
-                    accent
-                    disabled={savedToLibrary}
-                  />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: FONT, lineHeight: 1.3 }}>
+                    {result.readiness.verdict}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5, fontFamily: FONT, marginTop: 4 }}>
+                    {result.readiness.rationale.length > 200
+                      ? result.readiness.rationale.slice(0, 200) + '…'
+                      : result.readiness.rationale}
+                  </div>
                 </div>
+                <button
+                  onClick={() => toggleSection('readiness')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 12, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontFamily: FONT, flexShrink: 0, padding: '4px 0',
+                  }}
+                >
+                  {expandedSections.has('readiness') ? 'Hide' : 'Learn more'}
+                  <ChevronDown size={13} style={{
+                    transform: expandedSections.has('readiness') ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s',
+                  }} />
+                </button>
               </div>
 
-              {/* Markdown view — shows the cohesive system prompt */}
-              {showMarkdown && (
+              {/* Expanded readiness detail */}
+              {expandedSections.has('readiness') && (
                 <div style={{
-                  background: '#1A202C', borderRadius: 12,
-                  padding: '22px 24px', overflow: 'auto',
+                  background: '#FFFFFF', borderRadius: 12,
+                  border: '1px solid #E2E8F0', padding: '18px 20px',
+                  marginBottom: 16, marginTop: -8,
+                  animation: 'ppSlideDown 0.2s ease both',
                 }}>
-                  <pre style={{
-                    color: '#E2E8F0', fontSize: 13, lineHeight: 1.8,
-                    fontFamily: MONO,
-                    whiteSpace: 'pre-wrap', margin: 0,
-                  }}>
-                    {buildFullSystemPrompt(result)}
-                  </pre>
+                  {(Object.entries(result.readiness.criteria) as [string, AgentReadinessCriteria][]).map(([key, val]) => (
+                    <div key={key} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
+                      borderBottom: '1px solid #F7FAFC',
+                    }}>
+                      <div style={{ width: 120, flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#1A202C' }}>
+                        {CRITERIA_LABELS[key]?.label || key}
+                      </div>
+                      <div style={{ flex: 1, fontSize: 12, color: '#718096' }}>{val.assessment}</div>
+                      <div style={{ width: 80, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ flex: 1, height: 5, borderRadius: 3, background: '#E2E8F0', overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 3,
+                            width: `${val.score}%`, background: getScoreColor(val.score),
+                            transition: 'width 0.7s ease',
+                          }} />
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', width: 28, textAlign: 'right' }}>{val.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.6, marginTop: 12, fontFamily: FONT }}>
+                    {result.readiness.rationale}
+                  </div>
                 </div>
               )}
 
-              {/* Card view — 4 sections */}
-              {!showMarkdown && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* Section 1: Readiness Score */}
-                  <OutputSection
-                    section={DESIGN_SECTIONS[0]}
-                    index={0}
-                    visible={0 < visibleBlocks}
-                    copiedSection={copiedSection}
-                    onCopy={(key, label, content) => handleCopySection(key, label, content)}
-                    copyContent={`Readiness Score: ${result.readiness.overall_score}%\nVerdict: ${result.readiness.verdict}\n\n${result.readiness.rationale}`}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-                      <ScoreCircle score={result.readiness.overall_score} animated={scoreAnimated} />
-                    </div>
-                    {/* Criteria bars */}
-                    <div style={{ marginBottom: 16 }}>
-                      {(Object.entries(result.readiness.criteria) as [string, AgentReadinessCriteria][]).map(([key, val]) => (
-                        <div key={key} style={{
-                          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
-                          borderBottom: '1px solid #F7FAFC',
-                        }}>
-                          <div style={{ width: 120, flexShrink: 0, fontSize: 13, fontWeight: 700, color: '#1A202C' }}>
-                            {CRITERIA_LABELS[key]?.label || key}
-                          </div>
-                          <div style={{ flex: 1, fontSize: 13, color: '#4A5568' }}>{val.assessment}</div>
-                          <div style={{ width: 100, flexShrink: 0 }}>
-                            <div style={{ height: 6, borderRadius: 3, background: '#E2E8F0', overflow: 'hidden' }}>
-                              <div style={{
-                                height: '100%', borderRadius: 3,
-                                width: `${val.score}%`, background: LEVEL_ACCENT_DARK,
-                                transition: 'width 0.7s ease',
-                              }} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Level 1 vs Level 2 comparison */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                      <div style={{ background: '#F7FAFC', borderRadius: 10, padding: 16, border: '1px solid #E2E8F0' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>
-                          Level 1: Ad-Hoc Prompting
-                        </div>
-                        {result.readiness.level1_points.map((point, i) => (
-                          <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, display: 'flex', gap: 6, marginBottom: 4 }}>
-                            <span style={{ color: '#A0AEC0', flexShrink: 0 }}>&bull;</span>{point}
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{
-                        background: '#F7FAFC', borderRadius: 10, padding: 16,
-                        border: result.readiness.overall_score >= 50 ? `2px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
-                      }}>
-                        {result.readiness.overall_score >= 50 && (
-                          <span style={{
-                            display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#FFFFFF',
-                            background: LEVEL_ACCENT_DARK, borderRadius: 10, padding: '2px 8px', marginBottom: 8,
-                          }}>
-                            Recommended
-                          </span>
-                        )}
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>
-                          Level 2: Custom Agent
-                        </div>
-                        {result.readiness.level2_points.map((point, i) => (
-                          <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, display: 'flex', gap: 6, marginBottom: 4 }}>
-                            <span style={{ color: LEVEL_ACCENT_DARK, flexShrink: 0 }}>&bull;</span>{point}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </OutputSection>
+              {/* ── System Prompt — primary deliverable ── */}
+              <div style={{
+                marginBottom: 16,
+                opacity: 1 < visibleBlocks ? 1 : 0,
+                transform: 1 < visibleBlocks ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginBottom: 10, flexWrap: 'wrap', gap: 8,
+                }}>
+                  <div style={{
+                    fontSize: 13, fontWeight: 700, color: '#1A202C',
+                    textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: FONT,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <span style={{ fontSize: 15 }}>📝</span> Your System Prompt
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <ActionBtn
+                      icon={copied ? <Check size={13} /> : <Copy size={13} />}
+                      label={copied ? 'Copied!' : 'Copy'}
+                      onClick={handleCopyFull}
+                      primary
+                    />
+                  </div>
+                </div>
 
-                  {/* Section 2: Output Format */}
-                  <OutputSection
-                    section={DESIGN_SECTIONS[1]}
-                    index={1}
-                    visible={1 < visibleBlocks}
-                    copiedSection={copiedSection}
-                    onCopy={(key, label, content) => handleCopySection(key, label, content)}
-                    copyContent={JSON.stringify(result.output_format.json_template, null, 2)}
-                  >
+                {/* ── Unified view toggle row: Cards/Markdown LEFT — Output Format/Accountability RIGHT ── */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      display: 'flex', background: '#F7FAFC', borderRadius: 8,
+                      border: '1px solid #E2E8F0', overflow: 'hidden',
+                    }}>
+                      <ToggleBtn
+                        icon={<Eye size={12} />}
+                        label="Cards"
+                        active={activeView === 'cards'}
+                        onClick={() => setActiveView('cards')}
+                      />
+                      <ToggleBtn
+                        icon={<Code size={12} />}
+                        label="Markdown"
+                        active={activeView === 'markdown'}
+                        onClick={() => setActiveView('markdown')}
+                        highlight
+                      />
+                    </div>
+                    <span style={{ fontSize: 11, color: '#A0AEC0', fontFamily: FONT }}>
+                      {result.system_prompt.length.toLocaleString()} characters
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([
+                      { key: 'output_format' as const, label: 'Output Format', icon: '📐' },
+                      { key: 'accountability' as const, label: 'Accountability', icon: '✅' },
+                    ]).map(tab => {
+                      const isActive = activeView === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          onClick={() => setActiveView(isActive ? 'cards' : tab.key)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            padding: '6px 12px', borderRadius: 8,
+                            background: isActive ? `${LEVEL_ACCENT}30` : '#F7FAFC',
+                            border: isActive ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
+                            cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                            color: isActive ? LEVEL_ACCENT_DARK : '#4A5568',
+                            fontFamily: FONT, transition: 'all 0.15s',
+                          }}
+                        >
+                          <span style={{ fontSize: 13 }}>{tab.icon}</span>
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── View content area ── */}
+                {activeView === 'markdown' ? (
+                  <div style={{
+                    background: '#1A202C', borderRadius: 12,
+                    padding: '20px 22px', overflow: 'auto', maxHeight: 500,
+                  }}>
+                    <pre style={{
+                      color: '#E2E8F0', fontSize: 13, lineHeight: 1.7,
+                      fontFamily: MONO, whiteSpace: 'pre-wrap', margin: 0,
+                    }}>
+                      {buildFullSystemPrompt(result)}
+                    </pre>
+                  </div>
+                ) : activeView === 'output_format' ? (
+                  <div style={{
+                    background: '#FFFFFF', borderRadius: 12,
+                    border: '1px solid #E2E8F0', padding: '18px 20px',
+                    animation: 'ppSlideDown 0.2s ease both',
+                  }}>
+                    <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginBottom: 14, fontFamily: FONT }}>
+                      Your agent uses a structured output format so every run produces identical, machine-readable results. The <strong style={{ color: '#1A202C' }}>[OUTPUT FORMAT]</strong> section in the prompt above defines this structure.
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                      {/* Human-readable */}
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                          <Eye size={14} color="#718096" />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#1A202C' }}>What your team sees</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          <Eye size={13} color="#718096" />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#1A202C' }}>What your team sees</span>
                         </div>
                         <div style={{
-                          background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10,
-                          padding: 16, maxHeight: 320, overflowY: 'auto',
+                          background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10,
+                          padding: 14, maxHeight: 400, overflowY: 'auto',
                         }}>
-                          {result.output_format.human_readable.split('\n').map((line, i) => {
-                            if (!line.trim()) return <div key={i} style={{ height: 8 }} />;
+                          {result.output_format.human_readable.split('\n').map((line: string, i: number) => {
+                            if (!line.trim()) return <div key={i} style={{ height: 6 }} />;
                             if (line.startsWith('# ') || line.startsWith('## ') || /^[A-Z][A-Z\s&:]+$/.test(line.trim())) {
-                              return <p key={i} style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', marginTop: 10, marginBottom: 4 }}>{line.replace(/^#+\s*/, '')}</p>;
+                              return <p key={i} style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', marginTop: 8, marginBottom: 3 }}>{line.replace(/^#+\s*/, '')}</p>;
                             }
                             if (line.trim().startsWith('- ') || line.trim().startsWith('\u2022 ')) {
-                              return <p key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, paddingLeft: 12 }}>&bull; {line.replace(/^\s*[-\u2022]\s*/, '')}</p>;
+                              return <p key={i} style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5, paddingLeft: 10 }}>&bull; {line.replace(/^\s*[-\u2022]\s*/, '')}</p>;
                             }
-                            return <p key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}>{line}</p>;
+                            return <p key={i} style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5 }}>{line}</p>;
                           })}
                         </div>
                       </div>
-                      {/* JSON template */}
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, position: 'relative' }}>
-                          <Code size={14} color="#718096" />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#1A202C' }}>The JSON template</span>
-                          <button
-                            onClick={e => { e.stopPropagation(); setShowJsonTooltip(!showJsonTooltip); }}
-                            style={{
-                              fontSize: 11, fontWeight: 600, color: '#718096', background: '#F7FAFC',
-                              border: '1px solid #E2E8F0', borderRadius: 4, padding: '2px 6px',
-                              cursor: 'pointer', transition: 'color 0.15s',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
-                          >
-                            Why JSON?
-                          </button>
-                          {showJsonTooltip && (
-                            <div
-                              onClick={e => e.stopPropagation()}
-                              style={{
-                                position: 'absolute', top: 28, left: 0, zIndex: 40,
-                                background: '#1A202C', color: '#E2E8F0', borderRadius: 10,
-                                padding: '14px 16px', fontSize: 13, lineHeight: 1.6,
-                                maxWidth: 320, boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-                                whiteSpace: 'pre-line',
-                              }}
-                            >
-                              {WHY_JSON_CONTENT}
-                            </div>
-                          )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          <Code size={13} color="#718096" />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#1A202C' }}>JSON template</span>
                         </div>
                         <div style={{
                           background: '#1A202C', borderRadius: 10,
-                          padding: 16, maxHeight: 320, overflowY: 'auto',
-                          fontFamily: MONO,
+                          padding: 14, maxHeight: 400, overflowY: 'auto', fontFamily: MONO,
                         }}>
-                          <pre style={{ fontSize: 12, lineHeight: 1.6, margin: 0, overflowX: 'auto' }}>
-                            {JSON.stringify(result.output_format.json_template, null, 2).split('\n').map((line, i) => (
+                          <pre style={{ fontSize: 11, lineHeight: 1.5, margin: 0, overflowX: 'auto' }}>
+                            {JSON.stringify(result.output_format.json_template, null, 2).split('\n').map((line: string, i: number) => (
                               <div key={i}>{renderJSONLine(line)}</div>
                             ))}
                           </pre>
                         </div>
                       </div>
                     </div>
-                  </OutputSection>
-
-                  {/* Section 3: System Prompt */}
-                  <OutputSection
-                    section={DESIGN_SECTIONS[2]}
-                    index={2}
-                    visible={2 < visibleBlocks}
-                    copiedSection={copiedSection}
-                    onCopy={(key, label, content) => handleCopySection(key, label, content)}
-                    copyContent={result.system_prompt}
-                  >
-                    <div style={{
-                      background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>
-                          Your system prompt is ready
-                        </div>
-                        <button
-                          onClick={() => setPromptExpanded(!promptExpanded)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 4,
-                            fontSize: 12, color: '#718096', background: 'none',
-                            border: 'none', cursor: 'pointer', transition: 'color 0.15s',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
-                          onMouseLeave={e => (e.currentTarget.style.color = '#718096')}
-                        >
-                          {promptExpanded ? <><ChevronUp size={14} /> Hide</> : <><ChevronDown size={14} /> View Full Prompt</>}
-                        </button>
-                      </div>
-                      {promptExpanded && (
-                        <div style={{
-                          background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8,
-                          padding: 16, maxHeight: 400, overflowY: 'auto',
-                        }}>
-                          <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                            {renderColorCodedPrompt(result.system_prompt)}
-                          </div>
-                        </div>
-                      )}
-                      <div style={{ fontSize: 12, color: '#718096', marginTop: 8, fontStyle: 'italic' }}>
-                        This prompt follows the Prompt Blueprint framework from Level 1 — Role, Context, Task, Format, Steps, and Quality Checks.
-                      </div>
+                  </div>
+                ) : activeView === 'accountability' ? (
+                  <div style={{
+                    background: '#FFFFFF', borderRadius: 12,
+                    border: '1px solid #E2E8F0', padding: '18px 20px',
+                    animation: 'ppSlideDown 0.2s ease both',
+                  }}>
+                    <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginBottom: 14, fontFamily: FONT }}>
+                      Your agent includes {result.accountability.length} built-in accountability features — source citations, confidence scores, and verification aids — so every output can be trusted and traced.
                     </div>
-                  </OutputSection>
-
-                  {/* Section 4: Built-In Accountability */}
-                  <OutputSection
-                    section={DESIGN_SECTIONS[3]}
-                    index={3}
-                    visible={3 < visibleBlocks}
-                    copiedSection={copiedSection}
-                    onCopy={(key, label, content) => handleCopySection(key, label, content)}
-                    copyContent={result.accountability.filter((_, idx) => selectedChecks[idx]).map(c => `${c.name} [${c.severity}]: ${c.prompt_instruction}`).join('\n\n')}
-                  >
-                    <div style={{ fontSize: 12, color: '#718096', marginBottom: 12 }}>
-                      All features included by default. Uncheck any you don't need in your agent's prompt.
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {result.accountability.map((check, idx) => {
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {result.accountability.map((check: AccountabilityCheck, idx: number) => {
                         const severity = getSeverityStyle(check.severity);
-                        const isSelected = !!selectedChecks[idx];
                         return (
-                          <div
-                            key={idx}
-                            style={{
-                              background: '#FFFFFF', borderRadius: 10,
-                              padding: '14px 16px', border: '1px solid #E2E8F0',
-                              borderLeft: `4px solid ${isSelected ? LEVEL_ACCENT_DARK : '#A0AEC0'}`,
-                              opacity: isSelected ? 1 : 0.6,
-                              transition: 'opacity 0.2s, border-color 0.2s',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                                <button
-                                  onClick={() => toggleCheck(idx)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}
-                                >
-                                  {isSelected
-                                    ? <CheckSquare size={18} color={LEVEL_ACCENT_DARK} />
-                                    : <Square size={18} color="#A0AEC0" />
-                                  }
-                                </button>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{check.name}</span>
+                          <div key={idx} style={{
+                            display: 'flex', alignItems: 'flex-start', gap: 10,
+                            padding: '10px 14px', borderRadius: 10,
+                            background: '#F7FAFC', border: '1px solid #EDF2F7',
+                          }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 600, borderRadius: 8, padding: '2px 6px',
+                              background: severity.bg, color: severity.color, border: `1px solid ${severity.border}`,
+                              textTransform: 'capitalize', flexShrink: 0, marginTop: 2,
+                            }}>
+                              {check.severity}
+                            </span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>
+                                {check.name}
                               </div>
-                              <span style={{
-                                fontSize: 10, fontWeight: 600, borderRadius: 10, padding: '2px 8px',
-                                background: severity.bg, color: severity.color, border: `1px solid ${severity.border}`,
-                                textTransform: 'capitalize',
-                              }}>
-                                {check.severity}
-                              </span>
-                            </div>
-                            <div style={{ paddingLeft: 26 }}>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-                                What the agent provides
-                              </div>
-                              <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8 }}>
+                              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginTop: 2, fontFamily: FONT }}>
                                 {check.what_to_verify}
-                              </div>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-                                How this helps your review
-                              </div>
-                              <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 8 }}>
-                                {check.why_it_matters}
-                              </div>
-                              <div style={{
-                                background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8,
-                                padding: '8px 12px',
-                              }}>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-                                  Prompt instruction
-                                </div>
-                                <div style={{
-                                  fontSize: 12, color: '#2D3748', lineHeight: 1.6,
-                                  fontFamily: MONO,
-                                }}>
-                                  {check.prompt_instruction}
-                                </div>
                               </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  </OutputSection>
-                </div>
-              )}
+                  </div>
+                ) : (
+                  /* Cards view (default) */
+                  <div style={{
+                    background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 12,
+                    padding: '18px 20px', maxHeight: 500, overflowY: 'auto',
+                  }}>
+                    <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                      {renderColorCodedPrompt(buildFullSystemPrompt(result))}
+                    </div>
+                  </div>
+                )}
 
-              {/* ── Output Actions Panel (per PRD §4.2) ── */}
-              <div style={{
-                marginTop: 24,
-                opacity: visibleBlocks >= 5 ? 1 : 0,
-                transform: visibleBlocks >= 5 ? 'translateY(0)' : 'translateY(8px)',
-                transition: 'opacity 0.3s, transform 0.3s',
-              }}>
-                <OutputActionsPanel
-                  workflowName={`Agent: ${taskDescription.slice(0, 50)}`}
-                  fullMarkdown={buildFullSystemPrompt(result)}
-                  onSaveToArtefacts={handleSaveToLibrary}
-                  isSaved={savedToLibrary}
-                />
+                {/* Prompt Blueprint labels — show for Cards and Markdown views */}
+                {(activeView === 'cards' || activeView === 'markdown') && (
+                  <div style={{ fontSize: 12, color: '#718096', marginTop: 8, fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span>Follows the Prompt Blueprint framework:</span>
+                    {Object.entries(PROMPT_SECTION_COLORS).map(([key, val]) => (
+                      <span key={key} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                        fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                        padding: '2px 8px', borderRadius: 6,
+                        backgroundColor: val.bg, color: '#4A5568',
+                        border: `1px solid ${val.bg.replace('0.3)', '0.5)').replace('0.15)', '0.35)').replace('0.5)', '0.7)')}`,
+                      }}>
+                        <span style={{ fontSize: 11 }}>{val.emoji}</span> {val.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* ── Combined Caveat + Refinement Card (per PRD §4.5) ── */}
+              {/* ── Combined Caveat + Refinement Card (matches Workflow Canvas pattern) ── */}
               {(() => {
-                const refIdx = 6; // after 4 output sections + OutputActionsPanel + 1
                 const questions = result.refinement_questions || [];
                 return (
                   <div style={{
-                    background: '#F7FAFC',
-                    borderRadius: 14,
-                    border: '1px solid #E2E8F0',
-                    padding: '20px 24px',
-                    marginTop: 24,
-                    opacity: visibleBlocks >= refIdx ? 1 : 0,
-                    transform: visibleBlocks >= refIdx ? 'translateY(0)' : 'translateY(8px)',
+                    background: '#F7FAFC', borderRadius: 14,
+                    border: '1px solid #E2E8F0', padding: '20px 24px',
+                    marginBottom: 16,
+                    opacity: 3 < visibleBlocks ? 1 : 0,
+                    transform: 3 < visibleBlocks ? 'translateY(0)' : 'translateY(8px)',
                     transition: 'opacity 0.3s, transform 0.3s',
                   }}>
-                    {/* Practitioner caveat — always visible */}
-                    <div style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10,
-                      marginBottom: refineExpanded ? 16 : 12,
-                    }}>
-                      <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
-                      <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
-                        This agent design is a strong starting point, but every environment is different.
-                        Test the system prompt in your actual AI platform, verify the output format works with your data,
-                        and adjust the accountability checks to match your review process.
+                    {/* Caveat text */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: refineExpanded ? 20 : 0 }}>
+                      <Info size={16} color="#A0AEC0" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                          This agent design is a strong starting point, but every environment is different.
+                          Test the system prompt in your actual AI platform, verify the output format works with your data,
+                          and adjust the accountability checks to match your review process.
+                        </div>
+
+                        {/* Expand CTA */}
+                        {!refineExpanded && (
+                          <button
+                            onClick={() => setRefineExpanded(true)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              background: 'none', border: 'none', padding: '8px 0 0',
+                              fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                              cursor: 'pointer', fontFamily: FONT,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; }}
+                            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                          >
+                            Would you like to refine this agent design further?
+                            <ChevronDown size={14} />
+                            {refinementCount > 0 && (
+                              <span style={{
+                                fontSize: 11, fontWeight: 600,
+                                background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                                borderRadius: 20, padding: '2px 10px', fontFamily: FONT,
+                                marginLeft: 4,
+                              }}>
+                                Refinement #{refinementCount}
+                              </span>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {/* Expand CTA — shown only when collapsed */}
-                    {!refineExpanded && (
-                      <button
-                        onClick={() => setRefineExpanded(true)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          padding: 0, fontSize: 13, fontWeight: 600,
-                          color: LEVEL_ACCENT_DARK, fontFamily: FONT,
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                      >
-                        <ChevronDown size={14} />
-                        Would you like to refine this agent design further?
-                        {refinementCount > 0 && (
-                          <span style={{
-                            fontSize: 11, fontWeight: 600,
-                            background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
-                            borderRadius: 20, padding: '2px 10px',
-                            marginLeft: 6,
-                          }}>
-                            Refinement #{refinementCount}
-                          </span>
-                        )}
-                      </button>
-                    )}
-
-                    {/* Expanded refinement section */}
+                    {/* Expanded refinement questions */}
                     {refineExpanded && (
-                      <div style={{
-                        borderTop: '1px solid #E2E8F0',
-                        paddingTop: 16,
-                        animation: 'ppSlideDown 0.3s ease-out both',
-                      }}>
-                        {/* Section header with close button */}
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          marginBottom: 6,
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{
-                              fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
-                              textTransform: 'uppercase', letterSpacing: '0.06em',
-                              fontFamily: FONT,
-                            }}>
-                              Refine Your Agent Design
-                            </div>
-                            {refinementCount > 0 && (
+                      <div style={{ animation: 'ppSlideDown 0.3s ease-out' }}>
+                        <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{
-                                fontSize: 11, fontWeight: 600,
-                                background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
-                                borderRadius: 20, padding: '2px 10px',
-                                fontFamily: FONT,
+                                fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                                textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontFamily: FONT,
                               }}>
-                                Refinement #{refinementCount}
+                                Refine Your Agent Design
                               </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => setRefineExpanded(false)}
-                            style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              padding: 4, borderRadius: 6, display: 'flex',
-                              color: '#A0AEC0', transition: 'color 0.15s',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#4A5568')}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                        <p style={{
-                          fontSize: 13, color: '#718096', lineHeight: 1.6,
-                          margin: '0 0 18px', fontFamily: FONT,
-                        }}>
-                          {questions.length > 0
-                            ? "Answer any of these to add context and get a more targeted agent design. You don't need to answer all of them — even one helps."
-                            : 'Add any additional context below to refine your agent design.'}
-                        </p>
-
-                        {/* Questions */}
-                        {questions.map((question, i) => (
-                          <div key={i} style={{ marginBottom: 16 }}>
-                            <label style={{
-                              display: 'block',
-                              fontSize: 13, fontWeight: 600, color: '#2D3748',
-                              marginBottom: 6, fontFamily: FONT,
-                            }}>
-                              {question}
-                            </label>
-                            <input
-                              type="text"
-                              value={refinementAnswers[i] || ''}
-                              onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
-                              placeholder="Your answer…"
+                              {refinementCount > 0 && (
+                                <div style={{
+                                  fontSize: 11, fontWeight: 600,
+                                  background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                                  borderRadius: 20, padding: '2px 10px', fontFamily: FONT,
+                                }}>
+                                  Refinement #{refinementCount}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setRefineExpanded(false)}
                               style={{
-                                width: '100%',
-                                border: '1px solid #E2E8F0',
-                                borderRadius: 10,
-                                padding: '10px 14px',
-                                fontSize: 13,
-                                fontFamily: FONT,
-                                color: '#1A202C',
-                                outline: 'none',
-                                boxSizing: 'border-box',
-                                transition: 'border-color 0.15s',
-                                background: '#FFFFFF',
+                                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                                color: '#A0AEC0', display: 'flex', alignItems: 'center',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#4A5568'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = '#A0AEC0'; }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
+                            {questions.length > 0
+                              ? "Answer any of these to add context and get a more targeted agent design. You don't need to answer all of them — even one helps."
+                              : 'Add any additional context below to refine your agent design.'}
+                          </p>
+
+                          {questions.map((question: string, i: number) => (
+                            <div key={i} style={{ marginBottom: 16 }}>
+                              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                                {question}
+                              </label>
+                              <input
+                                type="text"
+                                value={refinementAnswers[i] || ''}
+                                onChange={e => setRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                                placeholder="Your answer…"
+                                style={{
+                                  width: '100%', border: '1px solid #E2E8F0', borderRadius: 10,
+                                  padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C',
+                                  outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+                                  background: '#FFFFFF',
+                                }}
+                                onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                                onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                              />
+                            </div>
+                          ))}
+
+                          <div style={{ marginBottom: 18 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                              Anything else to add?
+                            </label>
+                            <textarea
+                              value={additionalContext}
+                              onChange={e => setAdditionalContext(e.target.value)}
+                              placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                              style={{
+                                width: '100%', minHeight: 60, resize: 'none',
+                                border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px',
+                                fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none',
+                                boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+                                background: '#FFFFFF', lineHeight: 1.5,
                               }}
                               onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
                               onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
                             />
                           </div>
-                        ))}
 
-                        {/* Open-ended additional context */}
-                        <div style={{ marginBottom: 18 }}>
-                          <label style={{
-                            display: 'block',
-                            fontSize: 13, fontWeight: 600, color: '#2D3748',
-                            marginBottom: 6, fontFamily: FONT,
-                          }}>
-                            Anything else to add?
-                          </label>
-                          <textarea
-                            value={additionalContext}
-                            onChange={e => setAdditionalContext(e.target.value)}
-                            placeholder="Any additional requirements, constraints, or context you'd like to include…"
-                            style={{
-                              width: '100%',
-                              minHeight: 60,
-                              resize: 'none',
-                              border: '1px solid #E2E8F0',
-                              borderRadius: 10,
-                              padding: '10px 14px',
-                              fontSize: 13,
-                              fontFamily: FONT,
-                              color: '#1A202C',
-                              outline: 'none',
-                              boxSizing: 'border-box',
-                              transition: 'border-color 0.15s',
-                              background: '#FFFFFF',
-                              lineHeight: 1.5,
-                            }}
-                            onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
-                            onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                          <ActionBtn
+                            label={isLoading ? 'Refining…' : 'Refine Agent Design'}
+                            onClick={handleRefine}
+                            primary
+                            disabled={!hasRefinementInput || isLoading}
+                            iconAfter={isLoading ? (
+                              <div style={{
+                                width: 13, height: 13, border: '2px solid #FFFFFF40',
+                                borderTopColor: '#FFFFFF', borderRadius: '50%',
+                                animation: 'ppSpin 0.6s linear infinite',
+                              }} />
+                            ) : (
+                              <ArrowRight size={13} />
+                            )}
                           />
                         </div>
-
-                        {/* Refine button */}
-                        <ActionBtn
-                          icon={isLoading ? (
-                            <div style={{
-                              width: 13, height: 13, border: '2px solid #FFFFFF40',
-                              borderTopColor: '#FFFFFF', borderRadius: '50%',
-                              animation: 'ppSpin 0.6s linear infinite',
-                            }} />
-                          ) : (
-                            <ArrowRight size={13} />
-                          )}
-                          label={isLoading ? 'Refining…' : 'Refine Agent Design'}
-                          onClick={handleRefine}
-                          primary
-                          disabled={!hasRefinementInput || isLoading}
-                        />
                       </div>
                     )}
                   </div>
                 );
               })()}
 
-              {/* Bottom navigation row (per PRD §4.2) */}
+              {/* Bottom navigation */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, marginTop: 20,
-                flexWrap: 'wrap',
+                display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, flexWrap: 'wrap',
               }}>
+                <ActionBtn
+                  icon={<ArrowRight size={13} style={{ transform: 'rotate(180deg)' }} />}
+                  label="Back to Step 1"
+                  onClick={() => {
+                    setResult(null);
+                    setVisibleBlocks(0);
+                    setStep2Approved(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+                <ActionBtn
+                  label="Approve Prompt"
+                  onClick={() => {
+                    setStep2Approved(true);
+                    setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                  }}
+                  iconAfter={<ArrowRight size={13} />}
+                  primary
+                />
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
@@ -1365,6 +1392,602 @@ const AppAgentBuilder: React.FC = () => {
         </StepCard>
       </div>
 
+      {/* ═══ Step 3 — Choose Your Platform ═══ */}
+      <StepConnector />
+      <div ref={step3Ref} style={step2Approved ? { animation: 'ppFadeIn 0.3s ease both' } : undefined}>
+        <StepCard
+          stepNumber={3}
+          title="Choose your platform"
+          subtitle="Select where you want to deploy this agent"
+          done={step3Done}
+          collapsed={step3Done}
+          locked={!step2Approved}
+          lockedMessage="Complete Step 2 to choose your platform"
+        >
+              {/* Platform selector — 2×3 grid */}
+              <div style={{ marginBottom: 8 }}>
+                <p style={{
+                  fontSize: 14, fontWeight: 600, color: '#1A202C',
+                  margin: '0 0 4px 0', fontFamily: FONT,
+                }}>
+                  Where will you deploy this agent?
+                </p>
+                <p style={{
+                  fontSize: 13, color: '#718096', margin: '0 0 16px 0',
+                  fontFamily: FONT, lineHeight: 1.5,
+                }}>
+                  We'll tailor the setup instructions to your chosen platform.
+                </p>
+
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 12, marginBottom: 20,
+                }}>
+                  {AGENT_PLATFORMS.map(platform => {
+                    const isSelected = selectedPlatform === platform.id;
+                    return (
+                      <button
+                        key={platform.id}
+                        onClick={() => setSelectedPlatform(platform.id)}
+                        style={{
+                          padding: '14px 16px',
+                          backgroundColor: isSelected ? '#FFFDF5' : '#FFFFFF',
+                          border: isSelected ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
+                          borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                          fontFamily: FONT, transition: 'border-color 0.15s, background-color 0.15s',
+                        }}
+                      >
+                        <div style={{ fontSize: 18, marginBottom: 4 }}>{platform.icon}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 2, fontFamily: FONT }}>
+                          {platform.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#A0AEC0', fontFamily: FONT }}>{platform.description}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <ActionBtn
+                  label={setupLoading ? 'Generating…' : 'Generate Build Plan'}
+                  onClick={handleGenerateSetupGuide}
+                  primary
+                  disabled={!selectedPlatform || setupLoading}
+                  iconAfter={setupLoading ? (
+                    <div style={{
+                      width: 13, height: 13, border: '2px solid #FFFFFF40',
+                      borderTopColor: '#FFFFFF', borderRadius: '50%',
+                      animation: 'ppSpin 0.6s linear infinite',
+                    }} />
+                  ) : (
+                    <ArrowRight size={13} />
+                  )}
+                />
+              </div>
+        </StepCard>
+      </div>
+
+      {/* ═══ Step 4 — Download your Build Plan (per BUILD-GUIDE-OUTPUT-STANDARD) ═══ */}
+      <StepConnector />
+      <div ref={step4Ref} style={step3Done ? { animation: 'ppFadeIn 0.3s ease both' } : undefined}>
+        <StepCard
+          stepNumber={4}
+          title="Download your Build Plan"
+          subtitle="Your complete, platform-specific deployment guide."
+          done={step4Done}
+          collapsed={false}
+          locked={!setupGuide && !setupLoading}
+          lockedMessage="Complete Step 3 to generate your Build Plan"
+        >
+              {/* §2.1 Loading State */}
+              {setupLoading && (
+                <ProcessingProgress
+                  steps={SETUP_LOADING_STEPS}
+                  currentStep={setupLoadingStep}
+                  header="Generating your build plan…"
+                  subtext={`Tailoring instructions for ${AGENT_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform'}`}
+                />
+              )}
+
+              {/* §2.2–2.7 Generated Output */}
+              {setupGuide && !setupLoading && (() => {
+                const platformLabel = AGENT_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform';
+                const fullBuildPlanMd = buildFullBuildPlan();
+                const hasBuildPlanRefinementInput = Object.values(buildPlanRefinementAnswers).some(a => (a as string).trim()) || buildPlanAdditionalContext.trim();
+                const buildPlanRefinementQuestions = [
+                  `Are there specific error scenarios for this ${platformLabel} deployment you want the guide to address?`,
+                  'Should any steps include alternative approaches or fallback options?',
+                  'Are there team-specific naming conventions or folder structures to follow?',
+                  `What level of detail do you need for the ${platformLabel} configuration — beginner-friendly or advanced?`,
+                  'Are there any compliance or security requirements to document?',
+                ];
+
+                return (
+                  <>
+                    {/* §2.2 Next Step Banner */}
+                    <div style={{
+                      opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
+                      transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                      transition: 'opacity 0.3s, transform 0.3s',
+                    }}>
+                      <NextStepBanner
+                        accentColor={LEVEL_ACCENT}
+                        accentDark={LEVEL_ACCENT_DARK}
+                        text={`Download your Build Plan and follow the steps in ${platformLabel}. Use the system prompt from Step 2 and deploy it step by step.`}
+                      />
+                    </div>
+
+                    {/* §2.3 Top Action Row */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      gap: 8, marginBottom: 14, flexWrap: 'wrap',
+                      opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
+                      transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                      transition: 'opacity 0.3s, transform 0.3s',
+                    }}>
+                      {/* View toggle */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{
+                          display: 'inline-flex', background: '#F7FAFC', borderRadius: 10,
+                          border: '1px solid #E2E8F0', overflow: 'hidden',
+                        }}>
+                          <ToggleBtn
+                            icon={<Eye size={13} />}
+                            label="Cards"
+                            active={buildPlanViewMode === 'cards'}
+                            onClick={() => setBuildPlanViewMode('cards')}
+                          />
+                          <ToggleBtn
+                            icon={<Code size={13} />}
+                            label="Markdown"
+                            active={buildPlanViewMode === 'markdown'}
+                            onClick={() => setBuildPlanViewMode('markdown')}
+                            highlight
+                          />
+                        </div>
+                        <InfoTooltip text="Markdown view shows the raw Build Plan ready to paste into any tool or docs system. Cards view provides an interactive breakdown of each section." />
+                      </div>
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <ActionBtn
+                          icon={buildPlanCopied ? <Check size={13} /> : <Copy size={13} />}
+                          label={buildPlanCopied ? 'Copied!' : 'Copy Build Plan'}
+                          onClick={handleCopyBuildPlan}
+                          primary
+                        />
+                        <ActionBtn
+                          icon={<Download size={13} />}
+                          label="Download (.md)"
+                          onClick={handleDownloadBuildPlan}
+                        />
+                        <ActionBtn
+                          icon={<BookOpen size={13} />}
+                          label={buildPlanSaved ? 'Saved!' : 'Save to Library'}
+                          onClick={handleSaveBuildPlan}
+                          primary
+                          disabled={buildPlanSaved}
+                        />
+                      </div>
+                    </div>
+
+                    {/* §2.4 Build Plan Content */}
+                    <div style={{
+                      opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
+                      transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                      transition: 'opacity 0.3s, transform 0.3s',
+                    }}>
+                      {buildPlanViewMode === 'markdown' ? (
+                        /* §2.4b Markdown View */
+                        <div style={{
+                          background: '#1A202C', borderRadius: 12, padding: '22px 24px',
+                          fontFamily: MONO, fontSize: 13, lineHeight: 1.8, color: '#E2E8F0',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                          maxHeight: 600, overflow: 'auto', marginBottom: 16,
+                        }}>
+                          {fullBuildPlanMd}
+                        </div>
+                      ) : (
+                        /* §2.4a Cards View */
+                        <div style={{
+                          background: '#FFFFFF', border: '1px solid #E2E8F0',
+                          borderRadius: 16, padding: '28px 32px', marginBottom: 16,
+                        }}>
+                          {/* Header row */}
+                          <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            marginBottom: 16,
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <FileText size={20} color={LEVEL_ACCENT_DARK} />
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                                textTransform: 'uppercase', letterSpacing: 2,
+                              }}>
+                                BUILD PLAN
+                              </span>
+                            </div>
+                            <span style={{
+                              background: `${LEVEL_ACCENT}30`, color: LEVEL_ACCENT_DARK,
+                              border: `1px solid ${LEVEL_ACCENT}88`, borderRadius: 99,
+                              padding: '3px 12px', fontSize: 11, fontWeight: 700,
+                            }}>
+                              {platformLabel}
+                            </span>
+                          </div>
+
+                          {/* Title & overview */}
+                          <h2 style={{
+                            fontSize: 22, fontWeight: 800, color: '#1A202C',
+                            margin: '0 0 12px 0', fontFamily: FONT,
+                          }}>
+                            {taskDescription.slice(0, 80)}{taskDescription.length > 80 ? '…' : ''}
+                          </h2>
+                          <p style={{
+                            fontSize: 14, color: '#4A5568', lineHeight: 1.7,
+                            margin: '0 0 20px 0', fontFamily: FONT,
+                          }}>
+                            Step-by-step instructions to deploy your agent on {platformLabel}. Follow each step in order, then use the system prompt from Step 2.
+                          </p>
+
+                          {/* Stat pills */}
+                          <div style={{
+                            display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24,
+                          }}>
+                            {[
+                              `${setupGuide.steps.length} steps`,
+                              platformLabel,
+                              setupGuide.tips.length > 0 ? `${setupGuide.tips.length} pro tips` : null,
+                            ].filter(Boolean).map((pill, i) => (
+                              <span key={i} style={{
+                                background: '#F7FAFC', border: '1px solid #E2E8F0',
+                                borderRadius: 99, padding: '4px 12px',
+                                fontSize: 12, fontWeight: 600, color: '#4A5568',
+                              }}>
+                                {pill}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Steps section */}
+                          <div style={{ marginBottom: 24 }}>
+                            <div style={{
+                              fontSize: 14, fontWeight: 700, color: '#1A202C',
+                              marginBottom: 10, fontFamily: FONT,
+                            }}>
+                              {setupGuide.steps.length} steps in this build plan
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {setupGuide.steps.map((step: { title: string; instruction: string }, i: number) => {
+                                const isExpanded = expandedBuildSteps.has(i);
+                                return (
+                                  <div key={i}>
+                                    {/* Step row (clickable) */}
+                                    <button
+                                      onClick={() => setExpandedBuildSteps(prev => {
+                                        const next = new Set(prev);
+                                        next.has(i) ? next.delete(i) : next.add(i);
+                                        return next;
+                                      })}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        width: '100%', textAlign: 'left',
+                                        padding: '10px 14px', border: 'none', cursor: 'pointer',
+                                        borderRadius: isExpanded ? '10px 10px 0 0' : 10,
+                                        background: isExpanded ? `${LEVEL_ACCENT}18` : '#F7FAFC',
+                                        transition: 'background 0.15s',
+                                        fontFamily: FONT,
+                                      }}
+                                    >
+                                      <div style={{
+                                        width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                                        background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 11, fontWeight: 700,
+                                      }}>
+                                        {i + 1}
+                                      </div>
+                                      <span style={{
+                                        flex: 1, fontSize: 13, fontWeight: 600, color: '#1A202C',
+                                      }}>
+                                        {step.title}
+                                      </span>
+                                      {isExpanded
+                                        ? <ChevronUp size={16} color="#718096" />
+                                        : <ChevronDown size={16} color="#718096" />
+                                      }
+                                    </button>
+
+                                    {/* Expanded detail panel */}
+                                    {isExpanded && (
+                                      <div style={{
+                                        padding: '16px 18px',
+                                        background: `${LEVEL_ACCENT}08`,
+                                        border: `1px solid ${LEVEL_ACCENT}44`,
+                                        borderTop: 'none',
+                                        borderRadius: '0 0 10px 10px',
+                                      }}>
+                                        <p style={{
+                                          fontSize: 13, color: '#4A5568', lineHeight: 1.7,
+                                          margin: 0, fontFamily: FONT, whiteSpace: 'pre-wrap',
+                                        }}>
+                                          {step.instruction}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Pro Tips section */}
+                          {setupGuide.tips.length > 0 && (
+                            <div style={{ marginBottom: 24 }}>
+                              <div style={{
+                                fontSize: 14, fontWeight: 700, color: '#1A202C',
+                                marginBottom: 10, fontFamily: FONT,
+                                display: 'flex', alignItems: 'center', gap: 8,
+                              }}>
+                                <Sparkles size={16} color={LEVEL_ACCENT_DARK} />
+                                Pro Tips
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {setupGuide.tips.map((tip: string, i: number) => (
+                                  <div key={i} style={{
+                                    display: 'flex', gap: 10, alignItems: 'flex-start',
+                                    padding: '10px 14px', borderRadius: 10,
+                                    background: `${LEVEL_ACCENT}12`,
+                                    border: `1px solid ${LEVEL_ACCENT}44`,
+                                  }}>
+                                    <div style={{
+                                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                                      background: `${LEVEL_ACCENT}40`, color: LEVEL_ACCENT_DARK,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      fontSize: 10, fontWeight: 800, marginTop: 1,
+                                    }}>
+                                      {'\u2022'}
+                                    </div>
+                                    <div style={{ flex: 1, fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>
+                                      {tip}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Limitations note */}
+                          {setupGuide.limitations && (
+                            <div style={{
+                              fontSize: 12, color: '#A0AEC0', lineHeight: 1.5,
+                              fontFamily: FONT, fontStyle: 'italic', padding: '0 4px',
+                            }}>
+                              Note: {setupGuide.limitations}
+                            </div>
+                          )}
+
+                          {/* "Want the full guide?" CTA */}
+                          <div style={{
+                            background: '#F7FAFC', border: '1px solid #E2E8F0',
+                            borderRadius: 10, padding: '16px 20px', marginTop: 20,
+                            display: 'flex', alignItems: 'center', gap: 12,
+                          }}>
+                            <Download size={18} color="#718096" />
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
+                                Want the full guide?
+                              </div>
+                              <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: FONT }}>
+                                Download as a Markdown or Word document using the buttons below.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* §2.5 Output Actions Panel */}
+                    <div style={{
+                      opacity: buildPlanVisibleBlocks >= 2 ? 1 : 0,
+                      transform: buildPlanVisibleBlocks >= 2 ? 'translateY(0)' : 'translateY(8px)',
+                      transition: 'opacity 0.3s, transform 0.3s',
+                    }}>
+                      <OutputActionsPanel
+                        workflowName={`Agent: ${taskDescription.slice(0, 50)}`}
+                        fullMarkdown={fullBuildPlanMd}
+                        onSaveToArtefacts={handleSaveBuildPlan}
+                        isSaved={buildPlanSaved}
+                      />
+                    </div>
+
+                    {/* §2.6 Refinement Section */}
+                    <div style={{
+                      opacity: buildPlanVisibleBlocks >= 3 ? 1 : 0,
+                      transform: buildPlanVisibleBlocks >= 3 ? 'translateY(0)' : 'translateY(8px)',
+                      transition: 'opacity 0.3s, transform 0.3s',
+                    }}>
+                      <div style={{
+                        background: '#F7FAFC', borderRadius: 14,
+                        border: '1px solid #E2E8F0', padding: '20px 24px',
+                        marginTop: 20,
+                      }}>
+                        {/* Caveat text */}
+                        <div style={{ display: 'flex', gap: 10, marginBottom: buildPlanRefineExpanded ? 20 : 0 }}>
+                          <Info size={16} color="#A0AEC0" style={{ flexShrink: 0, marginTop: 2 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                              This Build Plan is a strong starting point, but every environment is different.
+                              Test each step in your actual {platformLabel} workspace, and adjust field
+                              mappings or credentials as needed.
+                            </div>
+
+                            {!buildPlanRefineExpanded && (
+                              <button
+                                onClick={() => setBuildPlanRefineExpanded(true)}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                                  background: 'none', border: 'none', padding: '8px 0 0',
+                                  fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                                  cursor: 'pointer', fontFamily: FONT,
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; }}
+                                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                              >
+                                Would you like to refine this Build Plan further?
+                                <ChevronDown size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded refinement */}
+                        {buildPlanRefineExpanded && (
+                          <div style={{ animation: 'ppSlideDown 0.3s ease-out' }}>
+                            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <div style={{
+                                  fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
+                                  textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontFamily: FONT,
+                                }}>
+                                  Refine Your Build Plan
+                                </div>
+                                <button
+                                  onClick={() => setBuildPlanRefineExpanded(false)}
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                                    color: '#A0AEC0', display: 'flex', alignItems: 'center',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = '#4A5568'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = '#A0AEC0'; }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
+                                Answer any of these to add context and get a more targeted Build Plan. You don't need to answer all.
+                              </p>
+
+                              {buildPlanRefinementQuestions.map((question, i) => (
+                                <div key={i} style={{ marginBottom: 16 }}>
+                                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                                    {question}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={buildPlanRefinementAnswers[i] || ''}
+                                    onChange={e => setBuildPlanRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                                    placeholder="Your answer…"
+                                    style={{
+                                      width: '100%', border: '1px solid #E2E8F0', borderRadius: 10,
+                                      padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C',
+                                      outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+                                      background: '#FFFFFF',
+                                    }}
+                                    onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                                    onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                                  />
+                                </div>
+                              ))}
+
+                              <div style={{ marginBottom: 18 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                                  Anything else to add?
+                                </label>
+                                <textarea
+                                  value={buildPlanAdditionalContext}
+                                  onChange={e => setBuildPlanAdditionalContext(e.target.value)}
+                                  placeholder="Any additional requirements, constraints, or context…"
+                                  style={{
+                                    width: '100%', minHeight: 60, resize: 'none',
+                                    border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px',
+                                    fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none',
+                                    boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+                                    background: '#FFFFFF', lineHeight: 1.5,
+                                  }}
+                                  onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                                  onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                                />
+                              </div>
+
+                              <ActionBtn
+                                label={setupLoading ? 'Regenerating…' : 'Regenerate Build Plan'}
+                                onClick={async () => {
+                                  // Re-generate with refinement context appended to the task
+                                  if (!hasBuildPlanRefinementInput) return;
+                                  const refinementParts = buildPlanRefinementQuestions
+                                    .map((q, idx) => {
+                                      const a = buildPlanRefinementAnswers[idx]?.trim();
+                                      return a ? `Q: ${q}\nA: ${a}` : null;
+                                    })
+                                    .filter(Boolean)
+                                    .join('\n\n');
+                                  const extra = buildPlanAdditionalContext.trim();
+                                  const refinementNote = [refinementParts, extra ? `Additional: ${extra}` : ''].filter(Boolean).join('\n\n');
+
+                                  const guide = await generateSetupGuide({
+                                    platform: platformLabel,
+                                    system_prompt: result!.system_prompt,
+                                    output_format: result!.output_format,
+                                    task_description: `${taskDescription}\n\n[REFINEMENT CONTEXT]\n${refinementNote}`,
+                                  });
+                                  if (guide) {
+                                    setSetupGuide(guide);
+                                    setBuildPlanRefinementAnswers({});
+                                    setBuildPlanAdditionalContext('');
+                                    setBuildPlanRefineExpanded(false);
+                                    setBuildPlanSaved(false);
+                                    setBuildPlanCopied(false);
+                                  }
+                                }}
+                                primary
+                                disabled={!hasBuildPlanRefinementInput || setupLoading}
+                                iconAfter={setupLoading ? (
+                                  <div style={{
+                                    width: 13, height: 13, border: '2px solid #FFFFFF40',
+                                    borderTopColor: '#FFFFFF', borderRadius: '50%',
+                                    animation: 'ppSpin 0.6s linear infinite',
+                                  }} />
+                                ) : (
+                                  <ArrowRight size={13} />
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* §2.7 Bottom Navigation Row */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap',
+                    }}>
+                      <ActionBtn
+                        icon={<ArrowLeft size={14} />}
+                        label="Back to Step 3"
+                        onClick={() => {
+                          setSetupGuide(null);
+                          setBuildPlanVisibleBlocks(0);
+                          setBuildPlanViewMode('cards');
+                          setBuildPlanSaved(false);
+                          setBuildPlanCopied(false);
+                          setExpandedBuildSteps(new Set());
+                          setBuildPlanRefineExpanded(false);
+                          setBuildPlanRefinementAnswers({});
+                          setBuildPlanAdditionalContext('');
+                          setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                        }}
+                      />
+                      <ActionBtn
+                        icon={<RotateCcw size={14} />}
+                        label="Start Over"
+                        onClick={handleReset}
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+        </StepCard>
+      </div>
       {/* Toast */}
       {toastMessage && (
         <div style={{
@@ -1382,7 +2005,7 @@ const AppAgentBuilder: React.FC = () => {
   );
 };
 
-/* ─── Output Section Card ─── */
+/* ─── Output Section Card (collapsible per §4.7) ─── */
 const OutputSection: React.FC<{
   section: typeof DESIGN_SECTIONS[number];
   index: number;
@@ -1390,8 +2013,11 @@ const OutputSection: React.FC<{
   copiedSection: string | null;
   onCopy: (key: string, label: string, content: string) => void;
   copyContent: string;
+  expanded: boolean;
+  onToggle: () => void;
+  summary?: string;
   children: React.ReactNode;
-}> = ({ section, index, visible, copiedSection, onCopy, copyContent, children }) => {
+}> = ({ section, index, visible, copiedSection, onCopy, copyContent, expanded, onToggle, summary, children }) => {
   const isSectionCopied = copiedSection === section.key;
   return (
     <div style={{
@@ -1402,37 +2028,61 @@ const OutputSection: React.FC<{
       transform: visible ? 'translateY(0)' : 'translateY(8px)',
       transition: 'opacity 0.3s ease, transform 0.3s ease',
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 14,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 15 }}>{section.icon}</span>
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: '#1A202C',
-            textTransform: 'uppercase', letterSpacing: '0.04em',
-          }}>
-            {section.label}
-          </span>
-          <span style={{ fontSize: 11, color: '#A0AEC0' }}>
-            {index + 1}/4
-          </span>
-        </div>
-        <button
-          onClick={() => onCopy(section.key, section.label, copyContent)}
+      {/* Header row — clickable to expand/collapse */}
+      <button
+        onClick={onToggle}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: 15, flexShrink: 0 }}>{section.icon}</span>
+        <span style={{
+          fontSize: 12, fontWeight: 700, color: '#1A202C',
+          textTransform: 'uppercase', letterSpacing: '0.04em',
+          fontFamily: "'DM Sans', sans-serif", flex: 1,
+        }}>
+          {section.label}
+        </span>
+        <span style={{ fontSize: 11, color: '#A0AEC0' }}>
+          {index + 1}/4
+        </span>
+        <span
+          onClick={e => { e.stopPropagation(); onCopy(section.key, section.label, copyContent); }}
           style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
-            padding: '2px 6px', borderRadius: 6, transition: 'color 0.15s',
+            color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
+            fontSize: 11, padding: '2px 6px', flexShrink: 0,
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
-          onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
         >
           {isSectionCopied ? <Check size={11} /> : <Copy size={11} />}
           {isSectionCopied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-      {children}
+        </span>
+        <ChevronDown size={14} color="#A0AEC0" style={{
+          flexShrink: 0,
+          transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+        }} />
+      </button>
+
+      {/* Summary — shown when collapsed */}
+      {!expanded && summary && (
+        <div style={{
+          fontSize: 13, color: '#718096', lineHeight: 1.5,
+          fontFamily: "'DM Sans', sans-serif", marginTop: 6,
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+        }}>
+          {summary}
+        </div>
+      )}
+
+      {/* Expanded content */}
+      {expanded && (
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #EDF2F7', animation: 'ppSlideDown 0.2s ease both' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 };
@@ -1444,22 +2094,28 @@ const StepCard: React.FC<{
   subtitle: string;
   done: boolean;
   collapsed: boolean;
+  locked?: boolean;
+  lockedMessage?: string;
   children: React.ReactNode;
-}> = ({ stepNumber, title, subtitle, done, collapsed, children }) => (
+}> = ({ stepNumber, title, subtitle, done, collapsed, locked, lockedMessage, children }) => (
   <div style={{
-    background: '#FFFFFF', borderRadius: 16,
+    background: locked ? '#FAFBFC' : '#FFFFFF', borderRadius: 16,
     border: `1px solid ${done ? `${LEVEL_ACCENT}88` : '#E2E8F0'}`,
-    padding: collapsed ? '16px 24px' : '24px 28px',
+    padding: (collapsed || locked) ? '16px 24px' : '24px 28px',
     transition: 'padding 0.2s ease, border-color 0.2s ease',
+    opacity: locked ? 0.7 : 1,
   }}>
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      marginBottom: collapsed ? 0 : 20,
+      marginBottom: (collapsed || locked) ? 0 : 20,
     }}>
-      <StepBadge number={stepNumber} done={done} />
+      <StepBadge number={stepNumber} done={done} locked={locked} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>{title}</div>
-        {!collapsed && (
+        <div style={{ fontSize: 16, fontWeight: 700, color: locked ? '#A0AEC0' : '#1A202C' }}>{title}</div>
+        {locked && lockedMessage && (
+          <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: FONT }}>{lockedMessage}</div>
+        )}
+        {!collapsed && !locked && (
           <div style={{ fontSize: 13, color: '#718096', marginTop: 2 }}>{subtitle}</div>
         )}
       </div>
@@ -1472,19 +2128,19 @@ const StepCard: React.FC<{
         </div>
       )}
     </div>
-    {!collapsed && children}
+    {!collapsed && !locked && children}
   </div>
 );
 
 /* ── Step badge circle — uses Level 2 accent color ── */
-const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
+const StepBadge: React.FC<{ number: number; done: boolean; locked?: boolean }> = ({ number, done, locked }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-    background: done ? LEVEL_ACCENT : '#F7FAFC',
+    background: done ? LEVEL_ACCENT : locked ? '#EDF2F7' : '#F7FAFC',
     border: done ? 'none' : '2px solid #E2E8F0',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 13, fontWeight: 800,
-    color: done ? LEVEL_ACCENT_DARK : '#718096',
+    color: done ? LEVEL_ACCENT_DARK : locked ? '#CBD5E0' : '#718096',
     transition: 'background 0.2s, color 0.2s',
   }}>
     {done ? <Check size={14} /> : number}
@@ -1575,32 +2231,6 @@ const ToolOverview: React.FC<{
   </div>
 );
 
-/* ── Step Placeholder ── */
-const StepPlaceholder: React.FC<{
-  icon: React.ReactNode;
-  message: string;
-  detail: string;
-}> = ({ icon, message, detail }) => (
-  <div style={{
-    background: '#F7FAFC', borderRadius: 12, border: '1px dashed #E2E8F0',
-    padding: '24px 28px', textAlign: 'center',
-  }}>
-    <div style={{
-      width: 36, height: 36, borderRadius: '50%', background: '#EDF2F7',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      marginBottom: 10,
-    }}>
-      {icon}
-    </div>
-    <div style={{ fontSize: 14, fontWeight: 700, color: '#4A5568', marginBottom: 6 }}>
-      {message}
-    </div>
-    <div style={{ fontSize: 13, color: '#A0AEC0', lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
-      {detail}
-    </div>
-  </div>
-);
-
 /* ── Toggle Button (Cards / Markdown) ── */
 const ToggleBtn: React.FC<{
   icon: React.ReactNode;
@@ -1667,28 +2297,28 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
 
 /* ── Action Button ── */
 const ActionBtn: React.FC<{
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   label: string;
   onClick: () => void;
   primary?: boolean;
-  accent?: boolean;
   disabled?: boolean;
-}> = ({ icon, label, onClick, primary, accent, disabled }) => {
-  const bg = primary ? '#38B2AC' : accent ? '#5A67D8' : '#FFFFFF';
-  const color = primary || accent ? '#FFFFFF' : '#4A5568';
-  const border = primary || accent ? 'none' : '1px solid #E2E8F0';
+  iconAfter?: React.ReactNode;
+}> = ({ icon, label, onClick, primary, disabled, iconAfter }) => {
+  const bg = primary ? '#38B2AC' : '#FFFFFF';
+  const color = primary ? '#FFFFFF' : '#4A5568';
+  const border = primary ? 'none' : '1px solid #E2E8F0';
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 5,
+        display: 'inline-flex', alignItems: 'center', gap: 6,
         background: disabled ? '#E2E8F0' : bg,
         color: disabled ? '#A0AEC0' : color,
         border,
         borderRadius: 24,
-        padding: '8px 16px',
-        fontSize: 12,
+        padding: '9px 18px',
+        fontSize: 13,
         fontWeight: 600,
         fontFamily: FONT,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -1698,7 +2328,7 @@ const ActionBtn: React.FC<{
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.opacity = '0.85'; }}
       onMouseLeave={e => { if (!disabled) e.currentTarget.style.opacity = '1'; }}
     >
-      {icon} {label}
+      {icon} {label} {iconAfter}
     </button>
   );
 };

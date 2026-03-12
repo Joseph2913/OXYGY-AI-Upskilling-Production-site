@@ -141,6 +141,12 @@ export const PRD_SECTIONS = [
     example: '1. App loads in <2s. 2. All CRUD operations work. 3. Responsive on mobile. 4. npm test passes. 5. npm run build succeeds.',
   },
   {
+    key: 'design_tokens',
+    title: 'Design Tokens & Visual Reference',
+    description: 'Concrete design token specification — color palette, typography, spacing, shadows, and component-level style notes — formatted as CSS variables ready to paste into code.',
+    example: ':root { --color-primary: #38B2AC; --color-secondary: #5A67D8; --font-family: "DM Sans"; --radius-card: 16px; --shadow-card: 0 2px 8px rgba(0,0,0,0.08); }',
+  },
+  {
     key: 'implementation_plan',
     title: 'Implementation Phases',
     description: 'Ordered build phases using vertical slices — each phase delivers a working end-to-end feature (DB to UI), not a horizontal layer. Designed for incremental prompting.',
@@ -148,16 +154,36 @@ export const PRD_SECTIONS = [
   },
 ];
 
-// ─── "Why Mockup First?" tooltip content ───
-export const WHY_MOCKUP_TOOLTIP = 'Generating a visual mockup before writing code is a powerful shortcut. Vibe coding tools like Lovable, Bolt.new, V0, and Cursor can accept mockup images as input and recreate layouts in code far more accurately than text descriptions alone. A picture eliminates ambiguity, iteration is cheaper at the image stage, and the structured PRD can serve as the specification for your actual build.';
+// ─── Vibe-Coding Platform Options (Step 3) ───
+export const VIBE_CODING_PLATFORMS = [
+  { id: 'cursor', label: 'Cursor', icon: '⚡', description: 'AI-powered code editor with inline generation' },
+  { id: 'lovable', label: 'Lovable', icon: '💜', description: 'Full-stack app builder from a prompt' },
+  { id: 'bolt', label: 'Bolt.new', icon: '⚙️', description: 'StackBlitz-powered instant app scaffolding' },
+  { id: 'claude-code', label: 'Claude Code', icon: '🧠', description: "Anthropic's agentic CLI coding tool" },
+  { id: 'codex', label: 'Codex (OpenAI)', icon: '🤖', description: "OpenAI's cloud coding agent" },
+  { id: 'google-ai-studio', label: 'Google AI Studio', icon: '✨', description: 'Build with Gemini models directly' },
+  { id: 'v0', label: 'V0 (Vercel)', icon: '🔷', description: 'AI-generated React/Next.js components' },
+  { id: 'replit', label: 'Replit Agent', icon: '🔁', description: 'Build and deploy from a prompt' },
+  { id: 'unsure', label: 'Not sure yet', icon: '🤔', description: 'Platform-agnostic guidance' },
+] as const;
 
-// ─── Inspiration Sites (with clickable links) ───
-export const INSPIRATION_SITES = [
-  { name: 'Dribbble', url: 'https://dribbble.com/search/web-app' },
-  { name: 'Behance', url: 'https://www.behance.net/search/projects?search=web+application+design' },
-  { name: 'Mobbin', url: 'https://mobbin.com/browse/web/apps' },
-  { name: 'Godly', url: 'https://godly.website' },
-  { name: 'Screenlane', url: 'https://screenlane.com' },
+export const BUILD_GUIDE_LOADING_STEPS = [
+  'Reading your PRD…',
+  'Mapping to platform capabilities…',
+  'Writing setup instructions…',
+  'Adding platform-specific tips…',
+  'Finalising build guide…',
 ];
 
-export const INSPIRATION_TOOLTIP_CONTENT = 'Browse the inspiration sites below for app and interface design ideas, then upload a screenshot to guide your mockup generation.';
+export const BUILD_GUIDE_STEP_DELAYS = [800, 1500, 3000, 4000, -1];
+
+// ─── Tooltips & Inspiration ───
+export const WHY_MOCKUP_TOOLTIP = 'A visual mockup gives your vibe-coding tool a concrete target. It can reference the layout, colours, and component structure — dramatically improving first-pass accuracy.';
+
+export const INSPIRATION_SITES = [
+  { label: 'Dribbble', url: 'https://dribbble.com/search/dashboard' },
+  { label: 'Behance', url: 'https://www.behance.net/search/projects?search=dashboard+ui' },
+  { label: 'Mobbin', url: 'https://mobbin.com/browse/web/apps' },
+];
+
+export const INSPIRATION_TOOLTIP_CONTENT = 'Browse these sites for dashboard design ideas. Save screenshots or links and reference them in your brief to help the AI match a specific visual direction.';

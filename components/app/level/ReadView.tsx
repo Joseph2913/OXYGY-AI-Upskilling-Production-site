@@ -1,37 +1,22 @@
 import React, { useState } from 'react';
 import { BookOpen, ExternalLink, MessageSquare } from 'lucide-react';
-
-const PLACEHOLDER_READINGS = [
-  {
-    source: 'Harvard Business Review',
-    title: 'How AI Is Changing the Way Professionals Work',
-    summary:
-      'An accessible overview of the practical impact of large language models on knowledge work. Covers real examples from consulting, strategy, and operations teams.',
-    readTime: '8 min read',
-  },
-  {
-    source: 'MIT Technology Review',
-    title: 'The Art of Prompting: What Makes an AI Assistant Actually Useful',
-    summary:
-      "A deep dive into the mechanics of effective AI interaction. Explains why specificity, context, and iteration matter more than people expect.",
-    readTime: '12 min read',
-  },
-];
+import { ArticleData } from '../../../data/topicContent';
 
 interface ReadViewProps {
+  articles: ArticleData[];
   accentColor: string;
   accentDark: string;
   onCompletePhase: () => void;
 }
 
-const ReadView: React.FC<ReadViewProps> = ({ accentColor, accentDark, onCompletePhase }) => {
+const ReadView: React.FC<ReadViewProps> = ({ articles, accentColor, accentDark, onCompletePhase }) => {
   const [readArticles, setReadArticles] = useState<Set<number>>(new Set());
 
   const markRead = (idx: number) => {
     setReadArticles((prev) => new Set(prev).add(idx));
   };
 
-  const allRead = readArticles.size >= PLACEHOLDER_READINGS.length;
+  const allRead = readArticles.size >= articles.length;
 
   return (
     <div>
@@ -58,14 +43,7 @@ const ReadView: React.FC<ReadViewProps> = ({ accentColor, accentDark, onComplete
         >
           <BookOpen size={20} color={accentColor} />
           <div>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: '#FFFFFF',
-                marginBottom: 2,
-              }}
-            >
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', marginBottom: 2 }}>
               Curated Reading
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
@@ -73,94 +51,53 @@ const ReadView: React.FC<ReadViewProps> = ({ accentColor, accentDark, onComplete
             </div>
           </div>
           <div style={{ marginLeft: 'auto', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-            {readArticles.size} of {PLACEHOLDER_READINGS.length} read
+            {readArticles.size} of {articles.length} read
           </div>
         </div>
 
         {/* Article cards */}
         <div style={{ padding: 24 }}>
           <div style={{ display: 'grid', gap: 16 }}>
-            {PLACEHOLDER_READINGS.map((reading, idx) => {
+            {articles.map((article, idx) => {
               const isRead = readArticles.has(idx);
               return (
                 <div
-                  key={idx}
+                  key={article.id}
                   style={{
                     borderRadius: 14,
-                    border: isRead
-                      ? `1px solid ${accentColor}66`
-                      : '1px solid #E2E8F0',
+                    border: isRead ? `1px solid ${accentColor}66` : '1px solid #E2E8F0',
                     background: isRead ? `${accentColor}08` : '#FFFFFF',
                     padding: '24px 28px',
                     transition: 'border-color 0.2s, background 0.2s',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                    }}
-                  >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: accentDark,
-                            background: `${accentColor}33`,
-                            padding: '3px 10px',
-                            borderRadius: 20,
-                          }}
-                        >
-                          {reading.source}
+                        <span style={{ fontSize: 10, fontWeight: 700, color: accentDark, background: `${accentColor}33`, padding: '3px 10px', borderRadius: 20 }}>
+                          {article.source}
                         </span>
-                        <span style={{ fontSize: 11, color: '#A0AEC0' }}>
-                          {reading.readTime}
-                        </span>
+                        <span style={{ fontSize: 11, color: '#A0AEC0' }}>{article.readTime}</span>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 17,
-                          fontWeight: 700,
-                          color: '#1A202C',
-                          marginBottom: 6,
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {reading.title}
+                      <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', marginBottom: 6, lineHeight: 1.3 }}>
+                        {article.title}
                       </div>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          color: '#718096',
-                          lineHeight: 1.7,
-                          marginBottom: 14,
-                        }}
-                      >
-                        {reading.summary}
+                      <div style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, marginBottom: 14 }}>
+                        {article.desc}
                       </div>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <a
-                          href="#"
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           onClick={(e) => {
-                            e.preventDefault();
+                            if (article.url === '#') e.preventDefault();
                             markRead(idx);
                           }}
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: accentDark,
-                            textDecoration: 'none',
-                            padding: '6px 14px',
-                            borderRadius: 8,
-                            background: `${accentColor}22`,
-                            transition: 'background 0.15s',
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            fontSize: 13, fontWeight: 600, color: accentDark, textDecoration: 'none',
+                            padding: '6px 14px', borderRadius: 8, background: `${accentColor}22`, transition: 'background 0.15s',
                           }}
                         >
                           <ExternalLink size={12} />
@@ -181,7 +118,7 @@ const ReadView: React.FC<ReadViewProps> = ({ accentColor, accentDark, onComplete
         </div>
       </div>
 
-      {/* Reflection block */}
+      {/* Reflection block — show per-article reflections if available, else generic */}
       <div
         style={{
           background: '#FFFFFF',
@@ -194,37 +131,27 @@ const ReadView: React.FC<ReadViewProps> = ({ accentColor, accentDark, onComplete
           alignItems: 'flex-start',
         }}
       >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            background: `${accentColor}22`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${accentColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <MessageSquare size={18} color={accentDark} />
         </div>
         <div>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: accentDark,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: 6,
-            }}
-          >
+          <div style={{ fontSize: 12, fontWeight: 700, color: accentDark, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             Reflection
           </div>
-          <div style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.7 }}>
-            Consider how the concepts in these articles connect to your current role. What's one
-            specific workflow where you could apply this thinking this week?
-          </div>
+          {articles.some((a) => a.reflection) ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {articles.filter((a) => a.reflection).map((a, i) => (
+                <div key={i} style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.7 }}>
+                  <span style={{ fontWeight: 600 }}>Article {i + 1}:</span> {a.reflection}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.7 }}>
+              Consider how the concepts in these articles connect to your current role. What's one
+              specific workflow where you could apply this thinking this week?
+            </div>
+          )}
         </div>
       </div>
 
@@ -257,7 +184,7 @@ const ReadView: React.FC<ReadViewProps> = ({ accentColor, accentDark, onComplete
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          {allRead ? 'Complete Reading →' : `Read all articles to continue (${readArticles.size}/${PLACEHOLDER_READINGS.length})`}
+          {allRead ? 'Complete Reading →' : `Read all articles to continue (${readArticles.size}/${articles.length})`}
         </button>
       </div>
     </div>

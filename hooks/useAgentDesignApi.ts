@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import type { AgentDesignResult } from '../types';
+import type { AgentDesignResult, AgentSetupGuide } from '../types';
 import { fetchWithRetry, getErrorMessage } from '../lib/fetchWithRetry';
 
 interface AgentDesignPayload {
@@ -7,8 +7,16 @@ interface AgentDesignPayload {
   input_data_description: string;
 }
 
+interface SetupGuidePayload {
+  platform: string;
+  system_prompt: string;
+  output_format: { human_readable: string; json_template: Record<string, unknown> };
+  task_description: string;
+}
+
 export function useAgentDesignApi() {
   const [isLoading, setIsLoading] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastCallRef = useRef(0);
 
@@ -73,5 +81,55 @@ export function useAgentDesignApi() {
     }
   };
 
-  return { designAgent, isLoading, error, clearError };
+  const generateSetupGuide = async (payload: SetupGuidePayload): Promise<AgentSetupGuide | null> => {
+    const now = Date.now();
+    if (now - lastCallRef.current < 8000) {
+      setError('Please wait a few seconds before trying again.');
+      return null;
+    }
+
+    setSetupLoading(true);
+    setError(null);
+    lastCallRef.current = now;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const res = await fetchWithRetry('/api/agent-setup-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        setError(getErrorMessage(res.status, 'setup guide'));
+        return null;
+      }
+
+      const data = await res.json();
+
+      if (!Array.isArray(data.steps) || !Array.isArray(data.tips)) {
+        setError('Received an unexpected response format. Please try again.');
+        return null;
+      }
+
+      return data as AgentSetupGuide;
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('This is taking longer than expected. Please try again.');
+      } else {
+        setError('Unable to reach the setup guide service. Please check your connection and try again.');
+      }
+      return null;
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  return { designAgent, generateSetupGuide, isLoading, setupLoading, error, clearError };
 }

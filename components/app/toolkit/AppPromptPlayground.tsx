@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
+import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const MONO = "'JetBrains Mono', 'Fira Code', monospace";
@@ -44,7 +45,8 @@ const REFINE_LOADING_STEPS = [
   'Finalising refined output…',
 ];
 // Front-loaded timing: early steps fast, later steps slower
-const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+// Last step = -1 (open-ended buffer — stays spinning until API returns)
+const STEP_DELAYS = [800, 1500, 3000, 4000, 4500, 5000, -1];
 
 const AppPromptPlayground: React.FC = () => {
   const { user } = useAuth();
@@ -108,6 +110,7 @@ const AppPromptPlayground: React.FC = () => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cumulative = 0;
     STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return; // -1 = open-ended buffer, don't auto-advance
       cumulative += delay;
       timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
     });
@@ -379,35 +382,71 @@ const AppPromptPlayground: React.FC = () => {
     return null;
   };
 
-  /* ── Render prompt with highlighted excerpt ── */
+  /* ── Number badges (circled digits) for strategy ↔ excerpt linking ── */
+  const BadgeCircle: React.FC<{ num: number; size?: number }> = ({ num, size = 18 }) => (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: size, height: size, borderRadius: '50%',
+      background: LEVEL_ACCENT_DARK, color: '#FFFFFF',
+      fontSize: size * 0.55, fontWeight: 700, fontFamily: FONT,
+      lineHeight: 1, flexShrink: 0, verticalAlign: 'middle',
+    }}>
+      {num}
+    </span>
+  );
+
+  /* ── Render prompt with ALL excerpt badges inline ── */
   const renderHighlightedPrompt = (prompt: string): React.ReactNode => {
-    if (!activeHighlight || !result) return prompt;
-    const strategy = result.strategies_used.find(s => s.id === activeHighlight);
-    if (!strategy?.prompt_excerpt) return prompt;
+    if (!result) return prompt;
 
-    const range = findExcerptRange(prompt, strategy.prompt_excerpt);
-    if (!range) return prompt;
+    // Collect all valid ranges with their strategy index
+    const ranges: { start: number; end: number; idx: number }[] = [];
+    result.strategies_used.forEach((s: PlaygroundStrategy, i: number) => {
+      if (!s.prompt_excerpt) return;
+      const range = findExcerptRange(prompt, s.prompt_excerpt);
+      if (range) ranges.push({ ...range, idx: i });
+    });
 
-    const accentColor = STRATEGY_COLOR;
-    const before = prompt.slice(0, range.start);
-    const match = prompt.slice(range.start, range.end);
-    const after = prompt.slice(range.end);
+    if (ranges.length === 0) return prompt;
 
-    return (
-      <>
-        {before}
-        <span style={{
-          background: `${accentColor}40`,
-          borderBottom: `2px solid ${accentColor}`,
-          borderRadius: 3,
-          padding: '1px 0',
-          transition: 'background 0.3s',
-        }}>
-          {match}
+    // Sort by start position, deduplicate overlaps (keep first)
+    ranges.sort((a, b) => a.start - b.start);
+    const deduped: typeof ranges = [];
+    for (const r of ranges) {
+      if (deduped.length === 0 || r.start >= deduped[deduped.length - 1].end) {
+        deduped.push(r);
+      }
+    }
+
+    // Build React nodes with inline badges at each excerpt
+    const parts: React.ReactNode[] = [];
+    let cursor = 0;
+    deduped.forEach((r, i) => {
+      if (r.start > cursor) parts.push(prompt.slice(cursor, r.start));
+      const isActive = activeHighlight === result!.strategies_used[r.idx].id;
+      parts.push(
+        <span key={`badge-${i}`} style={{ position: 'relative' }}>
+          <span style={{
+            display: 'inline', marginRight: 3, verticalAlign: 'middle',
+          }}>
+            <BadgeCircle num={r.idx + 1} />
+          </span>
+          <span style={{
+            background: isActive ? `${STRATEGY_COLOR}40` : `${STRATEGY_COLOR}18`,
+            borderBottom: isActive ? `2px solid ${STRATEGY_COLOR}` : `1px dashed ${STRATEGY_COLOR}`,
+            borderRadius: 3,
+            padding: '1px 0',
+            transition: 'background 0.3s',
+          }}>
+            {prompt.slice(r.start, r.end)}
+          </span>
         </span>
-        {after}
-      </>
-    );
+      );
+      cursor = r.end;
+    });
+    if (cursor < prompt.length) parts.push(prompt.slice(cursor));
+
+    return <>{parts}</>;
   };
 
   /* ── Toggle strategy card ── */
@@ -628,6 +667,8 @@ const AppPromptPlayground: React.FC = () => {
           subtitle="Review your AI-ready prompt and the strategies that shaped it."
           done={false}
           collapsed={false}
+          locked={!result && !isLoading}
+          lockedMessage="Complete Step 1 to generate your optimised prompt"
         >
           {!result && !isLoading ? (
             /* ── Educational default ── */
@@ -721,6 +762,13 @@ const AppPromptPlayground: React.FC = () => {
           ) : result ? (
             /* ── Generated output ── */
             <div>
+              {/* Next Step Banner (§4.8) */}
+              <NextStepBanner
+                accentColor={LEVEL_ACCENT}
+                accentDark={LEVEL_ACCENT_DARK}
+                text="Copy your prompt and test it in your AI tool of choice. Come back and refine it based on what you learn."
+              />
+
               {/* Top action row — toggle + actions on one line */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -774,6 +822,33 @@ const AppPromptPlayground: React.FC = () => {
                 />
               </div>
 
+              {/* ── Next Step Banner ── */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: `${LEVEL_ACCENT}18`,
+                border: `1px solid ${LEVEL_ACCENT}`,
+                borderRadius: 10,
+                padding: '12px 16px',
+                marginBottom: 16,
+                opacity: visibleBlocks >= 1 ? 1 : 0,
+                transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
+                <span style={{ fontSize: 16 }}>🎯</span>
+                <span style={{
+                  fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                  fontFamily: FONT, lineHeight: 1.4,
+                }}>
+                  Your prompt is ready — try it out
+                </span>
+                <span style={{
+                  fontSize: 12, color: '#4A5568', fontFamily: FONT,
+                  marginLeft: 4,
+                }}>
+                  Copy it and paste into any AI tool to see the difference a well-structured prompt makes.
+                </span>
+              </div>
+
               {viewMode === 'markdown' ? (
                 /* ── Markdown view ── */
                 <div style={{
@@ -819,21 +894,6 @@ const AppPromptPlayground: React.FC = () => {
                     }}>
                       {renderHighlightedPrompt(result.prompt)}
                     </div>
-                    {activeHighlight && (() => {
-                      const s = result.strategies_used.find(st => st.id === activeHighlight);
-                      if (!s) return null;
-                      const ac = STRATEGY_COLOR;
-                      return (
-                        <div style={{
-                          marginTop: 12, padding: '8px 12px',
-                          background: `${ac}15`, borderLeft: `3px solid ${ac}`,
-                          borderRadius: 6, fontSize: 12, color: '#4A5568',
-                          lineHeight: 1.5, fontFamily: FONT,
-                        }}>
-                          <span style={{ fontWeight: 600 }}>{s.icon} {s.name}:</span> highlighted above
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   {/* Strategy cards heading */}
@@ -886,8 +946,9 @@ const AppPromptPlayground: React.FC = () => {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{
                                 fontSize: 13, fontWeight: 700, color: '#1A202C',
-                                fontFamily: FONT,
+                                fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6,
                               }}>
+                                <BadgeCircle num={idx + 1} size={18} />
                                 {strategy.name}
                               </div>
                               {strategy.how_applied && !isExpanded && (
@@ -979,20 +1040,6 @@ const AppPromptPlayground: React.FC = () => {
                                 </div>
                               </div>
 
-                              {/* Highlighted excerpt reference */}
-                              {strategy.prompt_excerpt && (
-                                <div style={{
-                                  marginTop: 10, padding: '6px 10px',
-                                  background: '#F7FAFC', borderRadius: 6,
-                                  border: '1px dashed #E2E8F0',
-                                  fontSize: 11, color: '#718096',
-                                  fontFamily: FONT, lineHeight: 1.5,
-                                  display: 'flex', alignItems: 'flex-start', gap: 6,
-                                }}>
-                                  <span style={{ flexShrink: 0, marginTop: 1 }}>↑</span>
-                                  <span>See the highlighted section in the prompt above</span>
-                                </div>
-                              )}
                             </div>
                           )}
                         </div>
@@ -1023,9 +1070,10 @@ const AppPromptPlayground: React.FC = () => {
                 const refIdx = result.strategies_used.length + 2; // after prompt + all strategies + 1
                 return (
                   <div style={{
-                    background: '#F7FAFC',
+                    background: '#FFFBF0',
                     borderRadius: 14,
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid #F7E8A4',
+                    borderLeft: '4px solid #F7E8A4',
                     padding: '20px 24px',
                     marginTop: 24,
                     opacity: visibleBlocks >= refIdx ? 1 : 0,
@@ -1037,7 +1085,7 @@ const AppPromptPlayground: React.FC = () => {
                       display: 'flex', alignItems: 'flex-start', gap: 10,
                       marginBottom: refineExpanded ? 16 : 12,
                     }}>
-                      <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>✨</span>
                       <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
                         This is an optimised starting point built for your context — not the only valid approach.
                         Adapt it, iterate on it, and make it yours. The strategies above are the craft behind it;
@@ -1059,7 +1107,7 @@ const AppPromptPlayground: React.FC = () => {
                         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                       >
                         <ChevronDown size={14} />
-                        Would you like to refine this prompt further?
+                        Sharpen this prompt — add more context
                         {refinementCount > 0 && (
                           <span style={{
                             fontSize: 11, fontWeight: 600,
@@ -1361,14 +1409,14 @@ const ProcessingProgress: React.FC<{
 };
 
 /* ── Step Badge ── */
-const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
+const StepBadge: React.FC<{ number: number; done: boolean; locked?: boolean }> = ({ number, done, locked }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-    background: done ? LEVEL_ACCENT : '#F7FAFC',
+    background: done ? LEVEL_ACCENT : locked ? '#EDF2F7' : '#F7FAFC',
     border: done ? 'none' : '2px solid #E2E8F0',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 13, fontWeight: 800,
-    color: done ? LEVEL_ACCENT_DARK : '#718096',
+    color: done ? LEVEL_ACCENT_DARK : locked ? '#CBD5E0' : '#718096',
     transition: 'background 0.2s, color 0.2s',
   }}>
     {done ? <Check size={14} /> : number}
@@ -1382,24 +1430,30 @@ const StepCard: React.FC<{
   subtitle: string;
   done: boolean;
   collapsed: boolean;
+  locked?: boolean;
+  lockedMessage?: string;
   children: React.ReactNode;
-}> = ({ stepNumber, title, subtitle, done, collapsed, children }) => (
+}> = ({ stepNumber, title, subtitle, done, collapsed, locked, lockedMessage, children }) => (
   <div style={{
-    background: '#FFFFFF', borderRadius: 16,
+    background: locked ? '#FAFBFC' : '#FFFFFF', borderRadius: 16,
     border: `1px solid ${done ? `${LEVEL_ACCENT}88` : '#E2E8F0'}`,
-    padding: collapsed ? '16px 24px' : '24px 28px',
+    padding: (collapsed || locked) ? '16px 24px' : '24px 28px',
     transition: 'padding 0.2s ease, border-color 0.2s ease',
+    opacity: locked ? 0.7 : 1,
   }}>
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      marginBottom: collapsed ? 0 : 20,
+      marginBottom: (collapsed || locked) ? 0 : 20,
     }}>
-      <StepBadge number={stepNumber} done={done} />
+      <StepBadge number={stepNumber} done={done} locked={locked} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: locked ? '#A0AEC0' : '#1A202C', fontFamily: "'DM Sans', sans-serif" }}>
           {title}
         </div>
-        {!collapsed && (
+        {locked && lockedMessage && (
+          <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{lockedMessage}</div>
+        )}
+        {!collapsed && !locked && (
           <div style={{ fontSize: 13, color: '#718096', marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
             {subtitle}
           </div>
@@ -1414,7 +1468,7 @@ const StepCard: React.FC<{
         </div>
       )}
     </div>
-    {!collapsed && children}
+    {!collapsed && !locked && children}
   </div>
 );
 

@@ -149,16 +149,20 @@ Do not create Vercel serverless functions, Vercel edge functions, or any `api/*.
 
 ### Deploying to Firebase
 
-**CRITICAL: Always deploy hosting explicitly to ensure the frontend is updated.**
+**CRITICAL: ALWAYS deploy BOTH hosting AND functions together. Never deploy one without the other.**
 
+System prompts, AI logic, and all API behaviour live in Cloud Functions (`functions/src/index.ts`). Deploying only hosting leaves stale backend code in production — this has caused real bugs (e.g. prompt changes not taking effect for users).
+
+**Standard deployment sequence:**
 1. Build the frontend: `npx vite build`
-2. Deploy hosting: `npx firebase-tools deploy --only hosting`
-3. Deploy functions (if changed): `npx firebase-tools deploy --only functions`
-4. Or deploy both: `npx firebase-tools deploy --only hosting,functions`
+2. Build functions (if any `.ts` files in `functions/` changed): `cd functions && npm run build && cd ..`
+3. Deploy both: `npx firebase-tools deploy --only hosting,functions`
 
-**Do NOT rely on `npx firebase-tools deploy` (no flags) to update hosting** — it may deploy functions successfully while serving a stale hosting build. Always verify the release timestamp updated in Firebase Console → Hosting → Dashboard.
+**Never run `--only hosting` alone** unless you are 100% certain no function code has changed. When in doubt, deploy both — it only adds ~60 seconds.
 
-After deploying, remind the user to **hard-refresh** (Cmd+Shift+R / Ctrl+Shift+R) to bypass browser cache.
+**Do NOT rely on `npx firebase-tools deploy` (no flags)** — it may deploy functions successfully while serving a stale hosting build. Always use the explicit `--only hosting,functions` flag after a fresh `npx vite build`.
+
+After deploying, verify the release timestamp in Firebase Console → Hosting → Dashboard, and remind the user to **hard-refresh** (Cmd+Shift+R / Ctrl+Shift+R) to bypass browser cache.
 
 ### Adding a new API endpoint
 

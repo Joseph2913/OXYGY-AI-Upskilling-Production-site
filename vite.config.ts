@@ -346,6 +346,213 @@ CRITICAL RULES:
   };
 }
 
+function agentSetupGuideProxyPlugin(apiKey: string, model: string): Plugin {
+  // ── Hybrid v2: Short templates with {SLOT} placeholders + AI slot-filling ──
+  type SetupStep = { title: string; instruction: string };
+  type PlatformTemplate = {
+    steps: SetupStep[];
+    slots: Record<string, string>;
+    fallbackTips: string[];
+    fallbackLimitations: string;
+  };
+
+  const PLATFORM_TEMPLATES: Record<string, PlatformTemplate> = {
+    "ChatGPT Custom GPTs": {
+      slots: { AGENT_NAME: "your agent", TASK: "your agent's task", KNOWLEDGE_FILES: "relevant documents, templates, and reference data", CAPABILITIES: "Code Interpreter for data processing, Web Search for research", CONVERSATION_STARTERS: "example prompts that show your agent's core use cases" },
+      steps: [
+        { title: "Open the GPT Builder", instruction: "Go to chat.openai.com → Explore GPTs → + Create. Switch to the \"Configure\" tab." },
+        { title: "Paste your system prompt", instruction: "Paste the full system prompt into the \"Instructions\" field. Name your GPT \"{AGENT_NAME}\" and add a short description." },
+        { title: "Upload Knowledge files", instruction: "In the \"Knowledge\" section, upload {KNOWLEDGE_FILES}. The GPT will search these files when generating responses." },
+        { title: "Configure Capabilities", instruction: "Toggle on the capabilities your agent needs: {CAPABILITIES}. Only enable what's relevant to keep responses focused." },
+        { title: "Set up Actions (optional)", instruction: "If your agent needs external data, click \"Create new action\" and define an OpenAPI schema for the API endpoints it should access." },
+        { title: "Add Conversation Starters", instruction: "Add 3–4 starters like: {CONVERSATION_STARTERS}. These teach users how to interact with your agent effectively." },
+        { title: "Test and publish", instruction: "Test in the Preview pane with realistic inputs. When ready, click \"Create\" and choose your sharing level (Private, Team, or Public)." }
+      ],
+      fallbackTips: [ "Upload example outputs as Knowledge files — concrete examples teach the GPT your expected format better than instructions alone.", "Duplicate your GPT before making changes (three-dot menu → Copy) to create a safe rollback point.", "Use the Analytics tab (Team/Enterprise plans) to see which conversation starters get used most and where users drop off." ],
+      fallbackLimitations: "Requires ChatGPT Plus, Team, or Enterprise. Knowledge limited to 20 files (512 MB each)."
+    },
+    "Claude Skills": {
+      slots: { AGENT_NAME: "your agent", TASK: "your agent's task", EXAMPLE_INPUT: "the relevant input data", EXAMPLE_OUTPUT: "structured output in your expected format", CHAIN_SUGGESTION: "a formatting skill (e.g., report generator or slide deck builder)", SKILL_DESCRIPTION: "a short description of what this skill does" },
+      steps: [
+        { title: "Prepare your design answers", instruction: "Before building, decide: What input will users provide ({EXAMPLE_INPUT})? What should the output look like ({EXAMPLE_OUTPUT})? Should this skill chain into another (e.g., {CHAIN_SUGGESTION})?" },
+        { title: "Use the built-in skill-creator", instruction: "Start a new Claude chat and say: \"Help me build a skill that {TASK}\". Claude's skill-creator will guide you through design questions and generate the skill automatically." },
+        { title: "Install with one click", instruction: "When the skill is ready, click the \"Copy to your skills\" button at the bottom of the chat. It's instantly added to Customize > Skills. Toggle it on or off any time." },
+        { title: "Test in a new conversation", instruction: "Open a fresh chat and describe a task naturally — don't mention the skill by name. If the skill activates, you'll see \"Using {AGENT_NAME}\" appear. If not, edit the description at Customize > Skills." },
+        { title: "Chain with other skills", instruction: "Build a complementary skill (e.g., {CHAIN_SUGGESTION}) using the skill-creator. Toggle both on, and Claude will chain them automatically when the task fits." }
+      ],
+      fallbackTips: [ "The skill description (max 200 chars) determines when Claude activates it — write it as \"activate when the user asks about [specific task]\". Vague descriptions mean the skill never fires.", "Skills work across ALL conversations, not just one Project — once installed, it's always available.", "Pair this skill with a formatting skill (slides, reports, docs) so structured output feeds directly into professional deliverables.", "Connect to document repositories via MCP connectors so the skill can access live organisational data." ],
+      fallbackLimitations: "Requires Claude Pro or Team. Skill description limited to 200 characters. Skills can't call each other by name — chaining relies on Claude matching descriptions to the task."
+    },
+    "Microsoft Copilot": {
+      slots: { AGENT_NAME: "your agent", TASK: "your agent's task", KNOWLEDGE_SOURCES: "relevant SharePoint sites, documents, or data sources", ACTIONS: "automations like sending emails, creating tasks, or updating records", CHANNEL: "Microsoft Teams" },
+      steps: [
+        { title: "Create a new Agent", instruction: "Open Copilot Studio (copilotstudio.microsoft.com) → Create → New Agent. Name it \"{AGENT_NAME}\"." },
+        { title: "Paste your system prompt", instruction: "Paste the full system prompt into the \"Instructions\" field. This defines your agent's behaviour and output format." },
+        { title: "Connect Knowledge sources", instruction: "Add {KNOWLEDGE_SOURCES} via the Knowledge section. The agent will search these when responding to users." },
+        { title: "Configure Actions", instruction: "Connect Power Automate flows for {ACTIONS}. Map your agent's output fields to flow inputs for seamless automation." },
+        { title: "Set up Topics", instruction: "Create Topics for your agent's main use cases. Each Topic guides users through providing the right inputs step by step." },
+        { title: "Test your agent", instruction: "Click \"Test\" in the top-right to open the test pane. Run through realistic scenarios and check that Knowledge and Actions work correctly." },
+        { title: "Publish to {CHANNEL}", instruction: "Go to Channels and deploy to {CHANNEL}. Your team can start using the agent immediately." }
+      ],
+      fallbackTips: [ "Use Adaptive Cards for rich output — formatted cards with tables, buttons, and input fields are much more engaging than plain text.", "Connect to Microsoft Graph so your agent can access calendars, emails, files, and org data for context-aware responses.", "Use the Analytics tab to monitor which Topics get triggered most and where users abandon conversations." ],
+      fallbackLimitations: "Requires Microsoft 365 with Copilot Studio access. Some Power Automate connectors need additional licensing."
+    },
+    "Google Gemini Gems": {
+      slots: { AGENT_NAME: "your agent", TASK: "your agent's task", REFERENCE_DOCS: "relevant Google Docs, Sheets, or PDFs", WORKSPACE_INTEGRATIONS: "Drive, Docs, Sheets, or Slides" },
+      steps: [
+        { title: "Open the Gem Manager", instruction: "Go to gemini.google.com → Gem manager → New Gem. Requires Gemini Advanced (Google One AI Premium)." },
+        { title: "Configure name and instructions", instruction: "Name your Gem \"{AGENT_NAME}\" and paste the full system prompt into the \"Instructions\" field." },
+        { title: "Upload reference documents", instruction: "Attach {REFERENCE_DOCS} so the Gem can reference them when generating responses." },
+        { title: "Test and calibrate", instruction: "Send representative inputs in the conversation area. If the output format or tone isn't right, refine the Instructions — changes take effect immediately." },
+        { title: "Connect Workspace integrations", instruction: "Grant the Gem access to {WORKSPACE_INTEGRATIONS} so it can pull live organisational data when needed." },
+        { title: "Test with realistic data", instruction: "Test with actual data, not toy examples. Verify the output matches your expected format, especially for structured output like JSON." },
+        { title: "Share with your team", instruction: "Click Share and add collaborators by email. They'll see the Gem in their Gem manager immediately." }
+      ],
+      fallbackTips: [ "Link to live Google Sheets for real-time data access — the Gem always works with the latest information.", "Pair with Google Apps Script to automatically write structured output to Sheets, Docs, or Slides.", "Create a shared Drive folder with all reference materials — updating the folder updates the Gem's knowledge." ],
+      fallbackLimitations: "Requires Google One AI Premium (Gemini Advanced). Gems can't execute code, call APIs, or trigger automations directly."
+    },
+    "Open Source / API": {
+      slots: { AGENT_NAME: "your agent", TASK: "your agent's task", SDK_EXAMPLE: "pip install openai (Python) or npm install openai (Node.js)", OUTPUT_FORMAT: "your expected JSON schema", DATA_SOURCES: "your document store, database, or file system", DEPLOY_FRAMEWORK: "FastAPI (Python) or Express (Node.js)" },
+      steps: [
+        { title: "Install the SDK", instruction: "Set up API access with your chosen provider: {SDK_EXAMPLE}. Store the API key as an environment variable." },
+        { title: "Configure the system message", instruction: "Pass the system prompt as the \"system\" role in the chat completions API. This loads before every user interaction." },
+        { title: "Parse structured output", instruction: "Use JSON mode or function calling to enforce {OUTPUT_FORMAT}. Add a validation retry loop for malformed responses." },
+        { title: "Build the input pipeline", instruction: "Create a function that prepares user input — extracting text from files, formatting data, and truncating to fit context limits." },
+        { title: "Add error handling", instruction: "Handle rate limits (exponential backoff), timeouts (retry), and invalid output (re-prompt). This is critical for production reliability." },
+        { title: "Connect to data sources", instruction: "Integrate with {DATA_SOURCES} so the agent can access reference materials at runtime. For large collections, consider a vector database for RAG." },
+        { title: "Deploy as a service", instruction: "Wrap in an API endpoint ({DEPLOY_FRAMEWORK}) or build a simple UI (Streamlit, Gradio, Next.js). Add auth, rate limiting, and logging." }
+      ],
+      fallbackTips: [ "Use streaming (stream: true) for long outputs — users get immediate feedback instead of waiting.", "Count tokens before each API call to stay within context limits and truncate intelligently.", "Log every API call (input, output, latency, tokens) for debugging and quality monitoring.", "For large document collections, implement RAG with a vector database (Pinecone, Weaviate, ChromaDB)." ],
+      fallbackLimitations: "API costs scale with usage — monitor token consumption. You're responsible for data handling, security, and compliance."
+    },
+    "Not sure yet": {
+      slots: { AGENT_NAME: "your agent", TASK: "your agent's task", REFERENCE_MATERIALS: "relevant documents, templates, and example data" },
+      steps: [
+        { title: "Find the instructions field", instruction: "Every AI platform has a place for \"system instructions\" or \"custom instructions\" — look for Settings, Configure, or Instructions in your platform." },
+        { title: "Paste the full system prompt", instruction: "Copy the entire prompt (all sections) into the instructions field. Don't shorten it — the sections work together." },
+        { title: "Upload reference materials", instruction: "Most platforms support file uploads. Add {REFERENCE_MATERIALS} to give the agent context beyond the prompt." },
+        { title: "Test with realistic inputs", instruction: "Use actual data, not toy examples. Run 3–5 test cases including messy or incomplete inputs to check edge cases." },
+        { title: "Iterate on output quality", instruction: "If the format is wrong, tighten the format instructions. If the tone is off, adjust the role section. Expect 2–3 rounds of iteration." },
+        { title: "Share with your team", instruction: "Use your platform's sharing features to deploy the agent. Collect feedback from real users in the first week and iterate." }
+      ],
+      fallbackTips: [ "Start with the full prompt — only simplify if the platform has strict character limits.", "Upload 2–3 example outputs alongside the prompt — examples teach the AI more effectively than instructions alone.", "Test your hardest use case first — if that works, simpler ones will too." ],
+      fallbackLimitations: ""
+    }
+  };
+
+  // AI fills personalised slot values + tips — never generates steps or UI navigation
+  const slotFillPrompt = `You personalise a build plan for deploying a specific AI agent on a platform.
+
+You will receive the agent's task description and output format. Fill in personalised values for template slots AND generate tailored tips.
+
+RULES:
+- Fill EVERY slot with a value specific to THIS agent (not generic placeholders)
+- Slot values should be concise — a few words to one short sentence max
+- Generate exactly 3-4 tips specific to THIS agent on this platform
+- Do NOT describe UI navigation or setup steps
+- Do NOT mention specific model names
+- Note limitations specific to THIS agent (or empty string if none)
+
+RESPONSE FORMAT (JSON only, no markdown):
+{
+  "slots": { "AGENT_NAME": "short name", "TASK": "what it does", ...other slots... },
+  "tips": ["Tip 1", "Tip 2", "Tip 3"],
+  "limitations": "Limitations or empty string"
+}
+
+Do NOT add preamble or explanation outside the JSON object.`;
+
+  return {
+    name: 'agent-setup-guide-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/agent-setup-guide', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { platform, output_format, task_description } = JSON.parse(body);
+
+            // 1. Look up hardcoded template
+            const template = PLATFORM_TEMPLATES[platform];
+            if (!template) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: `Unknown platform: ${platform}` }));
+              return;
+            }
+
+            // 2. Ask AI to fill slots + generate tips
+            let slotValues: Record<string, string> = { ...template.slots, TASK: task_description || template.slots.TASK };
+            let tips = template.fallbackTips;
+            let limitations = template.fallbackLimitations;
+
+            try {
+              const slotNames = Object.keys(template.slots).join(", ");
+              const userMessage = `Platform: ${platform}\n\nAgent Task: ${task_description}\n\nOutput Format: ${JSON.stringify(output_format, null, 2)}\n\nSlots to fill: ${slotNames}\n\nFill each slot with a value personalised to this specific agent, and generate tips.`;
+              const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+              const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                  model: openRouterModel,
+                  messages: [
+                    { role: 'system', content: slotFillPrompt },
+                    { role: 'user', content: userMessage },
+                  ],
+                  temperature: 0.7,
+                  response_format: { type: 'json_object' },
+                }),
+              }, 'agent-setup-slots');
+
+              if (geminiResponse.ok) {
+                const data = await geminiResponse.json();
+                const text = data?.choices?.[0]?.message?.content || '';
+                const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                const parsed = JSON.parse(cleaned);
+                if (parsed.slots && typeof parsed.slots === 'object') {
+                  slotValues = { ...slotValues, ...parsed.slots };
+                }
+                if (Array.isArray(parsed.tips) && parsed.tips.length > 0) tips = parsed.tips;
+                if (typeof parsed.limitations === 'string') limitations = parsed.limitations;
+              }
+            } catch (aiErr) {
+              console.warn('Slot personalization failed, using defaults:', aiErr);
+            }
+
+            // 3. Inject slot values into step templates
+            const steps = template.steps.map(s => ({
+              title: s.title.replace(/\{(\w+)\}/g, (_: string, k: string) => slotValues[k] || k),
+              instruction: s.instruction.replace(/\{(\w+)\}/g, (_: string, k: string) => slotValues[k] || k),
+            }));
+
+            // 4. Return merged response
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ steps, tips, limitations }));
+          } catch (err) {
+            console.error('Proxy error (agent-setup-guide):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 function workflowDesignProxyPlugin(apiKey: string, model: string): Plugin {
   const pathAPrompt = `You are the OXYGY Workflow Architect — an expert in designing AI-powered automation workflows. You help users map their business processes into structured, multi-step workflows using a node-based system.
 
@@ -1275,6 +1482,7 @@ RESPONSE FORMAT (JSON only, no markdown, no code fences):
     "auth_permissions": "SECTION CONTENT",
     "scope_boundaries": "SECTION CONTENT",
     "acceptance_criteria": "SECTION CONTENT",
+    "design_tokens": "SECTION CONTENT",
     "implementation_plan": "SECTION CONTENT"
   }
 }
@@ -1300,7 +1508,9 @@ SECTIONS:
 
 10. ACCEPTANCE CRITERIA (15-25 numbered items): One per feature. Performance. Responsive. Error handling. Accessibility. Verification commands.
 
-11. IMPLEMENTATION PHASES (10-15 sentences): Vertical slices: Phase 1 foundation, Phase 2 core feature, Phase 3 secondary, Phase 4 polish. Each: files, deliverable, verification.`;
+11. DESIGN TOKENS & VISUAL REFERENCE: Based on the user's brief (visual style, color scheme, inspiration images), generate a concrete design token specification. Include primary, secondary, accent, and neutral color hex values. Font family from Google Fonts. Border radius, spacing scale, and shadow tokens. Component-level style notes (card, button, input). Format as a CSS variables block (:root { --color-primary: #...; ... }).
+
+12. IMPLEMENTATION PHASES (10-15 sentences): Vertical slices: Phase 1 foundation, Phase 2 core feature, Phase 3 secondary, Phase 4 polish. Each: files, deliverable, verification.`;
 
   return {
     name: 'prd-proxy',
@@ -1380,6 +1590,111 @@ SECTIONS:
             res.end(JSON.stringify(parsed));
           } catch (err) {
             console.error('Proxy error (PRD):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+// ─── App Build Guide Proxy ───
+
+function appBuildGuideProxyPlugin(apiKey: string, model: string): Plugin {
+  const systemPrompt = `You are an expert developer educator who creates step-by-step build guides for AI coding platforms. The user has a completed PRD for an application. Create a clear, actionable build guide tailored to their chosen platform.
+
+RESPONSE FORMAT (JSON only, no markdown, no code fences):
+{
+  "steps": [
+    { "title": "Step title", "instruction": "Detailed instruction text" }
+  ],
+  "tips": ["Pro tip 1", "Pro tip 2"],
+  "limitations": "Platform-specific limitations or caveats"
+}
+
+RULES:
+- Generate 5-8 concrete, actionable steps
+- Each step instruction should be 2-4 sentences, specific to the platform
+- Include what to paste, where to paste it, and what to expect
+- Reference the PRD sections by name
+- Include platform-specific UI navigation
+- Tips should be platform-specific best practices (3-5 tips)
+- Limitations should mention what the platform can't do well
+- NEVER mention specific AI model names. Use "the AI" or "the platform's AI"
+
+PLATFORM-SPECIFIC GUIDANCE:
+- Cursor: Focus on .cursorrules file, composer mode, step-by-step prompting
+- Lovable: Focus on pasting full PRD as initial prompt, iteration workflow, Supabase
+- Bolt.new: Focus on initial prompt, StackBlitz environment, chat iteration
+- Claude Code: Focus on CLAUDE.md setup, passing PRD, plan mode, agentic workflow
+- Codex (OpenAI): Focus on environment setup, task description, repository structure
+- Google AI Studio: Focus on system instructions, structured prompts, code generation
+- V0 (Vercel): Focus on component-by-component generation, Next.js, shadcn/ui
+- Replit Agent: Focus on initial description, deployment, database setup
+- Not sure yet: Give platform-agnostic advice`;
+
+  return {
+    name: 'app-build-guide-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/app-build-guide', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { platform, prd_content, app_description } = JSON.parse(body);
+
+            const userMessage = `Platform: ${platform}\n\nApp Description: ${app_description || "See PRD"}\n\nFull PRD:\n${(prd_content || '').slice(0, 8000)}`;
+
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'app-build-guide');
+
+            if (!geminiResponse.ok) {
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await geminiResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+              tips: Array.isArray(parsed.tips) ? parsed.tips : [],
+              limitations: typeof parsed.limitations === 'string' ? parsed.limitations : '',
+            }));
+          } catch (err) {
+            console.error('Proxy error (app-build-guide):', err);
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
@@ -2043,11 +2358,13 @@ export default defineConfig(({ mode }) => {
       react(),
       geminiProxyPlugin(env.OpenRouter_API, geminiModel),
       agentDesignProxyPlugin(env.OpenRouter_API, geminiModel),
+      agentSetupGuideProxyPlugin(env.OpenRouter_API, geminiModel),
       workflowDesignProxyPlugin(env.OpenRouter_API, geminiModel),
       architectureProxyPlugin(env.OpenRouter_API, geminiModel),
       pathwayProxyPlugin(env.OpenRouter_API, geminiModel),
       dashboardDesignProxyPlugin(env.OpenRouter_API, dashboardModel, geminiModel),
       prdProxyPlugin(env.OpenRouter_API, geminiModel),
+      appBuildGuideProxyPlugin(env.OpenRouter_API, geminiModel),
       insightAnalysisProxyPlugin(env.OpenRouter_API, geminiModel),
       evaluateAppProxyPlugin(env.OpenRouter_API, geminiModel),
       n8nGenerateProxyPlugin(env.OpenRouter_API),

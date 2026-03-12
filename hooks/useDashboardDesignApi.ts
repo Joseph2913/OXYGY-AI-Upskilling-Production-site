@@ -194,6 +194,54 @@ export function useDashboardDesignApi() {
     }
   }, [prdGenerationCount]);
 
+  // ─── Build Guide Generation ───
+  const [isBuildGuideLoading, setIsBuildGuideLoading] = useState(false);
+
+  const generateBuildGuide = useCallback(async (payload: {
+    platform: string;
+    prd_content: string;
+    app_description: string;
+  }): Promise<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string } | null> => {
+    setIsBuildGuideLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const res = await fetchWithRetry('/api/app-build-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        setError(getErrorMessage(res.status, 'build guide generation'));
+        return null;
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data.steps) || !Array.isArray(data.tips)) {
+        setError('Received an unexpected response format. Please try again.');
+        return null;
+      }
+
+      return data;
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Build guide generation timed out. Please try again.');
+      } else {
+        setError('Unable to reach the build guide service. Please check your connection and try again.');
+      }
+      return null;
+    } finally {
+      setIsBuildGuideLoading(false);
+    }
+  }, []);
+
   const clearError = useCallback(() => setError(null), []);
   const resetCounts = useCallback(() => {
     setRegenerationCount(0);
@@ -201,8 +249,8 @@ export function useDashboardDesignApi() {
   }, []);
 
   return {
-    generateDashboardImage, generatePRD,
-    isLoading, isPrdLoading, error, clearError,
+    generateDashboardImage, generatePRD, generateBuildGuide,
+    isLoading, isPrdLoading, isBuildGuideLoading, error, clearError,
     regenerationCount, prdGenerationCount, resetCounts,
   };
 }

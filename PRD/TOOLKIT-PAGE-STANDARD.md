@@ -12,11 +12,32 @@ Every tool page is a **practical workspace**, not a sales page. There should be 
 ### 1.2 Sequential Guided Flow
 Every tool page follows a **step-by-step card progression**. Each step occupies the full width of the content area and guides the user through a clear sequence: configure → input → output. Users should never feel lost about what to do next.
 
-### 1.3 Always-Visible Steps
-All step cards are **always rendered on the page**, even before the user reaches them. Incomplete steps show contextual placeholder content that explains what will appear once the prerequisite steps are completed. This gives users a complete overview of the process from the moment they land on the page and creates an incentive to engage.
+### 1.3 Always-Visible Steps (Progressive Disclosure)
+All step cards are **always rendered on the page**, even before the user reaches them. However, only **one step is fully expanded at a time** — the step the user is currently working on. Subsequent steps appear in a **locked state**: greyed out, with a short message indicating which step must be completed first (e.g., "Complete Step 1 to generate your agent design"). This gives users a clear overview of the full process while keeping focus on the current task and reducing visual clutter.
 
-### 1.4 Educational Defaults
-For output steps that will display structured results (e.g., the 6-part Prompt Blueprint, agent configuration sections, workflow components), show the **educational/generic version** of those sections by default. Each section should explain what it is, why it matters, and include an example — so the user learns the framework before they even start. Once the user generates output, the educational content is replaced with their personalised results in the same layout.
+**Locked step behavior:**
+- Background: `#FAFBFC` (slightly greyed)
+- Opacity: `0.7`
+- Badge: `background: #EDF2F7`, `color: #CBD5E0`
+- Title color: `#A0AEC0` (muted)
+- Locked message below title: `fontSize: 12`, `color: #A0AEC0`
+- Children are NOT rendered — only the header row with the locked message
+
+**Unlocking rules:**
+- Step 1 is always expanded on page load
+- Step 2 unlocks when Step 1's action is completed (e.g., "Design My Agent" returns results)
+- Step 3 unlocks when the user explicitly approves Step 2's output (e.g., "Approve Prompt" button)
+- Navigation buttons ("Back to Step 1", "Back to Step 2") re-expand the target step and re-lock downstream steps
+
+**Immediate collapse rule (one step in focus at a time):**
+Each step collapses to its "Done ✓" state **immediately** when its completion condition is met — not when a later step also completes. This ensures exactly one step is expanded at any time, keeping the user focused on their current task.
+
+- `collapsed={stepDone}` — collapse is tied solely to the step's own done state, never gated on downstream steps (e.g., never `collapsed={step1Done && step2Done}`)
+- Loading indicators (e.g., `ProcessingProgress`) belong **inside the next step's children**, not the step that triggered the action. When the user clicks "Generate", Step 1 collapses and Step 2 shows the loading state.
+- The final output step of each tool is never collapsed (`collapsed={false}`) since there is no subsequent step to focus on.
+
+### 1.4 No Pre-Generation Educational Content
+Output steps should **not** show educational preview cards or framework explanations before the user generates output. This content adds visual clutter and delays the user from engaging with the tool. Instead, locked steps use the compact locked state described in §1.3, and output steps show the `ProcessingProgress` indicator (§9.5) during generation, then reveal the actual results directly. Educational context is better served by the "How It Works" overview strip (§3.3) and the page description (§3.2).
 
 ### 1.5 Level-Themed Accent Colors
 Each tool inherits the accent color of its level. This color is used **everywhere** that indicates completion or active state — step connectors, step badges (completed state), "How it works" overview badges, "Done ✓" labels, step card done borders, and all interactive accent elements throughout the page. **Never hardcode teal (`#38B2AC`) for these elements** — always use the tool's `LEVEL_ACCENT` and `LEVEL_ACCENT_DARK` constants.
@@ -59,16 +80,16 @@ Every tool page follows this exact vertical structure, top to bottom:
 │  └──────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────┤
 │  Step 1 Card (full width)                           │
-│  [Active content OR collapsed summary]              │
+│  [Expanded (active) OR collapsed "Done ✓"]          │
 ├─── Animated Connector ──────────────────────────────┤
 │  Step 2 Card (full width)                           │
-│  [Active content OR placeholder]                    │
+│  [Locked OR Expanded (active) OR collapsed "Done ✓"]│
 ├─── Animated Connector ──────────────────────────────┤
 │  Step 3 Card (full width)                           │
-│  [Active content OR educational default]            │
+│  [Locked OR Expanded (active) OR collapsed "Done ✓"]│
 ├─── Animated Connector (if Step 4 exists) ───────────┤
 │  Step 4 Card (optional, full width)                 │
-│  [Active content OR placeholder]                    │
+│  [Locked OR Expanded (active)]                      │
 ├─────────────────────────────────────────────────────┤
 │  Toast Notification (fixed, bottom-center)          │
 └─────────────────────────────────────────────────────┘
@@ -162,12 +183,15 @@ A standardised component that sits below the description and above the step card
 The primary container for each step of the tool flow.
 
 ```tsx
+{/* Step collapses immediately when done — collapsed is always just stepDone, never gated on later steps */}
 <StepCard
   stepNumber={1}
   title="Step title"
   subtitle="Brief instruction for this step"
   done={stepDone}
-  collapsed={stepDone && nextStepDone}
+  collapsed={stepDone}
+  locked={!prerequisiteMet}
+  lockedMessage="Complete Step N to unlock this step"
 >
   {/* Step content */}
 </StepCard>
@@ -176,14 +200,24 @@ The primary container for each step of the tool flow.
 **Specifications:**
 - `background: #FFFFFF`, `borderRadius: 16`
 - Border: `1px solid #E2E8F0` (default) or `1px solid ${LEVEL_ACCENT}88` (when done)
-- Padding: `24px 28px` (expanded) or `16px 24px` (collapsed)
+- Padding: `24px 28px` (expanded) or `16px 24px` (collapsed/locked)
 - Header row: StepBadge (32px circle) + title (16px, weight 700) + subtitle (13px, `#718096`)
 - When `collapsed`: shows only header row with "Done ✓" indicator on the right
+- When `locked`: shows header row with muted title (`#A0AEC0`) + locked message below title. Background changes to `#FAFBFC`, opacity `0.7`. Children are NOT rendered.
 - When expanded: header + `marginBottom: 20` + children content
+
+**Card states (mutually exclusive priority: locked > collapsed > expanded):**
+
+| State | Background | Opacity | Title color | Shows |
+|-------|-----------|---------|-------------|-------|
+| Locked | `#FAFBFC` | `0.7` | `#A0AEC0` | Header + locked message only |
+| Collapsed (done) | `#FFFFFF` | `1` | `#1A202C` | Header + "Done ✓" badge |
+| Expanded (active) | `#FFFFFF` | `1` | `#1A202C` | Header + subtitle + children |
 
 **Step Badge:**
 - 32px circle, `fontWeight: 800`, `fontSize: 13`
 - Incomplete: `background: #F7FAFC`, `border: 2px solid #E2E8F0`, `color: #718096`
+- Locked: `background: #EDF2F7`, `border: 2px solid #E2E8F0`, `color: #CBD5E0`
 - Complete: `background: LEVEL_ACCENT`, `color: LEVEL_ACCENT_DARK`, checkmark icon — uses the tool's level accent color, not hardcoded teal
 
 **"Done ✓" indicator (collapsed card):**
@@ -227,57 +261,55 @@ const StepConnector: React.FC = () => (
 }
 ```
 
-### 3.6 Step Placeholder
+### 3.6 Step Locking (replaces Step Placeholder)
 
-Shown inside a step card when its prerequisite step hasn't been completed yet.
+Steps that haven't met their prerequisites are rendered using the StepCard's built-in `locked` prop (see §3.4) rather than a separate placeholder component inside the card. The locked state is handled at the card level — the card itself appears greyed out with a message, and its children are not rendered at all.
 
+**This replaces the old `StepPlaceholder` component.** The locked card pattern is simpler, more consistent, and reduces visual clutter by not showing a dashed-border placeholder inside an already-visible card.
+
+**Implementation:**
 ```tsx
-<StepPlaceholder
-  icon={<ArrowRight size={16} color="#A0AEC0" />}
-  message="Complete the step above to unlock this"
-  detail="Longer description of what will appear here once the prerequisite is met."
-/>
+// Step 2 is locked until Step 1 produces results
+<StepCard
+  stepNumber={2}
+  title="Review your agent design"
+  subtitle="Your agent has been designed across 4 sections."
+  done={step2Done}
+  collapsed={step2Done}
+  locked={!result && !isLoading}
+  lockedMessage="Complete Step 1 to generate your agent design"
+>
+  {/* Only rendered when not locked */}
+</StepCard>
 ```
 
-**Specifications:**
-- `background: #F7FAFC`, `borderRadius: 12`, `border: 1px dashed #E2E8F0`
-- `padding: 24px 28px`, `textAlign: center`
-- Icon in a 36px circle (`background: #EDF2F7`)
-- Message: `fontSize: 14`, `fontWeight: 700`, `color: #4A5568`
-- Detail: `fontSize: 13`, `color: #A0AEC0`, `maxWidth: 480px`, centred
+### 3.7 Educational Default (DEPRECATED — use Locked Steps instead)
 
-### 3.7 Educational Default (for Output Steps)
+> **This pattern has been superseded by the locked step pattern (§1.3, §3.6).** Output steps that haven't met their prerequisites should use the StepCard `locked` prop to show a greyed-out card with a "Complete Step X" message — not a grid of educational preview cards.
 
-When the output step has structured sections (e.g., Blueprint sections, agent config sections), show them in a **2-column grid** with educational content before the user generates output.
+**Rationale:** Educational preview cards (2×2 grids explaining "what this section is" with examples) add significant visual clutter before the user has even engaged with the tool. The locked step pattern is cleaner, focuses attention on the active step, and still communicates the full process via the "How It Works" overview strip (§3.3).
 
-**Section color rule:** All output section cards (educational defaults AND generated output) must use the tool's `LEVEL_ACCENT_DARK` as their accent color — not per-section custom colors. This keeps the page visually cohesive and reinforces the level identity. The only exception is the Prompt Playground's strategy cards, which use distinct colors per strategy because the strategies themselves are the educational content being differentiated.
-
-**Structure per section card:**
-- `borderLeft: 4px solid ${LEVEL_ACCENT_DARK}`
-- `background: ${LEVEL_ACCENT_DARK}08` (very subtle tint)
-- `borderRadius: 10`, `padding: 16px 18px`
-- Header: icon + label (uppercase, 12px, weight 700) + position indicator (e.g., "1/6")
-- Body: educational "why this matters" text (13px, `#4A5568`, `lineHeight: 1.6`)
-- Example block: tinted background (`${LEVEL_ACCENT_DARK}18`), `borderLeft: 3px solid ${LEVEL_ACCENT_DARK}`, italic example text
-
-**Intro text above the grid:**
-> "Your output will be structured using the **[Framework Name]** — [one-line description]. Complete the steps above and each section below will be filled with content tailored to your specific needs."
-
-**Summary footer below the grid:**
-- Horizontal row of all section icons + labels
-- `borderTop: 1px solid #EDF2F7`, `padding: 10px 0`
+**Exception:** The Prompt Playground (Level 1) may retain educational strategy cards in its output step because the strategies themselves are core learning content that benefits from pre-generation visibility. All other tools should use locked steps.
 
 ### 3.8 Action Buttons
 
-Three visual variants used throughout tool pages:
+Two visual variants used throughout tool pages:
 
 | Variant | Background | Text | Border | Use Case |
 |---------|-----------|------|--------|----------|
-| `primary` | `#38B2AC` | `#FFFFFF` | none | Primary CTA (Copy, Generate) |
-| `accent` | `#5A67D8` | `#FFFFFF` | none | Save to Library |
+| `primary` | `#38B2AC` (teal) | `#FFFFFF` | none | Primary CTA (Approve, Generate, Copy) |
 | default | `#FFFFFF` | `#4A5568` | `1px solid #E2E8F0` | Secondary (Download, Start Over, Back) |
 
-All buttons: `borderRadius: 24`, `padding: 8px 16px`, `fontSize: 12`, `fontWeight: 600`, icon + label with `gap: 5`
+All buttons share: `borderRadius: 24`, `padding: 9px 18px`, `fontSize: 13`, `fontWeight: 600`, `gap: 6`, `fontFamily: FONT`.
+
+**Icon placement rules:**
+- **Forward-action buttons** (Approve Prompt, Generate Build Plan, Refine): Arrow icon goes **after** the label using `iconAfter={<ArrowRight size={13} />}`. Never place the arrow before the label.
+- **Back buttons** (Back to Step X): Arrow icon goes **before** the label using `icon={<ArrowRight size={13} style={{ transform: 'rotate(180deg)' }} />}`.
+- **Utility buttons** (Copy, Start Over): Icon goes **before** the label using `icon`.
+- **Loading state**: Replace the `iconAfter` arrow with a spinner `<div>` (see §9.5). Update the label text (e.g., "Generating…").
+- Never include arrow characters (`→`) in the label text when an `iconAfter` arrow icon is present.
+
+**Deprecated:** The `accent` variant (purple `#5A67D8`) is removed. All primary CTAs use teal (`#38B2AC`) for visual consistency.
 
 ### 3.9 Toast Notification
 
@@ -334,6 +366,8 @@ const handleGoBackToStep2 = () => {
 
 ## 4. Output Step Patterns
 
+> **Build Guide outputs:** Any tool that generates a Build Guide as its final deliverable (e.g., Workflow Canvas) must follow the dedicated **[Build Guide Output Standard](BUILD-GUIDE-OUTPUT-STANDARD.md)**. That document defines the complete component hierarchy, layout, interaction patterns, loading states, refinement flow, and export behavior specific to Build Guide outputs. The patterns below still apply as general defaults for non–Build Guide output steps.
+
 ### 4.1 Cards + Markdown Toggle
 
 When the output consists of structured sections, provide a **view toggle** between Cards view and Markdown view.
@@ -365,7 +399,7 @@ Output actions are organised into **three zones**: a top action row, an Output A
 - **Right (inline, wrapped in a `<div style={{ display: 'flex', gap: 8 }}>`):**
   1. **Copy {Deliverable Name}** — `primary` ActionBtn (teal). Label must name the specific deliverable, e.g., "Copy Full System Prompt", "Copy Build Guide". Never use generic labels like "Copy All".
   2. **Download (.md)** — default ActionBtn (white). Downloads the cohesive deliverable as a `.md` file with a date-stamped filename.
-  3. **Save to Prompt Library** — `accent` ActionBtn (purple). Calls `dbSavePrompt()`. Shows disabled state with "Saved!" label after saving. Resets on new generation.
+  3. **Save to Prompt Library** — `primary` ActionBtn (teal). Calls `dbSavePrompt()`. Shows disabled state with "Saved!" label after saving. Resets on new generation.
 
 **Zone 2 — Output Actions Panel (between output content and refinement card):**
 - Uses the `OutputActionsPanel` component (`components/app/workflow/OutputActionsPanel.tsx`)
@@ -572,6 +606,84 @@ useEffect(() => {
 
 Each block: `opacity` and `translateY(8px)` transition over 0.3s.
 
+### 4.7 Collapsed-by-Default Output Sections
+
+On pages with multiple output sections (Agent Builder, App Designer, App Evaluator), output cards render **collapsed by default** after generation. This prevents a wall of expanded content and lets users scan results quickly.
+
+**Rules:**
+- Collapsed state: show section icon, title, and a one-line summary or score (if applicable). Hide the full body content.
+- Click the header row or chevron to expand/collapse.
+- The **primary deliverable** section (e.g., system prompt on L2, PRD project_overview on L4) auto-expands since it's the main artifact the user came for.
+- Staggered reveal animation still applies — cards fade in one by one, but in their collapsed state.
+
+**Implementation pattern:**
+```tsx
+const [expandedSections, setExpandedSections] = useState<Set<string>>(
+  new Set(['primary_deliverable_key']) // only the main deliverable starts expanded
+);
+
+const toggleSection = (key: string) => {
+  setExpandedSections(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
+};
+```
+
+**Applies to:** Agent Builder (4 sections), App Designer (11 PRD sections), App Evaluator (4 sections). Prompt Playground and Workflow Canvas have different output structures — assess case by case.
+
+### 4.8 Next Step Banner
+
+After output generates, a **Next Step Banner** appears immediately above the output sections (below the top action row). This single, prominent card tells the user the most important next action and eliminates decision paralysis.
+
+**Specifications:**
+- Background: `${LEVEL_ACCENT}15`
+- `borderLeft: 4px solid ${LEVEL_ACCENT_DARK}`
+- `borderRadius: 10`, `padding: 14px 18px`
+- Icon (Lucide) + bold headline (13px, 700) + one sentence body (13px, 400, `#4A5568`)
+
+**Per-page content:**
+
+| Page | Banner Text |
+|------|-------------|
+| L1 Prompt Playground | "Copy your prompt and test it in your AI tool of choice. Come back and refine it based on what you learn." |
+| L2 Agent Builder | "Copy the Full System Prompt below and paste it into your AI platform. The sections below break down how it was built." |
+| L3 Workflow Canvas | "Download your Build Guide and follow the steps in your chosen platform. Use the test checklist to verify each step." |
+| L4 App Designer | "Copy the PRD and paste it into an AI coding tool (Cursor, Lovable, Bolt.new) to start building. The mockup above is your visual reference." |
+| L5 App Evaluator | "Review your Design Score, then use the Architecture and Implementation Plan sections to plan your build. Start with the highest-priority components." |
+
+### 4.9 CollapsibleOutputCard Component
+
+A shared component for collapsible output section cards, supporting §4.7 above.
+
+**Props:**
+```tsx
+interface CollapsibleOutputCardProps {
+  sectionKey: string;
+  icon: string | React.ReactNode;
+  title: string;
+  summary?: string;
+  expanded: boolean;
+  onToggle: () => void;
+  copyContent?: string;
+  accentColor: string;      // LEVEL_ACCENT_DARK
+  accentBg?: string;        // defaults to `${accentColor}08`
+  index?: number;
+  total?: number;
+  visible?: boolean;
+  children: React.ReactNode;
+}
+```
+
+**Specs:**
+- `borderLeft: 4px solid ${accentColor}`, `background: ${accentBg || accentColor + '08'}`
+- `borderRadius: 10`, `padding: 16px 18px`
+- Header row: icon + title (13px, 700) + summary when collapsed (13px, `#718096`) + chevron right-aligned
+- Collapsed: header row only. Expanded: header + `borderTop: 1px solid #EDF2F7` + children.
+- Transition: `ppSlideDown` animation on expand.
+- Per-section copy button (top-right, appears on hover or always on mobile).
+
 ---
 
 ## 5. Tool-Specific Step Definitions
@@ -619,17 +731,36 @@ Each block: `opacity` and `translateY(8px)` transition over 0.3s.
 | Step | Title | Content |
 |------|-------|---------|
 | 1 | Describe your agent | Two input fields: task description + input data description. Example agents (good + not-recommended) for quick-fill. Draft persistence via localStorage. |
-| 2 | Review your agent design | 4-section output displayed for review, with a cohesive system prompt as the deliverable |
+| 2 | Review your agent design | 4-section output displayed for review, with a cohesive system prompt as the deliverable. Includes "Approve Prompt" action to unlock Step 3. |
+| 3 | Deploy your agent | Platform selector (6 options) + AI-generated build plan with platform-specific setup instructions and pro tips. |
 
-**Displayed sections (Cards view):**
-1. **Readiness Score** — Circular gauge (0-100) with verdict and per-criteria breakdown (Frequency, Consistency, Shareability, Complexity, Standardization Risk). Level 1 vs Level 2 comparison points. **Informational only — not included in the deliverable.**
-2. **Output Format** — Side-by-side human-readable + JSON template views. Both displayed for review; the JSON template is embedded into the cohesive deliverable.
-3. **System Prompt** — Color-coded prompt sections (Role, Context, Task, Output Format, Steps, Quality Checks) matching the Level 1 Prompt Blueprint framework. Expandable/collapsible. This is the core of the cohesive deliverable.
-4. **Built-In Accountability** — Checkbox-selectable accountability features with severity badges (critical/important/recommended). Only selected items are included in the deliverable.
+**Progressive disclosure flow:**
+- **Step 1** expanded on load. Steps 2 and 3 visible but locked.
+- **Step 2** unlocks when "Design My Agent" returns results. Step 1 collapses to "Done ✓".
+- **Step 3** unlocks when user clicks "Approve Prompt" in Step 2. Step 2 collapses to "Done ✓".
+- "Back to Step 1" / "Back to Step 2" buttons re-expand the target step and re-lock downstream steps.
+- `step2Approved` state tracks whether the user has explicitly approved the prompt.
 
-**Cohesive deliverable:** "Full System Prompt" — combines sections 2 (JSON template), 3 (system prompt), and 4 (selected accountability instructions) into a single ready-to-use prompt. Section 1 (readiness) is excluded.
+**Step 2 — View toggle with inline tabs:**
+The system prompt view area has a unified toggle row:
+- **Left side:** Cards / Markdown toggle (same as §4.1)
+- **Right side:** Output Format and Accountability buttons — clicking either switches the content card below to show that view instead of the prompt. Clicking again returns to Cards view.
+- This replaces the old separate collapsible sections and gives more vertical space to each view.
 
-**Educational default (Step 2):** Show 4 cards in a 2×2 grid, each explaining what the section assesses and why it matters, with a brief example. Uses the same layout as the output cards but with educational content.
+**Displayed views (Step 2):**
+1. **Cards view (default)** — Color-coded system prompt with Prompt Blueprint section labels (Role, Context, Task, Output Format, Steps, Quality Checks)
+2. **Markdown view** — Dark-background raw prompt text
+3. **Output Format view** — Side-by-side human-readable + JSON template
+4. **Accountability view** — Severity-badged accountability features list
+5. **Readiness Score** — Always visible above the toggle row as a compact card. **Informational only — not included in the deliverable.**
+
+**Cohesive deliverable:** "Full System Prompt" — combines the system prompt, JSON template, and selected accountability instructions into a single ready-to-use prompt. Readiness score is excluded.
+
+**Step 3 — Deploy:**
+- 2×3 grid of platform cards (ChatGPT Custom GPTs, Claude Skills, Microsoft Copilot, Google Gemini Gems, Open Source / API, Not sure yet)
+- "Generate Build Plan" button triggers AI-generated platform-specific setup guide
+- Build plan displayed as numbered steps + Pro Tips card + limitations note
+- Smart, advanced guidance: data source connections, tool composition, team deployment, power-user tips
 
 **Level accent:** `#F7E8A4` (light) / `#8A6A00` (dark)
 
@@ -642,6 +773,8 @@ Each block: `opacity` and `translateY(8px)` transition over 0.3s.
 | 3 | Export your workflow | Workflow summary with connection map, Markdown export, and implementation notes |
 
 **Educational default (Step 3):** Show node type categories with example nodes and their purposes.
+
+**Build Guide output (Step 4):** The Workflow Canvas produces a Build Guide as its final deliverable. For the complete specification of Step 4's output view — including the loading state, Cards/Markdown toggle, ExportSummaryCard, OutputActionsPanel, refinement flow, and download behavior — refer to **[BUILD-GUIDE-OUTPUT-STANDARD.md](BUILD-GUIDE-OUTPUT-STANDARD.md)**.
 
 ### 5.4 Dashboard Designer (Level 4)
 
@@ -703,10 +836,12 @@ interface StepCardProps {
   subtitle: string;
   done: boolean;
   collapsed: boolean;
+  locked?: boolean;          // Greyed-out state for steps whose prerequisite isn't met
+  lockedMessage?: string;    // e.g., "Complete Step 1 to generate your agent design"
   children: React.ReactNode;
 }
 
-// StepPlaceholder
+// StepPlaceholder (DEPRECATED — use StepCard locked prop instead, see §3.6)
 interface StepPlaceholderProps {
   icon: React.ReactNode;
   message: string;
@@ -723,13 +858,14 @@ interface ProcessingProgressProps {
 
 // ActionBtn
 interface ActionBtnProps {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;      // Icon before label (back buttons, utility buttons)
   label: string;
   onClick: () => void;
-  primary?: boolean;  // teal background
-  accent?: boolean;   // indigo background (Save to Library)
+  primary?: boolean;            // teal (#38B2AC) background
   disabled?: boolean;
+  iconAfter?: React.ReactNode;  // Icon after label (forward-action buttons)
 }
+// Note: `accent` variant (purple) is deprecated — use `primary` (teal) for all CTAs
 ```
 
 ---
@@ -800,8 +936,18 @@ Derive step completion from state, don't duplicate it:
 
 ```typescript
 const step1Done = /* first choice made */ activeMode !== null;
-const step2Done = /* output generated */ result !== null;
+const step2Done = /* output generated AND approved */ result !== null && step2Approved;
+const step3Done = /* deployment guide generated */ setupGuide !== null;
 ```
+
+**Explicit approval gates:** For tools with 3+ steps, intermediate steps may require an explicit user action (e.g., "Approve Prompt") before downstream steps unlock. Track this with a separate boolean state:
+
+```typescript
+const [step2Approved, setStep2Approved] = useState(false);
+// Reset in handleReset, handleGoBackToStep1, handleGoBackToStep2
+```
+
+This prevents users from accidentally advancing past an unreviewed output.
 
 ### 8.3 Database Integration
 
@@ -887,12 +1033,15 @@ Every tool page should include these base animations in a `<style>` tag:
 Steps advance on a timed schedule that approximates the expected API duration. The schedule should be front-loaded (early steps advance quickly to give immediate feedback) and back-loaded (later steps take longer to avoid finishing before the API responds).
 
 ```typescript
-// Example: 7 steps over ~18 seconds
-const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
-// Cumulative: 0.8s, 2.3s, 5.3s, 8.8s, 12.3s, 15.3s, 17.8s
+// Example: 7 steps over ~24 seconds (last step is open-ended buffer)
+const STEP_DELAYS = [800, 1500, 3000, 3500, 4000, 4500, -1];
+// Cumulative: 0.8s, 2.3s, 5.3s, 8.8s, 12.8s, 17.3s, ∞ (waits for API)
+// -1 means "never auto-advance" — the final step stays spinning until isLoading flips
 ```
 
-If the API returns before all steps complete, immediately jump to the final step and then reveal the output. If the API takes longer than expected, the last step stays active with the spinner — it never goes backwards.
+The final step ("Finalising…") must remain in the **active/spinning state** until the API actually returns. It should never show a checkmark until `isLoading` flips to `false`. Use `-1` as the delay for the last step to indicate it should not auto-advance.
+
+If the API returns before all timed steps complete, immediately jump all remaining steps to ✓ simultaneously, hold 400ms, then reveal output. If the API takes longer than expected, the last step stays active with the spinner — it never goes backwards.
 
 **Step content is tool-specific.** Each tool defines its own step labels that describe what the AI is actually doing for that tool. Examples:
 
@@ -927,7 +1076,8 @@ const REFINE_LOADING_STEPS = [
   'Finalising refined output…',
 ];
 // Front-loaded timing: early steps fast, later steps slower
-const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+// Last step uses -1 = open-ended buffer (never auto-advances)
+const STEP_DELAYS = [800, 1500, 3000, 3500, 4000, 4500, -1];
 
 // In component:
 const [loadingStep, setLoadingStep] = useState(0);
@@ -949,6 +1099,7 @@ useEffect(() => {
   const timers: ReturnType<typeof setTimeout>[] = [];
   let cumulative = 0;
   STEP_DELAYS.forEach((delay, i) => {
+    if (delay < 0) return; // -1 = open-ended buffer, don't auto-advance
     cumulative += delay;
     timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
   });
@@ -1009,9 +1160,9 @@ components/app/toolkit/
 - [ ] Page title: plain text, 28px, weight 800, no emoji
 - [ ] Description: 2 lines max, answers problem/function/outcome
 - [ ] `ToolOverview` strip with 3-4 steps + outcome bar
-- [ ] All step cards visible on first load
-- [ ] Incomplete steps show `StepPlaceholder` or educational default
-- [ ] Output step shows educational/generic content before generation
+- [ ] All step cards visible on first load (locked steps use `locked` prop, not hidden)
+- [ ] Only one step expanded at a time — downstream steps show locked state with "Complete Step N" message
+- [ ] Steps unlock progressively as prerequisites are met (e.g., API returns results, user clicks "Approve")
 - [ ] Animated `StepConnector` between every step card
 
 **Theming & Accent Colors:**
@@ -1066,7 +1217,9 @@ components/app/toolkit/
 - **No back-to-home navigation** — the app shell handles navigation
 - **No level/course badges** — tool pages are workspaces, not course content
 - **No two-column step layouts** — steps are always full-width, one per row
-- **No hidden steps** — all steps are always visible (with placeholders)
+- **No hidden steps** — all steps are always visible (locked steps use `locked` prop, not `display: none`)
+- **No multiple expanded steps** — only one step card is expanded at a time; downstream steps show locked state, completed steps collapse to "Done ✓"
+- **No educational preview cards in locked steps** — locked steps show a compact greyed-out card with "Complete Step N" message, not a grid of educational content. The old `StepPlaceholder` and educational default patterns are deprecated (see §1.4, §3.6, §3.7).
 - **No manual resize textareas** — use auto-growing textareas (`resize: none`, auto-height on change)
 - **No emoji in titles** — first thing visible is the tool name in plain text
 

@@ -185,6 +185,9 @@ Generate a complete, ready-to-use system prompt for this agent that incorporates
 
 Mark each section with labels: [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS].
 
+ABSOLUTE RULE — TOOL AND MODEL AGNOSTIC:
+Never mention specific AI providers (OpenAI, Anthropic, Google) or models (GPT-4, Claude, Gemini) in the output. Use generic terms: "AI model", "LLM", "your chosen AI platform", "the AI model approved by your organisation".
+
 SECTION 4: BUILT-IN ACCOUNTABILITY FEATURES
 Design 3-5 specific features built into the agent's prompt to actively support human oversight. Each must include: name, severity (critical/important/recommended), what_to_verify, why_it_matters, prompt_instruction.
 
@@ -244,6 +247,253 @@ export const designagent = onRequest({ secrets: [openRouterApiKey] }, async (req
     res.status(200).json(result.data);
   } catch (err) {
     console.error("design-agent error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 4b. AGENT SETUP GUIDE — Hybrid Architecture v2
+// Steps are HARDCODED templates with {SLOT} placeholders.
+// AI fills slot values + tips (personalised to the agent).
+// Steps stay accurate; content adapts to each agent.
+// ═══════════════════════════════════════════════════════════════
+
+type SetupStep = { title: string; instruction: string };
+type PlatformTemplate = {
+  steps: SetupStep[];
+  slots: Record<string, string>; // default slot values if AI fails
+  fallbackTips: string[];
+  fallbackLimitations: string;
+};
+
+const PLATFORM_TEMPLATES: Record<string, PlatformTemplate> = {
+  "ChatGPT Custom GPTs": {
+    slots: {
+      AGENT_NAME: "your agent",
+      TASK: "your agent's task",
+      KNOWLEDGE_FILES: "relevant documents, templates, and reference data",
+      CAPABILITIES: "Code Interpreter for data processing, Web Search for research",
+      CONVERSATION_STARTERS: "example prompts that show your agent's core use cases",
+    },
+    steps: [
+      { title: "Open the GPT Builder", instruction: "Go to chat.openai.com → Explore GPTs → + Create. Switch to the \"Configure\" tab." },
+      { title: "Paste your system prompt", instruction: "Paste the full system prompt into the \"Instructions\" field. Name your GPT \"{AGENT_NAME}\" and add a short description." },
+      { title: "Upload Knowledge files", instruction: "In the \"Knowledge\" section, upload {KNOWLEDGE_FILES}. The GPT will search these files when generating responses." },
+      { title: "Configure Capabilities", instruction: "Toggle on the capabilities your agent needs: {CAPABILITIES}. Only enable what's relevant to keep responses focused." },
+      { title: "Set up Actions (optional)", instruction: "If your agent needs external data, click \"Create new action\" and define an OpenAPI schema for the API endpoints it should access." },
+      { title: "Add Conversation Starters", instruction: "Add 3–4 starters like: {CONVERSATION_STARTERS}. These teach users how to interact with your agent effectively." },
+      { title: "Test and publish", instruction: "Test in the Preview pane with realistic inputs. When ready, click \"Create\" and choose your sharing level (Private, Team, or Public)." }
+    ],
+    fallbackTips: [
+      "Upload example outputs as Knowledge files — concrete examples teach the GPT your expected format better than instructions alone.",
+      "Duplicate your GPT before making changes (three-dot menu → Copy) to create a safe rollback point.",
+      "Use the Analytics tab (Team/Enterprise plans) to see which conversation starters get used most and where users drop off."
+    ],
+    fallbackLimitations: "Requires ChatGPT Plus, Team, or Enterprise. Knowledge limited to 20 files (512 MB each)."
+  },
+  "Claude Skills": {
+    slots: {
+      AGENT_NAME: "your agent",
+      TASK: "your agent's task",
+      EXAMPLE_INPUT: "the relevant input data",
+      EXAMPLE_OUTPUT: "structured output in your expected format",
+      CHAIN_SUGGESTION: "a formatting skill (e.g., report generator or slide deck builder)",
+      SKILL_DESCRIPTION: "a short description of what this skill does",
+    },
+    steps: [
+      { title: "Prepare your design answers", instruction: "Before building, decide: What input will users provide ({EXAMPLE_INPUT})? What should the output look like ({EXAMPLE_OUTPUT})? Should this skill chain into another (e.g., {CHAIN_SUGGESTION})?" },
+      { title: "Use the built-in skill-creator", instruction: "Start a new Claude chat and say: \"Help me build a skill that {TASK}\". Claude's skill-creator will guide you through design questions and generate the skill automatically." },
+      { title: "Install with one click", instruction: "When the skill is ready, click the \"Copy to your skills\" button at the bottom of the chat. It's instantly added to Customize > Skills. Toggle it on or off any time." },
+      { title: "Test in a new conversation", instruction: "Open a fresh chat and describe a task naturally — don't mention the skill by name. If the skill activates, you'll see \"Using {AGENT_NAME}\" appear. If not, edit the description at Customize > Skills." },
+      { title: "Chain with other skills", instruction: "Build a complementary skill (e.g., {CHAIN_SUGGESTION}) using the skill-creator. Toggle both on, and Claude will chain them automatically when the task fits." }
+    ],
+    fallbackTips: [
+      "The skill description (max 200 chars) determines when Claude activates it — write it as \"activate when the user asks about [specific task]\". Vague descriptions mean the skill never fires.",
+      "Skills work across ALL conversations, not just one Project — once installed, it's always available.",
+      "Pair this skill with a formatting skill (slides, reports, docs) so structured output feeds directly into professional deliverables.",
+      "Connect to document repositories via MCP connectors so the skill can access live organisational data."
+    ],
+    fallbackLimitations: "Requires Claude Pro or Team. Skill description limited to 200 characters. Skills can't call each other by name — chaining relies on Claude matching descriptions to the task."
+  },
+  "Microsoft Copilot": {
+    slots: {
+      AGENT_NAME: "your agent",
+      TASK: "your agent's task",
+      KNOWLEDGE_SOURCES: "relevant SharePoint sites, documents, or data sources",
+      ACTIONS: "automations like sending emails, creating tasks, or updating records",
+      CHANNEL: "Microsoft Teams",
+    },
+    steps: [
+      { title: "Create a new Agent", instruction: "Open Copilot Studio (copilotstudio.microsoft.com) → Create → New Agent. Name it \"{AGENT_NAME}\"." },
+      { title: "Paste your system prompt", instruction: "Paste the full system prompt into the \"Instructions\" field. This defines your agent's behaviour and output format." },
+      { title: "Connect Knowledge sources", instruction: "Add {KNOWLEDGE_SOURCES} via the Knowledge section. The agent will search these when responding to users." },
+      { title: "Configure Actions", instruction: "Connect Power Automate flows for {ACTIONS}. Map your agent's output fields to flow inputs for seamless automation." },
+      { title: "Set up Topics", instruction: "Create Topics for your agent's main use cases. Each Topic guides users through providing the right inputs step by step." },
+      { title: "Test your agent", instruction: "Click \"Test\" in the top-right to open the test pane. Run through realistic scenarios and check that Knowledge and Actions work correctly." },
+      { title: "Publish to {CHANNEL}", instruction: "Go to Channels and deploy to {CHANNEL}. Your team can start using the agent immediately." }
+    ],
+    fallbackTips: [
+      "Use Adaptive Cards for rich output — formatted cards with tables, buttons, and input fields are much more engaging than plain text.",
+      "Connect to Microsoft Graph so your agent can access calendars, emails, files, and org data for context-aware responses.",
+      "Use the Analytics tab to monitor which Topics get triggered most and where users abandon conversations."
+    ],
+    fallbackLimitations: "Requires Microsoft 365 with Copilot Studio access. Some Power Automate connectors need additional licensing."
+  },
+  "Google Gemini Gems": {
+    slots: {
+      AGENT_NAME: "your agent",
+      TASK: "your agent's task",
+      REFERENCE_DOCS: "relevant Google Docs, Sheets, or PDFs",
+      WORKSPACE_INTEGRATIONS: "Drive, Docs, Sheets, or Slides",
+    },
+    steps: [
+      { title: "Open the Gem Manager", instruction: "Go to gemini.google.com → Gem manager → New Gem. Requires Gemini Advanced (Google One AI Premium)." },
+      { title: "Configure name and instructions", instruction: "Name your Gem \"{AGENT_NAME}\" and paste the full system prompt into the \"Instructions\" field." },
+      { title: "Upload reference documents", instruction: "Attach {REFERENCE_DOCS} so the Gem can reference them when generating responses." },
+      { title: "Test and calibrate", instruction: "Send representative inputs in the conversation area. If the output format or tone isn't right, refine the Instructions — changes take effect immediately." },
+      { title: "Connect Workspace integrations", instruction: "Grant the Gem access to {WORKSPACE_INTEGRATIONS} so it can pull live organisational data when needed." },
+      { title: "Test with realistic data", instruction: "Test with actual data, not toy examples. Verify the output matches your expected format, especially for structured output like JSON." },
+      { title: "Share with your team", instruction: "Click Share and add collaborators by email. They'll see the Gem in their Gem manager immediately." }
+    ],
+    fallbackTips: [
+      "Link to live Google Sheets for real-time data access — the Gem always works with the latest information.",
+      "Pair with Google Apps Script to automatically write structured output to Sheets, Docs, or Slides.",
+      "Create a shared Drive folder with all reference materials — updating the folder updates the Gem's knowledge."
+    ],
+    fallbackLimitations: "Requires Google One AI Premium (Gemini Advanced). Gems can't execute code, call APIs, or trigger automations directly."
+  },
+  "Open Source / API": {
+    slots: {
+      AGENT_NAME: "your agent",
+      TASK: "your agent's task",
+      SDK_EXAMPLE: "pip install openai (Python) or npm install openai (Node.js)",
+      OUTPUT_FORMAT: "your expected JSON schema",
+      DATA_SOURCES: "your document store, database, or file system",
+      DEPLOY_FRAMEWORK: "FastAPI (Python) or Express (Node.js)",
+    },
+    steps: [
+      { title: "Install the SDK", instruction: "Set up API access with your chosen provider: {SDK_EXAMPLE}. Store the API key as an environment variable." },
+      { title: "Configure the system message", instruction: "Pass the system prompt as the \"system\" role in the chat completions API. This loads before every user interaction." },
+      { title: "Parse structured output", instruction: "Use JSON mode or function calling to enforce {OUTPUT_FORMAT}. Add a validation retry loop for malformed responses." },
+      { title: "Build the input pipeline", instruction: "Create a function that prepares user input — extracting text from files, formatting data, and truncating to fit context limits." },
+      { title: "Add error handling", instruction: "Handle rate limits (exponential backoff), timeouts (retry), and invalid output (re-prompt). This is critical for production reliability." },
+      { title: "Connect to data sources", instruction: "Integrate with {DATA_SOURCES} so the agent can access reference materials at runtime. For large collections, consider a vector database for RAG." },
+      { title: "Deploy as a service", instruction: "Wrap in an API endpoint ({DEPLOY_FRAMEWORK}) or build a simple UI (Streamlit, Gradio, Next.js). Add auth, rate limiting, and logging." }
+    ],
+    fallbackTips: [
+      "Use streaming (stream: true) for long outputs — users get immediate feedback instead of waiting.",
+      "Count tokens before each API call to stay within context limits and truncate intelligently.",
+      "Log every API call (input, output, latency, tokens) for debugging and quality monitoring.",
+      "For large document collections, implement RAG with a vector database (Pinecone, Weaviate, ChromaDB)."
+    ],
+    fallbackLimitations: "API costs scale with usage — monitor token consumption. You're responsible for data handling, security, and compliance."
+  },
+  "Not sure yet": {
+    slots: {
+      AGENT_NAME: "your agent",
+      TASK: "your agent's task",
+      REFERENCE_MATERIALS: "relevant documents, templates, and example data",
+    },
+    steps: [
+      { title: "Find the instructions field", instruction: "Every AI platform has a place for \"system instructions\" or \"custom instructions\" — look for Settings, Configure, or Instructions in your platform." },
+      { title: "Paste the full system prompt", instruction: "Copy the entire prompt (all sections) into the instructions field. Don't shorten it — the sections work together." },
+      { title: "Upload reference materials", instruction: "Most platforms support file uploads. Add {REFERENCE_MATERIALS} to give the agent context beyond the prompt." },
+      { title: "Test with realistic inputs", instruction: "Use actual data, not toy examples. Run 3–5 test cases including messy or incomplete inputs to check edge cases." },
+      { title: "Iterate on output quality", instruction: "If the format is wrong, tighten the format instructions. If the tone is off, adjust the role section. Expect 2–3 rounds of iteration." },
+      { title: "Share with your team", instruction: "Use your platform's sharing features to deploy the agent. Collect feedback from real users in the first week and iterate." }
+    ],
+    fallbackTips: [
+      "Start with the full prompt — only simplify if the platform has strict character limits.",
+      "Upload 2–3 example outputs alongside the prompt — examples teach the AI more effectively than instructions alone.",
+      "Test your hardest use case first — if that works, simpler ones will too."
+    ],
+    fallbackLimitations: ""
+  }
+};
+
+// AI prompt — fills personalised slot values + tips for this specific agent.
+// The AI never generates steps or UI navigation, eliminating hallucination risk.
+const SLOT_FILL_SYSTEM = `You personalise a build plan for deploying a specific AI agent on a platform.
+
+You will receive the agent's task description and output format. Your job is to fill in personalised values for template slots AND generate tailored tips.
+
+RULES:
+- Fill EVERY slot with a value specific to THIS agent (not generic placeholders)
+- Slot values should be concise — a few words to one short sentence max
+- Generate exactly 3-4 tips specific to THIS agent on this platform
+- Tips should reference the agent's actual task, data, and use case
+- Do NOT describe UI navigation or setup steps
+- Do NOT mention specific model names
+- Note limitations specific to THIS agent (or empty string if none)
+
+RESPONSE FORMAT (JSON only, no markdown):
+
+{
+  "slots": {
+    "AGENT_NAME": "short name for this agent",
+    "TASK": "concise description of what the agent does",
+    ...other slots as provided...
+  },
+  "tips": [
+    "Specific tip for this agent",
+    "Another tip referencing the agent's actual task"
+  ],
+  "limitations": "Limitations for THIS agent on this platform, or empty string"
+}
+
+Do NOT add preamble, commentary, or explanation outside the JSON object.`;
+
+export const agentsetupguide = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { platform, output_format, task_description } = req.body;
+
+    // 1. Look up hardcoded template for this platform
+    const template = PLATFORM_TEMPLATES[platform];
+    if (!template) {
+      res.status(400).json({ error: `Unknown platform: ${platform}` });
+      return;
+    }
+
+    // 2. Ask AI to fill slots + generate tips (one simple call)
+    let slotValues: Record<string, string> = { ...template.slots, TASK: task_description || template.slots.TASK };
+    let tips = template.fallbackTips;
+    let limitations = template.fallbackLimitations;
+
+    try {
+      const slotNames = Object.keys(template.slots).join(", ");
+      const userMessage = `Platform: ${platform}\n\nAgent Task: ${task_description}\n\nOutput Format: ${JSON.stringify(output_format, null, 2)}\n\nSlots to fill: ${slotNames}\n\nFill each slot with a value personalised to this specific agent, and generate tips.`;
+
+      const result = await callGemini({ apiKey, model, systemPrompt: SLOT_FILL_SYSTEM, userMessage, label: "agent-setup-slots" });
+      if (result.ok && result.data) {
+        // Merge AI slots with defaults (AI values override defaults)
+        if (result.data.slots && typeof result.data.slots === "object") {
+          slotValues = { ...slotValues, ...result.data.slots };
+        }
+        if (Array.isArray(result.data.tips) && result.data.tips.length > 0) {
+          tips = result.data.tips;
+        }
+        if (typeof result.data.limitations === "string") {
+          limitations = result.data.limitations;
+        }
+      }
+    } catch (aiErr) {
+      console.warn("Slot personalization failed, using defaults:", aiErr);
+    }
+
+    // 3. Inject slot values into step templates
+    const steps = template.steps.map(s => ({
+      title: s.title.replace(/\{(\w+)\}/g, (_: string, k: string) => slotValues[k] || k),
+      instruction: s.instruction.replace(/\{(\w+)\}/g, (_: string, k: string) => slotValues[k] || k),
+    }));
+
+    // 4. Return merged response
+    res.status(200).json({ steps, tips, limitations });
+  } catch (err) {
+    console.error("agent-setup-guide error:", err);
     res.status(500).json({ error: "Internal server error", retryable: true });
   }
 });
@@ -452,8 +702,8 @@ export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async 
     };
     const experienceLabels: Record<string, string> = {
       "beginner": "Beginner — rarely uses AI tools",
-      "comfortable-user": "Comfortable User — uses ChatGPT or similar regularly",
-      "builder": "Builder — has created custom GPTs, agents, or prompt templates",
+      "comfortable-user": "Comfortable User — uses AI tools regularly",
+      "builder": "Builder — has created custom AI agents or prompt templates",
       "integrator": "Integrator — has designed AI-powered workflows or multi-step pipelines",
     };
 
@@ -779,6 +1029,9 @@ Include at least one risk from each severity level when possible.
 
 Provide a summary sentence for each of sections 2, 3, and 4.
 
+ABSOLUTE RULE — TOOL AND MODEL AGNOSTIC:
+Never mention specific AI providers (OpenAI, Anthropic, Google) or models (GPT-4, Claude, Gemini) in the output. Use generic terms: "AI model", "LLM", "your chosen AI platform", "the AI model approved by your organisation".
+
 SECTION 5: REFINEMENT QUESTIONS
 Generate 3-5 follow-up questions that would help you produce a significantly improved evaluation if the user answered them. Questions must be specific to the user's particular application — not generic. Reference their app name, domain, or specific features in the questions.
 
@@ -857,6 +1110,35 @@ You will receive details about a dashboard project. Generate a comprehensive, de
 
 CRITICAL: Every section value MUST be a plain text STRING, not a JSON object. Use formatted text with newlines and bullets within the string.
 
+SECTION 12: DESIGN TOKENS & VISUAL REFERENCE
+Based on the user's brief (visual style preference, color scheme, inspiration images if provided), generate a concrete design token specification:
+- Primary, secondary, accent, and neutral color hex values
+- Font family recommendations (from Google Fonts)
+- Border radius, spacing scale, and shadow tokens
+- Component-level style notes (card style, button style, input style)
+
+If the user mentioned a color scheme or visual style preference, use those as the foundation.
+If no style preference was given, provide a sensible default based on the app type.
+
+Format as a CSS variables block that can be copy-pasted directly:
+:root {
+  --color-primary: #...;
+  --color-secondary: #...;
+  --color-accent: #...;
+  --color-background: #...;
+  --color-card: #...;
+  --color-text: #...;
+  --color-text-muted: #...;
+  --font-family: '...', sans-serif;
+  --radius-card: ...px;
+  --radius-button: ...px;
+  --shadow-card: ...;
+  --spacing-xs: ...px;
+  --spacing-sm: ...px;
+  --spacing-md: ...px;
+  --spacing-lg: ...px;
+}
+
 RESPONSE FORMAT (JSON only):
 {
   "prd_content": "PRD: [Dashboard name]",
@@ -871,7 +1153,8 @@ RESPONSE FORMAT (JSON only):
     "interactions_filtering": "...",
     "responsive_behavior": "...",
     "human_checkpoints": "...",
-    "acceptance_criteria": "..."
+    "acceptance_criteria": "...",
+    "design_tokens": "..."
   }
 }`;
 
@@ -899,6 +1182,71 @@ export const generateprd = onRequest({ secrets: [openRouterApiKey] }, async (req
     res.status(200).json(result.data);
   } catch (err) {
     console.error("generate-prd error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 11b. APP BUILD GUIDE (platform-specific instructions from PRD)
+// ═══════════════════════════════════════════════════════════════
+
+const APP_BUILD_GUIDE_SYSTEM = `You are an expert developer educator who creates step-by-step build guides for AI coding platforms. The user has a completed PRD (Product Requirements Document) for an application they want to build. Your job is to create a clear, actionable build guide tailored to their chosen platform.
+
+RESPONSE FORMAT (JSON only, no markdown, no code fences):
+{
+  "steps": [
+    { "title": "Step title", "instruction": "Detailed instruction text" }
+  ],
+  "tips": ["Pro tip 1", "Pro tip 2"],
+  "limitations": "Platform-specific limitations or caveats"
+}
+
+RULES:
+- Generate 5-8 concrete, actionable steps
+- Each step instruction should be 2-4 sentences, specific to the platform
+- Include what to paste, where to paste it, and what to expect
+- Reference the PRD sections by name (e.g., "Copy the Tech Stack section...")
+- Include platform-specific UI navigation (e.g., "Click New Project in Cursor...")
+- Tips should be platform-specific best practices (3-5 tips)
+- Limitations should mention what the platform can't do well for this app type
+- NEVER mention specific AI model names (GPT-4, Claude, Gemini). Use "the AI" or "the platform's AI"
+
+PLATFORM-SPECIFIC GUIDANCE:
+- Cursor: Focus on project setup, .cursorrules file, composer mode, step-by-step prompting with PRD sections
+- Lovable: Focus on pasting the full PRD as the initial prompt, iteration workflow, connecting Supabase
+- Bolt.new: Focus on the initial prompt, StackBlitz environment, iterating in the chat
+- Claude Code: Focus on CLAUDE.md setup, passing the PRD, using plan mode, agentic workflow
+- Codex (OpenAI): Focus on environment setup, task description, repository structure
+- Google AI Studio: Focus on system instructions, structured prompts, code generation workflow
+- V0 (Vercel): Focus on component-by-component generation, Next.js integration, shadcn/ui
+- Replit Agent: Focus on the initial description, Replit's deployment, database setup
+- Not sure yet: Give platform-agnostic advice that works with any AI coding tool`;
+
+export const appbuildguide = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { platform, prd_content, app_description } = req.body;
+    if (!platform || !prd_content) {
+      res.status(400).json({ error: "Missing platform or prd_content" });
+      return;
+    }
+
+    const userMessage = `Platform: ${platform}\n\nApp Description: ${app_description || "See PRD"}\n\nFull PRD:\n${prd_content.slice(0, 8000)}`;
+
+    const result = await callGemini({ apiKey, model, systemPrompt: APP_BUILD_GUIDE_SYSTEM, userMessage, label: "app-build-guide" });
+    if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
+
+    const data = result.data as Record<string, unknown>;
+    const steps = Array.isArray(data.steps) ? data.steps : [];
+    const tips = Array.isArray(data.tips) ? data.tips : [];
+    const limitations = typeof data.limitations === "string" ? data.limitations : "";
+
+    res.status(200).json({ steps, tips, limitations });
+  } catch (err) {
+    console.error("app-build-guide error:", err);
     res.status(500).json({ error: "Internal server error", retryable: true });
   }
 });
@@ -1706,8 +2054,11 @@ REFINEMENT HANDLING:
 
 If the user's message begins with "[REFINEMENT]", it contains their original task description followed by answers to your previous questions and/or additional context. Use ALL provided context to write a significantly improved prompt. The refinement answers provide crucial specifics — weave them deeply into the prompt structure, not as afterthoughts. Generate new refinement_questions that probe even deeper.
 
+ABSOLUTE RULE — TOOL AND MODEL AGNOSTIC:
+Never mention specific AI providers (OpenAI, Anthropic, Google) or models (GPT-4, Claude, Gemini) in the output. Use generic terms: "AI model", "LLM", "your chosen AI platform", "the AI model approved by your organisation". Platform UI labels (e.g., an n8n node called "OpenAI Chat Model") are acceptable only with a note that the user can substitute their preferred provider.
+
 RULES:
-- The prompt must be clean, professional, and immediately usable in ChatGPT or Claude without modification
+- The prompt must be clean, professional, and immediately usable in any AI platform without modification
 - The "why" must be specific to the user's task — not a generic description of the strategy
 - The "what" is the stable, general description — it can be consistent across similar tasks
 - The "how_applied" must describe the specific way this strategy manifests in the generated prompt — reference actual content you wrote

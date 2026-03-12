@@ -1,43 +1,36 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code, Library, Download,
-  Info, ChevronRight, ChevronDown, Sparkles, ThumbsUp, MessageSquare,
-  Upload, X, Plus, Maximize2, Minimize2, Eye,
+  Info, ChevronRight, ChevronDown, Sparkles,
+  X, Eye,
   LayoutDashboard, Users, Layers, BarChart3, Palette, Code2,
-  Database, SlidersHorizontal, Smartphone, ShieldCheck, CheckSquare,
+  Database, SlidersHorizontal, ShieldCheck, CheckSquare,
 } from 'lucide-react';
 import {
-  DASHBOARD_STEPS, EXAMPLE_BRIEFS,
-  VISUAL_STYLE_OPTIONS, PRD_SECTIONS, WHY_MOCKUP_TOOLTIP,
-  INSPIRATION_SITES, INSPIRATION_TOOLTIP_CONTENT,
+  EXAMPLE_BRIEFS,
+  VISUAL_STYLE_OPTIONS, PRD_SECTIONS,
+  VIBE_CODING_PLATFORMS, BUILD_GUIDE_LOADING_STEPS, BUILD_GUIDE_STEP_DELAYS,
 } from '../../../data/dashboard-designer-content';
 import {
-  useDashboardDesignApi, MAX_REGENERATIONS, MAX_PRD_GENERATIONS,
-  type DashboardImageResult,
+  useDashboardDesignApi, MAX_PRD_GENERATIONS,
 } from '../../../hooks/useDashboardDesignApi';
 import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
+import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const LEVEL_ACCENT = '#F5B8A0';
 const LEVEL_ACCENT_DARK = '#8C3A1A';
 
 /* ─── ProcessingProgress step labels ─── */
-const MOCKUP_LOADING_STEPS = [
-  'Analysing your brief and requirements…',
-  'Processing inspiration references…',
-  'Generating visual layout and components…',
-  'Rendering your app mockup…',
-  'Applying design tokens and polish…',
-  'Finalising mockup…',
-];
 const PRD_LOADING_STEPS = [
-  'Analysing your brief and mockup…',
+  'Analysing your brief…',
   'Defining tech stack and architecture…',
   'Mapping features and data models…',
   'Writing API routes and UI specs…',
+  'Generating design tokens…',
   'Generating acceptance criteria…',
   'Building implementation phases…',
   'Finalising your PRD…',
@@ -51,9 +44,7 @@ const PRD_REFINE_LOADING_STEPS = [
   'Rebuilding implementation phases…',
   'Finalising refined PRD…',
 ];
-// Front-loaded: early steps fast, later steps slower
-const MOCKUP_STEP_DELAYS = [800, 2000, 4000, 5000, 4000, 3000];
-const PRD_STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+const PRD_STEP_DELAYS = [800, 1500, 3500, 4000, 3500, 4000, 4000, -1];
 
 const INITIAL_BRIEF: DashboardBrief = {
   q1_purpose: '', q2_audience: '', q3_type: '',
@@ -74,71 +65,9 @@ const PRD_SECTION_ICONS: Record<string, React.ElementType> = {
   auth_permissions: ShieldCheck,
   scope_boundaries: Users,
   acceptance_criteria: BarChart3,
+  design_tokens: Palette,
   implementation_plan: ArrowRight,
 };
-
-/* ─── SVG Fallback ─── */
-function generateDashboardSVG(metricsText: string, title: string): string {
-  const colors = ['#38B2AC', '#D47B5A', '#5B6DC2', '#C4A934', '#2BA89C', '#D4A017'];
-  const metrics = metricsText ? metricsText.split(',').map(m => m.trim()).filter(Boolean).slice(0, 6) : ['Revenue', 'Users', 'Growth', 'Engagement'];
-  return `<svg width="100%" height="100%" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1200" height="800" fill="#F8FAFC"/>
-  <rect width="1200" height="70" fill="#FFFFFF"/>
-  <rect width="1200" height="1" y="70" fill="#E2E8F0"/>
-  <text x="40" y="45" font-family="DM Sans, sans-serif" font-size="24" font-weight="800" fill="#1A202C">${title || 'App'}</text>
-  ${metrics.map((m, i) => {
-    const x = 40 + (i % 4) * 285;
-    const y = 100 + Math.floor(i / 4) * 170;
-    const c = colors[i % colors.length];
-    const val = Math.floor(Math.random() * 9000 + 1000);
-    const chg = (Math.random() * 20 - 5).toFixed(1);
-    return `<g>
-      <rect x="${x}" y="${y}" width="260" height="140" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
-      <text x="${x + 20}" y="${y + 30}" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" fill="#718096" letter-spacing="0.5px">${m.toUpperCase()}</text>
-      <text x="${x + 20}" y="${y + 70}" font-family="DM Sans, sans-serif" font-size="36" font-weight="800" fill="#1A202C">${val.toLocaleString()}</text>
-      <rect x="${x + 20}" y="${y + 90}" width="70" height="26" rx="6" fill="${c}18"/>
-      <text x="${x + 28}" y="${y + 108}" font-family="DM Sans, sans-serif" font-size="12" font-weight="700" fill="${c}">${Number(chg) > 0 ? '+' : ''}${chg}%</text>
-    </g>`;
-  }).join('')}
-  <rect x="40" y="440" width="740" height="320" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
-  <text x="60" y="475" font-family="DM Sans, sans-serif" font-size="18" font-weight="700" fill="#1A202C">Performance Trends</text>
-  <polyline points="60,560 120,530 200,500 280,510 360,470 440,450 520,430 600,410 680,400 740,380" fill="none" stroke="#38B2AC" stroke-width="3" stroke-linecap="round"/>
-  <rect x="810" y="440" width="350" height="320" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
-  <text x="830" y="475" font-family="DM Sans, sans-serif" font-size="18" font-weight="700" fill="#1A202C">Recent Activity</text>
-  ${[0, 1, 2, 3, 4].map(i => `<rect x="820" y="${500 + i * 50}" width="330" height="40" rx="8" fill="${i % 2 === 0 ? '#F7FAFC' : '#FFFFFF'}"/>
-  <text x="835" y="${525 + i * 50}" font-family="DM Sans, sans-serif" font-size="13" fill="#4A5568">Activity item ${i + 1}</text>`).join('')}
-</svg>`;
-}
-
-/* ─── JSON Prompt Builder ─── */
-function buildJsonPrompt(brief: DashboardBrief, inspirationAnalysis?: string): object {
-  const prompt: Record<string, unknown> = {
-    image_generation_prompt: {
-      subject: 'Web application / single-page app UI mockup',
-      app_metadata: {
-        title: brief.q1_purpose.slice(0, 80),
-        type: brief.q3_type || 'Web Application',
-        target_user: brief.q2_audience || 'End users',
-        primary_purpose: brief.q1_purpose,
-      },
-      layout: {
-        style: VISUAL_STYLE_OPTIONS.find(v => v.id === brief.q7_visualStyle)?.label || 'Clean & Minimal',
-      },
-      key_features: brief.q4_metrics || 'Key features and screens',
-      data_sources: brief.q5_dataSources.join(', ') || 'To be determined',
-      ...(inspirationAnalysis ? {
-        design_reference: {
-          source: 'Extracted from uploaded inspiration image(s)',
-          patterns: inspirationAnalysis,
-          priority: 'CRITICAL — the visual design must closely follow these patterns',
-        },
-      } : {}),
-      rendering_instructions: 'Render as a high-fidelity UI mockup screenshot of a web application. Show realistic placeholder data and content.' +
-        (inspirationAnalysis ? ' Apply the design_reference patterns (colours, layout, typography, card styles, spacing) to this mockup.' : ''),
-    },
-  };
-  return prompt;
-}
 
 /* ─── Fallback PRD ─── */
 function generateFallbackPRD(brief: DashboardBrief): NewPRDResult {
@@ -157,6 +86,7 @@ function generateFallbackPRD(brief: DashboardBrief): NewPRDResult {
       auth_permissions: 'Authentication approach to be determined based on project scope. Single-user apps may use localStorage.',
       scope_boundaries: 'Phase 1 focuses on core functionality. Mobile native app, payment processing, and advanced analytics are out of scope.',
       acceptance_criteria: '1. Core features work as described. 2. UI matches the approved mockup. 3. Page loads in <2s. 4. Responsive on mobile. 5. npm run build succeeds.',
+      design_tokens: `:root {\n  --color-primary: #38B2AC;\n  --color-secondary: #5A67D8;\n  --color-accent: #D47B5A;\n  --color-background: #F7FAFC;\n  --color-card: #FFFFFF;\n  --color-text: #1A202C;\n  --color-text-muted: #718096;\n  --font-family: 'DM Sans', sans-serif;\n  --radius-card: 16px;\n  --radius-button: 24px;\n  --shadow-card: 0 2px 8px rgba(0,0,0,0.08);\n}`,
       implementation_plan: 'Phase 1: Project setup + core data model. Phase 2: Main CRUD features. Phase 3: Search, filter, polish. Phase 4: Responsive and deploy.',
     },
   };
@@ -172,23 +102,24 @@ function buildFullPRD(result: NewPRDResult): string {
 }
 
 function summariseSection(val: string): string {
-  // Return first meaningful line, truncated to ~120 chars
   const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#'));
   const first = lines[0] || '';
   return first.length > 120 ? first.slice(0, 117) + '…' : first;
 }
 
 /* ────────────────────────────────────────────────────────────
-   Shared UI Primitives (inline, per TOOLKIT-PAGE-STANDARD)
+   Shared UI Primitives
    ──────────────────────────────────────────────────────────── */
 
-const StepBadge: React.FC<{ num: number; done: boolean }> = ({ num, done }) => (
+const StepBadge: React.FC<{ num: number; done: boolean; active?: boolean }> = ({ num, done, active }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontWeight: 800, fontSize: 13, fontFamily: FONT, flexShrink: 0,
     ...(done
       ? { background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK }
-      : { background: '#F7FAFC', border: '2px solid #E2E8F0', color: '#718096' }),
+      : active
+        ? { background: '#FFFFFF', border: `2px solid ${LEVEL_ACCENT}`, color: LEVEL_ACCENT_DARK, animation: 'ppPulse 2s ease-in-out infinite' }
+        : { background: '#F7FAFC', border: '2px solid #E2E8F0', color: '#718096' }),
   }}>
     {done ? <Check size={15} /> : num}
   </div>
@@ -214,13 +145,14 @@ const StepConnector: React.FC = () => (
 
 const StepCard: React.FC<{
   stepNumber: number; title: string; subtitle: string;
-  done: boolean; collapsed: boolean; children: React.ReactNode;
-}> = ({ stepNumber, title, subtitle, done, collapsed, children }) => (
+  done: boolean; collapsed: boolean; locked?: boolean; lockedMessage?: string; children: React.ReactNode;
+}> = ({ stepNumber, title, subtitle, done, collapsed, locked, lockedMessage, children }) => (
   <div style={{
     background: '#FFFFFF', borderRadius: 16,
     border: done ? `1px solid ${LEVEL_ACCENT}88` : '1px solid #E2E8F0',
     padding: collapsed ? '16px 24px' : '24px 28px',
     transition: 'border-color 0.3s',
+    opacity: locked ? 0.5 : 1,
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <StepBadge num={stepNumber} done={done} />
@@ -234,12 +166,17 @@ const StepCard: React.FC<{
         <span style={{ fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>Done ✓</span>
       )}
     </div>
-    {!collapsed && <div style={{ marginTop: 20 }}>{children}</div>}
+    {locked && lockedMessage && (
+      <div style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT, marginTop: 8, fontStyle: 'italic' }}>
+        {lockedMessage}
+      </div>
+    )}
+    {!collapsed && !locked && <div style={{ marginTop: 20 }}>{children}</div>}
   </div>
 );
 
 const ToolOverview: React.FC<{
-  steps: { number: number; label: string; detail: string; done: boolean }[];
+  steps: { number: number; label: string; detail: string; done: boolean; active?: boolean }[];
   outcome: string;
 }> = ({ steps, outcome }) => (
   <div style={{
@@ -256,13 +193,17 @@ const ToolOverview: React.FC<{
             <div style={{
               width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0,
-              ...(s.done ? { background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK } : { background: '#F7FAFC', border: '2px solid #E2E8F0', color: '#718096' }),
+              ...(s.done
+                ? { background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK }
+                : s.active
+                  ? { background: '#FFFFFF', border: `2px solid ${LEVEL_ACCENT}`, color: LEVEL_ACCENT_DARK, animation: 'ppPulse 2s ease-in-out infinite' }
+                  : { background: '#F7FAFC', border: '2px solid #E2E8F0', color: '#718096' }),
             }}>
               {s.done ? <Check size={12} /> : s.number}
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{s.label}</div>
-              <div style={{ fontSize: 12, color: '#718096', fontFamily: FONT }}>{s.detail}</div>
+              <div style={{ fontSize: 12, color: s.active ? '#4A5568' : '#718096', fontFamily: FONT }}>{s.detail}</div>
             </div>
           </div>
           {i < steps.length - 1 && (
@@ -303,28 +244,6 @@ const ActionBtn: React.FC<{
     </button>
   );
 };
-
-const StepPlaceholder: React.FC<{
-  icon: React.ReactNode; message: string; detail: string;
-}> = ({ icon, message, detail }) => (
-  <div style={{
-    background: '#F7FAFC', borderRadius: 12, border: '1px dashed #E2E8F0',
-    padding: '24px 28px', textAlign: 'center',
-  }}>
-    <div style={{
-      width: 36, height: 36, borderRadius: '50%', background: '#EDF2F7',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10,
-    }}>
-      {icon}
-    </div>
-    <div style={{ fontSize: 14, fontWeight: 700, color: '#4A5568', fontFamily: FONT, marginBottom: 6 }}>
-      {message}
-    </div>
-    <div style={{ fontSize: 13, color: '#A0AEC0', fontFamily: FONT, maxWidth: 480, margin: '0 auto' }}>
-      {detail}
-    </div>
-  </div>
-);
 
 /* ─── Info Tooltip ─── */
 const InfoTooltip: React.FC<{ content: string }> = ({ content }) => {
@@ -386,20 +305,6 @@ const AppDashboardDesigner: React.FC = () => {
   const [brief, setBrief] = useState<DashboardBrief>({ ...INITIAL_BRIEF });
   const [dataSourcesText, setDataSourcesText] = useState('');
 
-  // ─── Mockup state ───
-  const [imageUrl, setImageUrl] = useState('');
-  const [dashboardHtml, setDashboardHtml] = useState('');
-  const [dashboardSvg, setDashboardSvg] = useState('');
-  const [imagePrompt, setImagePrompt] = useState('');
-  const [jsonPrompt, setJsonPrompt] = useState<object | null>(null);
-  const [generationMethod, setGenerationMethod] = useState<'gemini-image' | 'imagen' | 'html' | 'svg' | null>(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-
-  // ─── Approve / feedback ───
-  const [mockupApproved, setMockupApproved] = useState(false);
-  const [showFeedbackInput, setShowFeedbackInput] = useState(false);
-  const [feedbackText, setFeedbackText] = useState('');
-
   // ─── PRD state ───
   const [prdResult, setPrdResult] = useState<NewPRDResult | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(false);
@@ -411,7 +316,6 @@ const AppDashboardDesigner: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // ─── Loading step progression ───
-  const [mockupLoadingStep, setMockupLoadingStep] = useState(0);
   const [prdLoadingStep, setPrdLoadingStep] = useState(0);
   const [isPrdRefineLoading, setIsPrdRefineLoading] = useState(false);
 
@@ -421,31 +325,28 @@ const AppDashboardDesigner: React.FC = () => {
   const [prdRefinementCount, setPrdRefinementCount] = useState(0);
   const [prdRefineExpanded, setPrdRefineExpanded] = useState(false);
 
-  // ─── Image upload ───
-  const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isAnalyzingInspiration, setIsAnalyzingInspiration] = useState(false);
-  const [inspirationAnalysis, setInspirationAnalysis] = useState<string | null>(null);
-  const [jsonPromptExpanded, setJsonPromptExpanded] = useState(false);
+  // ─── Platform + Build Guide (Step 3) ───
+  const [prdApproved, setPrdApproved] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [buildGuide, setBuildGuide] = useState<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string } | null>(null);
+  const [buildGuideLoadingStep, setBuildGuideLoadingStep] = useState(0);
 
   // ─── Refs ───
-  const mockupRef = useRef<HTMLDivElement>(null);
   const prdRef = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
   const toolUsedRef = useRef(false);
 
   // ─── API ───
   const {
-    generateDashboardImage, generatePRD,
-    isLoading, isPrdLoading, error, clearError,
-    regenerationCount, prdGenerationCount, resetCounts,
+    generatePRD, generateBuildGuide,
+    isPrdLoading, isBuildGuideLoading, error, clearError,
+    prdGenerationCount, resetCounts,
   } = useDashboardDesignApi();
 
   // ─── Derived step state ───
-  const hasMockup = imageUrl !== '' || dashboardHtml !== '' || dashboardSvg !== '';
-  const step1Done = hasMockup || isLoading;
-  const step2Done = mockupApproved;
-  const step3Done = prdResult !== null;
+  const step1Done = prdResult !== null || isPrdLoading;
+  const step2Done = prdApproved;
+  const step3Done = buildGuide !== null;
 
   const canGenerate = brief.q1_purpose.trim().length > 0;
 
@@ -468,26 +369,6 @@ const AppDashboardDesigner: React.FC = () => {
     }
   }, [brief, dataSourcesText]);
 
-  // ─── Mockup loading step progression ───
-  useEffect(() => {
-    if (!isLoading) {
-      if (mockupLoadingStep > 0) {
-        setMockupLoadingStep(MOCKUP_LOADING_STEPS.length);
-        const timer = setTimeout(() => setMockupLoadingStep(0), 400);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-    setMockupLoadingStep(0);
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    let cumulative = 0;
-    MOCKUP_STEP_DELAYS.forEach((delay, i) => {
-      cumulative += delay;
-      timers.push(setTimeout(() => setMockupLoadingStep(i + 1), cumulative));
-    });
-    return () => timers.forEach(clearTimeout);
-  }, [isLoading]);
-
   // ─── PRD loading step progression ───
   useEffect(() => {
     if (!isPrdLoading) {
@@ -503,11 +384,33 @@ const AppDashboardDesigner: React.FC = () => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cumulative = 0;
     PRD_STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return;
       cumulative += delay;
       timers.push(setTimeout(() => setPrdLoadingStep(i + 1), cumulative));
     });
     return () => timers.forEach(clearTimeout);
   }, [isPrdLoading]);
+
+  // ─── Build guide loading step progression ───
+  useEffect(() => {
+    if (!isBuildGuideLoading) {
+      if (buildGuideLoadingStep > 0) {
+        setBuildGuideLoadingStep(BUILD_GUIDE_LOADING_STEPS.length);
+        const timer = setTimeout(() => setBuildGuideLoadingStep(0), 400);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+    setBuildGuideLoadingStep(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cumulative = 0;
+    BUILD_GUIDE_STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return;
+      cumulative += delay;
+      timers.push(setTimeout(() => setBuildGuideLoadingStep(i + 1), cumulative));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [isBuildGuideLoading]);
 
   // ─── PRD staggered animation ───
   useEffect(() => {
@@ -544,127 +447,41 @@ const AppDashboardDesigner: React.FC = () => {
     setBrief(prev => ({ ...prev, [key]: val }));
   }, []);
 
-  const convertImagesToBase64 = useCallback(async (images: { file: File; preview: string }[]): Promise<string[]> => {
-    const promises = images.map(img => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(img.file);
-    }));
-    return Promise.all(promises);
-  }, []);
+  /* ─── Textarea auto-height helper ─── */
+  const autoHeight = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
 
-  // ─── Image upload handlers ───
-  const handleImageFiles = useCallback((files: FileList | File[]) => {
-    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-    if (validFiles.length === 0) return;
-    const newImages = validFiles.map(file => ({ file, preview: URL.createObjectURL(file) }));
-    setUploadedImages(prev => [...prev, ...newImages]);
-    const newNames = validFiles.map(f => f.name);
-    updateBrief('q9_uploadedImages', [...brief.q9_uploadedImages, ...newNames]);
-  }, [brief.q9_uploadedImages, updateBrief]);
-
-  const handleRemoveImage = useCallback((index: number) => {
-    setUploadedImages(prev => {
-      const removed = prev[index];
-      if (removed) URL.revokeObjectURL(removed.preview);
-      return prev.filter((_, i) => i !== index);
-    });
-    updateBrief('q9_uploadedImages', brief.q9_uploadedImages.filter((_, i) => i !== index));
-  }, [brief.q9_uploadedImages, updateBrief]);
-
-  useEffect(() => {
-    return () => { uploadedImages.forEach(img => URL.revokeObjectURL(img.preview)); };
-  }, []);
-
-  // ─── Clipboard paste handler for inspiration images ───
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const imageFiles: File[] = [];
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
-          const file = items[i].getAsFile();
-          if (file) imageFiles.push(file);
-        }
-      }
-      if (imageFiles.length > 0) {
-        e.preventDefault();
-        handleImageFiles(imageFiles);
-        toast('Image pasted from clipboard');
-      }
-    };
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, [handleImageFiles, toast]);
-
-  // ─── Mockup generation ───
-  const handleGenerateMockup = async () => {
+  // ─── Generate PRD directly from brief ───
+  const handleGeneratePRD = async () => {
     if (!canGenerate) return;
     clearError();
 
     const updatedBrief = { ...brief, q5_dataSources: dataSourcesText.trim() ? [dataSourcesText.trim()] : [] };
     setBrief(updatedBrief);
 
-    // Build initial JSON prompt (without inspiration — will be enriched after API returns)
-    setJsonPrompt(buildJsonPrompt(updatedBrief));
-
-    setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
-    setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
-    setPrdResult(null); setInspirationAnalysis(null);
-
-    setTimeout(() => mockupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-
-    const hasInspirationImages = uploadedImages.length > 0;
-    setIsAnalyzingInspiration(hasInspirationImages);
-
-    const inspirationBase64 = uploadedImages.length > 0 ? await convertImagesToBase64(uploadedImages) : undefined;
-    const result = await generateDashboardImage(updatedBrief, undefined, undefined, inspirationBase64);
-    setIsAnalyzingInspiration(false);
-
-    if (result) {
-      setImagePrompt(result.image_prompt || '');
-
-      // Always rebuild JSON prompt with inspiration analysis when available
-      const analysis = result.inspiration_analysis || null;
-      setInspirationAnalysis(analysis);
-      setJsonPrompt(buildJsonPrompt(updatedBrief, analysis || undefined));
-
-      if ((result.generation_method === 'gemini-image' || result.generation_method === 'imagen') && result.image_url) {
-        setImageUrl(result.image_url); setGenerationMethod(result.generation_method);
-      } else if (result.html_content) {
-        setDashboardHtml(result.html_content); setGenerationMethod('html');
-      } else if (result.image_url) {
-        setImageUrl(result.image_url); setGenerationMethod('gemini-image');
-      } else {
-        const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
-        setDashboardSvg(svg); setGenerationMethod('svg');
-        setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
-      }
-    } else {
-      const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
-      setDashboardSvg(svg); setGenerationMethod('svg');
-      setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
-    }
-
-    setTimeout(() => mockupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-  };
-
-  // ─── Approve mockup → auto-generate PRD ───
-  const handleApproveMockup = async () => {
-    setMockupApproved(true);
-    setShowFeedbackInput(false);
-    toast('Design approved! Generating your PRD...');
+    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
+    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
+    setSavedToLibrary(false);
 
     setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
-    clearError();
-    const result = await generatePRD(brief, imagePrompt);
+    // Build a descriptive prompt from the brief fields
+    const briefSummary = [
+      `App purpose: ${updatedBrief.q1_purpose}`,
+      updatedBrief.q2_audience ? `Target users: ${updatedBrief.q2_audience}` : '',
+      updatedBrief.q3_type ? `App type: ${updatedBrief.q3_type}` : '',
+      updatedBrief.q4_metrics ? `Key features/metrics: ${updatedBrief.q4_metrics}` : '',
+      updatedBrief.q5_dataSources.length > 0 ? `Data sources: ${updatedBrief.q5_dataSources.join(', ')}` : '',
+      updatedBrief.q7_visualStyle ? `Visual style: ${VISUAL_STYLE_OPTIONS.find(v => v.id === updatedBrief.q7_visualStyle)?.label || updatedBrief.q7_visualStyle}` : '',
+    ].filter(Boolean).join('. ');
+
+    const result = await generatePRD(updatedBrief, briefSummary);
     if (result) {
       setPrdResult(result as NewPRDResult);
     } else {
-      setPrdResult(generateFallbackPRD(brief));
+      setPrdResult(generateFallbackPRD(updatedBrief));
     }
 
     if (user && !toolUsedRef.current) {
@@ -673,60 +490,6 @@ const AppDashboardDesigner: React.FC = () => {
     }
 
     setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-  };
-
-  // ─── Submit feedback for refinement ───
-  const handleSubmitFeedback = async () => {
-    if (!feedbackText.trim()) return;
-    const feedback = feedbackText.trim();
-    const previousPrompt = imagePrompt;
-
-    setShowFeedbackInput(false);
-    clearError();
-
-    const updatedBrief = { ...brief, q5_dataSources: dataSourcesText.trim() ? [dataSourcesText.trim()] : [] };
-    setBrief(updatedBrief);
-    // Initial JSON prompt — carry forward previous inspiration analysis
-    setJsonPrompt(buildJsonPrompt(updatedBrief, inspirationAnalysis || undefined));
-
-    setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
-    setMockupApproved(false); setPrdResult(null);
-
-    setTimeout(() => mockupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-
-    const inspirationBase64 = uploadedImages.length > 0 ? await convertImagesToBase64(uploadedImages) : undefined;
-    if (inspirationBase64) setIsAnalyzingInspiration(true);
-
-    const result = await generateDashboardImage(updatedBrief, feedback, previousPrompt, inspirationBase64);
-    setIsAnalyzingInspiration(false);
-
-    if (result) {
-      setImagePrompt(result.image_prompt || '');
-
-      // Always rebuild JSON prompt with inspiration analysis
-      const analysis = result.inspiration_analysis || inspirationAnalysis || null;
-      setInspirationAnalysis(analysis);
-      setJsonPrompt(buildJsonPrompt(updatedBrief, analysis || undefined));
-
-      if ((result.generation_method === 'gemini-image' || result.generation_method === 'imagen') && result.image_url) {
-        setImageUrl(result.image_url); setGenerationMethod(result.generation_method);
-      } else if (result.html_content) {
-        setDashboardHtml(result.html_content); setGenerationMethod('html');
-      } else if (result.image_url) {
-        setImageUrl(result.image_url); setGenerationMethod('gemini-image');
-      } else {
-        const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
-        setDashboardSvg(svg); setGenerationMethod('svg');
-        setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
-      }
-    } else {
-      const svg = generateDashboardSVG(updatedBrief.q4_metrics, updatedBrief.q1_purpose.slice(0, 40));
-      setDashboardSvg(svg); setGenerationMethod('svg');
-      setImagePrompt(`App mockup for ${updatedBrief.q2_audience || 'users'}: ${updatedBrief.q4_metrics || updatedBrief.q1_purpose.slice(0, 60)}`);
-    }
-
-    setFeedbackText('');
-    setTimeout(() => mockupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
   };
 
   // ─── Example click ───
@@ -745,42 +508,58 @@ const AppDashboardDesigner: React.FC = () => {
 
   // ─── Step-back navigation ───
   const handleGoBackToStep1 = () => {
-    setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
-    setImagePrompt(''); setJsonPrompt(null); setGenerationMethod(null);
-    setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
     setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
     setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
     setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
-    setSavedToLibrary(false); setJsonPromptExpanded(false);
+    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
+    setSavedToLibrary(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleGoBackToStep2 = () => {
-    setMockupApproved(false);
-    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
-    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
-    setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
-    setSavedToLibrary(false);
+    setPrdApproved(false);
+    setSelectedPlatform(null); setBuildGuide(null);
   };
 
   // ─── Start over ───
   const handleStartOver = () => {
     setBrief({ ...INITIAL_BRIEF });
     setDataSourcesText('');
-    setImageUrl(''); setDashboardHtml(''); setDashboardSvg('');
-    setImagePrompt(''); setJsonPrompt(null); setGenerationMethod(null); setInspirationAnalysis(null);
-    setMockupApproved(false); setShowFeedbackInput(false); setFeedbackText('');
     setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
-    setUploadedImages(prev => { prev.forEach(img => URL.revokeObjectURL(img.preview)); return []; });
-    setPrdRefinementAnswers({});
-    setPrdAdditionalContext('');
-    setPrdRefinementCount(0);
-    setIsPrdRefineLoading(false);
-    setPrdRefineExpanded(false);
-    setJsonPromptExpanded(false);
+    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
+    setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
+    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
+    setSavedToLibrary(false);
     resetCounts();
     localStorage.removeItem('oxygy_dashboard-designer_draft');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ─── Approve PRD → move to Step 3 ───
+  const handleApprovePRD = () => {
+    setPrdApproved(true);
+    toast('PRD approved! Choose your platform.');
+    setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+  };
+
+  // ─── Generate Build Guide ───
+  const handleGenerateBuildGuide = async () => {
+    if (!prdResult || !selectedPlatform) return;
+    clearError();
+
+    const platformLabel = VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || selectedPlatform;
+    const fullPrd = buildFullPRD(prdResult);
+
+    const guide = await generateBuildGuide({
+      platform: platformLabel,
+      prd_content: fullPrd,
+      app_description: brief.q1_purpose,
+    });
+
+    if (guide) {
+      setBuildGuide(guide);
+      setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
   };
 
   // ─── PRD refinement handler ───
@@ -789,7 +568,6 @@ const AppDashboardDesigner: React.FC = () => {
   const handleRefinePRD = async () => {
     if (!hasPrdRefinementInput || !prdResult || isPrdLoading) return;
 
-    // Build refinement context from answered questions + additional context
     const questions = [
       'Are there specific features or screens that need more detail in the PRD?',
       'What third-party integrations or APIs should be included?',
@@ -814,8 +592,7 @@ const AppDashboardDesigner: React.FC = () => {
     clearError();
     setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
-    // Pass refinement as enriched image prompt
-    const enrichedPrompt = `${imagePrompt}\n\n--- REFINEMENT FEEDBACK ---\n${refinementMsg}`;
+    const enrichedPrompt = `${brief.q1_purpose}\n\n--- REFINEMENT FEEDBACK ---\n${refinementMsg}`;
     const result = await generatePRD(brief, enrichedPrompt);
 
     if (result) {
@@ -874,12 +651,6 @@ const AppDashboardDesigner: React.FC = () => {
     toast('Saved to Prompt Library');
   };
 
-  /* ─── Textarea auto-height helper ─── */
-  const autoHeight = (el: HTMLTextAreaElement) => {
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  };
-
   /* ════════════════════════════════════════
      RENDER
      ════════════════════════════════════════ */
@@ -904,25 +675,19 @@ const AppDashboardDesigner: React.FC = () => {
       {/* ─── Description ─── */}
       <p style={{
         fontSize: 14, color: '#718096', lineHeight: 1.7,
-        margin: 0, marginBottom: 10, fontFamily: FONT,
-      }}>
-        A <strong style={{ color: '#2D3748' }}>Product Requirements Document (PRD)</strong> is the single most important artefact you need before building any app with AI coding tools. It's the detailed specification — covering purpose, users, layout, features, data, and tech stack — that you paste into tools like <strong style={{ color: '#2D3748' }}>Cursor, Lovable, Bolt.new, or V0</strong> so they know exactly what to build. Without a PRD, vibe coding tools guess; with one, they execute.
-      </p>
-      <p style={{
-        fontSize: 14, color: '#718096', lineHeight: 1.7,
         margin: 0, marginBottom: 20, fontFamily: FONT,
       }}>
-        The App Designer walks you through a structured brief, generates a visual mockup you can refine, and produces a production-ready PRD — whether you're building a professional dashboard, a personal side project, or just exploring what's possible. The goal isn't for us to build it for you; it's to give you the confidence and understanding to do it yourself.
+        Stakeholders and AI coding tools need the same thing: a clear, complete specification of what to build. Most teams skip this and waste cycles on rework. The App Designer walks you through a structured brief and produces a production-ready PRD — covering layout, tech stack, data models, and acceptance criteria — then gives you platform-specific guidance to build it with <strong style={{ color: '#2D3748' }}>Cursor, Lovable, Bolt.new, Claude Code</strong>, or your tool of choice.
       </p>
 
       {/* ─── How It Works Overview ─── */}
       <ToolOverview
         steps={[
-          { number: 1, label: 'Complete your brief', detail: 'Describe what you\'re building, who it\'s for, and what it needs to do', done: step1Done },
-          { number: 2, label: 'Review your mockup', detail: 'Approve, refine, or regenerate the visual design', done: step2Done },
-          { number: 3, label: 'Your app PRD', detail: '11-section product requirements document', done: step3Done },
+          { number: 1, label: 'Complete your brief', detail: 'Describe what you\'re building, who it\'s for, and what it needs to do', done: step1Done, active: !step1Done },
+          { number: 2, label: 'Your app PRD', detail: '12-section product requirements document', done: step2Done, active: step1Done && !step2Done },
+          { number: 3, label: 'Build guide', detail: 'Platform-specific instructions to start building', done: step3Done, active: step2Done && !step3Done },
         ]}
-        outcome="A production-ready PRD you can paste directly into AI coding tools like Cursor, Lovable, or Bolt.new to build your app."
+        outcome="A production-ready PRD plus a step-by-step build guide tailored to your chosen AI coding tool."
       />
 
       {/* ═══════════════════════════════════════════
@@ -961,556 +726,179 @@ const AppDashboardDesigner: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Q1: Purpose */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              What does this app or tool need to do? <span style={{ color: '#E53E3E' }}>*</span>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+              What does this app do? <span style={{ color: '#E53E3E' }}>*</span>
             </label>
             <textarea
               value={brief.q1_purpose}
               onChange={e => { updateBrief('q1_purpose', e.target.value); autoHeight(e.target); }}
-              placeholder="e.g., Track my daily habits and show streaks over time, or Build a sales dashboard that flags underperforming regions..."
-              rows={2}
+              placeholder="Describe the app's purpose — what problem does it solve and what will it do?"
+              rows={3}
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
+                width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
                 fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
                 outline: 'none', boxSizing: 'border-box',
               }}
+              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
             />
           </div>
 
           {/* Q2: Audience */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Who will use this? Describe the target users.
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+              Who is this app for?
             </label>
-            <textarea
+            <input
+              type="text"
               value={brief.q2_audience}
-              onChange={e => { updateBrief('q2_audience', e.target.value); autoHeight(e.target); }}
-              placeholder="e.g., Just me — I want a simple personal tool, or HR managers who need to track team training progress"
-              rows={2}
+              onChange={e => updateBrief('q2_audience', e.target.value)}
+              placeholder="e.g., Sales managers, students, home cooks, just me"
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
-                fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
-                outline: 'none', boxSizing: 'border-box',
+                width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
+                fontSize: 13, fontFamily: FONT, color: '#2D3748', outline: 'none', boxSizing: 'border-box',
               }}
+              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
             />
           </div>
 
-          {/* Q3: Type */}
+          {/* Q3: App type */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              What type of app or tool is this?
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+              What type of app is this?
             </label>
-            <textarea
+            <input
+              type="text"
               value={brief.q3_type}
-              onChange={e => { updateBrief('q3_type', e.target.value); autoHeight(e.target); }}
-              placeholder="e.g., A personal habit tracker with a calendar view, or An operational dashboard with KPI cards and charts"
-              rows={2}
+              onChange={e => updateBrief('q3_type', e.target.value)}
+              placeholder="e.g., Dashboard, CRUD app, content platform, personal tool"
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
-                fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
-                outline: 'none', boxSizing: 'border-box',
+                width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
+                fontSize: 13, fontFamily: FONT, color: '#2D3748', outline: 'none', boxSizing: 'border-box',
               }}
+              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
             />
           </div>
 
-          {/* Q4: Metrics */}
+          {/* Q4: Key features */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Key features, screens, or metrics
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+              Key features or metrics to display
             </label>
             <textarea
               value={brief.q4_metrics}
               onChange={e => { updateBrief('q4_metrics', e.target.value); autoHeight(e.target); }}
-              placeholder="e.g., Daily check-in view, streak counter, weekly summary chart — or Revenue, Conversion Rate, Pipeline Value"
+              placeholder="List the main features, screens, or data points (e.g., user auth, CRUD for recipes, streak tracking, charts)"
               rows={2}
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px',
+                width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
                 fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
                 outline: 'none', boxSizing: 'border-box',
               }}
+              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
             />
           </div>
 
           {/* Q5: Data sources */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Where does the data come from? (optional)
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+              Data sources
             </label>
             <input
+              type="text"
               value={dataSourcesText}
               onChange={e => setDataSourcesText(e.target.value)}
-              placeholder="e.g., User input, local storage, Supabase, Google Sheets, Salesforce API"
+              placeholder="e.g., Supabase, REST API, local storage, user input"
               style={{
-                width: '100%', borderRadius: 12, border: '1px solid #E2E8F0', padding: '10px 14px',
+                width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
                 fontSize: 13, fontFamily: FONT, color: '#2D3748', outline: 'none', boxSizing: 'border-box',
               }}
+              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
             />
           </div>
 
-          {/* Q7: Visual style (optional) */}
+          {/* Q7: Visual style */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Visual style <span style={{ fontWeight: 400, color: '#A0AEC0' }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+              Visual style preference
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {VISUAL_STYLE_OPTIONS.map(vs => (
+              {VISUAL_STYLE_OPTIONS.map(opt => (
                 <button
-                  key={vs.id}
-                  onClick={() => updateBrief('q7_visualStyle', vs.id)}
+                  key={opt.id}
+                  onClick={() => updateBrief('q7_visualStyle', opt.id)}
                   style={{
-                    background: brief.q7_visualStyle === vs.id ? `${LEVEL_ACCENT}30` : '#F7FAFC',
-                    border: brief.q7_visualStyle === vs.id ? `2px solid ${LEVEL_ACCENT}` : '1px solid #E2E8F0',
-                    borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 600,
-                    color: brief.q7_visualStyle === vs.id ? LEVEL_ACCENT_DARK : '#4A5568',
-                    cursor: 'pointer', fontFamily: FONT,
+                    padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, fontFamily: FONT,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    background: brief.q7_visualStyle === opt.id ? `${LEVEL_ACCENT}30` : '#FFFFFF',
+                    border: brief.q7_visualStyle === opt.id ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
+                    color: brief.q7_visualStyle === opt.id ? LEVEL_ACCENT_DARK : '#4A5568',
                   }}
                 >
-                  {vs.label}
+                  {opt.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Q9: Inspiration (images) */}
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', fontFamily: FONT, display: 'block', marginBottom: 6 }}>
-              Inspiration images (optional)
-              <InfoTooltip content={INSPIRATION_TOOLTIP_CONTENT} />
-            </label>
-
-            {/* Inspiration sites */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-              {INSPIRATION_SITES.map(site => (
-                <a
-                  key={site.name}
-                  href={site.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontSize: 11, fontWeight: 600, color: '#5A67D8', fontFamily: FONT,
-                    background: '#EBF4FF', borderRadius: 6, padding: '3px 8px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  {site.name}
-                </a>
-              ))}
-            </div>
-
-            {/* Drop zone */}
-            <div
-              onDragOver={e => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
-              onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
-              onDrop={e => {
-                e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
-                if (e.dataTransfer.files.length > 0) handleImageFiles(e.dataTransfer.files);
-              }}
+          {/* Generate PRD button */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+            <button
+              onClick={handleGeneratePRD}
+              disabled={!canGenerate || isPrdLoading}
               style={{
-                border: isDragOver ? `2px dashed ${LEVEL_ACCENT}` : '2px dashed #E2E8F0',
-                borderRadius: 12, padding: '16px 20px', textAlign: 'center',
-                cursor: 'pointer', background: isDragOver ? `${LEVEL_ACCENT}08` : '#F7FAFC',
-                transition: 'border-color 0.2s, background 0.2s',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: canGenerate ? LEVEL_ACCENT_DARK : '#CBD5E0',
+                color: '#FFFFFF', border: 'none', borderRadius: 24,
+                padding: '12px 28px', fontSize: 14, fontWeight: 700, fontFamily: FONT,
+                cursor: canGenerate ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s',
               }}
-              onClick={() => fileInputRef.current?.click()}
             >
-              <Upload size={20} color="#A0AEC0" style={{ marginBottom: 4 }} />
-              <div style={{ fontSize: 13, color: '#718096', fontFamily: FONT }}>
-                Drop screenshots here, click to upload, or <strong style={{ color: '#4A5568' }}>paste from clipboard</strong> (Ctrl+V / Cmd+V)
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                style={{ display: 'none' }}
-                onChange={e => { if (e.target.files) handleImageFiles(e.target.files); e.target.value = ''; }}
-              />
-            </div>
-
-            {/* Uploaded previews */}
-            {uploadedImages.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-                {uploadedImages.map((img, i) => (
-                  <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #E2E8F0' }}>
-                    <img src={img.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <button
-                      onClick={e => { e.stopPropagation(); handleRemoveImage(i); }}
-                      style={{
-                        position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
-                        background: '#1A202C', color: '#FFFFFF', border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-                      }}
-                    >
-                      <X size={10} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {isPrdLoading ? (
+                <div style={{ width: 16, height: 16, border: '2px solid #FFFFFF40', borderTopColor: '#FFFFFF', borderRadius: '50%', animation: 'ppSpin 0.6s linear infinite' }} />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              {isPrdLoading ? 'Generating PRD…' : prdGenerationCount > 0 ? 'Regenerate PRD' : 'Generate PRD'}
+            </button>
+            {prdGenerationCount > 0 && (
+              <span style={{ fontSize: 11, color: '#A0AEC0', alignSelf: 'center', fontFamily: FONT }}>
+                {prdGenerationCount}/{MAX_PRD_GENERATIONS} generations used
+              </span>
             )}
           </div>
-        </div>
 
-        {/* Generate button */}
-        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={handleGenerateMockup}
-            disabled={!canGenerate || isLoading}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: canGenerate && !isLoading ? '#38B2AC' : '#CBD5E0',
-              color: '#FFFFFF', border: 'none', borderRadius: 24,
-              padding: '10px 22px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-              cursor: canGenerate && !isLoading ? 'pointer' : 'not-allowed',
-            }}
-          >
-            {isLoading ? (
-              <>
-                <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFFFFF', borderRadius: '50%', animation: 'ppSpin 0.7s linear infinite' }} />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles size={15} />
-                Generate Mockup
-              </>
-            )}
-          </button>
-          {regenerationCount > 0 && (
-            <span style={{ fontSize: 11, color: '#A0AEC0', fontFamily: FONT }}>
-              {regenerationCount}/{MAX_REGENERATIONS} generations used
-            </span>
+          {error && (
+            <div style={{ padding: '10px 14px', background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: 10, fontSize: 13, color: '#C53030', fontFamily: FONT }}>
+              {error}
+            </div>
           )}
         </div>
-
-        {error && !hasMockup && (
-          <div style={{ marginTop: 12, padding: '10px 14px', background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: 10, fontSize: 13, color: '#C53030', fontFamily: FONT }}>
-            {error}
-          </div>
-        )}
       </StepCard>
 
       <StepConnector />
 
       {/* ═══════════════════════════════════════════
-          STEP 2 — Review your mockup
-      ═══════════════════════════════════════════ */}
-      <div ref={mockupRef}>
-        <StepCard
-          stepNumber={2}
-          title="Review your mockup"
-          subtitle="Approve, refine with feedback, or regenerate the visual design."
-          done={step2Done}
-          collapsed={step2Done && step3Done}
-        >
-          {!hasMockup && !isLoading ? (
-            <StepPlaceholder
-              icon={<ArrowRight size={16} color="#A0AEC0" />}
-              message="Complete your brief above to generate a mockup"
-              detail="Once you describe your app's purpose and features, we'll generate a visual mockup you can review and approve before generating the full PRD."
-            />
-          ) : (
-            <>
-              {/* Loading state */}
-              {isLoading && (
-                <ProcessingProgress
-                  steps={MOCKUP_LOADING_STEPS}
-                  currentStep={mockupLoadingStep}
-                  header={isAnalyzingInspiration ? 'Analysing inspiration images…' : 'Generating your app mockup…'}
-                  subtext="This typically takes 15–30 seconds"
-                />
-              )}
-
-              {/* Mockup display */}
-              {hasMockup && !isLoading && (
-                <div>
-                  {/* Mockup display */}
-                  <div style={{
-                    marginBottom: 16,
-                    ...(isFullScreen ? {
-                      position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
-                      zIndex: 100, margin: 0, background: '#FFFFFF', padding: 0,
-                    } : {}),
-                  }}>
-                    {/* Mockup */}
-                    <div style={{
-                      borderRadius: isFullScreen ? 0 : 12, overflow: 'hidden',
-                      border: '1px solid #E2E8F0', background: '#FFFFFF',
-                    }}>
-                      {/* Top bar */}
-                      <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '8px 14px', background: '#F7FAFC', borderBottom: '1px solid #E2E8F0',
-                      }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', fontFamily: FONT }}>
-                          {generationMethod === 'html' ? 'HTML Mockup' : generationMethod === 'svg' ? 'SVG Preview' : 'AI-Generated Mockup'}
-                        </span>
-                        <button
-                          onClick={() => setIsFullScreen(!isFullScreen)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', padding: 0 }}
-                        >
-                          {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                        </button>
-                      </div>
-
-                      {/* Mockup content */}
-                      <div style={{
-                        height: isFullScreen ? 'calc(100vh - 40px)' : 460, overflow: 'auto',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        {imageUrl && (
-                          <img src={imageUrl} alt="App mockup" style={{ width: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
-                        )}
-                        {dashboardHtml && (
-                          <iframe
-                            srcDoc={dashboardHtml}
-                            title="App mockup"
-                            style={{ width: '100%', height: '100%', border: 'none' }}
-                            sandbox="allow-scripts"
-                          />
-                        )}
-                        {dashboardSvg && (
-                          <div
-                            style={{ width: '100%', height: '100%' }}
-                            dangerouslySetInnerHTML={{ __html: dashboardSvg }}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* "Why mockup first?" tooltip */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, color: '#A0AEC0', fontFamily: FONT }}>Why generate a mockup first?</span>
-                    <InfoTooltip content={WHY_MOCKUP_TOOLTIP} />
-                  </div>
-
-                  {/* Collapsible JSON Prompt Card */}
-                  {!isFullScreen && jsonPrompt && (
-                    <div style={{
-                      borderRadius: 12, overflow: 'hidden',
-                      border: '1px solid #E2E8F0',
-                      marginBottom: 16,
-                      background: jsonPromptExpanded ? '#1A202C' : '#F7FAFC',
-                    }}>
-                      {/* Collapsed CTA */}
-                      {!jsonPromptExpanded && (
-                        <button
-                          onClick={() => setJsonPromptExpanded(true)}
-                          style={{
-                            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '12px 16px', background: 'none', border: 'none',
-                            cursor: 'pointer', fontFamily: FONT,
-                          }}
-                        >
-                          <Code size={14} color={LEVEL_ACCENT_DARK} />
-                          <span style={{ fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK }}>
-                            See the JSON prompt used to generate this mockup
-                          </span>
-                          <ChevronDown size={14} color={LEVEL_ACCENT_DARK} />
-                          <div style={{ flex: 1 }} />
-                          <InfoTooltip content="A structured JSON prompt is the most effective way to instruct image generation models. Unlike free-text prompts, JSON organises your requirements into clear fields — purpose, layout, features, style — so the AI can interpret each dimension precisely." />
-                        </button>
-                      )}
-
-                      {/* Expanded JSON content */}
-                      {jsonPromptExpanded && (
-                        <div style={{ animation: 'ppSlideDown 0.3s ease-out both' }}>
-                          {/* Header */}
-                          <div style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '8px 14px', background: '#2D3748', borderBottom: '1px solid #4A5568',
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <Code size={13} color="#A0AEC0" />
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT }}>
-                                JSON Prompt
-                              </span>
-                              <InfoTooltip content="A structured JSON prompt is the most effective way to instruct image generation models. Unlike free-text prompts, JSON organises your requirements into clear fields — purpose, layout, features, style — so the AI can interpret each dimension precisely. This is the exact prompt that was sent to generate your mockup." />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <button
-                                onClick={async () => {
-                                  await copyText(JSON.stringify(jsonPrompt, null, 2));
-                                  toast('JSON prompt copied');
-                                }}
-                                style={{
-                                  background: '#4A5568', color: '#E2E8F0', border: 'none', borderRadius: 6,
-                                  padding: '3px 8px', fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                                  display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT,
-                                }}
-                              >
-                                <Copy size={10} /> Copy
-                              </button>
-                              <button
-                                onClick={() => setJsonPromptExpanded(false)}
-                                style={{
-                                  background: 'none', border: 'none', cursor: 'pointer',
-                                  padding: 2, display: 'flex', color: '#A0AEC0',
-                                }}
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* JSON content */}
-                          <div style={{ maxHeight: 360, overflow: 'auto', padding: '14px 16px' }}>
-                            <pre style={{
-                              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                              fontSize: 11, lineHeight: 1.7, color: '#E2E8F0',
-                              whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
-                            }}>
-                              {JSON.stringify(jsonPrompt, null, 2)}
-                            </pre>
-                          </div>
-
-                          {/* Generated text prompt */}
-                          {imagePrompt && (
-                            <div style={{
-                              borderTop: '1px solid #4A5568', padding: '10px 16px',
-                              background: '#2D3748',
-                            }}>
-                              <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontFamily: FONT }}>
-                                Generated text prompt
-                              </div>
-                              <div style={{
-                                fontSize: 11, color: '#A0AEC0', lineHeight: 1.5, fontFamily: FONT,
-                                maxHeight: 80, overflow: 'auto',
-                              }}>
-                                {imagePrompt.length > 300 ? imagePrompt.slice(0, 300) + '...' : imagePrompt}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  {!mockupApproved && (
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      <button
-                        onClick={handleGoBackToStep1}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24,
-                          padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <ArrowLeft size={15} /> Back to Brief
-                      </button>
-                      <button
-                        onClick={handleApproveMockup}
-                        disabled={isPrdLoading}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: '#38A169', color: '#FFFFFF', border: 'none', borderRadius: 24,
-                          padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <ThumbsUp size={15} /> Approve Design
-                      </button>
-                      <button
-                        onClick={() => setShowFeedbackInput(!showFeedbackInput)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24,
-                          padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <MessageSquare size={15} /> Give Feedback
-                      </button>
-                      <button
-                        onClick={handleGenerateMockup}
-                        disabled={isLoading || regenerationCount >= MAX_REGENERATIONS}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24,
-                          padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-                          cursor: 'pointer', opacity: regenerationCount >= MAX_REGENERATIONS ? 0.5 : 1,
-                        }}
-                      >
-                        <RotateCcw size={15} /> Regenerate
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Feedback input */}
-                  {showFeedbackInput && !mockupApproved && (
-                    <div style={{ marginTop: 14, background: '#F7FAFC', borderRadius: 12, padding: 16, border: '1px solid #E2E8F0' }}>
-                      <textarea
-                        value={feedbackText}
-                        onChange={e => { setFeedbackText(e.target.value); autoHeight(e.target); }}
-                        placeholder="Describe what you'd like changed, e.g., 'Make the KPI cards bigger', 'Add a pie chart for category breakdown', 'Use a darker color scheme'..."
-                        rows={3}
-                        style={{
-                          width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
-                          fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
-                          outline: 'none', boxSizing: 'border-box',
-                        }}
-                      />
-                      <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={handleSubmitFeedback}
-                          disabled={!feedbackText.trim() || isLoading}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: feedbackText.trim() ? '#38B2AC' : '#CBD5E0',
-                            color: '#FFFFFF', border: 'none', borderRadius: 24,
-                            padding: '8px 18px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                            cursor: feedbackText.trim() ? 'pointer' : 'not-allowed',
-                          }}
-                        >
-                          <Sparkles size={13} /> Refine Mockup
-                        </button>
-                        <button
-                          onClick={() => { setShowFeedbackInput(false); setFeedbackText(''); }}
-                          style={{
-                            background: '#FFFFFF', color: '#718096', border: '1px solid #E2E8F0',
-                            borderRadius: 24, padding: '8px 14px', fontSize: 12, fontWeight: 600,
-                            fontFamily: FONT, cursor: 'pointer',
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {error && (
-                    <div style={{ marginTop: 12, padding: '10px 14px', background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: 10, fontSize: 13, color: '#C53030', fontFamily: FONT }}>
-                      {error}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </StepCard>
-      </div>
-
-      <StepConnector />
-
-      {/* ═══════════════════════════════════════════
-          STEP 3 — Your app PRD
+          STEP 2 — Your app PRD
       ═══════════════════════════════════════════ */}
       <div ref={prdRef}>
         <StepCard
-          stepNumber={3}
+          stepNumber={2}
           title="Your app PRD"
           subtitle="A comprehensive product requirements document for development handoff."
-          done={step3Done}
-          collapsed={false}
+          done={step2Done}
+          collapsed={step2Done && step3Done}
         >
-          {!step2Done && !isPrdLoading ? (
+          {!step1Done && !isPrdLoading ? (
             /* ─── Educational default ─── */
             <div>
               <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, marginBottom: 16, fontFamily: FONT }}>
-                Your PRD will be structured using <strong>11 production-grade sections</strong> optimised for AI coding tools like Cursor, Lovable, Bolt.new, and V0. Each section gives the AI the exact constraints and specifications it needs — tech stack, data models, feature behaviours, and acceptance criteria. Approve your mockup above and each section will be filled with content tailored to your specific app.
+                Your PRD will be structured using <strong>12 production-grade sections</strong> optimised for AI coding tools like Cursor, Lovable, Bolt.new, and Claude Code. Each section gives the AI the exact constraints and specifications it needs — tech stack, data models, feature behaviours, design tokens, and acceptance criteria. Complete your brief above and each section will be filled with content tailored to your specific app.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {EDUCATIONAL_PRD_SECTIONS.map((s, i) => {
@@ -1522,7 +910,6 @@ const AppDashboardDesigner: React.FC = () => {
                         borderLeft: `4px solid ${s.color}`,
                         background: `${s.color}08`,
                         borderRadius: 10, padding: '16px 18px',
-                        opacity: 1,
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -1531,40 +918,19 @@ const AppDashboardDesigner: React.FC = () => {
                           {s.title}
                         </span>
                         <span style={{ fontSize: 10, color: '#A0AEC0', fontFamily: FONT, marginLeft: 'auto' }}>
-                          {i + 1}/11
+                          {i + 1}/{EDUCATIONAL_PRD_SECTIONS.length}
                         </span>
                       </div>
                       <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>
                         {s.description}
                       </div>
-                      {s.example && (
-                        <div style={{
-                          marginTop: 8, padding: '8px 12px', borderRadius: 6,
-                          background: `${s.color}18`, borderLeft: `3px solid ${s.color}`,
-                          fontSize: 12, color: '#4A5568', fontStyle: 'italic', lineHeight: 1.5, fontFamily: FONT,
-                        }}>
-                          {s.example}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Summary footer */}
-              <div style={{ borderTop: '1px solid #EDF2F7', paddingTop: 10, marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {EDUCATIONAL_PRD_SECTIONS.map(s => {
-                  const Icon = PRD_SECTION_ICONS[s.key];
-                  return (
-                    <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {Icon && <Icon size={11} color={s.color} />}
-                      <span style={{ fontSize: 10, color: '#718096', fontFamily: FONT }}>{s.title}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
           ) : isPrdLoading ? (
-            /* ─── PRD Loading — ProcessingProgress ─── */
+            /* ─── PRD Loading ─── */
             <ProcessingProgress
               steps={isPrdRefineLoading ? PRD_REFINE_LOADING_STEPS : PRD_LOADING_STEPS}
               currentStep={prdLoadingStep}
@@ -1574,7 +940,7 @@ const AppDashboardDesigner: React.FC = () => {
           ) : prdResult ? (
             /* ─── PRD Result ─── */
             <div>
-              {/* Top action row — toggle + buttons on same line */}
+              {/* Top action row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                 {/* Cards / Markdown toggle */}
                 <div style={{
@@ -1589,7 +955,6 @@ const AppDashboardDesigner: React.FC = () => {
                       border: 'none', cursor: 'pointer', borderRadius: 8,
                       background: !showMarkdown ? '#1A202C' : 'transparent',
                       color: !showMarkdown ? '#FFFFFF' : '#718096',
-                      transition: 'background 0.15s, color 0.15s',
                     }}
                   >
                     <Eye size={13} /> Cards
@@ -1602,13 +967,12 @@ const AppDashboardDesigner: React.FC = () => {
                       border: 'none', cursor: 'pointer', borderRadius: 8,
                       background: showMarkdown ? '#2B6CB0' : 'transparent',
                       color: showMarkdown ? '#FFFFFF' : '#718096',
-                      transition: 'background 0.15s, color 0.15s',
                     }}
                   >
                     <Code size={13} /> Markdown
                   </button>
                 </div>
-                <InfoTooltip content="Markdown view shows the cohesive PRD deliverable — ready to paste into AI coding tools like Cursor, Lovable, or Bolt.new. Cards view shows all sections for individual review." />
+                <InfoTooltip content="Markdown view shows the cohesive PRD deliverable — ready to paste into AI coding tools. Cards view shows all sections for individual review." />
 
                 <div style={{ flex: 1 }} />
 
@@ -1631,6 +995,16 @@ const AppDashboardDesigner: React.FC = () => {
                   disabled={savedToLibrary}
                 />
               </div>
+
+              {/* Next Step Banner */}
+              {!prdApproved && (
+                <NextStepBanner
+                  accentColor={LEVEL_ACCENT}
+                  accentDark={LEVEL_ACCENT_DARK}
+                  title="Review your PRD"
+                  text="Scroll through each section below. When you're happy, approve the PRD and choose your coding platform to get a step-by-step build guide."
+                />
+              )}
 
               {showMarkdown ? (
                 /* ─── Markdown view ─── */
@@ -1658,7 +1032,7 @@ const AppDashboardDesigner: React.FC = () => {
                   </pre>
                 </div>
               ) : (
-                /* ─── Cards view — collapsible ─── */
+                /* ─── Cards view — all collapsed by default ─── */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {Object.entries(prdResult.sections).map(([key, rawVal], i) => {
                     const val = rawVal as string;
@@ -1680,7 +1054,6 @@ const AppDashboardDesigner: React.FC = () => {
                           transition: 'opacity 0.3s, transform 0.3s',
                         }}
                       >
-                        {/* Section header — clickable to expand/collapse */}
                         <button
                           onClick={() => setExpandedPrdSections(prev => {
                             const next = new Set(prev);
@@ -1700,7 +1073,6 @@ const AppDashboardDesigner: React.FC = () => {
                           }}>
                             {def?.title || key}
                           </span>
-                          {/* Copy section button */}
                           <span
                             onClick={e => { e.stopPropagation(); handleCopySection(key, val); }}
                             style={{ color: '#A0AEC0', padding: 2, flexShrink: 0, display: 'flex' }}
@@ -1714,7 +1086,6 @@ const AppDashboardDesigner: React.FC = () => {
                           }} />
                         </button>
 
-                        {/* Collapsed summary */}
                         {!isExpanded && (
                           <div style={{
                             fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT,
@@ -1726,7 +1097,6 @@ const AppDashboardDesigner: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Expanded content */}
                         {isExpanded && (
                           <div style={{
                             fontSize: 13, color: '#2D3748', lineHeight: 1.7, fontFamily: FONT,
@@ -1742,7 +1112,7 @@ const AppDashboardDesigner: React.FC = () => {
                 </div>
               )}
 
-              {/* ── Output Actions Panel (per PRD §4.2) ── */}
+              {/* Output Actions Panel */}
               <div style={{ marginTop: 24 }}>
                 <OutputActionsPanel
                   workflowName={`PRD: ${prdResult.prd_content?.slice(0, 50) || 'App PRD'}`}
@@ -1752,28 +1122,19 @@ const AppDashboardDesigner: React.FC = () => {
                 />
               </div>
 
-              {/* ── Combined Caveat + Refinement Card (collapsible per standard §4.5) ── */}
+              {/* Refinement Card (collapsible per §4.5) */}
               <div style={{
-                background: '#F7FAFC',
-                borderRadius: 14,
-                border: '1px solid #E2E8F0',
-                padding: '20px 24px',
-                marginTop: 20,
-                marginBottom: 20,
+                background: '#F7FAFC', borderRadius: 14, border: '1px solid #E2E8F0',
+                padding: '20px 24px', marginTop: 20, marginBottom: 20,
               }}>
-                {/* Practitioner caveat — always visible */}
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  marginBottom: prdRefineExpanded ? 16 : 12,
-                }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: prdRefineExpanded ? 16 : 12 }}>
                   <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
                   <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
-                    This PRD is a strong starting point built from your brief and mockup — not the final word.
+                    This PRD is a strong starting point built from your brief — not the final word.
                     Review each section, refine the areas that matter most, and adapt it to your specific tools and constraints.
                   </div>
                 </div>
 
-                {/* Expand CTA — shown only when collapsed */}
                 {!prdRefineExpanded && (
                   <button
                     onClick={() => setPrdRefineExpanded(true)}
@@ -1783,8 +1144,6 @@ const AppDashboardDesigner: React.FC = () => {
                       padding: 0, fontSize: 13, fontWeight: 600,
                       color: LEVEL_ACCENT_DARK, fontFamily: FONT,
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                   >
                     <ChevronDown size={14} />
                     Would you like to refine this PRD further?
@@ -1792,8 +1151,7 @@ const AppDashboardDesigner: React.FC = () => {
                       <span style={{
                         fontSize: 11, fontWeight: 600,
                         background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
-                        borderRadius: 20, padding: '2px 10px',
-                        marginLeft: 6,
+                        borderRadius: 20, padding: '2px 10px', marginLeft: 6,
                       }}>
                         Refinement #{prdRefinementCount}
                       </span>
@@ -1801,54 +1159,19 @@ const AppDashboardDesigner: React.FC = () => {
                   </button>
                 )}
 
-                {/* Expanded refinement section */}
                 {prdRefineExpanded && (
-                  <div style={{
-                    borderTop: '1px solid #E2E8F0',
-                    paddingTop: 16,
-                    animation: 'ppSlideDown 0.3s ease-out both',
-                  }}>
-                    {/* Section header with close button */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      marginBottom: 6,
-                    }}>
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16, animation: 'ppSlideDown 0.3s ease-out both' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{
-                          fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK,
-                          textTransform: 'uppercase', letterSpacing: '0.06em',
-                          fontFamily: FONT,
-                        }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
                           Refine Your PRD
                         </div>
-                        {prdRefinementCount > 0 && (
-                          <div style={{
-                            fontSize: 11, fontWeight: 600,
-                            background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
-                            borderRadius: 20, padding: '2px 10px',
-                            fontFamily: FONT,
-                          }}>
-                            Refinement #{prdRefinementCount}
-                          </div>
-                        )}
                       </div>
-                      <button
-                        onClick={() => setPrdRefineExpanded(false)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          padding: 4, borderRadius: 6, display: 'flex',
-                          color: '#A0AEC0', transition: 'color 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.color = '#4A5568')}
-                        onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
-                      >
+                      <button onClick={() => setPrdRefineExpanded(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#A0AEC0' }}>
                         <X size={16} />
                       </button>
                     </div>
-                    <p style={{
-                      fontSize: 13, color: '#718096', lineHeight: 1.6,
-                      margin: '0 0 18px', fontFamily: FONT,
-                    }}>
+                    <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
                       Answer any of these to add context and get a more targeted PRD. You don't need to answer all of them — even one helps.
                     </p>
 
@@ -1860,11 +1183,7 @@ const AppDashboardDesigner: React.FC = () => {
                       'Any design system preferences (colors, typography, component library)?',
                     ].map((question, i) => (
                       <div key={i} style={{ marginBottom: 16 }}>
-                        <label style={{
-                          display: 'block',
-                          fontSize: 13, fontWeight: 600, color: '#2D3748',
-                          marginBottom: 6, fontFamily: FONT,
-                        }}>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
                           {question}
                         </label>
                         <input
@@ -1873,16 +1192,8 @@ const AppDashboardDesigner: React.FC = () => {
                           onChange={e => setPrdRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
                           placeholder="Your answer…"
                           style={{
-                            width: '100%',
-                            border: '1px solid #E2E8F0',
-                            borderRadius: 10,
-                            padding: '10px 14px',
-                            fontSize: 13,
-                            fontFamily: FONT,
-                            color: '#1A202C',
-                            outline: 'none',
-                            boxSizing: 'border-box' as const,
-                            transition: 'border-color 0.15s',
+                            width: '100%', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px',
+                            fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none', boxSizing: 'border-box' as const,
                             background: '#FFFFFF',
                           }}
                           onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
@@ -1892,32 +1203,17 @@ const AppDashboardDesigner: React.FC = () => {
                     ))}
 
                     <div style={{ marginBottom: 18 }}>
-                      <label style={{
-                        display: 'block',
-                        fontSize: 13, fontWeight: 600, color: '#2D3748',
-                        marginBottom: 6, fontFamily: FONT,
-                      }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
                         Anything else to add?
                       </label>
                       <textarea
                         value={prdAdditionalContext}
                         onChange={e => setPrdAdditionalContext(e.target.value)}
-                        placeholder="Any additional requirements, constraints, or context you'd like to include…"
+                        placeholder="Any additional requirements, constraints, or context…"
                         style={{
-                          width: '100%',
-                          minHeight: 60,
-                          resize: 'none',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: 10,
-                          padding: '10px 14px',
-                          fontSize: 13,
-                          fontFamily: FONT,
-                          color: '#1A202C',
-                          outline: 'none',
-                          boxSizing: 'border-box' as const,
-                          transition: 'border-color 0.15s',
-                          background: '#FFFFFF',
-                          lineHeight: 1.5,
+                          width: '100%', minHeight: 60, resize: 'none', border: '1px solid #E2E8F0', borderRadius: 10,
+                          padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none',
+                          boxSizing: 'border-box' as const, background: '#FFFFFF', lineHeight: 1.5,
                         }}
                         onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
                         onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
@@ -1926,14 +1222,8 @@ const AppDashboardDesigner: React.FC = () => {
 
                     <ActionBtn
                       icon={isPrdLoading ? (
-                        <div style={{
-                          width: 13, height: 13, border: '2px solid #FFFFFF40',
-                          borderTopColor: '#FFFFFF', borderRadius: '50%',
-                          animation: 'ppSpin 0.6s linear infinite',
-                        }} />
-                      ) : (
-                        <ArrowRight size={13} />
-                      )}
+                        <div style={{ width: 13, height: 13, border: '2px solid #FFFFFF40', borderTopColor: '#FFFFFF', borderRadius: '50%', animation: 'ppSpin 0.6s linear infinite' }} />
+                      ) : <ArrowRight size={13} />}
                       label={isPrdLoading ? 'Refining…' : 'Refine PRD'}
                       onClick={handleRefinePRD}
                       primary
@@ -1943,21 +1233,189 @@ const AppDashboardDesigner: React.FC = () => {
                 )}
               </div>
 
-              {/* Bottom action row */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
-                <ActionBtn
-                  icon={<ArrowLeft size={13} />}
-                  label="Back to Mockup"
-                  onClick={handleGoBackToStep2}
-                />
-                <ActionBtn
-                  icon={<RotateCcw size={13} />}
-                  label="Start Over"
-                  onClick={handleStartOver}
-                />
-              </div>
+              {/* Approve / Back / Start Over */}
+              {!prdApproved && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={handleApprovePRD}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#38A169', color: '#FFFFFF', border: 'none', borderRadius: 24,
+                      padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Check size={15} /> Approve PRD
+                  </button>
+                  <ActionBtn icon={<ArrowLeft size={13} />} label="Back to Brief" onClick={handleGoBackToStep1} />
+                  <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleStartOver} />
+                </div>
+              )}
             </div>
           ) : null}
+        </StepCard>
+      </div>
+
+      <StepConnector />
+
+      {/* ═══════════════════════════════════════════
+          STEP 3 — Choose platform & build guide
+      ═══════════════════════════════════════════ */}
+      <div ref={step3Ref}>
+        <StepCard
+          stepNumber={3}
+          title="Build guide"
+          subtitle={selectedPlatform ? `Setup guide for ${VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label}` : 'Choose your AI coding platform and get a step-by-step build guide.'}
+          done={step3Done}
+          collapsed={false}
+          locked={!step2Done}
+          lockedMessage="Approve your PRD above to choose your platform"
+        >
+          {/* Platform selection grid */}
+          {!buildGuide && !isBuildGuideLoading && (
+            <div>
+              <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, marginBottom: 16, fontFamily: FONT }}>
+                Which AI coding tool will you use to build this app? We'll generate a step-by-step guide tailored to your platform.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+                {VIBE_CODING_PLATFORMS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPlatform(p.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: 14,
+                      background: selectedPlatform === p.id ? '#FFFDF5' : '#FFFFFF',
+                      border: selectedPlatform === p.id ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
+                      borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                      transition: 'border-color 0.3s, background 0.3s',
+                    }}
+                  >
+                    <span style={{ fontSize: 18 }}>{p.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>{p.label}</div>
+                      <div style={{ fontSize: 11, color: '#718096', fontFamily: FONT }}>{p.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={handleGenerateBuildGuide}
+                  disabled={!selectedPlatform || isBuildGuideLoading}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: selectedPlatform ? LEVEL_ACCENT_DARK : '#CBD5E0',
+                    color: '#FFFFFF', border: 'none', borderRadius: 24,
+                    padding: '12px 28px', fontSize: 14, fontWeight: 700, fontFamily: FONT,
+                    cursor: selectedPlatform ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <Sparkles size={16} />
+                  Generate Build Guide
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Build guide loading */}
+          {isBuildGuideLoading && (
+            <ProcessingProgress
+              steps={BUILD_GUIDE_LOADING_STEPS}
+              currentStep={buildGuideLoadingStep}
+              header="Generating your build guide…"
+              subtext={`Tailoring instructions for ${VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform'}`}
+            />
+          )}
+
+          {/* Build guide result */}
+          {buildGuide && !isBuildGuideLoading && (
+            <div>
+              <NextStepBanner
+                accentColor={LEVEL_ACCENT}
+                accentDark={LEVEL_ACCENT_DARK}
+                title={`Build with ${VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform'}`}
+                text="Follow these steps to turn your PRD into a working app. Copy the PRD first, then follow each step below."
+              />
+
+              {/* Steps */}
+              <div style={{
+                background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+                padding: '20px 24px', marginBottom: 16,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                  <Code2 size={16} color={LEVEL_ACCENT_DARK} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>
+                    Build Plan — {VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {buildGuide.steps.map((step, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 14 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        background: `${LEVEL_ACCENT}40`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 700, color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+                      }}>
+                        {i + 1}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
+                          {step.title}
+                        </div>
+                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, fontFamily: FONT, whiteSpace: 'pre-wrap' }}>
+                          {step.instruction}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tips */}
+              {buildGuide.tips.length > 0 && (
+                <div style={{
+                  background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+                  padding: '20px 24px', marginBottom: 16,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Sparkles size={16} color={LEVEL_ACCENT_DARK} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>Pro Tips</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {buildGuide.tips.map((tip, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <div style={{
+                          width: 6, height: 6, borderRadius: '50%', background: LEVEL_ACCENT,
+                          flexShrink: 0, marginTop: 7,
+                        }} />
+                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>{tip}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Limitations */}
+              {buildGuide.limitations && (
+                <div style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic', fontFamily: FONT, marginBottom: 16 }}>
+                  {buildGuide.limitations}
+                </div>
+              )}
+
+              {/* Bottom actions */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <ActionBtn icon={<ArrowLeft size={13} />} label="Back to PRD" onClick={handleGoBackToStep2} />
+                <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleStartOver} />
+              </div>
+            </div>
+          )}
+
+          {error && !isBuildGuideLoading && (
+            <div style={{ marginTop: 12, padding: '10px 14px', background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: 10, fontSize: 13, color: '#C53030', fontFamily: FONT }}>
+              {error}
+            </div>
+          )}
         </StepCard>
       </div>
 
@@ -1989,21 +1447,13 @@ const ProcessingProgress: React.FC<{
 
   return (
     <div style={{
-      background: '#FFFFFF',
-      borderRadius: 14,
-      border: '1px solid #E2E8F0',
+      background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
       padding: '28px 32px',
     }}>
-      <div style={{
-        fontSize: 15, fontWeight: 700, color: '#1A202C',
-        marginBottom: 4, fontFamily: FONT,
-      }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
         {header}
       </div>
-      <div style={{
-        fontSize: 12, color: '#A0AEC0',
-        marginBottom: 24, fontFamily: FONT,
-      }}>
+      <div style={{ fontSize: 12, color: '#A0AEC0', marginBottom: 24, fontFamily: FONT }}>
         {subtext}
       </div>
 
@@ -2012,51 +1462,46 @@ const ProcessingProgress: React.FC<{
           const stepNum = i + 1;
           const isComplete = stepNum <= completedSteps;
           const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
-          const isPending = !isComplete && !isActive;
 
           return (
             <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              transition: 'opacity 0.2s',
-              opacity: isPending ? 0.5 : 1,
+              display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0',
+              opacity: isComplete || isActive ? 1 : 0.4,
+              transition: 'opacity 0.3s',
             }}>
               <div style={{
-                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
-                border: isActive
-                  ? `2px solid ${LEVEL_ACCENT}`
-                  : isComplete ? 'none' : '2px solid #E2E8F0',
-                position: 'relative',
+                width: 22, height: 22, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                ...(isComplete
+                  ? { background: '#38A169', color: '#FFFFFF' }
+                  : isActive
+                    ? { border: `2px solid ${LEVEL_ACCENT}`, background: '#FFFFFF' }
+                    : { border: '2px solid #E2E8F0', background: '#FFFFFF' }),
               }}>
-                {isComplete && <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />}
-                {isActive && (
+                {isComplete ? (
+                  <Check size={11} />
+                ) : isActive ? (
                   <div style={{
-                    width: 18, height: 18, borderRadius: '50%',
-                    border: '2px solid transparent',
-                    borderTopColor: LEVEL_ACCENT_DARK,
-                    animation: 'ppSpin 0.7s linear infinite',
-                    position: 'absolute', top: -2, left: -2,
+                    width: 8, height: 8, borderRadius: '50%', border: `2px solid ${LEVEL_ACCENT}`,
+                    borderTopColor: LEVEL_ACCENT_DARK, animation: 'ppSpin 0.8s linear infinite',
                   }} />
-                )}
+                ) : null}
               </div>
-              <div style={{
-                fontSize: 13,
+              <span style={{
+                fontSize: 13, fontFamily: FONT,
                 fontWeight: isActive ? 600 : 400,
-                color: isPending ? '#A0AEC0' : '#2D3748',
-                fontFamily: FONT,
-                transition: 'color 0.2s, font-weight 0.2s',
+                color: isComplete ? '#38A169' : isActive ? '#1A202C' : '#A0AEC0',
               }}>
                 {label}
-              </div>
+              </span>
             </div>
           );
         })}
       </div>
 
       <div style={{
-        width: '100%', height: 4, borderRadius: 2,
-        background: '#EDF2F7', overflow: 'hidden',
+        height: 4, background: '#EDF2F7', borderRadius: 2,
+        overflow: 'hidden',
       }}>
         <div style={{
           height: '100%', borderRadius: 2,

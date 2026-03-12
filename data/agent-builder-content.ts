@@ -1,5 +1,25 @@
 // Agent Builder Toolkit — Static Content & Configuration
 
+// AI platform options for Step 3 — Deploy Your Agent
+export const AGENT_PLATFORMS = [
+  { id: 'chatgpt', label: 'ChatGPT Custom GPTs', icon: '🤖', description: "OpenAI's Custom GPT Builder" },
+  { id: 'claude', label: 'Claude Skills', icon: '🧠', description: "Anthropic's Agent Skills feature" },
+  { id: 'copilot', label: 'Microsoft Copilot', icon: '🔷', description: 'Copilot Studio / Agents' },
+  { id: 'gemini', label: 'Google Gemini Gems', icon: '✨', description: "Google's Gems feature" },
+  { id: 'api', label: 'Open Source / API', icon: '⚙️', description: 'Direct API integration' },
+  { id: 'unsure', label: 'Not sure yet', icon: '🤔', description: 'Platform-agnostic guidance' },
+] as const;
+
+export const SETUP_LOADING_STEPS = [
+  'Reading your agent configuration…',
+  'Mapping to platform capabilities…',
+  'Writing setup instructions…',
+  'Adding platform-specific tips…',
+  'Finalising guide…',
+];
+
+export const SETUP_STEP_DELAYS = [800, 1500, 3000, 4000, -1];
+
 // Good examples — strong candidates for a Level 2 agent
 export const GOOD_EXAMPLES = [
   {
@@ -90,19 +110,70 @@ b) A JSON template — the exact JSON schema that the agent should produce. Incl
 
 The JSON template should be comprehensive and production-ready. Think about what fields someone would need to: track the output over time, compare outputs across different runs, feed the output into a dashboard or report, and share with colleagues.
 
-SECTION 3: SYSTEM PROMPT
-Generate a complete, ready-to-use system prompt for this agent that incorporates:
-- A clear role definition
-- Context about the task and domain
-- Explicit task instructions
-- The JSON output format from Section 2 (embedded in the prompt)
-- Step-by-step processing instructions
-- Quality checks and constraints
-- Human-in-the-loop requirements from Section 4
+SECTION 3: SYSTEM PROMPT — PRODUCTION-GRADE
+Generate a complete, production-grade system prompt that a professional could paste directly into any AI platform and start using immediately. This is the PRIMARY deliverable — it must be exceptionally detailed, thorough, and ready for real-world use.
 
-The prompt should be professional, detailed, and immediately usable in ChatGPT Custom GPT Builder, Claude Projects, or Microsoft Copilot Agents.
+THE SYSTEM PROMPT MUST BE AT LEAST 1500 CHARACTERS LONG. Short, vague prompts are unacceptable. Every section must contain substantive, actionable detail.
 
-Mark each section of the prompt with labels: [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS] — so the frontend can apply color-coding to match the Prompt Blueprint framework from Level 1.
+Structure the prompt with these clearly labelled sections:
+
+[ROLE]
+Write a detailed role definition (minimum 3-4 sentences). Include:
+- The agent's specific expertise and professional domain
+- The organisational context it operates within
+- Its relationship to the end user (e.g., "You serve as a dedicated analyst for the team...")
+- The professional standard and tone it must maintain
+- Any domain-specific knowledge it should assume
+
+[CONTEXT]
+Provide rich contextual grounding (minimum 4-5 sentences). Include:
+- The business problem this agent addresses
+- Who will consume the output and how they will use it
+- The operational environment (team size, frequency, downstream processes)
+- Constraints or assumptions the agent should operate under
+- Why this task matters to the organisation
+
+[TASK]
+Write explicit, step-by-step task instructions (minimum 5-6 sentences). Include:
+- Exactly what the agent must do when given input data
+- The scope of analysis or processing expected
+- Specific analytical methods or approaches to apply
+- How to handle edge cases, missing data, or ambiguous inputs
+- The expected depth and breadth of the output
+- Any prioritisation logic (e.g., "Focus first on... then...")
+
+[OUTPUT FORMAT]
+Embed the complete JSON template from Section 2 inside the prompt. Also include:
+- A preamble explaining the output structure to the agent
+- Field-by-field instructions for what each key should contain
+- Data type expectations (string, number, array, etc.)
+- Example values where helpful for clarity
+- Instructions for handling optional vs required fields
+
+[STEPS]
+Write a detailed numbered processing workflow (minimum 6-8 steps). Each step should:
+- Be a specific, actionable instruction (not vague guidance)
+- Include what to look for, how to process it, and what to produce
+- Reference the input data format explicitly
+- Build logically on the previous step
+- Include sub-steps where the logic is complex
+Example: "Step 1: Read the entire input dataset and identify the column headers. Map each column to its role in the analysis (e.g., 'Department' = grouping variable, 'Rating' = quantitative metric, 'Open-Text Response' = qualitative data source)."
+
+[QUALITY CHECKS]
+Write comprehensive quality gates (minimum 5-6 checks). Include:
+- Data validation checks (completeness, format, outliers)
+- Logical consistency checks (do conclusions follow from evidence?)
+- Cross-referencing requirements (verify claims against source data)
+- Bias and fairness checks where applicable
+- Output format validation (does the JSON match the template exactly?)
+- Confidence thresholds (when to flag low-confidence conclusions)
+- A final self-review instruction: "Before returning your response, re-read your output and verify that every claim is supported by specific evidence from the input data."
+
+ABSOLUTE RULES FOR THE SYSTEM PROMPT:
+1. TOOL AND MODEL AGNOSTIC — Never mention specific AI providers (OpenAI, Anthropic, Google) or models (GPT-4, Claude, Gemini). Use generic terms: "AI model", "LLM", "your chosen AI platform".
+2. PRODUCTION-READY — The prompt must be immediately usable without editing. No placeholders like "[INSERT X]" or "TODO".
+3. SELF-CONTAINED — Include all necessary instructions within the prompt. Do not reference external documents or links.
+4. SPECIFIC TO THE TASK — Every instruction must be tailored to the user's specific task and data. Avoid generic filler.
 
 SECTION 4: BUILT-IN ACCOUNTABILITY FEATURES
 The goal here is NOT to remind humans to "review the output" — that's obvious and expected. Instead, design 3-5 specific features that are built into the agent's prompt to actively support human oversight. Each feature should describe how the agent itself is designed to make verification easy and effective.
@@ -126,7 +197,7 @@ Each accountability feature must include:
 - severity: "critical", "important", or "recommended"
 - what_to_verify: 1-2 sentences describing what the agent provides or does (NOT what the human should check — frame it as "The agent includes...", "The agent flags...", "The agent provides...")
 - why_it_matters: 1-2 sentences on how this specific agent behavior helps the reviewer do their job faster and more effectively
-- prompt_instruction: The exact text to add to the agent's prompt to enforce this behavior
+- prompt_instruction: The exact text to add to the agent's prompt to enforce this behavior (minimum 2-3 sentences, specific and actionable)
 
 RESPONSE FORMAT:
 You must respond with the following JSON structure ONLY — no markdown, no extra text:
@@ -156,14 +227,14 @@ You must respond with the following JSON structure ONLY — no markdown, no extr
       "example": "The actual JSON template object goes here as a nested object"
     }
   },
-  "system_prompt": "The full system prompt text with [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS] section markers",
+  "system_prompt": "The full system prompt text — MUST be at least 1500 characters. Include [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], [STEPS], [QUALITY CHECKS] section markers. Each section must be substantive and detailed.",
   "accountability": [
     {
       "name": "Source Row References",
       "severity": "critical",
       "what_to_verify": "Description of what to check...",
       "why_it_matters": "Description of the risk...",
-      "prompt_instruction": "The exact prompt text to add..."
+      "prompt_instruction": "The exact prompt text to add — minimum 2-3 sentences..."
     }
   ]
 }`;

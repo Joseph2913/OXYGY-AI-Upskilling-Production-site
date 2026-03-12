@@ -28,7 +28,6 @@ export interface UseLevelDataReturn {
   completeTopic: (topicId: number) => void;
 }
 
-export const TOTAL_SLIDES = 13;
 export const TOTAL_PHASES = 4;
 export const PHASE_LABELS = ['E-Learn', 'Read', 'Watch', 'Practise'];
 export const PHASE_ICONS = ['📖', '📄', '🎬', '🛠️'];
@@ -48,12 +47,12 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     const timer = setTimeout(() => {
       const topics = LEVEL_TOPICS[currentLevel] || [];
 
-      // Mock: active level has the single topic in progress at phase 1 slide 7
+      // Mock: active level has the single topic in progress at phase 1 slide 1
       const topicProgress: TopicProgress[] = topics.map((topic) => {
         return {
           topicId: topic.id,
           phase: 1,
-          slide: 7,
+          slide: 1,
           completedAt: null,
         };
       });

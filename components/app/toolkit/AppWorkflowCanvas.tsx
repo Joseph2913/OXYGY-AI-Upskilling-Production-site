@@ -1,18 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowRight, ArrowDown, ArrowLeft, Check, RotateCcw, Copy, Download, Library,
-  Info, ChevronRight, ChevronDown, Sparkles, Wrench, Plus, Undo2, Trash2, X,
-  Lightbulb, Loader2, Eye, Code,
+  Info, ChevronRight, ChevronDown, Sparkles, X,
+  Loader2, Eye, Code,
   FileText, Key, ListChecks, Clock, Layers, GitBranch,
 } from 'lucide-react';
 import type {
-  WorkflowNode, WorkflowPath, WorkflowGenerateResult, WorkflowFeedbackResult,
-  NodeLayer, NodeDefinition, WorkflowIntermediate,
+  WorkflowNode, WorkflowGenerateResult, WorkflowFeedbackResult,
+  WorkflowIntermediate,
 } from '../../../types';
 import { useWorkflowDesignApi } from '../../../hooks/useWorkflowDesignApi';
 import {
-  INPUT_NODES, PROCESSING_NODES, OUTPUT_NODES, NODE_MAP,
-  LAYER_COLORS, WORKFLOW_EXAMPLES, ICON_MAP,
+  NODE_MAP, LAYER_COLORS, WORKFLOW_EXAMPLES, ICON_MAP,
 } from '../../../data/workflow-designer-content';
 import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
 import { useAuth } from '../../../context/AuthContext';
@@ -21,7 +20,6 @@ import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
-import FeedbackItemRow from '../workflow/FeedbackItemRow';
 
 /* ─── Constants ─── */
 
@@ -233,26 +231,20 @@ function generateConnectionPaths(positions: NodePosition[], nw: number, nh: numb
   return paths;
 }
 
-function getNodesForLayer(layer: NodeLayer): NodeDefinition[] {
-  if (layer === 'input') return INPUT_NODES;
-  if (layer === 'processing') return PROCESSING_NODES;
-  return OUTPUT_NODES;
-}
-
 function getNodeIcon(iconName: string) {
   return ICON_MAP[iconName] || Info;
 }
 
 /* ─── Shared sub-components ─── */
 
-const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
+const StepBadge: React.FC<{ number: number; done: boolean; locked?: boolean }> = ({ number, done, locked }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-    background: done ? LEVEL_ACCENT : '#F7FAFC',
+    background: done ? LEVEL_ACCENT : locked ? '#EDF2F7' : '#F7FAFC',
     border: done ? 'none' : '2px solid #E2E8F0',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 13, fontWeight: 800,
-    color: done ? '#FFFFFF' : '#718096',
+    color: done ? LEVEL_ACCENT_DARK : locked ? '#CBD5E0' : '#718096',
     transition: 'background 0.2s, color 0.2s',
     fontFamily: FONT,
   }}>
@@ -285,28 +277,34 @@ interface StepCardProps {
   subtitle: string;
   done: boolean;
   collapsed: boolean;
+  locked?: boolean;
+  lockedMessage?: string;
   children: React.ReactNode;
 }
 
-const StepCard: React.FC<StepCardProps> = ({ stepNumber, title, subtitle, done, collapsed, children }) => (
+const StepCard: React.FC<StepCardProps> = ({ stepNumber, title, subtitle, done, collapsed, locked, lockedMessage, children }) => (
   <div style={{
-    background: '#FFFFFF', borderRadius: 16,
+    background: locked ? '#FAFBFC' : '#FFFFFF', borderRadius: 16,
     border: done ? `1px solid ${LEVEL_ACCENT}88` : '1px solid #E2E8F0',
-    padding: collapsed ? '16px 24px' : '24px 28px',
-    transition: 'border-color 0.3s, padding 0.3s',
+    padding: (collapsed || locked) ? '16px 24px' : '24px 28px',
+    opacity: locked ? 0.7 : 1,
+    transition: 'border-color 0.3s, padding 0.3s, opacity 0.3s',
     fontFamily: FONT,
   }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <StepBadge number={stepNumber} done={done} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: (collapsed || locked) ? 0 : 20 }}>
+      <StepBadge number={stepNumber} done={done} locked={locked} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{title}</div>
-        {!collapsed && <div style={{ fontSize: 13, color: '#718096', fontFamily: FONT }}>{subtitle}</div>}
+        <div style={{ fontSize: 16, fontWeight: 700, color: locked ? '#A0AEC0' : '#1A202C', fontFamily: FONT }}>{title}</div>
+        {locked && lockedMessage && (
+          <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: FONT }}>{lockedMessage}</div>
+        )}
+        {!collapsed && !locked && <div style={{ fontSize: 13, color: '#718096', fontFamily: FONT, marginTop: 2 }}>{subtitle}</div>}
       </div>
       {collapsed && done && (
         <span style={{ fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>Done ✓</span>
       )}
     </div>
-    {!collapsed && <div style={{ marginTop: 20 }}>{children}</div>}
+    {!collapsed && !locked && children}
   </div>
 );
 
@@ -380,24 +378,6 @@ const ToolOverview: React.FC<{
       <span style={{ fontSize: 11, fontWeight: 700, color: '#276749', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>OUTCOME</span>
       <div style={{ fontSize: 12, color: '#2F855A', marginTop: 2 }}>{outcome}</div>
     </div>
-  </div>
-);
-
-/* ─── StepPlaceholder ─── */
-
-const StepPlaceholder: React.FC<{ icon: React.ReactNode; message: string; detail: string }> = ({ icon, message, detail }) => (
-  <div style={{
-    background: '#F7FAFC', borderRadius: 12, border: '1px dashed #E2E8F0',
-    padding: '24px 28px', textAlign: 'center' as const, fontFamily: FONT,
-  }}>
-    <div style={{
-      width: 36, height: 36, borderRadius: '50%', background: '#EDF2F7',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10,
-    }}>
-      {icon}
-    </div>
-    <div style={{ fontSize: 14, fontWeight: 700, color: '#4A5568', marginBottom: 4 }}>{message}</div>
-    <div style={{ fontSize: 13, color: '#A0AEC0', maxWidth: 480, margin: '0 auto' }}>{detail}</div>
   </div>
 );
 
@@ -622,92 +602,6 @@ const CanvasSkeleton: React.FC<{ nodesPerRow: number }> = ({ nodesPerRow }) => {
   );
 };
 
-/* ─── NodeLibraryPanel ─── */
-
-const NodeLibraryPanel: React.FC<{
-  activeTab: NodeLayer; onTabChange: (t: NodeLayer) => void;
-  onAddNode: (def: NodeDefinition) => void; onClose: () => void;
-}> = ({ activeTab, onTabChange, onAddNode, onClose }) => {
-  const [tooltipId, setTooltipId] = useState<string | null>(null);
-  const nodes = getNodesForLayer(activeTab);
-  const tabs: { key: NodeLayer; label: string }[] = [
-    { key: 'input', label: 'Data Input' },
-    { key: 'processing', label: 'Processing' },
-    { key: 'output', label: 'Data Output' },
-  ];
-
-  return (
-    <div style={{
-      position: 'absolute', top: 0, right: 0, height: '100%', background: '#FFFFFF',
-      width: 340, borderLeft: '1px solid #E2E8F0', boxShadow: '-2px 0 8px rgba(0,0,0,0.04)',
-      zIndex: 20, display: 'flex', flexDirection: 'column', fontFamily: FONT,
-      animation: 'ppFadeIn 0.2s ease',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 8px' }}>
-        <span style={{ fontWeight: 700, fontSize: 16, color: '#1A202C' }}>Add Node</span>
-        <button onClick={onClose} style={{ color: '#A0AEC0', cursor: 'pointer', background: 'none', border: 'none', padding: 4 }} aria-label="Close panel"><X size={20} /></button>
-      </div>
-      <div style={{ display: 'flex', gap: 8, padding: '0 16px 12px' }}>
-        {tabs.map(t => {
-          const isActive = activeTab === t.key;
-          const c = LAYER_COLORS[t.key];
-          return (
-            <button key={t.key} onClick={() => onTabChange(t.key)} style={{
-              fontSize: 12, padding: '4px 12px', borderRadius: 20,
-              backgroundColor: isActive ? c.bg : 'transparent',
-              color: isActive ? c.dark : '#718096',
-              fontWeight: isActive ? 600 : 400,
-              border: `1px solid ${isActive ? c.border : '#E2E8F0'}`,
-              cursor: 'pointer', fontFamily: FONT,
-            }}>
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {nodes.map(def => {
-          const c = LAYER_COLORS[def.layer];
-          const IconComp = getNodeIcon(def.icon);
-          return (
-            <div key={def.nodeId} style={{ position: 'relative' }}>
-              <button onClick={() => onAddNode(def)} style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: '10px 16px', textAlign: 'left' as const,
-                borderBottom: '1px solid #F7FAFC', background: 'none', border: 'none',
-                cursor: 'pointer', fontFamily: FONT,
-              }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7FAFC')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: c.band, flexShrink: 0 }} />
-                <IconComp size={18} color={c.dark} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                <span style={{ fontWeight: 600, fontSize: 13, color: '#1A202C', flex: 1 }}>{def.name}</span>
-                <span
-                  style={{ color: '#A0AEC0', cursor: 'pointer', flexShrink: 0, padding: 2 }}
-                  onClick={(e) => { e.stopPropagation(); setTooltipId(tooltipId === def.nodeId ? null : def.nodeId); }}
-                >
-                  <Info size={16} />
-                </span>
-              </button>
-              {tooltipId === def.nodeId && (
-                <div style={{
-                  position: 'absolute', right: 16, zIndex: 10, width: 224, padding: 12,
-                  borderRadius: 8, fontSize: 12, lineHeight: 1.6,
-                  backgroundColor: '#1A202C', color: '#E2E8F0', top: '100%', marginTop: -4,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontFamily: FONT,
-                }}>
-                  {def.description}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 /* ═════════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═════════════════════════════════════════════════════════════════ */
@@ -720,25 +614,10 @@ const AppWorkflowCanvas: React.FC = () => {
   const [toolsAndSystems, setToolsAndSystems] = useState('');
   const [flashTask, setFlashTask] = useState(false);
   const [flashTools, setFlashTools] = useState(false);
-  const [selectedPath, setSelectedPath] = useState<WorkflowPath | null>(null);
+  const [selectedPath, setSelectedPath] = useState<'a' | null>(null);
 
   /* ── Step 2 State (canvas) ── */
-  const [canvasNodes, setCanvasNodes] = useState<WorkflowNode[]>([]);
-  const [undoStack, setUndoStack] = useState<WorkflowNode[][]>([]);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [activeLibraryTab, setActiveLibraryTab] = useState<NodeLayer>('input');
-  const [orderWarningDismissed, setOrderWarningDismissed] = useState(false);
-  const [showOrderWarning, setShowOrderWarning] = useState(false);
-  const [nodeClickMenu, setNodeClickMenu] = useState<string | null>(null);
-  const [userRationale, setUserRationale] = useState('');
-  const [feedbackResult, setFeedbackResult] = useState<WorkflowFeedbackResult | null>(null);
-  const [comparisonView, setComparisonView] = useState<'user' | 'ai'>('user');
   const [generateResult, setGenerateResult] = useState<WorkflowGenerateResult | null>(null);
-
-  /* ── Path B feedback loop state (Change 1) ── */
-  const [pathBApproved, setPathBApproved] = useState(false);
-  const [resolvedFeedbackIds, setResolvedFeedbackIds] = useState<Set<string>>(new Set());
-  const [openDisputeId, setOpenDisputeId] = useState<string | null>(null);
   const [feedbackResolutions, setFeedbackResolutions] = useState<Record<string, {
     resolution: 'applied' | 'disputed' | 'dismissed';
     disputeText?: string;
@@ -791,17 +670,12 @@ const AppWorkflowCanvas: React.FC = () => {
 
   /* ── Derived state ── */
   const step1Done = selectedPath !== null;
-  const step2Done = selectedPath === 'a' ? pathAApproved : pathBApproved;
-  // step3Done derived from n8nJson state — used inline as !!n8nJson
+  const step2Done = pathAApproved;
 
   const displayedNodes: WorkflowNode[] = (() => {
     if (selectedPath === 'a') {
       if (pathAShowingRevised && pathAFeedbackResult) return pathAFeedbackResult.suggested_workflow;
       return generateResult?.nodes || [];
-    }
-    if (selectedPath === 'b') {
-      if (feedbackResult && comparisonView === 'ai') return feedbackResult.suggested_workflow;
-      return canvasNodes;
     }
     return [];
   })();
@@ -811,11 +685,9 @@ const AppWorkflowCanvas: React.FC = () => {
   const totalRows = displayedNodes.length > 0 ? positions[positions.length - 1].row + 1 : 0;
   const canvasHeight = totalRows > 0 ? totalRows * (nh + gy) - gy : 200;
 
-  const workflowName = selectedPath === 'a' && generateResult ? generateResult.workflow_name : 'Custom Workflow';
-  const workflowDescription = selectedPath === 'a' && generateResult ? generateResult.workflow_description : taskDescription;
-  const finalNodes = selectedPath === 'a'
-    ? (pathAFeedbackResult ? pathAFeedbackResult.suggested_workflow : generateResult?.nodes || [])
-    : (feedbackResult ? feedbackResult.suggested_workflow : canvasNodes);
+  const workflowName = generateResult ? generateResult.workflow_name : 'Custom Workflow';
+  const workflowDescription = generateResult ? generateResult.workflow_description : taskDescription;
+  const finalNodes = pathAFeedbackResult ? pathAFeedbackResult.suggested_workflow : generateResult?.nodes || [];
 
   /* ── Draft persistence ── */
   useEffect(() => {
@@ -850,11 +722,6 @@ const AppWorkflowCanvas: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [nodesAnimated, connectionsAnimated]);
-
-  useEffect(() => {
-    setNodesAnimated(0);
-    setConnectionsAnimated(0);
-  }, [comparisonView]);
 
   /* ── Loading step progression (matches L1 pattern) ── */
   useEffect(() => {
@@ -895,13 +762,13 @@ const AppWorkflowCanvas: React.FC = () => {
     if (!selectedPlatform || buildGuideMarkdown) return;
 
     // Assemble rich context from all prior steps
-    const activeFeedbackResult = selectedPath === 'a' ? pathAFeedbackResult : feedbackResult;
+    const activeFeedbackResult = pathAFeedbackResult;
     const activeFeedbackChanges = activeFeedbackResult?.changes || [];
 
     const richContext: NonNullable<import('../../../types').WorkflowIntermediate['context']> = {
       originalTaskDescription: taskDescription,
       toolsAndSystems: toolsAndSystems || 'Not specified',
-      pathUsed: selectedPath as 'a' | 'b',
+      pathUsed: 'a' as const,
       // Feedback items with resolution outcomes
       feedbackItems: activeFeedbackChanges.map(c => {
         const itemId = c.node_id || `feedback-${activeFeedbackChanges.indexOf(c)}`;
@@ -956,15 +823,7 @@ const AppWorkflowCanvas: React.FC = () => {
       console.error('[build-guide] Generation error:', err);
       setExportLoading(false);
     }
-  }, [selectedPlatform, buildGuideMarkdown, workflowName, workflowDescription, finalNodes, selectedPath, taskDescription, toolsAndSystems, feedbackResolutions, pathAFeedbackText, pathAFeedbackResult, feedbackResult]);
-
-  /* ── Close node menu on outside click ── */
-  useEffect(() => {
-    if (!nodeClickMenu) return;
-    const handler = () => setNodeClickMenu(null);
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, [nodeClickMenu]);
+  }, [selectedPlatform, buildGuideMarkdown, workflowName, workflowDescription, finalNodes, taskDescription, toolsAndSystems, feedbackResolutions, pathAFeedbackText, pathAFeedbackResult]);
 
   /* ── beforeunload warning for unsaved workflows ── */
   useEffect(() => {
@@ -1013,19 +872,6 @@ const AppWorkflowCanvas: React.FC = () => {
     }
   };
 
-  const handlePathB = () => {
-    setSelectedPath('b');
-    setCanvasNodes([]);
-    setUndoStack([]);
-    setPanelOpen(true);
-    setActiveLibraryTab('input');
-    setFeedbackResult(null);
-    setComparisonView('user');
-    setNodesAnimated(0);
-    setConnectionsAnimated(0);
-    setTimeout(() => canvasRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-  };
-
   const handlePathAApprove = () => {
     setPathAApproved(true);
     setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -1059,157 +905,10 @@ const AppWorkflowCanvas: React.FC = () => {
     }
   };
 
-  const handleAddNode = (def: NodeDefinition) => {
-    setUndoStack(prev => [...prev, [...canvasNodes]]);
-    const newNode: WorkflowNode = {
-      id: `user-node-${canvasNodes.length + 1}`,
-      node_id: def.nodeId,
-      name: def.name,
-      layer: def.layer,
-    };
-    const updated = [...canvasNodes, newNode];
-    setCanvasNodes(updated);
-    setNodesAnimated(updated.length - 1);
-    setConnectionsAnimated(Math.max(0, updated.length - 2));
-
-    if (!orderWarningDismissed) {
-      const hasInput = updated.some(n => n.layer === 'input');
-      const hasProcessing = updated.some(n => n.layer === 'processing');
-      if (def.layer === 'output' && (!hasInput || !hasProcessing)) setShowOrderWarning(true);
-    }
-
-    if (def.layer === 'input') setActiveLibraryTab('processing');
-    else if (def.layer === 'processing') setActiveLibraryTab('output');
-  };
-
-  const handleUndo = () => {
-    if (undoStack.length === 0) return;
-    const prev = undoStack[undoStack.length - 1];
-    setUndoStack(s => s.slice(0, -1));
-    setCanvasNodes(prev);
-    setNodesAnimated(prev.length);
-    setConnectionsAnimated(Math.max(0, prev.length - 1));
-  };
-
-  const handleClearAll = () => {
-    setUndoStack([]);
-    setCanvasNodes([]);
-    setNodesAnimated(0);
-    setConnectionsAnimated(0);
-    setFeedbackResult(null);
-    setComparisonView('user');
-    setPathBApproved(false);
-    setResolvedFeedbackIds(new Set());
-    setOpenDisputeId(null);
-  };
-
-  const handleRemoveNode = (nodeId: string) => {
-    setUndoStack(prev => [...prev, [...canvasNodes]]);
-    const updated = canvasNodes.filter(n => n.id !== nodeId);
-    setCanvasNodes(updated);
-    setNodesAnimated(updated.length);
-    setConnectionsAnimated(Math.max(0, updated.length - 1));
-    setNodeClickMenu(null);
-  };
-
-  const handleGetFeedback = async () => {
-    if (canvasNodes.length < 2) return;
-    setFeedbackResult(null);
-    setComparisonView('user');
-
-    const result = await designWorkflow({
-      mode: 'feedback',
-      task_description: taskDescription,
-      tools_and_systems: toolsAndSystems || 'Not specified',
-      user_workflow: canvasNodes.map(n => ({ id: n.id, node_id: n.node_id, name: n.name, layer: n.layer })),
-      user_rationale: userRationale || 'Not provided',
-    });
-
-    if (result && 'suggested_workflow' in result) {
-      setFeedbackResult(result);
-      setComparisonView('ai');
-      setNodesAnimated(0);
-      setConnectionsAnimated(0);
-      setResolvedFeedbackIds(new Set());
-      setOpenDisputeId(null);
-      setPathBApproved(false);
-      if (user) upsertToolUsed(user.id, 3);
-    }
-  };
-
-  /* ── Path B feedback loop handlers (Change 1) ── */
-
-  // Convert feedbackResult.changes to FeedbackItem[] for FeedbackItemRow
-  const feedbackItems = feedbackResult?.changes.map((c, i) => ({
-    id: c.node_id || `feedback-${i}`,
-    nodeId: c.node_id,
-    nodeName: c.node_name,
-    severity: (c.type === 'added' ? 'blocking' : 'advisory') as 'blocking' | 'advisory',
-    message: c.rationale,
-  })) || [];
-
-  const handleFeedbackApply = (itemId: string) => {
-    setResolvedFeedbackIds(prev => new Set(prev).add(itemId));
-    setFeedbackResolutions(prev => ({ ...prev, [itemId]: { resolution: 'applied' } }));
-  };
-
-  const handleFeedbackDispute = async (itemId: string, disputeText: string): Promise<{ outcome: 'concede' | 'maintain'; response: string }> => {
-    const item = feedbackItems.find(fi => fi.id === itemId);
-    const resp = await fetch('/api/resolve-dispute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        originalMessage: item?.message || '',
-        severity: item?.severity || 'advisory',
-        disputeText,
-        nodeContext: { nodeName: item?.nodeName, workflow: canvasNodes.map(n => n.name) },
-      }),
-    });
-    const data = await resp.json();
-    setResolvedFeedbackIds(prev => new Set(prev).add(itemId));
-    setFeedbackResolutions(prev => ({
-      ...prev,
-      [itemId]: {
-        resolution: 'disputed',
-        disputeText,
-        disputeOutcome: data.outcome || 'maintain',
-        disputeResponse: data.response || 'Unable to process dispute.',
-      },
-    }));
-    return { outcome: data.outcome || 'maintain', response: data.response || 'Unable to process dispute.' };
-  };
-
-  const handleFeedbackDismiss = (itemId: string) => {
-    setResolvedFeedbackIds(prev => new Set(prev).add(itemId));
-    setFeedbackResolutions(prev => ({ ...prev, [itemId]: { resolution: 'dismissed' } }));
-  };
-
-  const handleOpenDispute = (itemId: string) => {
-    setOpenDisputeId(itemId);
-  };
-
-  // Derive approval banner state
-  const allFeedbackResolved = feedbackItems.length > 0 && feedbackItems.every(fi => resolvedFeedbackIds.has(fi.id));
-  const overriddenBlockingCount = feedbackItems.filter(fi => fi.severity === 'blocking' && resolvedFeedbackIds.has(fi.id)).length;
-
-  const handlePathBApprove = () => {
-    setPathBApproved(true);
-  };
-
   const handleStartOver = () => {
     setTaskDescription('');
     setToolsAndSystems('');
     setSelectedPath(null);
-    setCanvasNodes([]);
-    setUndoStack([]);
-    setPanelOpen(false);
-    setActiveLibraryTab('input');
-    setOrderWarningDismissed(false);
-    setShowOrderWarning(false);
-    setNodeClickMenu(null);
-    setUserRationale('');
-    setFeedbackResult(null);
-    setComparisonView('user');
     setGenerateResult(null);
     setNodesAnimated(0);
     setConnectionsAnimated(0);
@@ -1217,9 +916,6 @@ const AppWorkflowCanvas: React.FC = () => {
     setPlatformStepDone(false);
     setBuildGuideMarkdown(null);
     setBuildGuideIntermediate(null);
-    setPathBApproved(false);
-    setResolvedFeedbackIds(new Set());
-    setOpenDisputeId(null);
     setFeedbackResolutions({});
     setExportLoading(false);
     setSavedToArtefacts(false);
@@ -1243,10 +939,8 @@ const AppWorkflowCanvas: React.FC = () => {
 
   /* ── Step-back navigation ── */
   const handleGoBackToStep1 = () => {
-    // Reopen step 1 — preserve generateResult so re-selecting Path A is instant
     setSelectedPath(null);
     setPathAApproved(false);
-    setPathBApproved(false);
     setPlatformStepDone(false);
     setSelectedPlatform(null);
     setBuildGuideMarkdown(null);
@@ -1257,9 +951,7 @@ const AppWorkflowCanvas: React.FC = () => {
   };
 
   const handleGoBackToStep2 = () => {
-    // Reopen step 2 — un-approve, keep canvas/feedback intact
-    if (selectedPath === 'a') setPathAApproved(false);
-    else setPathBApproved(false);
+    setPathAApproved(false);
     setPlatformStepDone(false);
     setSelectedPlatform(null);
     setBuildGuideMarkdown(null);
@@ -1446,7 +1138,7 @@ const AppWorkflowCanvas: React.FC = () => {
         title="Define your workflow"
         subtitle="Describe the process you want to automate, the tools involved, and how you'd like to build it."
         done={step1Done}
-        collapsed={step1Done && step2Done}
+        collapsed={step1Done}
       >
         {/* Example pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
@@ -1515,66 +1207,23 @@ const AppWorkflowCanvas: React.FC = () => {
           </div>
         )}
 
-        {/* Path choice */}
+        {/* Design workflow button */}
         {!selectedPath && (
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#4A5568', marginBottom: 12, fontFamily: FONT }}>
-              How would you like to build this workflow?
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {/* Path A */}
-              <button
-                onClick={handlePathA}
-                disabled={!taskDescription.trim() || isLoading}
-                style={{
-                  background: '#FFFFFF', borderRadius: 14, padding: 20,
-                  border: '1px solid #E2E8F0', cursor: !taskDescription.trim() ? 'not-allowed' : 'pointer',
-                  opacity: !taskDescription.trim() ? 0.5 : 1,
-                  textAlign: 'left' as const, fontFamily: FONT,
-                  transition: 'border-color 0.15s, box-shadow 0.15s',
-                }}
-                onMouseEnter={e => { if (taskDescription.trim()) { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.boxShadow = `0 2px 8px ${LEVEL_ACCENT}20`; } }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <Sparkles size={20} color={LEVEL_ACCENT} style={{ marginBottom: 8 }} />
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4 }}>Design It For Me</div>
-                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>Get an AI-designed workflow based on your description.</div>
-              </button>
-              {/* Path B */}
-              <button
-                onClick={handlePathB}
-                disabled={!taskDescription.trim()}
-                style={{
-                  background: '#FFFFFF', borderRadius: 14, padding: 20,
-                  border: '1px solid #E2E8F0', cursor: !taskDescription.trim() ? 'not-allowed' : 'pointer',
-                  opacity: !taskDescription.trim() ? 0.5 : 1,
-                  textAlign: 'left' as const, fontFamily: FONT,
-                  transition: 'border-color 0.15s, box-shadow 0.15s',
-                }}
-                onMouseEnter={e => { if (taskDescription.trim()) { e.currentTarget.style.borderColor = '#5B6DC2'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(91,109,194,0.12)'; } }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <Wrench size={20} color="#5B6DC2" style={{ marginBottom: 8 }} />
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4 }}>I'll Build It Myself</div>
-                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>Build your own workflow and get AI feedback.</div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Selected path indicator */}
-        {selectedPath && (
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px',
-              borderRadius: 20, fontSize: 12, fontWeight: 600, fontFamily: FONT,
-              background: selectedPath === 'a' ? `${LEVEL_ACCENT}15` : 'rgba(91,109,194,0.1)',
-              color: selectedPath === 'a' ? LEVEL_ACCENT_DARK : '#5B6DC2',
-              border: `1px solid ${selectedPath === 'a' ? `${LEVEL_ACCENT}50` : 'rgba(91,109,194,0.3)'}`,
-            }}>
-              {selectedPath === 'a' ? <Sparkles size={12} /> : <Wrench size={12} />}
-              {selectedPath === 'a' ? 'AI-Generated' : 'Manual Builder'}
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 20 }}>
+            <button
+              onClick={handlePathA}
+              disabled={!taskDescription.trim() || isLoading}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '12px 28px', borderRadius: 999, fontSize: 14, fontWeight: 700,
+                background: taskDescription.trim() ? LEVEL_ACCENT : '#CBD5E0',
+                color: '#FFFFFF', border: 'none',
+                cursor: (!taskDescription.trim() || isLoading) ? 'not-allowed' : 'pointer',
+                fontFamily: FONT, transition: 'background-color 0.15s',
+              }}
+            >
+              <Sparkles size={16} /> Design Workflow For Me
+            </button>
           </div>
         )}
       </StepCard>
@@ -1586,20 +1235,13 @@ const AppWorkflowCanvas: React.FC = () => {
         <StepCard
           stepNumber={2}
           title="Build & review your canvas"
-          subtitle={selectedPath === 'a'
-            ? (pathAApproved ? 'Workflow approved — proceed to export.' : generateResult ? 'Review the generated workflow. Approve it or give feedback to refine.' : 'AI is designing your workflow based on your description.')
-            : selectedPath === 'b' ? 'Add nodes from the library to build your workflow, then get AI feedback.'
-            : 'Choose a path above to start building.'}
+          subtitle={pathAApproved ? 'Workflow approved — proceed to export.' : generateResult ? 'Review the generated workflow. Approve it or give feedback to refine.' : selectedPath ? 'AI is designing your workflow based on your description.' : 'Describe your workflow above to get started.'}
           done={step2Done}
-          collapsed={step2Done && pathAApproved}
+          collapsed={step2Done}
+          locked={!selectedPath}
+          lockedMessage="Complete Step 1 to start building your canvas"
         >
-          {!selectedPath ? (
-            <StepPlaceholder
-              icon={<ArrowRight size={16} color="#A0AEC0" />}
-              message="Complete Step 1 first"
-              detail="Describe your workflow and choose a build path to start designing your canvas."
-            />
-          ) : (
+          {selectedPath && (
             <>
               {/* Back to Step 1 */}
               {!step2Done && (
@@ -1616,64 +1258,6 @@ const AppWorkflowCanvas: React.FC = () => {
                 >
                   <ArrowLeft size={14} /> Back to Step 1
                 </button>
-              )}
-
-              {/* Comparison toggle (Path B with feedback) */}
-              {selectedPath === 'b' && feedbackResult && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-                  <div style={{ display: 'inline-flex', borderRadius: 20, padding: 3, border: '1px solid #E2E8F0', background: '#F7FAFC' }}>
-                    {(['user', 'ai'] as const).map(v => (
-                      <button key={v} onClick={() => { setComparisonView(v); setNodesAnimated(0); setConnectionsAnimated(0); }} style={{
-                        padding: '6px 16px', borderRadius: 18, fontSize: 13, fontFamily: FONT,
-                        background: comparisonView === v ? '#FFFFFF' : 'transparent',
-                        color: comparisonView === v ? '#1A202C' : '#718096',
-                        fontWeight: comparisonView === v ? 700 : 400,
-                        boxShadow: comparisonView === v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                        border: 'none', cursor: 'pointer',
-                      }}>
-                        {v === 'user' ? 'Your Workflow' : 'AI Suggestion'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Overall assessment */}
-              {selectedPath === 'b' && feedbackResult && comparisonView === 'ai' && (
-                <p style={{ textAlign: 'center' as const, fontSize: 14, color: '#4A5568', maxWidth: 600, margin: '0 auto 16px', fontFamily: FONT }}>
-                  {feedbackResult.overall_assessment}
-                </p>
-              )}
-
-              {/* Path B toolbar */}
-              {selectedPath === 'b' && !feedbackResult && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <button onClick={handleUndo} disabled={undoStack.length === 0} style={{
-                    display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-                    borderRadius: 6, fontSize: 12, fontFamily: FONT,
-                    border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#718096',
-                    opacity: undoStack.length === 0 ? 0.4 : 1, cursor: undoStack.length === 0 ? 'not-allowed' : 'pointer',
-                  }}>
-                    <Undo2 size={14} /> Undo
-                  </button>
-                  <button onClick={() => setPanelOpen(!panelOpen)} style={{
-                    display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-                    borderRadius: 6, fontSize: 12, fontFamily: FONT,
-                    border: `1px solid ${panelOpen ? LEVEL_ACCENT : '#E2E8F0'}`,
-                    background: '#FFFFFF', color: panelOpen ? LEVEL_ACCENT : '#718096',
-                    cursor: 'pointer',
-                  }}>
-                    <Plus size={14} /> Add Node
-                  </button>
-                  <button onClick={handleClearAll} disabled={canvasNodes.length === 0} style={{
-                    display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-                    borderRadius: 6, fontSize: 12, fontFamily: FONT,
-                    border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#718096',
-                    opacity: canvasNodes.length === 0 ? 0.4 : 1, cursor: canvasNodes.length === 0 ? 'not-allowed' : 'pointer',
-                  }}>
-                    <Trash2 size={14} /> Clear
-                  </button>
-                </div>
               )}
 
               {/* Canvas container */}
@@ -1694,23 +1278,6 @@ const AppWorkflowCanvas: React.FC = () => {
                   </>
                 )}
 
-                {/* Empty state (Path B) */}
-                {selectedPath === 'b' && canvasNodes.length === 0 && !isLoading && (
-                  <div
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', cursor: 'pointer' }}
-                    onClick={() => { setPanelOpen(true); setActiveLibraryTab('input'); }}
-                  >
-                    <div style={{
-                      width: 56, height: 56, borderRadius: '50%', border: '2px dashed #E2E8F0',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10,
-                    }}>
-                      <Plus size={28} color="#A0AEC0" />
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: '#718096', fontFamily: FONT }}>Add Your First Node</span>
-                    <span style={{ fontSize: 13, color: '#A0AEC0', marginTop: 4, fontFamily: FONT }}>Start with a data input — where does your data come from?</span>
-                  </div>
-                )}
-
                 {/* Rendered nodes */}
                 {displayedNodes.length > 0 && !isLoading && (
                   <div style={{ position: 'relative', width: canvasWidth, height: canvasHeight, margin: selectedPath === 'a' ? '0 auto' : undefined }}>
@@ -1720,60 +1287,12 @@ const AppWorkflowCanvas: React.FC = () => {
                         <CanvasNode
                           node={node} position={positions[i]} nw={nw} nh={nh}
                           animated={i < nodesAnimated + 1} index={i}
-                          onClick={selectedPath === 'b' && !feedbackResult ? id => setNodeClickMenu(nodeClickMenu === id ? null : id) : undefined}
                         />
-                        {selectedPath === 'b' && !feedbackResult && nodeClickMenu === node.id && (
-                          <div
-                            style={{
-                              position: 'absolute', zIndex: 30, background: '#FFFFFF', borderRadius: 8,
-                              border: '1px solid #E2E8F0', padding: '4px 0',
-                              left: positions[i].x + nw / 2 - 50, top: positions[i].y + nh + 4,
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: 100, fontFamily: FONT,
-                            }}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => handleRemoveNode(node.id)}
-                              style={{ width: '100%', textAlign: 'left' as const, padding: '6px 12px', fontSize: 13, color: '#E53E3E', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}
-                              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FFF5F5')}
-                              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                            >Remove</button>
-                            <button
-                              onClick={() => { setNodeClickMenu(null); toast(NODE_MAP[node.node_id]?.description || node.name); }}
-                              style={{ width: '100%', textAlign: 'left' as const, padding: '6px 12px', fontSize: 13, color: '#4A5568', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}
-                              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7FAFC')}
-                              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                            >Info</button>
-                          </div>
-                        )}
                       </React.Fragment>
                     ))}
                   </div>
                 )}
 
-                {/* Legend for comparison view */}
-                {selectedPath === 'b' && feedbackResult && comparisonView === 'ai' && (
-                  <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 16, borderTop: '1px solid #E2E8F0' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#4A5568', fontFamily: FONT }}>
-                      <span style={{ width: 16, height: 16, borderRadius: 4, border: '2px dashed #48BB78', background: 'rgba(72,187,120,0.08)' }} />
-                      Added
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#4A5568', fontFamily: FONT }}>
-                      <span style={{ width: 16, height: 16, borderRadius: 4, border: '2px dashed #FC8181', background: 'rgba(252,129,129,0.08)' }} />
-                      Removed
-                    </span>
-                  </div>
-                )}
-
-                {/* Node library side panel (Path B) */}
-                {selectedPath === 'b' && panelOpen && !feedbackResult && (
-                  <NodeLibraryPanel
-                    activeTab={activeLibraryTab}
-                    onTabChange={setActiveLibraryTab}
-                    onAddNode={handleAddNode}
-                    onClose={() => setPanelOpen(false)}
-                  />
-                )}
               </div>
 
               {/* Workflow name/description (Path A result) */}
@@ -1930,122 +1449,6 @@ const AppWorkflowCanvas: React.FC = () => {
                 </div>
               )}
 
-              {/* Order warning */}
-              {selectedPath === 'b' && showOrderWarning && !orderWarningDismissed && (
-                <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 8, background: '#FFFFF0', border: '1px solid #F6E05E', fontFamily: FONT }}>
-                  <Lightbulb size={16} color="#B7791F" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <p style={{ flex: 1, fontSize: 13, color: '#B7791F', margin: 0 }}>
-                    <strong>Tip:</strong> Most workflows follow the pattern Input → Processing → Output. Consider adding a processing step between your data source and destination.
-                  </p>
-                  <button onClick={() => { setShowOrderWarning(false); setOrderWarningDismissed(true); }} style={{ flexShrink: 0, color: '#B7791F', background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-
-              {/* Get AI Feedback button (Path B) */}
-              {selectedPath === 'b' && canvasNodes.length >= 2 && !feedbackResult && (
-                <div style={{ marginTop: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: '#718096', marginBottom: 6, display: 'block', fontFamily: FONT }}>
-                    Why did you design it this way? (Optional)
-                  </label>
-                  <textarea
-                    value={userRationale}
-                    onChange={e => setUserRationale(e.target.value)}
-                    placeholder="e.g., I put the human review step before the email because this output goes directly to the client..."
-                    style={{
-                      width: '100%', minHeight: 56, padding: 12, borderRadius: 12, fontSize: 13,
-                      border: '1.5px solid #E2E8F0', color: '#1A202C', fontFamily: FONT,
-                      resize: 'none', outline: 'none', boxSizing: 'border-box',
-                    }}
-                    onFocus={e => { e.target.style.borderColor = LEVEL_ACCENT; }}
-                    onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                    <button
-                      onClick={handleGetFeedback}
-                      disabled={isLoading || canvasNodes.length < 2}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600,
-                        background: LEVEL_ACCENT, color: '#FFFFFF', border: 'none',
-                        cursor: (isLoading || canvasNodes.length < 2) ? 'not-allowed' : 'pointer',
-                        opacity: (isLoading || canvasNodes.length < 2) ? 0.5 : 1,
-                        fontFamily: FONT,
-                      }}
-                    >
-                      {isLoading ? <><Loader2 size={14} style={{ animation: 'ppSpin 0.7s linear infinite' }} /> Analyzing...</> : <>Get AI Feedback <ArrowRight size={14} /></>}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Loading indicator (Path B feedback) */}
-              {selectedPath === 'b' && isLoading && canvasNodes.length >= 2 && (
-                <div style={{ marginTop: 16, padding: 16, borderRadius: 12, border: `1px solid ${LEVEL_ACCENT}50`, background: `${LEVEL_ACCENT}08`, fontFamily: FONT }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                    <Loader2 size={18} color={LEVEL_ACCENT} style={{ animation: 'ppSpin 0.7s linear infinite' }} />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1A202C' }}>Analyzing your workflow...</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: '#718096', margin: 0 }}>Reviewing your node selection and suggesting improvements...</p>
-                </div>
-              )}
-
-              {/* Feedback items (Path B — FeedbackItemRow per change) */}
-              {selectedPath === 'b' && feedbackResult && comparisonView === 'ai' && feedbackItems.length > 0 && (
-                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', margin: '0 0 4px', fontFamily: FONT }}>AI Feedback</h4>
-                  {feedbackItems.map(item => (
-                    <FeedbackItemRow
-                      key={item.id}
-                      item={item}
-                      onApply={handleFeedbackApply}
-                      onDispute={handleFeedbackDispute}
-                      onDismiss={handleFeedbackDismiss}
-                      isDisputeOpen={openDisputeId === item.id}
-                      onOpenDispute={handleOpenDispute}
-                    />
-                  ))}
-
-                  {/* Approval Banner */}
-                  {!pathBApproved && (
-                    <div style={{
-                      marginTop: 8, padding: '14px 20px', borderRadius: 12, fontFamily: FONT,
-                      background: allFeedbackResolved ? '#F0FFF4' : '#F7FAFC',
-                      border: `1px solid ${allFeedbackResolved ? '#9AE6B4' : '#E2E8F0'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
-                    }}>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', margin: 0 }}>
-                          {allFeedbackResolved
-                            ? (overriddenBlockingCount > 0
-                              ? `⚠ You've overridden ${overriddenBlockingCount} blocking issue(s). Your workflow may not run as expected.`
-                              : '✓ All feedback resolved. Your workflow is ready.')
-                            : `Resolve all feedback items to approve (${resolvedFeedbackIds.size}/${feedbackItems.length})`}
-                        </p>
-                        {overriddenBlockingCount > 0 && allFeedbackResolved && (
-                          <p style={{ fontSize: 11, color: '#718096', margin: '4px 0 0' }}>{overriddenBlockingCount} item(s) manually overridden</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={handlePathBApprove}
-                        disabled={!allFeedbackResolved}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600,
-                          background: allFeedbackResolved ? LEVEL_ACCENT : '#E2E8F0',
-                          color: allFeedbackResolved ? '#FFFFFF' : '#A0AEC0',
-                          border: 'none', cursor: allFeedbackResolved ? 'pointer' : 'not-allowed',
-                          fontFamily: FONT,
-                        }}
-                      >
-                        {overriddenBlockingCount > 0 ? 'Approve anyway' : 'Approve & Export'} <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Error */}
               {error && selectedPath && (
                 <div style={{ marginTop: 12, padding: 12, borderRadius: 8, fontSize: 13, backgroundColor: '#FFF5F5', border: '1px solid #FEB2B2', color: '#C53030', fontFamily: FONT }}>
@@ -2065,22 +1468,11 @@ const AppWorkflowCanvas: React.FC = () => {
         title="Choose the platform"
         subtitle="Select the automation tool you'll use to build this workflow."
         done={platformStepDone}
-        collapsed={platformStepDone && !!buildGuideMarkdown}
+        collapsed={platformStepDone}
+        locked={!step2Done}
+        lockedMessage="Complete Step 2 to choose your platform"
       >
-        {!step2Done ? (
-          <StepPlaceholder
-            icon={<ArrowRight size={16} color="#A0AEC0" />}
-            message="Complete Step 2 first"
-            detail="Approve your workflow design to choose a platform."
-          />
-        ) : platformStepDone && exportLoading ? (
-          <ProcessingProgress
-            steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
-            currentStep={loadingStep}
-            header={isRefineLoading ? 'Refining your Build Guide…' : 'Generating your Build Guide…'}
-            subtext="This usually takes 20–30 seconds"
-          />
-        ) : !platformStepDone ? (
+        {!platformStepDone ? (
           <div style={{ animation: 'ppFadeIn 0.4s ease-out' }}>
             <button
               onClick={handleGoBackToStep2}
@@ -2116,68 +1508,16 @@ const AppWorkflowCanvas: React.FC = () => {
           subtitle="Your complete, platform-specific implementation document."
           done={!!buildGuideMarkdown}
           collapsed={false}
+          locked={!buildGuideMarkdown && !exportLoading}
+          lockedMessage="Complete Step 3 to generate your Build Guide"
         >
-          {!buildGuideMarkdown ? (
-            /* ── Educational default — shown until build guide is generated ── */
-            <div>
-              <p style={{
-                fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 16, fontFamily: FONT,
-              }}>
-                Your Build Guide will be a comprehensive, platform-specific implementation document structured around <strong>6 key sections</strong> — covering everything from credentials to testing. Complete the steps above and each section below will be filled with content tailored to your workflow.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {BUILD_GUIDE_SECTIONS.map((section, idx) => {
-                  const IconComp = section.icon;
-                  return (
-                    <div key={section.key} style={{
-                      borderLeft: `4px solid ${LEVEL_ACCENT_DARK}`,
-                      background: `${LEVEL_ACCENT_DARK}08`,
-                      borderRadius: 10, padding: '16px 18px',
-                      animation: 'ppFadeIn 0.3s ease both',
-                      animationDelay: `${idx * 60}ms`,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <IconComp size={16} color={LEVEL_ACCENT_DARK} />
-                        <span style={{
-                          fontSize: 12, fontWeight: 700, color: '#4A5568',
-                          textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontFamily: FONT,
-                        }}>
-                          {section.label}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#A0AEC0', marginLeft: 'auto', fontFamily: FONT }}>
-                          {idx + 1}/{BUILD_GUIDE_SECTIONS.length}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT, marginBottom: 10 }}>
-                        {section.description}
-                      </div>
-                      <div style={{
-                        background: `${LEVEL_ACCENT_DARK}18`, borderLeft: `3px solid ${LEVEL_ACCENT_DARK}`,
-                        borderRadius: 6, padding: '8px 12px',
-                      }}>
-                        <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic', fontFamily: FONT }}>
-                          {section.example}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Summary footer */}
-              <div style={{
-                borderTop: '1px solid #EDF2F7', padding: '10px 0 0', marginTop: 16,
-                display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center',
-              }}>
-                {BUILD_GUIDE_SECTIONS.map(s => {
-                  const SIcon = s.icon;
-                  return (
-                    <span key={s.key} style={{ fontSize: 11, color: '#718096', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <SIcon size={12} color={LEVEL_ACCENT_DARK} /> {s.label}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
+          {exportLoading && !buildGuideMarkdown ? (
+            <ProcessingProgress
+              steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
+              currentStep={loadingStep}
+              header={isRefineLoading ? 'Refining your Build Guide…' : 'Generating your Build Guide…'}
+              subtext="This usually takes 20–30 seconds"
+            />
           ) : buildGuideMarkdown && buildGuideIntermediate ? (
             /* ── Generated output (matches L1 pattern) ── */
             <div>

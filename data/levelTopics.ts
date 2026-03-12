@@ -17,9 +17,9 @@ export interface Topic {
 export const LEVEL_TOPICS: Record<number, Topic[]> = {
   1: [
     {
-      id: 1, title: "Prompt & Context Engineering", subtitle: "From brain dumps to structured, context-rich prompts",
-      description: "Learn the Prompt Blueprint framework and advanced prompting techniques, then go deeper with context engineering — using documents, system prompts, and project structures to give AI everything it needs for professional-quality output.",
-      estimatedMinutes: 50, icon: "⚡",
+      id: 1, title: "Prompt Engineering", subtitle: "From brain dumps to structured, repeatable prompts",
+      description: "Learn the Prompt Blueprint framework — Role, Context, Task, Format, Steps, Checks — plus the prompting spectrum and modifier techniques. Build the skill to choose the right approach for every task.",
+      estimatedMinutes: 45, icon: "⚡",
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "13-slide interactive module covering the Prompt Blueprint, RCTF framework, context layers, and the prompting spectrum." },
@@ -31,15 +31,15 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
   ],
   2: [
     {
-      id: 1, title: "Designing AI Agents", subtitle: "What an agent is, when to use one, how to scope it",
-      description: "System prompt architecture, role definition, and behavioural guardrails — how to think about agent design from instruction to output. Learn to build, template, and share agents across your team.",
+      id: 1, title: "From Prompts to Reusable Tools", subtitle: "Building AI agents that standardise quality, save time, and scale across your team",
+      description: "Learn when and how to turn a prompt into a permanent, shareable tool — an AI agent with defined inputs, defined behaviour, and structured outputs that runs the same way every time, for anyone on your team.",
       estimatedMinutes: 50, icon: "🤖",
 
       phases: [
-        { icon: "▶", label: "E-Learning", detail: "Interactive module on agent anatomy: system prompts, role definition, scope, guardrails, and team deployment." },
-        { icon: "◎", label: "Read", detail: "Articles on agent design patterns and scaling agents across teams." },
-        { icon: "▷", label: "Watch", detail: "Videos walking through agent design decisions and common pitfalls." },
-        { icon: "◈", label: "Practice", detail: "Design and configure your first AI agent using the Agent Builder." },
+        { icon: "▶", label: "E-Learning", detail: "14-slide interactive module covering the Level 2 shift, three-layer agent model, accountability by design, and team deployment." },
+        { icon: "◎", label: "Read", detail: "2 articles on scaling AI tools and designing trustworthy outputs, with guided reflection." },
+        { icon: "▷", label: "Watch", detail: "2 videos on building reusable agents and accountability in AI workflows." },
+        { icon: "◈", label: "Practice", detail: "Design your first Level 2 agent using the Agent Builder." },
       ],
     },
   ],

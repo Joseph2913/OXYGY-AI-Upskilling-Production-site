@@ -15,6 +15,7 @@ import type {
 import { useAuth } from '../../../context/AuthContext';
 import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
+import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const LEVEL_ACCENT = '#C3D0F5';
@@ -40,7 +41,8 @@ const REFINE_LOADING_STEPS = [
   'Generating deeper questions…',
   'Finalising refined evaluation…',
 ];
-const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500, 2000];
+// Last step = -1 (open-ended buffer — stays spinning until API returns)
+const STEP_DELAYS = [800, 1500, 3000, 3500, 4000, 4000, 4500, -1];
 
 /* ─── Fallback refinement questions ─── */
 const FALLBACK_REFINEMENT_QUESTIONS = [
@@ -193,6 +195,7 @@ const AppAppEvaluator: React.FC = () => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [savedToLibrary, setSavedToLibrary] = useState(false);
   const [showMarkdown, setShowMarkdown] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['architecture']));
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [architectureExpanded, setArchitectureExpanded] = useState(true);
   const [planExpanded, setPlanExpanded] = useState(true);
@@ -251,6 +254,7 @@ const AppAppEvaluator: React.FC = () => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cumulative = 0;
     STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return; // -1 = open-ended buffer, don't auto-advance
       cumulative += delay;
       timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
     });
@@ -447,6 +451,25 @@ const AppAppEvaluator: React.FC = () => {
     await copyToClipboard(buildProductSpec(result));
     setCopied(true); setToastMessage('Full product specification copied to clipboard');
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const getSectionSummary = (key: string): string => {
+    if (!result) return '';
+    switch (key) {
+      case 'design_score': return `Score: ${result.design_score.overall_score}% — ${getVerdictText(result.design_score.overall_score)}`;
+      case 'architecture': return `${result.architecture.components.length} components mapped — ${result.architecture.summary.split('.')[0]}`;
+      case 'implementation_plan': return `${result.implementation_plan.phases.length} phases — ${result.implementation_plan.phases[0]?.title || 'Phased rollout'}`;
+      case 'risks_and_gaps': return `${result.risks_and_gaps.items.length} risks identified across your design`;
+      default: return '';
+    }
   };
 
   const handleCopySection = async (key: string, label: string, content: string) => {
@@ -725,95 +748,20 @@ const AppAppEvaluator: React.FC = () => {
         <StepCard
           stepNumber={2}
           title={result ? 'Your product specification' : 'Review your evaluation'}
-          subtitle={result
-            ? 'Your application has been evaluated across 4 dimensions. Review, copy, or save the complete specification.'
-            : "Here's what your evaluation will include — each section addresses a critical aspect of application design."}
+          subtitle="Your application has been evaluated across 4 dimensions. Review, copy, or save the complete specification."
           done={false}
           collapsed={false}
+          locked={!result && !isLoading}
+          lockedMessage="Complete Step 1 to generate your evaluation"
         >
-          {!result ? (
-            /* Educational preview or ProcessingProgress */
-            isLoading ? (
-              /* ProcessingProgress indicator (§9.5) */
-              <ProcessingProgress
-                steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
-                currentStep={loadingStep}
-                header={isRefineLoading ? 'Refining your evaluation…' : 'Evaluating your application…'}
-                subtext="This usually takes 15–25 seconds"
-              />
-            ) : (
-              /* Educational default — 4-section preview (§3.7) using LEVEL_ACCENT_DARK */
-              <div>
-                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 16, fontFamily: FONT }}>
-                  Your output will be structured using the <strong style={{ color: '#1A202C' }}>4-part Application Evaluation Framework</strong> — a comprehensive assessment that transforms your idea into an actionable product specification. Complete Step 1 above and each section below will be filled with content tailored to your specific application.
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {EVALUATOR_SECTIONS.map((block, idx) => (
-                    <div
-                      key={block.key}
-                      style={{
-                        borderLeft: `4px solid ${LEVEL_ACCENT_DARK}`,
-                        background: `${LEVEL_ACCENT_DARK}08`,
-                        borderRadius: 10, padding: '16px 18px',
-                        animation: 'ppFadeIn 0.3s ease both',
-                        animationDelay: `${idx * 80}ms`,
-                      }}
-                    >
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
-                      }}>
-                        <span style={{ fontSize: 15 }}>{block.icon}</span>
-                        <span style={{
-                          fontSize: 12, fontWeight: 700, color: '#1A202C',
-                          textTransform: 'uppercase', letterSpacing: '0.04em',
-                          fontFamily: FONT,
-                        }}>
-                          {block.label}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#A0AEC0', marginLeft: 'auto' }}>
-                          {idx + 1}/4
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 10, fontFamily: FONT }}>
-                        {block.why}
-                      </div>
-                      <div style={{
-                        background: `${LEVEL_ACCENT_DARK}18`, borderRadius: 8,
-                        padding: '10px 12px', borderLeft: `3px solid ${LEVEL_ACCENT_DARK}`,
-                      }}>
-                        <div style={{
-                          fontSize: 10, fontWeight: 700, color: '#A0AEC0',
-                          textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4,
-                          fontFamily: FONT,
-                        }}>
-                          Example
-                        </div>
-                        <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontStyle: 'italic', fontFamily: FONT }}>
-                          {block.example}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Summary footer */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 16, marginTop: 16, padding: '10px 0',
-                  borderTop: '1px solid #EDF2F7',
-                }}>
-                  {EVALUATOR_SECTIONS.map(block => (
-                    <div key={block.key} style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 11, color: '#718096', fontFamily: FONT,
-                    }}>
-                      <span style={{ fontSize: 13 }}>{block.icon}</span>
-                      {block.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          ) : (
+          {isLoading && !result ? (
+            <ProcessingProgress
+              steps={isRefineLoading ? REFINE_LOADING_STEPS : INITIAL_LOADING_STEPS}
+              currentStep={loadingStep}
+              header={isRefineLoading ? 'Refining your evaluation…' : 'Evaluating your application…'}
+              subtext="This usually takes 15–25 seconds"
+            />
+          ) : result ? (
             /* ═══ Active Output Content ═══ */
             <>
               {/* Top row: toggle (left) + Copy button (right) — §4.2 */}
@@ -881,6 +829,13 @@ const AppAppEvaluator: React.FC = () => {
                 </div>
               )}
 
+              {/* Next Step Banner (§4.8) */}
+              <NextStepBanner
+                accentColor={LEVEL_ACCENT}
+                accentDark={LEVEL_ACCENT_DARK}
+                text="Review your Design Score, then use the Architecture and Implementation Plan sections to plan your build. Start with the highest-priority components."
+              />
+
               {/* Card view — 4 sections using LEVEL_ACCENT_DARK (§4.1) */}
               {!showMarkdown && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -892,6 +847,9 @@ const AppAppEvaluator: React.FC = () => {
                     copiedSection={copiedSection}
                     onCopy={(key, label) => handleCopySection(key, label, getSectionCopyContent(key))}
                     totalSections={4}
+                    expanded={expandedSections.has('design_score')}
+                    onToggle={() => toggleSection('design_score')}
+                    summary={getSectionSummary('design_score')}
                   >
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
                       <ScoreCircle score={result.design_score.overall_score} animated={scoreAnimated} />
@@ -934,7 +892,7 @@ const AppAppEvaluator: React.FC = () => {
                     </div>
                   </OutputSection>
 
-                  {/* Section 2: Architecture & Components */}
+                  {/* Section 2: Architecture & Components (primary deliverable — auto-expanded) */}
                   <OutputSection
                     section={EVALUATOR_SECTIONS[1]}
                     index={1}
@@ -942,6 +900,9 @@ const AppAppEvaluator: React.FC = () => {
                     copiedSection={copiedSection}
                     onCopy={(key, label) => handleCopySection(key, label, getSectionCopyContent(key))}
                     totalSections={4}
+                    expanded={expandedSections.has('architecture')}
+                    onToggle={() => toggleSection('architecture')}
+                    summary={getSectionSummary('architecture')}
                   >
                     <div style={{
                       background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, marginBottom: 12,
@@ -1017,6 +978,9 @@ const AppAppEvaluator: React.FC = () => {
                     copiedSection={copiedSection}
                     onCopy={(key, label) => handleCopySection(key, label, getSectionCopyContent(key))}
                     totalSections={4}
+                    expanded={expandedSections.has('implementation_plan')}
+                    onToggle={() => toggleSection('implementation_plan')}
+                    summary={getSectionSummary('implementation_plan')}
                   >
                     <div style={{
                       background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, marginBottom: 12,
@@ -1096,6 +1060,9 @@ const AppAppEvaluator: React.FC = () => {
                     copiedSection={copiedSection}
                     onCopy={(key, label) => handleCopySection(key, label, getSectionCopyContent(key))}
                     totalSections={4}
+                    expanded={expandedSections.has('risks_and_gaps')}
+                    onToggle={() => toggleSection('risks_and_gaps')}
+                    summary={getSectionSummary('risks_and_gaps')}
                   >
                     <div style={{
                       background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, marginBottom: 12,
@@ -1360,7 +1327,7 @@ const AppAppEvaluator: React.FC = () => {
                 />
               </div>
             </>
-          )}
+          ) : null}
         </StepCard>
       </div>
 
@@ -1381,7 +1348,7 @@ const AppAppEvaluator: React.FC = () => {
   );
 };
 
-/* ─── Output Section Card — uses LEVEL_ACCENT_DARK for all sections (§4.1, §13) ─── */
+/* ─── Output Section Card — collapsible, uses LEVEL_ACCENT_DARK (§4.1, §4.7, §13) ─── */
 const OutputSection: React.FC<{
   section: typeof EVALUATOR_SECTIONS[number];
   index: number;
@@ -1389,8 +1356,11 @@ const OutputSection: React.FC<{
   copiedSection: string | null;
   onCopy: (key: string, label: string) => void;
   totalSections: number;
+  expanded: boolean;
+  onToggle: () => void;
+  summary?: string;
   children: React.ReactNode;
-}> = ({ section, index, visible, copiedSection, onCopy, totalSections, children }) => {
+}> = ({ section, index, visible, copiedSection, onCopy, totalSections, expanded, onToggle, summary, children }) => {
   const isSectionCopied = copiedSection === section.key;
   return (
     <div style={{
@@ -1401,39 +1371,61 @@ const OutputSection: React.FC<{
       transform: visible ? 'translateY(0)' : 'translateY(8px)',
       transition: 'opacity 0.3s ease, transform 0.3s ease',
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 14,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 15 }}>{section.icon}</span>
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: '#1A202C',
-            textTransform: 'uppercase', letterSpacing: '0.04em',
-            fontFamily: FONT,
-          }}>
-            {section.label}
-          </span>
-          <span style={{ fontSize: 11, color: '#A0AEC0' }}>
-            {index + 1}/{totalSections}
-          </span>
-        </div>
-        <button
-          onClick={() => onCopy(section.key, section.label)}
+      {/* Header row — clickable to expand/collapse */}
+      <button
+        onClick={onToggle}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: 15, flexShrink: 0 }}>{section.icon}</span>
+        <span style={{
+          fontSize: 12, fontWeight: 700, color: '#1A202C',
+          textTransform: 'uppercase', letterSpacing: '0.04em',
+          fontFamily: FONT, flex: 1,
+        }}>
+          {section.label}
+        </span>
+        <span style={{ fontSize: 11, color: '#A0AEC0' }}>
+          {index + 1}/{totalSections}
+        </span>
+        <span
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onCopy(section.key, section.label); }}
           style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
-            padding: '2px 6px', borderRadius: 6, transition: 'color 0.15s',
-            fontFamily: FONT,
+            color: '#A0AEC0', display: 'flex', alignItems: 'center', gap: 3,
+            fontSize: 11, padding: '2px 6px', flexShrink: 0, fontFamily: FONT,
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = LEVEL_ACCENT_DARK)}
-          onMouseLeave={e => (e.currentTarget.style.color = '#A0AEC0')}
         >
           {isSectionCopied ? <Check size={11} /> : <Copy size={11} />}
           {isSectionCopied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-      {children}
+        </span>
+        <ChevronDown size={14} color="#A0AEC0" style={{
+          flexShrink: 0,
+          transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+        }} />
+      </button>
+
+      {/* Summary — shown when collapsed */}
+      {!expanded && summary && (
+        <div style={{
+          fontSize: 13, color: '#718096', lineHeight: 1.5,
+          fontFamily: FONT, marginTop: 6,
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+        }}>
+          {summary}
+        </div>
+      )}
+
+      {/* Expanded content */}
+      {expanded && (
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #EDF2F7', animation: 'ppSlideDown 0.2s ease both' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 };
@@ -1445,22 +1437,28 @@ const StepCard: React.FC<{
   subtitle: string;
   done: boolean;
   collapsed: boolean;
+  locked?: boolean;
+  lockedMessage?: string;
   children: React.ReactNode;
-}> = ({ stepNumber, title, subtitle, done, collapsed, children }) => (
+}> = ({ stepNumber, title, subtitle, done, collapsed, locked, lockedMessage, children }) => (
   <div style={{
-    background: '#FFFFFF', borderRadius: 16,
+    background: locked ? '#FAFBFC' : '#FFFFFF', borderRadius: 16,
     border: `1px solid ${done ? `${LEVEL_ACCENT}88` : '#E2E8F0'}`,
-    padding: collapsed ? '16px 24px' : '24px 28px',
+    padding: (collapsed || locked) ? '16px 24px' : '24px 28px',
     transition: 'padding 0.2s ease, border-color 0.2s ease',
+    opacity: locked ? 0.7 : 1,
   }}>
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      marginBottom: collapsed ? 0 : 20,
+      marginBottom: (collapsed || locked) ? 0 : 20,
     }}>
-      <StepBadge number={stepNumber} done={done} />
+      <StepBadge number={stepNumber} done={done} locked={locked} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{title}</div>
-        {!collapsed && (
+        <div style={{ fontSize: 16, fontWeight: 700, color: locked ? '#A0AEC0' : '#1A202C', fontFamily: FONT }}>{title}</div>
+        {locked && lockedMessage && (
+          <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: FONT }}>{lockedMessage}</div>
+        )}
+        {!collapsed && !locked && (
           <div style={{ fontSize: 13, color: '#718096', marginTop: 2, fontFamily: FONT }}>{subtitle}</div>
         )}
       </div>
@@ -1474,19 +1472,19 @@ const StepCard: React.FC<{
         </div>
       )}
     </div>
-    {!collapsed && children}
+    {!collapsed && !locked && children}
   </div>
 );
 
 /* ── Step badge circle — uses Level 5 accent color (§3.4) ── */
-const StepBadge: React.FC<{ number: number; done: boolean }> = ({ number, done }) => (
+const StepBadge: React.FC<{ number: number; done: boolean; locked?: boolean }> = ({ number, done, locked }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-    background: done ? LEVEL_ACCENT : '#F7FAFC',
+    background: done ? LEVEL_ACCENT : locked ? '#EDF2F7' : '#F7FAFC',
     border: done ? 'none' : '2px solid #E2E8F0',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 13, fontWeight: 800,
-    color: done ? LEVEL_ACCENT_DARK : '#718096',
+    color: done ? LEVEL_ACCENT_DARK : locked ? '#CBD5E0' : '#718096',
     transition: 'background 0.2s, color 0.2s',
   }}>
     {done ? <Check size={14} /> : number}

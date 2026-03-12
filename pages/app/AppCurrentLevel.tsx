@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { LEVEL_TOPICS, LEVEL_META } from '../../data/levelTopics';
+import { getTopicContent } from '../../data/topicContent';
 import { useLevelData, TOTAL_PHASES } from '../../hooks/useLevelData';
 import TopicHeader from '../../components/app/level/TopicHeader';
 import ELearningView from '../../components/app/level/ELearningView';
@@ -97,7 +98,12 @@ function PhaseProgressStrip({
 
 const AppCurrentLevel: React.FC = () => {
   const { userProfile, setCurrentLevel } = useAppContext();
-  const currentLevel = userProfile?.currentLevel ?? 1;
+  const [searchParams] = useSearchParams();
+
+  // Use ?level= query param if present (e.g. from Review button), else fall back to profile
+  const levelParam = searchParams.get('level');
+  const currentLevel = levelParam ? parseInt(levelParam, 10) : (userProfile?.currentLevel ?? 1);
+
   const levelMeta = LEVEL_META.find((l) => l.number === currentLevel);
   const accentColor = levelMeta?.accentColor ?? '#A8F0E0';
   const accentDark = levelMeta?.accentDark ?? '#1A6B5F';
@@ -106,8 +112,6 @@ const AppCurrentLevel: React.FC = () => {
 
   const { levelData, loading, advanceSlide, completePhase, completeTopic } =
     useLevelData(currentLevel);
-
-  const [searchParams] = useSearchParams();
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [viewingPhase, setViewingPhase] = useState<number | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
@@ -241,6 +245,9 @@ const AppCurrentLevel: React.FC = () => {
   const displayPhase = viewingPhase ?? selectedProgress.phase;
   const completedPhases = isCompleted ? TOTAL_PHASES : selectedProgress.phase - 1;
 
+  // Look up topic-specific content (slides, articles, videos)
+  const topicContent = getTopicContent(currentLevel, selectedTopicId);
+
   const showPhaseStrip = !showLevelCompletion && !(isCompleted && !isReviewMode);
 
   const renderContent = () => {
@@ -282,8 +289,9 @@ const AppCurrentLevel: React.FC = () => {
     // Active / review phase content
     return (
       <>
-        {displayPhase === 1 && (
+        {displayPhase === 1 && topicContent && (
           <ELearningView
+            slides={topicContent.slides}
             currentSlide={selectedProgress.slide}
             accentColor={accentColor}
             accentDark={accentDark}
@@ -298,16 +306,18 @@ const AppCurrentLevel: React.FC = () => {
           />
         )}
 
-        {displayPhase === 2 && (
+        {displayPhase === 2 && topicContent && (
           <ReadView
+            articles={topicContent.articles}
             accentColor={accentColor}
             accentDark={accentDark}
             onCompletePhase={() => handleCompletePhase(selectedTopicId)}
           />
         )}
 
-        {displayPhase === 3 && (
+        {displayPhase === 3 && topicContent && (
           <WatchView
+            videos={topicContent.videos}
             accentColor={accentColor}
             accentDark={accentDark}
             onCompletePhase={() => handleCompletePhase(selectedTopicId)}
