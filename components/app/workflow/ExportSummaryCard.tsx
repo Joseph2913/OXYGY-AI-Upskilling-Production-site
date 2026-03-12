@@ -67,7 +67,7 @@ function renderStepContent(raw: string): React.ReactNode[] {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Code blocks
+    // Code blocks (fenced with ```)
     if (line.trimStart().startsWith('```')) {
       const codeLines: string[] = [];
       i++;
@@ -77,6 +77,58 @@ function renderStepContent(raw: string): React.ReactNode[] {
       }
       i++; // skip closing ```
       elements.push(<CodeBlockWithCopy key={key++} code={codeLines.join('\n')} />);
+      continue;
+    }
+
+    // Heuristic: detect unfenced JSON blocks (line starts with { and a matching } exists)
+    if (line.trim() === '{') {
+      const codeLines: string[] = [line];
+      let depth = 1;
+      let j = i + 1;
+      while (j < lines.length && depth > 0) {
+        codeLines.push(lines[j]);
+        const trimmed = lines[j].trim();
+        for (const ch of trimmed) {
+          if (ch === '{') depth++;
+          else if (ch === '}') depth--;
+        }
+        j++;
+      }
+      if (depth === 0) {
+        elements.push(<CodeBlockWithCopy key={key++} code={codeLines.join('\n')} />);
+        i = j;
+        continue;
+      }
+    }
+
+    // Heuristic: detect unfenced code-like blocks (n8n expressions, message templates, prompts)
+    // Triggers on lines with {{ $json... }}, .map(, .join(, or multiple consecutive code-like lines
+    const isCodeLike = (l: string): boolean => {
+      const t = l.trim();
+      return /\{\{.*\$json/.test(t) ||
+        /\{\{.*\$\(/.test(t) ||
+        /\.map\s*\(/.test(t) ||
+        /\.join\s*\(/.test(t) ||
+        /\.filter\s*\(/.test(t) ||
+        /^\$\{/.test(t) ||
+        (/^["']?\w+["']?\s*:\s*/.test(t) && /[{[\]},]/.test(t));
+    };
+
+    if (isCodeLike(line)) {
+      const codeLines: string[] = [line];
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextTrimmed = lines[j].trim();
+        if (nextTrimmed === '' || nextTrimmed === '---') break;
+        // Stop if the next line looks like a markdown header or bold label
+        if (nextTrimmed.startsWith('**') || nextTrimmed.startsWith('#') || nextTrimmed.startsWith('>')) break;
+        // Stop if it's a numbered instruction (like "1. Add a node") that doesn't contain code
+        if (/^\d+\.\s+[A-Z]/.test(nextTrimmed) && !isCodeLike(nextTrimmed)) break;
+        codeLines.push(lines[j]);
+        j++;
+      }
+      elements.push(<CodeBlockWithCopy key={key++} code={codeLines.join('\n')} />);
+      i = j;
       continue;
     }
 

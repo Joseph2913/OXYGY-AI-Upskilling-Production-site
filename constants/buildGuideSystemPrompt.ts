@@ -21,6 +21,36 @@ CRITICAL FORMATTING RULES:
 - Every step must have a "What happens:" sentence before the configuration detail.
 - Code blocks must use triple backtick fences with the language identifier.
 - The Test Checklist must contain specific, testable actions — not generic advice.
+
+CODE FENCING — MANDATORY (THIS IS CRITICAL FOR USABILITY):
+The following content MUST ALWAYS be wrapped in triple-backtick fenced code blocks (\`\`\`).
+Users will copy these directly into their platform — plain text is NOT acceptable.
+
+MUST be fenced:
+- System prompts / system messages (use \`\`\`text)
+- User prompts / user messages (use \`\`\`text)
+- JSON schemas, structured output parsers, API payloads (use \`\`\`json)
+- Field mapping expressions when shown as a block (use \`\`\`text)
+- Message templates (Slack messages, email bodies, Teams messages) (use \`\`\`text)
+- Any multi-line configuration that a user would copy-paste into a platform field
+
+Example of CORRECT formatting:
+**System Prompt** (Options → System Message):
+\`\`\`text
+You are a meeting analyst. Extract structured information from meeting transcripts.
+Your task:
+1. Identify key decisions made during the meeting
+2. Extract action items with clear owners and deadlines
+\`\`\`
+
+Example of WRONG formatting (DO NOT DO THIS):
+**System Prompt** (Options → System Message):
+You are a meeting analyst. Extract structured information from meeting transcripts.
+Your task:
+1. Identify key decisions...
+
+The WRONG example above presents the prompt as regular paragraph text, making it
+impossible for users to distinguish what to copy. ALWAYS use code fences.
 - Known Edge Cases must be real failure modes, not theoretical ones.
 - Minimum 3 edge cases, maximum 6.
 

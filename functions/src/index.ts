@@ -984,6 +984,21 @@ CRITICAL FORMATTING RULES:
 - Known Edge Cases must be real failure modes, not theoretical ones.
 - Minimum 3 edge cases, maximum 6.
 
+CODE FENCING — MANDATORY (THIS IS CRITICAL FOR USABILITY):
+The following content MUST ALWAYS be wrapped in triple-backtick fenced code blocks.
+Users will copy these directly into their platform — plain text is NOT acceptable.
+
+MUST be fenced:
+- System prompts / system messages (use triple-backtick text)
+- User prompts / user messages (use triple-backtick text)
+- JSON schemas, structured output parsers, API payloads (use triple-backtick json)
+- Field mapping expressions when shown as a block (use triple-backtick text)
+- Message templates (Slack messages, email bodies, Teams messages) (use triple-backtick text)
+- Any multi-line configuration that a user would copy-paste into a platform field
+
+DO NOT present prompts, JSON schemas, or message templates as regular paragraph text.
+They MUST be in fenced code blocks so users can visually distinguish and copy them directly.
+
 PLATFORM VOCABULARY:
 | Concept | n8n | Zapier | Make | Power Automate | AI Coding Agent |
 |---|---|---|---|---|---|
