@@ -10,7 +10,7 @@ const AI_TOOLS = [
   { level: 5, emoji: '\uD83C\uDFD7\uFE0F', label: 'Product Architecture Sprint', href: '#product-architecture' },
 ];
 
-const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies', '#engagement-model', '#dashboard', '#course-resources', '#learn-level-1', '#learn-level-1-prompt', '#learn-level-1-context']);
+const ARTIFACT_HASHES = new Set([...AI_TOOLS.map((t) => t.href), '#learning-pathway', '#user-journey', '#case-studies', '#engagement-model', '#dashboard', '#course-resources', '#learn-level-1', '#learn-level-1-prompt', '#learn-level-1-context', '#learn-level-1-pe']);
 
 /* Thin vertical divider between nav items */
 const Divider = () => (
@@ -62,7 +62,7 @@ export const Navbar: React.FC = () => {
   const isOnUserJourney = currentHash === '#user-journey';
   const isOnCaseStudies = currentHash === '#case-studies';
   const isOnEngagementModel = currentHash === '#engagement-model';
-  const isOnCourseResource = currentHash === '#course-resources' || currentHash === '#learn-level-1' || currentHash === '#learn-level-1-prompt' || currentHash === '#learn-level-1-context';
+  const isOnCourseResource = currentHash === '#course-resources' || currentHash === '#learn-level-1' || currentHash === '#learn-level-1-prompt' || currentHash === '#learn-level-1-context' || currentHash === '#learn-level-1-pe';
   const isOnDashboard = currentHash === '#dashboard';
 
   // AI Tools dropdown active if on any artifact tool
@@ -344,7 +344,7 @@ export const Navbar: React.FC = () => {
                   Level 1
                 </div>
                 <a
-                  href="#course-resources"
+                  href="#learn-level-1"
                   className="flex items-center gap-3 transition-colors duration-150 hover:bg-[#F7FAFC] hover:text-[#38B2AC]"
                   style={{
                     padding: '12px 16px',
@@ -370,7 +370,48 @@ export const Navbar: React.FC = () => {
                   </span>
                   <div>
                     <span style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1A202C' }}>
-                      Context & Prompt Engineering
+                      Prompt Engineering
+                    </span>
+                    <span style={{ display: 'block', fontSize: '11px', color: '#A0AEC0' }}>
+                      Foundations · 11 slides · ~45 min
+                    </span>
+                  </div>
+                  <span
+                    className="ml-auto shrink-0"
+                    style={{ fontSize: '12px', color: '#A0AEC0' }}
+                  >
+                    →
+                  </span>
+                </a>
+                <a
+                  href="#learn-level-1-prompt"
+                  className="flex items-center gap-3 transition-colors duration-150 hover:bg-[#F7FAFC] hover:text-[#38B2AC]"
+                  style={{
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#2D3748',
+                    textDecoration: 'none',
+                    borderTop: '1px solid #E2E8F0',
+                  }}
+                  onClick={() => setCourseResourcesOpen(false)}
+                >
+                  <span
+                    className="shrink-0 flex items-center justify-center"
+                    style={{
+                      background: '#A8F0E0',
+                      color: '#2C9A94',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                    }}
+                  >
+                    L1
+                  </span>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1A202C' }}>
+                      Context Engineering
                     </span>
                     <span style={{ display: 'block', fontSize: '11px', color: '#A0AEC0' }}>
                       Foundations · 13 slides · ~45 min

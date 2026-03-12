@@ -31,7 +31,84 @@ Phases unlock sequentially. Completing Phase 1 advances to Phase 2. Completing P
 
 ---
 
-## 2. Brand & Visual Tokens
+## 2. Content Design Philosophy
+
+This section governs the pedagogical tone, narrative structure, and content authoring standards for every e-learning slide deck built with this skill. These principles apply to all levels and all topics.
+
+### 2.1 Core Principles
+
+**Principle 1: Relevance Is Earned Through Evidence, Not Assumed Through Scenario.**
+The opening of every module must establish *why this topic matters* using objective, verifiable evidence — not by assuming the learner has had a negative experience. A compelling statistic about the learner's profession is as engaging as a personal scenario, often more so, because data is objective and non-judgmental. Relevance can be established through industry research, adoption metrics, output quality data, or observable demonstrations that reveal a gap the learner hadn't considered.
+
+**Principle 2: Gaps Are Opportunities, Not Failures.**
+Content must frame knowledge gaps as opportunities for growth, never as personal shortcomings. The learner is a capable professional who hasn't been shown this technique yet — not someone who has been doing things wrong. Across all content, avoid language that implies blame, shame, or inadequacy. The learner chose to take this module — respect that choice by treating them as someone investing in growth, not someone being corrected.
+
+**Principle 3: Every Slide Earns Its Place.**
+No filler slides. Every slide must teach, test, or transition. If a slide doesn't change what the learner knows, believes, or can do, it doesn't belong in the deck.
+
+**Principle 4: Show, Don't Lecture.**
+Wherever possible, demonstrate the concept through interactive elements, side-by-side comparisons, or worked examples rather than paragraphs of explanation. The learner should *see* the difference a technique makes, not just read about it.
+
+**Principle 5: Every Slide Has a Contrast Moment — But Never a Strawman.**
+The most effective teaching tool is contrast: showing what happens with and without a technique. However, **never position a single framework or technique as the universally correct approach.** When teaching a framework (e.g., the Prompt Blueprint / RCTF), present it as one effective tool in a broader toolkit, not the default answer for every situation. Before/after comparisons must show genuine attempts on both sides — the difference is in technique, not effort. Any decision framework or heuristic must acknowledge that the right approach depends on the situation: the task, the stakes, the time available, and whether the output needs to be repeatable. Prefer "effective technique" or "recommended approach for [specific situation]" over "best practice."
+
+### 2.2 Five-Beat Narrative Arc
+
+Every e-learning slide deck follows a five-beat story structure. The beats create narrative momentum — the learner should feel pulled forward, not lectured at.
+
+**Beat 1 — SITUATION (Evidence-Led Opening)**
+Establish why this topic matters using real data, industry research, or verifiable metrics. The tone is opportunity and insight, not failure and frustration. The learner should feel "I didn't know that — tell me more," not "I've been doing this wrong."
+
+Acceptable Beat 1 openings:
+- Industry statistics that reveal a gap between adoption and skill (e.g., usage rates vs. training rates)
+- Research findings that quantify the impact of the skill being taught (e.g., output quality variance attributable to prompt structure)
+- Observable parallel demonstrations showing two approaches to the same task with visibly different results — framed as curiosity, not judgment
+
+Unacceptable Beat 1 openings:
+- "You failed at this task" framings
+- Scenarios that assume the learner has had a negative experience
+- Dramatic or exaggerated frustration moments (e.g., "The AI gives you something an intern would be embarrassed to submit")
+- Any framing that positions the learner as having done something wrong
+
+**Beat 2 — TENSION (The Knowledge Gap)**
+Name what's missing or unknown — not what's broken or wrong. The tension is a knowledge gap, not a performance failure. Frame the gap as something most people haven't been shown, not something they've been getting wrong. Replace language like "here's what's broken" with "here's what most people haven't been shown."
+
+**Beat 3 — CONCEPT (The Framework)**
+Introduce the core framework or technique. When presenting a structured framework, the same beat must also introduce the alternative approaches and the situational judgment for choosing between them. The learner should understand *when* to use this technique, not just *how*. Avoid implying that the framework is the only valid approach.
+
+**Beat 4 — CONTRAST (Technique in Action)**
+Show the technique applied versus not applied. Frame the "before" state as "without this technique" rather than "the wrong way." The before state is neutral — it's simply what happens when the technique hasn't been applied yet. Both states should represent genuine attempts — the difference is in technique, not effort. Avoid strawmanning the before state with deliberately weak examples.
+
+**Beat 5 — BRIDGE (From Theory to Practice)**
+Connect the module's concepts to the learner's real work. Provide templates, decision aids, or next-step prompts that help the learner apply what they've learned immediately. This beat transitions into the Read and Watch phases.
+
+### 2.3 Tool-Agnostic Framing
+
+All e-learning content must be tool-agnostic. Do not reference specific AI tools (ChatGPT, Claude, Copilot, Gemini) in scenario setups, prompt demonstrations, or teaching content. Instead, use neutral framing like "your AI tool," "the AI," or "any large language model."
+
+Rationale: Learners will be using different tools depending on their organisation's approved software. The skills taught (prompting, context engineering, workflow design) are transferable across all tools. Anchoring examples to a specific tool creates an unnecessary barrier for learners whose organisation uses a different one.
+
+Exceptions:
+- Tool-specific features can be referenced in Beat 5 (Bridge) when pointing learners to specific practice activities
+- Tool-specific interface elements (e.g., "Projects" in Claude, "Custom GPTs" in ChatGPT) can be referenced in Levels 2+ where the learning objective is specifically about that tool's capabilities
+- The Prompt Playground and other Oxygy platform tools are not subject to this rule — they are internal tools, not third-party AI products
+
+### 2.4 Audience Universality Rule
+
+Every scenario, example, prompt demonstration, and exercise must resonate across roles, functions, seniority levels, and organisational contexts. This is mandatory — not aspirational.
+
+- Scenarios must describe tasks that every knowledge worker performs: preparing for meetings, summarising information, drafting communications, synthesising inputs from multiple sources, structuring a recommendation, creating a first draft of a document, reviewing and improving existing content.
+- Never anchor a scenario to a specific function (e.g., "as a consultant preparing a client debrief" or "as an HR lead designing an onboarding programme") unless the exercise explicitly asks the learner to choose their own role.
+- Never name specific job titles in scenario setups. Use "you" and describe the task, not the role.
+- When parallel demonstrations are used (showing two approaches to the same task), the task itself must be one that any professional in any team could face.
+- Interactive exercises (branching scenarios, situational judgment, drag-and-drop) must use prompts and tasks drawn from universally recognisable professional situations — not function-specific workflows.
+- If a slide references an industry (e.g., pharma, professional services), it must be in a context that any professional in that industry would recognise, not a context specific to one department.
+
+This rule applies to: Beat 1 scenario setups, Beat 3 worked examples, Beat 4 contrast scenarios, Beat 5 interactive exercises, and any prompt text shown on screen.
+
+---
+
+## 3. Brand & Visual Tokens
 
 These are the only values to use. Never introduce new colours, fonts, or spacing values not listed here.
 
@@ -108,7 +185,7 @@ Use multiples of 4px. Standard values: 4, 8, 12, 16, 20, 24, 28, 32, 40, 48.
 
 ---
 
-## 3. Page Layout
+## 4. Page Layout
 
 ### Shell structure
 ```
@@ -164,7 +241,7 @@ Meta tags use this pattern:
 
 ---
 
-## 4. The E-Learning Player
+## 5. The E-Learning Player
 
 ### Critical constraint: FIXED HEIGHT
 The player content area **must always be exactly 460px tall** with `overflowY: "auto"`. This never changes regardless of slide content length. The outer player card never resizes — slides scroll internally if needed. This is non-negotiable.
@@ -228,7 +305,7 @@ The player content area **must always be exactly 460px tall** with `overflowY: "
 
 ---
 
-## 5. Slide Types
+## 6. Slide Types
 
 Every slide must declare a `type` field. The following types are available. Use only these types — do not invent new ones without extending this skill document.
 
@@ -361,9 +438,48 @@ Each template card:
 - Body: prompt text in monospace-ish style, full width
 - Copy button: on click, copies text, changes to "Copied ✓" for 2000ms then reverts
 
+### Expandable Accordion Pattern
+
+A standing interaction pattern for any slide that contains content at risk of truncation or overflow within the 460px content area.
+
+**When to use:** When a slide contains long prompt examples, full AI output text, detailed annotations, or multi-paragraph explanations, the content must be presented in an expandable/collapsible format.
+
+**Default state:** A scannable preview — enough for the learner to understand the point without reading every word. This might be 2–3 lines of a prompt, the first sentence of an AI output, or a summary label.
+
+**Expanded state:** The full content, revealed on click. A clear visual affordance (chevron icon, "Show full prompt ▾" / "Show less ▴" label) must indicate expandability.
+
+Key rules:
+- This pattern serves two audiences: the fast scanner who wants to absorb the concept and move on, and the deep reader who wants to examine every detail.
+- Expandable sections must never be the *only* way to access critical teaching content. The slide must make its pedagogical point in the default (collapsed) state. Expansion is for optional depth, not for hiding the lesson.
+
+Slide types most likely to need this pattern:
+- `comparison` and `branching` slides where prompt text is long
+- Beat 4 contrast slides where before/after outputs are shown
+- Any slide showing a worked example with a full prompt + full output
+
+Accordion toggle style:
+```jsx
+{
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  padding: "6px 12px",
+  borderRadius: 6,
+  border: `1px solid ${C.border}`,
+  background: C.bg,
+  fontSize: 12,
+  fontWeight: 600,
+  color: C.light,
+  cursor: "pointer",
+  fontFamily: F.b,
+}
+```
+
+State: `expanded` (boolean), toggle on click. Content area uses `maxHeight` transition (0 → auto equivalent via measured height) with 200ms ease.
+
 ---
 
-## 6. Prompt Box — Universal Style
+## 7. Prompt Box — Universal Style
 
 Any time prompt text appears anywhere in the e-learning (slides, articles, video descriptions), use this style:
 ```jsx
@@ -387,7 +503,7 @@ Any time prompt text appears anywhere in the e-learning (slides, articles, video
 
 ---
 
-## 7. Read Phase
+## 8. Read Phase
 
 ### Layout
 Two-column grid (`gridTemplateColumns: "1fr 1fr"`, gap 20px).
@@ -444,7 +560,7 @@ Each article must have a distinct, thought-provoking reflection question relevan
 
 ---
 
-## 8. Watch Phase
+## 9. Watch Phase
 
 ### Layout
 Single column, stacked cards with gap 24px.
@@ -496,7 +612,7 @@ Right: teal primary button "Go to Prompt Playground →".
 
 ---
 
-## 9. Handoff CTA
+## 10. Handoff CTA
 
 When the user clicks the final CTA in Watch phase, switch `activePhase` to `"practice"` and render:
 - Centred card (white bg, bordered, borderRadius 16, padding 48px)
@@ -510,7 +626,7 @@ This page does not host the Prompt Playground itself — it links to it. The `hr
 
 ---
 
-## 10. Journey Strip
+## 11. Journey Strip
 
 Always rendered below the active phase content, at full content width.
 
@@ -554,7 +670,7 @@ Phase description: 11px, muted.
 
 ---
 
-## 11. Reusable Components
+## 12. Reusable Components
 
 Always implement these as local components within the page file.
 
@@ -608,7 +724,7 @@ const Eyebrow = ({ t }) => (
 
 ---
 
-## 12. State Architecture
+## 13. State Architecture
 
 Use this state structure as a starting point for every e-learning page. Extend as needed for additional slide interactions.
 
@@ -639,7 +755,7 @@ const watchDone = VIDEOS.every(v => videoState[v.id]?.clicked && videoState[v.id
 
 ---
 
-## 13. Content Data Structure
+## 14. Content Data Structure
 
 When building a new level's e-learning page, provide all content as data arrays at the top of the file. The components read from this data — no content should be hardcoded inside component JSX.
 
@@ -649,7 +765,7 @@ const SLIDES = [
   {
     id: 1,                        // sequential integer
     section: "FOUNDATIONS",       // UPPERCASE section name for top bar
-    type: "title",                // one of the types defined in Section 5
+    type: "title",                // one of the types defined in Section 6
     heading: "...",
     subheading: "...",
     body: "...",
@@ -712,7 +828,44 @@ const PHASES = [
 
 ---
 
-## 14. Quality Rules — Non-Negotiable
+## 15. Topic Authoring Guidance
+
+These rules govern the *content* written for slides, articles, and video descriptions. They apply to every level and every topic.
+
+### Tone and framing
+
+- Frame gaps as opportunities, not failures. The learner is investing in growth — treat them accordingly.
+- Never use language that implies blame, shame, or inadequacy.
+- Avoid "best practice" — prefer "effective technique" or "recommended approach for [specific situation]."
+- When introducing a framework, always present the situational judgment for when to use it vs. alternatives.
+
+### Scenario and example requirements
+
+All scenarios and examples must pass the **audience universality test** defined in Section 2.4. In addition:
+
+- Scenarios should be professionally universal — recognisable to any knowledge worker regardless of role, function, or seniority.
+- Never anchor a scenario to a specific job title or department unless the exercise explicitly asks the learner to choose their own role.
+- Prompt demonstrations must use tasks any professional could face: summarising, drafting, structuring, reviewing, synthesising.
+- Before/after comparisons must use genuine attempts on both sides. Never strawman the "before" state.
+
+### Tool-agnostic content
+
+Follow the tool-agnostic framing rules in Section 2.3. In particular:
+- Never reference specific AI tools (ChatGPT, Claude, Copilot, Gemini) in scenario setups or teaching content.
+- Use "your AI tool," "the AI," or "any large language model" instead.
+- Exceptions are listed in Section 2.3.
+
+### Content that should never appear in self-paced slides
+
+- Walls of text without visual breaks (max 3 consecutive body paragraphs without an interactive or visual element)
+- Unattributed statistics or claims
+- References to specific AI tools in scenario setups (see Section 2.3 for exceptions)
+- Function-specific or role-specific scenarios that violate the audience universality rule (Section 2.4)
+- "One right answer" framing that positions a single technique as universally correct (see Principle 5 in Section 2.1)
+
+---
+
+## 16. Quality Rules — Non-Negotiable
 
 These apply to every build. Check before considering the page complete.
 
@@ -728,7 +881,7 @@ These apply to every build. Check before considering the page complete.
 
 **Borders are always `1px solid #E2E8F0`** on cards and panels. Never omit.
 
-**Prompt text is never rendered as bare body copy.** Always use the prompt box style from Section 6.
+**Prompt text is never rendered as bare body copy.** Always use the prompt box style from Section 7.
 
 **Button minimum width: 100px.** Buttons never collapse to icon-only on desktop.
 
@@ -740,9 +893,18 @@ These apply to every build. Check before considering the page complete.
 
 **Google Fonts must be loaded** via `@import` in the `<style>` tag at the top of every component. Never fall back to system fonts as the primary choice.
 
+**Vertical composition must be balanced across the full 460px content area.** No slide should feel top-heavy with content clustered in the upper half and empty space below.
+- **Header zone (top ~20%, max ~80–90px):** Section eyebrow, slide heading, teal-underlined key phrase. Keep compact.
+- **Primary content zone (middle ~60%):** Core teaching content — frameworks, diagrams, comparisons, interactive elements. Vertically centred or evenly distributed, not pushed to the top.
+- **Supporting content zone (bottom ~20%):** Pull quotes, footnotes, "continue" prompts, contextual links. Anchors the bottom of the slide.
+- If a slide's content naturally occupies less than 460px, distribute it with balanced vertical spacing rather than top-aligning everything with empty space below.
+- Minimum 16px between heading and body text. Minimum 20–24px between body text and primary visual content.
+
+**Dense content must use the expandable accordion pattern** (defined in Section 6). Long prompt examples, full AI outputs, and multi-paragraph explanations must be collapsible. The slide's pedagogical point must be clear in the collapsed state — expansion is for optional depth.
+
 ---
 
-## 15. File Location & Naming
+## 17. File Location & Naming
 
 New e-learning pages live in the site's route structure at:
 ```
@@ -755,7 +917,7 @@ Each page is a single self-contained `.jsx` file. All data, components, and styl
 
 ---
 
-## 16. How to Use This Skill — Quick Reference
+## 18. How to Use This Skill — Quick Reference
 
 When asked to build a new e-learning page:
 
@@ -765,7 +927,7 @@ When asked to build a new e-learning page:
 4. Build the page shell (Nav, Hero, phase switching logic, Journey Strip).
 5. Build or reuse the SlideContent renderer, Read phase, and Watch phase.
 6. Wire up state and phase progression logic.
-7. Validate against Section 14 quality rules before presenting output.
+7. Validate against Section 16 quality rules and Section 15 topic authoring guidance before presenting output.
 8. Output a single `.jsx` file at the correct path.
 
 Do not ask the user to choose a layout, colour scheme, or component style. These are defined here. Your only creative input is the content itself — not the design.
