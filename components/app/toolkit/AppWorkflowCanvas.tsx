@@ -20,6 +20,7 @@ import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/databas
 import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
+import NextStepBanner from './NextStepBanner';
 import FeedbackItemRow from '../workflow/FeedbackItemRow';
 
 /* ─── Constants ─── */
@@ -48,7 +49,9 @@ const REFINE_LOADING_STEPS = [
   'Applying quality checks…',
   'Finalising refined Build Guide…',
 ];
-const STEP_DELAYS = [800, 1500, 3000, 3500, 3500, 3000, 2500];
+// Build guide generation takes longer than other tools (~20-30s)
+// Last step = -1 (open-ended buffer — stays spinning until API returns)
+const STEP_DELAYS = [800, 2000, 4000, 5000, 5000, 4500, -1];
 
 /* ── Educational sections for Build Guide (Step 4 default) ── */
 const BUILD_GUIDE_SECTIONS = [
@@ -759,7 +762,7 @@ const AppWorkflowCanvas: React.FC = () => {
   const [buildGuideMarkdown, setBuildGuideMarkdown] = useState<string | null>(null);
   const [buildGuideIntermediate, setBuildGuideIntermediate] = useState<WorkflowIntermediate | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
-  const [exportLoadingMsg, setExportLoadingMsg] = useState('');
+
   const [savedToArtefacts, setSavedToArtefacts] = useState(false);
 
   /* ── Step 4 output state (matches L1 pattern) ── */
@@ -868,6 +871,7 @@ const AppWorkflowCanvas: React.FC = () => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cumulative = 0;
     STEP_DELAYS.forEach((delay, i) => {
+      if (delay < 0) return; // -1 = open-ended buffer, don't auto-advance
       cumulative += delay;
       timers.push(setTimeout(() => setLoadingStep(i + 1), cumulative));
     });
@@ -933,31 +937,12 @@ const AppWorkflowCanvas: React.FC = () => {
     setExportLoading(true);
     setPlatformStepDone(true);
 
-    const loadingSteps = [
-      { label: 'Analysing your workflow nodes and connections', delay: 0 },
-      { label: `Translating to ${selectedPlatform} terminology and conventions`, delay: 4000 },
-      { label: 'Writing step-by-step configuration instructions', delay: 9000 },
-      { label: 'Generating credential requirements and prerequisites', delay: 15000 },
-      { label: 'Building test checklist and documenting edge cases', delay: 21000 },
-      { label: 'Finalising your Build Guide', delay: 28000 },
-    ];
-    let msgIndex = 0;
-    setExportLoadingMsg(JSON.stringify({ steps: loadingSteps, activeIndex: 0 }));
-    const stepTimers = loadingSteps.slice(1).map((step, idx) =>
-      setTimeout(() => {
-        msgIndex = idx + 1;
-        setExportLoadingMsg(JSON.stringify({ steps: loadingSteps, activeIndex: msgIndex }));
-      }, step.delay)
-    );
-
     try {
       const response = await fetch('/api/generate-build-guide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intermediate, platform: selectedPlatform }),
       });
-
-      stepTimers.forEach(t => clearTimeout(t));
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -967,11 +952,8 @@ const AppWorkflowCanvas: React.FC = () => {
       const data = await response.json();
       setBuildGuideMarkdown(data.markdown || '');
       setExportLoading(false);
-      setExportLoadingMsg('');
     } catch (err) {
-      stepTimers.forEach(t => clearTimeout(t));
       console.error('[build-guide] Generation error:', err);
-      setExportLoadingMsg('Generation failed. Please try again.');
       setExportLoading(false);
     }
   }, [selectedPlatform, buildGuideMarkdown, workflowName, workflowDescription, finalNodes, selectedPath, taskDescription, toolsAndSystems, feedbackResolutions, pathAFeedbackText, pathAFeedbackResult, feedbackResult]);
@@ -1240,7 +1222,6 @@ const AppWorkflowCanvas: React.FC = () => {
     setOpenDisputeId(null);
     setFeedbackResolutions({});
     setExportLoading(false);
-    setExportLoadingMsg('');
     setSavedToArtefacts(false);
     setPathAApproved(false);
     setPathAFeedbackText('');
@@ -1272,7 +1253,6 @@ const AppWorkflowCanvas: React.FC = () => {
     setBuildGuideIntermediate(null);
     setSavedToArtefacts(false);
     setExportLoading(false);
-    setExportLoadingMsg('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1286,7 +1266,6 @@ const AppWorkflowCanvas: React.FC = () => {
     setBuildGuideIntermediate(null);
     setSavedToArtefacts(false);
     setExportLoading(false);
-    setExportLoadingMsg('');
   };
 
   const handleGoBackToStep3 = () => {
@@ -1296,7 +1275,6 @@ const AppWorkflowCanvas: React.FC = () => {
     setPlatformStepDone(false);
     setSavedToArtefacts(false);
     setExportLoading(false);
-    setExportLoadingMsg('');
     setViewMode('cards');
     setVisibleBlocks(0);
     setLoadingStep(0);
@@ -1381,7 +1359,6 @@ const AppWorkflowCanvas: React.FC = () => {
 
     setIsRefineLoading(true);
     setExportLoading(true);
-    setExportLoadingMsg('');
 
     try {
       const intermediate = buildGuideIntermediate;
@@ -2123,7 +2100,7 @@ const AppWorkflowCanvas: React.FC = () => {
               onSelectPlatform={setSelectedPlatform}
               onGenerate={handleGenerateBuildGuide}
               loading={exportLoading}
-              loadingMessage={exportLoadingMsg}
+
             />
           </div>
         ) : null}
@@ -2204,6 +2181,13 @@ const AppWorkflowCanvas: React.FC = () => {
           ) : buildGuideMarkdown && buildGuideIntermediate ? (
             /* ── Generated output (matches L1 pattern) ── */
             <div>
+              {/* Next Step Banner (§4.8) */}
+              <NextStepBanner
+                accentColor={LEVEL_ACCENT}
+                accentDark={LEVEL_ACCENT_DARK}
+                text="Download your Build Guide and follow the steps in your chosen platform. Use the test checklist to verify each step."
+              />
+
               {/* Top row: View toggle (left) + Copy (right) */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',

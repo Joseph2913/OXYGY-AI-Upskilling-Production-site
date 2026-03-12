@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 interface PlatformSelectorProps {
   selectedPlatform: string | null;
   onSelectPlatform: (platform: string) => void;
   onGenerate: () => void;
   loading: boolean;
-  loadingMessage: string;
 }
 
 const PLATFORMS = [
@@ -17,101 +16,12 @@ const PLATFORMS = [
   { label: 'Not sure yet', sub: 'Platform-agnostic language' },
 ];
 
-const LOADING_MESSAGES = [
-  'Reading your workflow…',
-  'Mapping steps to {platform} terminology…',
-  'Writing your build guide…',
-  'Adding test checklist and edge cases…',
-  'Almost done…',
-];
-
 const PlatformSelector: React.FC<PlatformSelectorProps> = ({
   selectedPlatform,
   onSelectPlatform,
   onGenerate,
   loading,
-  loadingMessage,
 }) => {
-  const [cycleIndex, setCycleIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    if (!loading) {
-      setCycleIndex(0);
-      setProgress(0);
-      return;
-    }
-
-    const messageInterval = setInterval(() => {
-      setCycleIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
-    }, 3000);
-
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) return prev;
-        return prev + 1;
-      });
-    }, 150);
-
-    return () => {
-      clearInterval(messageInterval);
-      clearInterval(progressInterval);
-    };
-  }, [loading]);
-
-  const currentLoadingMessage = loading
-    ? LOADING_MESSAGES[cycleIndex].replace(
-        '{platform}',
-        selectedPlatform || 'your platform'
-      )
-    : '';
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          width: '100%',
-          fontFamily: "'DM Sans', sans-serif",
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 20,
-          padding: '24px 0',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            height: 6,
-            backgroundColor: '#E2E8F0',
-            borderRadius: 3,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: `${progress}%`,
-              height: '100%',
-              backgroundColor: '#38B2AC',
-              borderRadius: 3,
-              transition: 'width 0.15s linear',
-            }}
-          />
-        </div>
-        <p
-          style={{
-            fontSize: 14,
-            color: '#4A5568',
-            fontFamily: "'DM Sans', sans-serif",
-            margin: 0,
-          }}
-        >
-          {currentLoadingMessage}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
