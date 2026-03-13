@@ -366,7 +366,9 @@ const handleGoBackToStep2 = () => {
 
 ## 4. Output Step Patterns
 
-> **Build Guide outputs:** Any tool that generates a Build Guide as its final deliverable (e.g., Workflow Canvas) must follow the dedicated **[Build Guide Output Standard](BUILD-GUIDE-OUTPUT-STANDARD.md)**. That document defines the complete component hierarchy, layout, interaction patterns, loading states, refinement flow, and export behavior specific to Build Guide outputs. The patterns below still apply as general defaults for non–Build Guide output steps.
+> **Design Review outputs:** Any tool that presents an AI-generated design for the user to review, refine, and approve (e.g., Agent Builder Step 2, App Designer Step 2) must follow the dedicated **[Design Review Output Standard](DESIGN-REVIEW-OUTPUT-STANDARD.md)**. That document defines the quality score banner, primary output view (Cards/Markdown toggle + supplementary tabs), refinement flow, and bottom navigation (Back / Approve / Start Over) specific to design review steps.
+>
+> **Build Guide outputs:** Any tool that generates a Build Guide or Build Plan as its final deliverable (e.g., Workflow Canvas Step 4, Agent Builder Step 4) must follow the dedicated **[Build Guide Output Standard](BUILD-GUIDE-OUTPUT-STANDARD.md)**. That document defines the complete component hierarchy, layout, interaction patterns, loading states, refinement flow, and export behavior specific to Build Guide outputs. The patterns below still apply as general defaults for non–Build Guide output steps.
 
 ### 4.1 Cards + Markdown Toggle
 
@@ -1170,6 +1172,15 @@ components/app/toolkit/
 - [ ] Level accent color used for: connectors, step badges (done), overview badges (done), "Done ✓" labels, step card done borders
 - [ ] No hardcoded teal (`#38B2AC`) for completion indicators — always use level accent variables
 - [ ] Output section cards use `LEVEL_ACCENT_DARK` for left border, background tint, and interactive states — no per-section custom colors
+
+**Design Review Step (if applicable — see [DESIGN-REVIEW-OUTPUT-STANDARD.md](DESIGN-REVIEW-OUTPUT-STANDARD.md)):**
+- [ ] Quality score banner with conic-gradient ring, verdict, rationale, and expandable criteria breakdown
+- [ ] Score uses dynamic colors (teal ≥80, amber ≥50, coral <50)
+- [ ] Primary output section with Cards/Markdown toggle + optional supplementary tabs
+- [ ] Supplementary tabs use `LEVEL_ACCENT` colors when active
+- [ ] Caveat + refinement card with AI-generated questions (collapsed by default)
+- [ ] Bottom navigation: Back to Step 1, Approve [X] (primary, teal), Start Over
+- [ ] Step collapses only when user explicitly clicks "Approve", not on result arrival
 
 **Output & Deliverable:**
 - [ ] Cohesive deliverable defined — a `build{Deliverable}` function that combines only actionable sections

@@ -156,15 +156,15 @@ export const PRD_SECTIONS = [
 
 // ─── Vibe-Coding Platform Options (Step 3) ───
 export const VIBE_CODING_PLATFORMS = [
-  { id: 'cursor', label: 'Cursor', icon: '⚡', description: 'AI-powered code editor with inline generation' },
-  { id: 'lovable', label: 'Lovable', icon: '💜', description: 'Full-stack app builder from a prompt' },
-  { id: 'bolt', label: 'Bolt.new', icon: '⚙️', description: 'StackBlitz-powered instant app scaffolding' },
-  { id: 'claude-code', label: 'Claude Code', icon: '🧠', description: "Anthropic's agentic CLI coding tool" },
-  { id: 'codex', label: 'Codex (OpenAI)', icon: '🤖', description: "OpenAI's cloud coding agent" },
-  { id: 'google-ai-studio', label: 'Google AI Studio', icon: '✨', description: 'Build with Gemini models directly' },
-  { id: 'v0', label: 'V0 (Vercel)', icon: '🔷', description: 'AI-generated React/Next.js components' },
-  { id: 'replit', label: 'Replit Agent', icon: '🔁', description: 'Build and deploy from a prompt' },
-  { id: 'unsure', label: 'Not sure yet', icon: '🤔', description: 'Platform-agnostic guidance' },
+  { id: 'cursor', label: 'Cursor', icon: '⚡', logo: '/logos/brands/cursor.svg', description: 'AI-powered code editor with inline generation' },
+  { id: 'lovable', label: 'Lovable', icon: '💜', logo: '/logos/brands/Lovable_Logo_2025_icon.svg', description: 'Full-stack app builder from a prompt' },
+  { id: 'bolt', label: 'Bolt.new', icon: '⚙️', logo: '/logos/brands/stackblitz.svg', description: 'StackBlitz-powered instant app scaffolding' },
+  { id: 'claude-code', label: 'Claude Code', icon: '🧠', logo: '/logos/tools/claude.svg', description: "Anthropic's agentic CLI coding tool" },
+  { id: 'codex', label: 'Codex (OpenAI)', icon: '🤖', logo: '/logos/brands/openai.svg', description: "OpenAI's cloud coding agent" },
+  { id: 'google-ai-studio', label: 'Google AI Studio', icon: '✨', logo: '/logos/brands/icons8-google.svg', description: 'Build with Gemini models directly' },
+  { id: 'v0', label: 'V0 (Vercel)', icon: '🔷', logo: '/logos/brands/v0.svg', description: 'AI-generated React/Next.js components' },
+  { id: 'replit', label: 'Replit Agent', icon: '🔁', logo: '/logos/brands/replit.svg', description: 'Build and deploy from a prompt' },
+  { id: 'unsure', label: 'Not sure yet', icon: '🤔', logo: '', description: 'Platform-agnostic guidance' },
 ] as const;
 
 export const BUILD_GUIDE_LOADING_STEPS = [

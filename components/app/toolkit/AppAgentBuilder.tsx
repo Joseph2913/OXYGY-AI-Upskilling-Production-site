@@ -1437,7 +1437,13 @@ const AppAgentBuilder: React.FC = () => {
                           fontFamily: FONT, transition: 'border-color 0.15s, background-color 0.15s',
                         }}
                       >
-                        <div style={{ fontSize: 18, marginBottom: 4 }}>{platform.icon}</div>
+                        <div style={{ fontSize: 18, marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28 }}>
+                          {platform.logo ? (
+                            <img src={platform.logo} alt={platform.label} style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                          ) : (
+                            <span>{platform.icon}</span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 2, fontFamily: FONT }}>
                           {platform.label}
                         </div>

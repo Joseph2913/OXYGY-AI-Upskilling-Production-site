@@ -23,7 +23,7 @@ interface AppContextValue {
 // TODO: Replace with real Supabase fetch when auth is wired up.
 const INITIAL_PROFILE: UserProfile = {
   fullName: 'Joseph Thomas',
-  currentLevel: 5,
+  currentLevel: 1,
   streakDays: 5,
 };
 

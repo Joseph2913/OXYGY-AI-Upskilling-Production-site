@@ -131,7 +131,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         {topics.map((topic, idx) => {
           const status = getTopicStatus(topic.id);
           const isSelected = topic.id === selectedTopicId;
-          const isLocked = status === 'upcoming';
+          const isLocked = false; // All topics accessible for now
           const currentPhase = getCurrentPhase(topic.id);
 
           let bgColor = 'transparent';

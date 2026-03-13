@@ -201,7 +201,7 @@ export function useDashboardDesignApi() {
     platform: string;
     prd_content: string;
     app_description: string;
-  }): Promise<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string } | null> => {
+  }): Promise<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string; prd_snippet: string } | null> => {
     setIsBuildGuideLoading(true);
     setError(null);
 

@@ -1104,59 +1104,88 @@ export const evaluateapp = onRequest({ secrets: [openRouterApiKey] }, async (req
 // 11. GENERATE PRD
 // ═══════════════════════════════════════════════════════════════
 
-const PRD_SYSTEM = `You are a senior product manager and technical writer specializing in dashboard and data visualization products. You create production-grade Product Requirements Documents (PRDs).
+const PRD_SYSTEM = `You are a senior product manager who writes PRDs specifically optimised for AI coding tools (Cursor, Lovable, Bolt.new, V0, Replit Agent, Claude Code). Your PRDs are the exact specification an AI agent reads to build a working app — every sentence either constrains a decision or describes a testable behaviour.
 
-You will receive details about a dashboard project. Generate a comprehensive, detailed, and actionable PRD.
+The user may be building anything — a professional dashboard, a personal side project, an internal tool, or any web application. Match the PRD's complexity to the project scope.
 
-CRITICAL: Every section value MUST be a plain text STRING, not a JSON object. Use formatted text with newlines and bullets within the string.
+CRITICAL RULES:
+- Be SPECIFIC — reference the user's exact features, users, data sources in every section.
+- Every feature: "When X happens, do Y." Not vague goals.
+- Lock down every decision point. Include edge cases, error states, empty states, loading states.
+- Be quantitative: pixel sizes, breakpoints, loading times, grid ratios.
+- IMPORTANT: Every section value MUST be a plain text STRING. Use newlines and bullets. Never nest JSON objects.
 
-SECTION 12: DESIGN TOKENS & VISUAL REFERENCE
-Based on the user's brief (visual style preference, color scheme, inspiration images if provided), generate a concrete design token specification:
-- Primary, secondary, accent, and neutral color hex values
-- Font family recommendations (from Google Fonts)
-- Border radius, spacing scale, and shadow tokens
-- Component-level style notes (card style, button style, input style)
+READINESS ASSESSMENT:
+After generating the PRD, evaluate the user's brief across 5 criteria. Score each 0-100:
+- Feasibility: Can this realistically be built with the described tech stack and scope?
+- Scope Clarity: How well-defined are the boundaries, features, and requirements?
+- User Value: How clear and compelling is the value proposition for the target users?
+- Technical Complexity: How appropriate is the complexity level for the chosen tools?
+- Data Requirements: How well-defined are the data sources, models, and integrations?
 
-If the user mentioned a color scheme or visual style preference, use those as the foundation.
-If no style preference was given, provide a sensible default based on the app type.
+Provide an overall_score (0-100), a one-line verdict, and a 2-3 sentence rationale.
 
-Format as a CSS variables block that can be copy-pasted directly:
-:root {
-  --color-primary: #...;
-  --color-secondary: #...;
-  --color-accent: #...;
-  --color-background: #...;
-  --color-card: #...;
-  --color-text: #...;
-  --color-text-muted: #...;
-  --font-family: '...', sans-serif;
-  --radius-card: ...px;
-  --radius-button: ...px;
-  --shadow-card: ...;
-  --spacing-xs: ...px;
-  --spacing-sm: ...px;
-  --spacing-md: ...px;
-  --spacing-lg: ...px;
+REFINEMENT QUESTIONS:
+Generate 3-5 targeted follow-up questions that would meaningfully improve the PRD if answered. Questions must:
+- Reference the user's actual task, data, and context
+- Seek information that would fill gaps in the PRD
+- NOT ask about things already specified in the brief
+
+SUPPLEMENTARY VIEWS:
+- screen_map: A text description of the app's screens/pages with navigation flow. Use arrows (→) and indentation to show hierarchy. Include screen names, key components on each screen, and navigation paths.
+- data_model: A text description of the core data entities, their fields, relationships, and constraints. Use a structured format like "Entity { field: type }" with relationship annotations.
+
+RESPONSE FORMAT (JSON only, no markdown, no code fences):
+{
+  "prd_content": "PRD: [Descriptive app name]",
+  "sections": {
+    "project_overview": "SECTION CONTENT",
+    "tech_stack": "SECTION CONTENT",
+    "file_structure": "SECTION CONTENT",
+    "data_models": "SECTION CONTENT",
+    "feature_requirements": "SECTION CONTENT",
+    "api_routes": "SECTION CONTENT",
+    "ui_specifications": "SECTION CONTENT",
+    "auth_permissions": "SECTION CONTENT",
+    "scope_boundaries": "SECTION CONTENT",
+    "acceptance_criteria": "SECTION CONTENT",
+    "design_tokens": "SECTION CONTENT",
+    "implementation_plan": "SECTION CONTENT"
+  },
+  "readiness": {
+    "overall_score": 82,
+    "verdict": "Strong foundation — ready to build with minor refinements",
+    "rationale": "2-3 sentence explanation of the score",
+    "criteria": {
+      "feasibility": { "label": "Feasibility", "score": 85, "assessment": "One-line assessment" },
+      "scope_clarity": { "label": "Scope Clarity", "score": 80, "assessment": "One-line assessment" },
+      "user_value": { "label": "User Value", "score": 90, "assessment": "One-line assessment" },
+      "technical_complexity": { "label": "Technical Complexity", "score": 75, "assessment": "One-line assessment" },
+      "data_requirements": { "label": "Data Requirements", "score": 80, "assessment": "One-line assessment" }
+    }
+  },
+  "refinement_questions": [
+    "Question 1 referencing the user's specific context?",
+    "Question 2 about a gap in the brief?",
+    "Question 3 about an important decision point?"
+  ],
+  "screen_map": "Screen map text content",
+  "data_model": "Data model text content"
 }
 
-RESPONSE FORMAT (JSON only):
-{
-  "prd_content": "PRD: [Dashboard name]",
-  "sections": {
-    "dashboard_overview": "...",
-    "target_users": "...",
-    "information_architecture": "...",
-    "widget_specifications": "...",
-    "visual_design": "...",
-    "tech_stack": "...",
-    "data_integration": "...",
-    "interactions_filtering": "...",
-    "responsive_behavior": "...",
-    "human_checkpoints": "...",
-    "acceptance_criteria": "...",
-    "design_tokens": "..."
-  }
-}`;
+SECTIONS:
+1. PROJECT OVERVIEW (20-30 sentences): App name, elevator pitch, problem, users, success criteria, scope boundaries. Detailed VISUAL DESCRIPTION of layout. Colour/style direction with hex codes. 2-3 key user flows step-by-step. Must be enough to understand the full app alone.
+2. TECH STACK & CONSTRAINTS (10-15 sentences): Lock down framework+version, styling, UI library, charting, backend, database, auth, hosting, key dependencies, packages to avoid.
+3. FILE & FOLDER STRUCTURE (8-12 sentences): Explicit directory tree. Naming conventions. Where pages, components, hooks, utils, types, and tests live.
+4. DATA MODELS & SCHEMA (10-15 sentences): Every entity: EntityName { field: type }. Relationships. Enums. Required vs optional. Defaults. Validation rules.
+5. FEATURE REQUIREMENTS (15-25 sentences): "When X, do Y" for every feature. Trigger → action → result → error. Loading states. Empty states. Error states.
+6. API & DATA LAYER (10-15 sentences): Per operation: method, path, request/response shapes, error codes. Refresh strategy. Caching. Error handling.
+7. UI & DESIGN SYSTEM (12-18 sentences): Colour palette (hex codes). Typography scale. Spacing system. Card specs. Page layouts referencing mockup. Component hierarchy. Responsive breakpoints. Accessibility.
+8. AUTH & PERMISSIONS (6-10 sentences): Auth provider, method, roles, protected routes. Or explicitly "No auth needed."
+9. SCOPE & BOUNDARIES (8-12 sentences): ALWAYS DO / ASK FIRST / NEVER DO tiers. Out-of-scope list. Future considerations.
+10. ACCEPTANCE CRITERIA (15-25 numbered items): One per feature. Performance. Responsive. Error handling. Accessibility. Verification commands.
+11. DESIGN TOKENS & VISUAL REFERENCE: Based on the user's brief (visual style, color scheme, inspiration images), generate a concrete design token specification. Include primary, secondary, accent, and neutral color hex values. Font family from Google Fonts. Border radius, spacing scale, and shadow tokens. Component-level style notes (card, button, input). Format as a CSS variables block (:root { --color-primary: #...; ... }).
+12. IMPLEMENTATION PHASES (10-15 sentences): Vertical slices: Phase 1 foundation, Phase 2 core feature, Phase 3 secondary, Phase 4 polish. Each: files, deliverable, verification.`;
 
 export const generateprd = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
@@ -1190,41 +1219,107 @@ export const generateprd = onRequest({ secrets: [openRouterApiKey] }, async (req
 // 11b. APP BUILD GUIDE (platform-specific instructions from PRD)
 // ═══════════════════════════════════════════════════════════════
 
-const APP_BUILD_GUIDE_SYSTEM = `You are an expert developer educator who creates step-by-step build guides for AI coding platforms. The user has a completed PRD (Product Requirements Document) for an application they want to build. Your job is to create a clear, actionable build guide tailored to their chosen platform.
+const APP_BUILD_GUIDE_SYSTEM = `You are an expert AI-assisted development coach. The user has already generated a PRD (Product Requirements Document) for their app and has chosen an AI coding platform. They already have the platform installed and ready to go.
 
-RESPONSE FORMAT (JSON only, no markdown, no code fences):
+Your job is to create a practical guide for HOW TO USE THE PRD with their chosen platform to kick off the build. This is NOT a guide for building each component — it is a guide for setting up their AI coding environment, configuring the AI's context with the PRD, and prompting effectively so the platform can do the heavy lifting.
+
+CRITICAL FRAMING:
+- The user is NOT a developer — they are using an AI coding platform to build for them
+- The platform is already installed. Do NOT include installation or download steps
+- The PRD is the user's primary asset. The guide should teach them how to feed it to the platform
+- Each step should tell the user what to do in the platform's UI and what to paste/configure
+- The goal is: user finishes the guide → the AI platform has full context → they can start prompting for features
+
+RESPONSE FORMAT (JSON only, no markdown fences, no preamble):
 {
   "steps": [
-    { "title": "Step title", "instruction": "Detailed instruction text" }
+    {
+      "title": "Step title",
+      "instruction": "Detailed instruction text. Can include markdown formatting like **bold**, \`code\`, and line breaks via \\n\\n."
+    }
   ],
   "tips": ["Pro tip 1", "Pro tip 2"],
-  "limitations": "Platform-specific limitations or caveats"
+  "limitations": "Platform-specific limitations or caveats",
+  "prd_snippet": "A ready-to-paste excerpt from the PRD, formatted for the platform. For CLI tools this should be markdown. For chat-based tools this should be a well-structured prompt. Include the app name, purpose, key features, tech stack, and UI/design requirements — trimmed to what the platform needs for a strong first pass."
 }
 
+STEP STRUCTURE — generate 4-6 steps covering these phases:
+1. PROJECT INITIALISATION — Create a new project/workspace in the platform. What to name it, what template to pick (if any).
+2. CONFIGURE AI CONTEXT — This is the most important step. Teach the user how to set up the platform's AI context mechanism with their PRD content:
+   - For CLI tools: what file to create (e.g. CLAUDE.md, .cursorrules), what to put in it
+   - For chat tools: how to structure the initial prompt or system instructions
+   - For agent tools: how to describe the project scope
+   Be specific about WHERE in the platform UI to paste and WHAT sections of the PRD to include.
+3. FIRST PROMPT / KICK-OFF — What to say or do to get the platform to start generating the app. Reference specific PRD sections. Explain what a good first prompt looks like vs a bad one.
+4. REVIEW & ITERATE — How to review what the platform generates, how to give feedback, how to course-correct using the PRD as the source of truth. Platform-specific features for iteration (e.g. plan mode, composer, chat follow-ups).
+5. OPTIONAL: Any platform-specific extras (e.g. connecting a database, enabling specific modes, setting up environment variables).
+
 RULES:
-- Generate 5-8 concrete, actionable steps
-- Each step instruction should be 2-4 sentences, specific to the platform
-- Include what to paste, where to paste it, and what to expect
-- Reference the PRD sections by name (e.g., "Copy the Tech Stack section...")
-- Include platform-specific UI navigation (e.g., "Click New Project in Cursor...")
-- Tips should be platform-specific best practices (3-5 tips)
-- Limitations should mention what the platform can't do well for this app type
+- Each step instruction should be 3-6 sentences with specific, actionable detail
+- Reference PRD sections by name (e.g. "the Tech Stack section", "the UI & Design System section")
+- Include exact UI paths where relevant (e.g. "Open Settings → System Prompt", "Create a file called CLAUDE.md in the project root")
+- The prd_snippet field must be a condensed, ready-to-paste version of the PRD — not the full document. Focus on: app purpose, core features, tech stack, and design requirements. Format it appropriately for the platform
+- Tips should be platform-specific best practices for getting the best AI output (3-5 tips)
+- Limitations should honestly state what the platform struggles with for this type of app
 - NEVER mention specific AI model names (GPT-4, Claude, Gemini). Use "the AI" or "the platform's AI"
 
 PLATFORM-SPECIFIC GUIDANCE:
-- Cursor: Focus on project setup, .cursorrules file, composer mode, step-by-step prompting with PRD sections
-- Lovable: Focus on pasting the full PRD as the initial prompt, iteration workflow, connecting Supabase
-- Bolt.new: Focus on the initial prompt, StackBlitz environment, iterating in the chat
-- Claude Code: Focus on CLAUDE.md setup, passing the PRD, using plan mode, agentic workflow
-- Codex (OpenAI): Focus on environment setup, task description, repository structure
-- Google AI Studio: Focus on system instructions, structured prompts, code generation workflow
-- V0 (Vercel): Focus on component-by-component generation, Next.js integration, shadcn/ui
-- Replit Agent: Focus on the initial description, Replit's deployment, database setup
-- Not sure yet: Give platform-agnostic advice that works with any AI coding tool`;
+
+Cursor:
+- Context file: .cursorrules in project root — paste a condensed PRD here so the AI always has context
+- Composer mode: teach users to use Composer (Cmd+I) for multi-file generation, referencing the PRD
+- Step-by-step prompting: start with "Build the app described in .cursorrules" then iterate section by section
+- Chat vs Composer: explain when to use inline chat (small edits) vs Composer (new features)
+- Reference files: teach @-mentioning files and the PRD in prompts
+
+Lovable:
+- Initial prompt: the entire PRD can be pasted as the first message — Lovable handles long context well
+- Iteration: use follow-up messages to refine, reference specific PRD sections
+- Supabase: if the PRD mentions a database, guide them through Lovable's Supabase integration
+- Preview: use the live preview to compare against PRD design requirements
+
+Bolt.new:
+- Initial prompt: paste a focused version of the PRD as the first message
+- StackBlitz: explain the live environment, how to see changes in real-time
+- Iteration: use chat to request changes, referencing PRD sections
+- Limitations: mention file system constraints and package limitations
+
+Claude Code:
+- CLAUDE.md: create this file in project root with the full PRD content — this is the AI's persistent memory
+- Plan mode: start with /plan to let the AI read the PRD and propose an architecture before coding
+- Agentic workflow: the AI will create files, run commands, and iterate — teach the user to review and approve
+- Iterative prompting: after the initial build, reference specific PRD sections for refinement
+
+Codex (OpenAI):
+- Task description: paste the PRD summary as the task, let the agent plan the implementation
+- Repository structure: if starting fresh, describe the desired structure from the PRD
+- Review: Codex proposes changes — teach the user to review diffs against PRD requirements
+
+Google AI Studio:
+- System instructions: paste the condensed PRD into the System Instructions field
+- Structured prompting: teach users to ask for one section at a time, referencing the PRD
+- Code generation: explain how to request full file outputs and copy them into their project
+- This platform requires more manual assembly — the user copies generated code into their own project
+
+V0 (Vercel):
+- Component-by-component: V0 excels at generating individual UI components — reference the UI & Design System section
+- Prompt structure: include design details, colour palette, and component behaviour from the PRD
+- Next.js: V0 generates Next.js/React code — mention this if the PRD specifies a different framework
+- Integration: teach users to copy generated components into their project and connect them
+
+Replit Agent:
+- Project description: paste the PRD summary as the initial agent description
+- Replit handles deployment, database, and hosting — guide users to enable these from the PRD requirements
+- Iteration: use chat to refine, reference specific PRD sections
+- Database: if the PRD includes data models, guide the user to describe them to the agent
+
+Not sure yet:
+- Give platform-agnostic advice: create a project context file, structure the PRD as an effective prompt, iterate section by section
+- Recommend trying a chat-based platform (Lovable, Bolt, Replit) for beginners or a CLI tool (Cursor, Claude Code) for more control`;
 
 export const appbuildguide = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { apiKey, model } = getEnv();
+  const { apiKey } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
@@ -1234,17 +1329,36 @@ export const appbuildguide = onRequest({ secrets: [openRouterApiKey] }, async (r
       return;
     }
 
-    const userMessage = `Platform: ${platform}\n\nApp Description: ${app_description || "See PRD"}\n\nFull PRD:\n${prd_content.slice(0, 8000)}`;
+    const userMessage = `Platform: ${platform}\n\nApp Description: ${app_description || "See PRD"}\n\nFull PRD:\n${prd_content.slice(0, 12000)}`;
 
-    const result = await callGemini({ apiKey, model, systemPrompt: APP_BUILD_GUIDE_SYSTEM, userMessage, label: "app-build-guide" });
+    const result = await callOpenRouterRaw({
+      apiKey,
+      model: "anthropic/claude-sonnet-4",
+      systemPrompt: APP_BUILD_GUIDE_SYSTEM,
+      userMessage,
+      label: "app-build-guide",
+      temperature: 0.4,
+      maxTokens: 4000,
+    });
     if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
 
-    const data = result.data as Record<string, unknown>;
+    // Parse JSON from response (strip markdown fences if present)
+    const cleaned = result.text.replace(/^```json?\s*/i, "").replace(/\s*```$/i, "").trim();
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(cleaned);
+    } catch {
+      console.error("app-build-guide: failed to parse JSON response:", cleaned.slice(0, 500));
+      res.status(502).json({ error: "Failed to parse AI response", retryable: true });
+      return;
+    }
+
     const steps = Array.isArray(data.steps) ? data.steps : [];
     const tips = Array.isArray(data.tips) ? data.tips : [];
     const limitations = typeof data.limitations === "string" ? data.limitations : "";
+    const prd_snippet = typeof data.prd_snippet === "string" ? data.prd_snippet : "";
 
-    res.status(200).json({ steps, tips, limitations });
+    res.status(200).json({ steps, tips, limitations, prd_snippet });
   } catch (err) {
     console.error("app-build-guide error:", err);
     res.status(500).json({ error: "Internal server error", retryable: true });

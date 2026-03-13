@@ -8,12 +8,12 @@ interface PlatformSelectorProps {
 }
 
 const PLATFORMS = [
-  { label: 'n8n', sub: 'Nodes & connections' },
-  { label: 'Zapier', sub: 'Zaps & steps' },
-  { label: 'Make', sub: 'Scenarios & modules' },
-  { label: 'Power Automate', sub: 'Flows & connectors' },
-  { label: 'AI Coding Agent', sub: 'Functions & API calls' },
-  { label: 'Not sure yet', sub: 'Platform-agnostic language' },
+  { label: 'n8n', sub: 'Nodes & connections', logo: '/logos/brands/n8n.svg' },
+  { label: 'Zapier', sub: 'Zaps & steps', logo: '/logos/brands/zapier.svg' },
+  { label: 'Make', sub: 'Scenarios & modules', logo: '/logos/brands/make.svg' },
+  { label: 'Power Automate', sub: 'Flows & connectors', logo: '/logos/microsoft.svg' },
+  { label: 'AI Coding Agent', sub: 'Functions & API calls', logo: '' },
+  { label: 'Not sure yet', sub: 'Platform-agnostic language', logo: '' },
 ];
 
 const PlatformSelector: React.FC<PlatformSelectorProps> = ({
@@ -79,25 +79,36 @@ const PlatformSelector: React.FC<PlatformSelectorProps> = ({
                 transition: 'border-color 0.15s, background-color 0.15s',
               }}
             >
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: '#1A202C',
-                  marginBottom: 2,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              >
-                {platform.label}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: '#A0AEC0',
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              >
-                {platform.sub}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {platform.logo ? (
+                  <img
+                    src={platform.logo}
+                    alt={platform.label}
+                    style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }}
+                  />
+                ) : null}
+                <div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: '#1A202C',
+                      marginBottom: 2,
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    {platform.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: '#A0AEC0',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    {platform.sub}
+                  </div>
+                </div>
               </div>
             </button>
           );

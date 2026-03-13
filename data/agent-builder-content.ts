@@ -2,12 +2,12 @@
 
 // AI platform options for Step 3 — Deploy Your Agent
 export const AGENT_PLATFORMS = [
-  { id: 'chatgpt', label: 'ChatGPT Custom GPTs', icon: '🤖', description: "OpenAI's Custom GPT Builder" },
-  { id: 'claude', label: 'Claude Skills', icon: '🧠', description: "Anthropic's Agent Skills feature" },
-  { id: 'copilot', label: 'Microsoft Copilot', icon: '🔷', description: 'Copilot Studio / Agents' },
-  { id: 'gemini', label: 'Google Gemini Gems', icon: '✨', description: "Google's Gems feature" },
-  { id: 'api', label: 'Open Source / API', icon: '⚙️', description: 'Direct API integration' },
-  { id: 'unsure', label: 'Not sure yet', icon: '🤔', description: 'Platform-agnostic guidance' },
+  { id: 'chatgpt', label: 'ChatGPT Custom GPTs', icon: '🤖', logo: '/logos/tools/chatgpt.svg', description: "OpenAI's Custom GPT Builder" },
+  { id: 'claude', label: 'Claude Skills', icon: '🧠', logo: '/logos/tools/claude.svg', description: "Anthropic's Agent Skills feature" },
+  { id: 'copilot', label: 'Microsoft Copilot', icon: '🔷', logo: '/logos/microsoft.svg', description: 'Copilot Studio / Agents' },
+  { id: 'gemini', label: 'Google Gemini Gems', icon: '✨', logo: '/logos/brands/icons8-google.svg', description: "Google's Gems feature" },
+  { id: 'api', label: 'Open Source / API', icon: '⚙️', logo: '', description: 'Direct API integration' },
+  { id: 'unsure', label: 'Not sure yet', icon: '🤔', logo: '', description: 'Platform-agnostic guidance' },
 ] as const;
 
 export const SETUP_LOADING_STEPS = [

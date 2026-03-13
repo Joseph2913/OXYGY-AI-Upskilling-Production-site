@@ -427,7 +427,24 @@ export interface DashboardVersion {
   timestamp: number;
 }
 
+export interface PRDReadinessCriteria {
+  label: string;
+  score: number;
+  assessment: string;
+}
+
+export interface PRDReadiness {
+  overall_score: number;
+  verdict: string;
+  rationale: string;
+  criteria: Record<string, PRDReadinessCriteria>;
+}
+
 export interface NewPRDResult {
   prd_content: string;
   sections: Record<string, string>;
+  readiness: PRDReadiness;
+  refinement_questions: string[];
+  screen_map?: string;
+  data_model?: string;
 }

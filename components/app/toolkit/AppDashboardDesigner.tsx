@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code, Library, Download,
-  Info, ChevronRight, ChevronDown, Sparkles,
-  X, Eye,
+  ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code,
+  Info, ChevronRight, ChevronDown, ChevronUp, Sparkles,
+  X, Eye, Download, FileText, BookOpen,
   LayoutDashboard, Users, Layers, BarChart3, Palette, Code2,
   Database, SlidersHorizontal, ShieldCheck, CheckSquare,
 } from 'lucide-react';
@@ -69,6 +69,38 @@ const PRD_SECTION_ICONS: Record<string, React.ElementType> = {
   implementation_plan: ArrowRight,
 };
 
+/* ─── PRD Section Color Map (neutral card bg, Level 4 peach gradient on left border) ─── */
+const PRD_SECTION_COLORS: Record<string, { bg: string; border: string; label: string }> = {
+  project_overview:    { bg: '#FAFBFC', border: '#F5DDD0', label: 'Overview' },
+  tech_stack:          { bg: '#FAFBFC', border: '#F2CEBC', label: 'Tech Stack' },
+  file_structure:      { bg: '#FAFBFC', border: '#EEC0A8', label: 'File Structure' },
+  data_models:         { bg: '#FAFBFC', border: '#EBB294', label: 'Data Models' },
+  feature_requirements:{ bg: '#FAFBFC', border: '#E7A480', label: 'Features' },
+  api_routes:          { bg: '#FAFBFC', border: '#E3966C', label: 'API Routes' },
+  ui_specifications:   { bg: '#FAFBFC', border: '#DF8858', label: 'UI Specs' },
+  auth_permissions:    { bg: '#FAFBFC', border: '#D87A44', label: 'Auth' },
+  scope_boundaries:    { bg: '#FAFBFC', border: '#CF6C34', label: 'Scope' },
+  acceptance_criteria: { bg: '#FAFBFC', border: '#C55E26', label: 'Acceptance' },
+  design_tokens:       { bg: '#FAFBFC', border: '#B85218', label: 'Design Tokens' },
+  implementation_plan: { bg: '#FAFBFC', border: '#A84810', label: 'Impl. Plan' },
+};
+
+/* ─── Score color helper (matches Agent Builder) ─── */
+function getScoreColor(score: number): string {
+  if (score >= 80) return '#38B2AC';
+  if (score >= 50) return '#C4A934';
+  return '#E57A5A';
+}
+
+/* ─── Criteria labels for readiness display ─── */
+const CRITERIA_LABELS: Record<string, string> = {
+  feasibility: 'Feasibility',
+  scope_clarity: 'Scope Clarity',
+  user_value: 'User Value',
+  technical_complexity: 'Tech Complexity',
+  data_requirements: 'Data Reqs',
+};
+
 /* ─── Fallback PRD ─── */
 function generateFallbackPRD(brief: DashboardBrief): NewPRDResult {
   const features = brief.q4_metrics || 'key features';
@@ -89,6 +121,27 @@ function generateFallbackPRD(brief: DashboardBrief): NewPRDResult {
       design_tokens: `:root {\n  --color-primary: #38B2AC;\n  --color-secondary: #5A67D8;\n  --color-accent: #D47B5A;\n  --color-background: #F7FAFC;\n  --color-card: #FFFFFF;\n  --color-text: #1A202C;\n  --color-text-muted: #718096;\n  --font-family: 'DM Sans', sans-serif;\n  --radius-card: 16px;\n  --radius-button: 24px;\n  --shadow-card: 0 2px 8px rgba(0,0,0,0.08);\n}`,
       implementation_plan: 'Phase 1: Project setup + core data model. Phase 2: Main CRUD features. Phase 3: Search, filter, polish. Phase 4: Responsive and deploy.',
     },
+    readiness: {
+      overall_score: 65,
+      verdict: 'Good starting point — add more detail for best results',
+      rationale: 'The brief covers the core purpose but could benefit from more specific feature descriptions, data model details, and acceptance criteria to produce a stronger PRD.',
+      criteria: {
+        feasibility: { label: 'Feasibility', score: 70, assessment: 'Scope appears achievable with standard web technologies' },
+        scope_clarity: { label: 'Scope Clarity', score: 55, assessment: 'Some features need more specific definitions' },
+        user_value: { label: 'User Value', score: 75, assessment: 'Clear target audience and purpose identified' },
+        technical_complexity: { label: 'Technical Complexity', score: 65, assessment: 'Moderate complexity, well-suited for AI coding tools' },
+        data_requirements: { label: 'Data Requirements', score: 60, assessment: 'Data sources and models need more definition' },
+      },
+    },
+    refinement_questions: [
+      'Are there specific features or screens that need more detail in the PRD?',
+      'What third-party integrations or APIs should be included?',
+      'Are there specific performance requirements or constraints?',
+      'What authentication or permission model does the app need?',
+      'Any design system preferences (colors, typography, component library)?',
+    ],
+    screen_map: 'Screen map not available for fallback PRD.',
+    data_model: 'Data model not available for fallback PRD.',
   };
 }
 
@@ -101,25 +154,79 @@ function buildFullPRD(result: NewPRDResult): string {
   return [`# ${result.prd_content}`, '', ...sectionBlocks].join('\n\n---\n\n');
 }
 
-function summariseSection(val: string): string {
-  const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#'));
-  const first = lines[0] || '';
-  return first.length > 120 ? first.slice(0, 117) + '…' : first;
+/* ─── Simple inline markdown renderer for build guide steps ─── */
+function renderFormattedText(text: string): React.ReactNode {
+  // Split on markdown patterns and render as React elements
+  // Supports: **bold**, *italic*, `code`, [links](url), \n\n for paragraphs
+  const paragraphs = text.split(/\n\n/);
+  return paragraphs.map((para, pIdx) => {
+    // Process inline formatting within each paragraph
+    const parts: React.ReactNode[] = [];
+    // Regex to match **bold**, *italic*, `code`, [text](url)
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let key = 0;
+
+    const line = para.replace(/\n/g, ' ');
+
+    while ((match = regex.exec(line)) !== null) {
+      // Text before this match
+      if (match.index > lastIndex) {
+        parts.push(line.slice(lastIndex, match.index));
+      }
+
+      if (match[2]) {
+        // **bold**
+        parts.push(<strong key={key++} style={{ fontWeight: 700, color: '#1A202C' }}>{match[2]}</strong>);
+      } else if (match[3]) {
+        // *italic*
+        parts.push(<em key={key++} style={{ fontStyle: 'italic' }}>{match[3]}</em>);
+      } else if (match[4]) {
+        // `code`
+        parts.push(
+          <code key={key++} style={{
+            background: '#EDF2F7', padding: '1px 6px', borderRadius: 4,
+            fontSize: '0.92em', fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+            color: '#8C3A1A',
+          }}>{match[4]}</code>
+        );
+      } else if (match[5] && match[6]) {
+        // [text](url)
+        parts.push(
+          <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" style={{
+            color: '#2B6CB0', textDecoration: 'underline', fontWeight: 600,
+          }}>{match[5]}</a>
+        );
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+    // Remaining text after last match
+    if (lastIndex < line.length) {
+      parts.push(line.slice(lastIndex));
+    }
+
+    if (paragraphs.length === 1) return <>{parts}</>;
+    return <p key={pIdx} style={{ margin: pIdx === 0 ? 0 : '10px 0 0 0' }}>{parts}</p>;
+  });
 }
 
 /* ────────────────────────────────────────────────────────────
    Shared UI Primitives
    ──────────────────────────────────────────────────────────── */
 
-const StepBadge: React.FC<{ num: number; done: boolean; active?: boolean }> = ({ num, done, active }) => (
+const StepBadge: React.FC<{ num: number; done: boolean; active?: boolean; locked?: boolean }> = ({ num, done, active, locked }) => (
   <div style={{
     width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontWeight: 800, fontSize: 13, fontFamily: FONT, flexShrink: 0,
     ...(done
       ? { background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK }
-      : active
-        ? { background: '#FFFFFF', border: `2px solid ${LEVEL_ACCENT}`, color: LEVEL_ACCENT_DARK, animation: 'ppPulse 2s ease-in-out infinite' }
-        : { background: '#F7FAFC', border: '2px solid #E2E8F0', color: '#718096' }),
+      : locked
+        ? { background: '#EDF2F7', border: '2px solid #E2E8F0', color: '#CBD5E0' }
+        : active
+          ? { background: '#FFFFFF', border: `2px solid ${LEVEL_ACCENT}`, color: LEVEL_ACCENT_DARK, animation: 'ppPulse 2s ease-in-out infinite' }
+          : { background: '#F7FAFC', border: '2px solid #E2E8F0', color: '#718096' }),
   }}>
     {done ? <Check size={15} /> : num}
   </div>
@@ -148,26 +255,26 @@ const StepCard: React.FC<{
   done: boolean; collapsed: boolean; locked?: boolean; lockedMessage?: string; children: React.ReactNode;
 }> = ({ stepNumber, title, subtitle, done, collapsed, locked, lockedMessage, children }) => (
   <div style={{
-    background: '#FFFFFF', borderRadius: 16,
+    background: locked ? '#FAFBFC' : '#FFFFFF', borderRadius: 16,
     border: done ? `1px solid ${LEVEL_ACCENT}88` : '1px solid #E2E8F0',
-    padding: collapsed ? '16px 24px' : '24px 28px',
+    padding: collapsed || locked ? '16px 24px' : '24px 28px',
     transition: 'border-color 0.3s',
-    opacity: locked ? 0.5 : 1,
+    opacity: locked ? 0.7 : 1,
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <StepBadge num={stepNumber} done={done} />
+      <StepBadge num={stepNumber} done={done} locked={locked} />
       <div style={{ flex: 1 }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{title}</span>
-        {!collapsed && (
+        <span style={{ fontSize: 16, fontWeight: 700, color: locked ? '#A0AEC0' : '#1A202C', fontFamily: FONT }}>{title}</span>
+        {!collapsed && !locked && (
           <span style={{ fontSize: 13, color: '#718096', fontFamily: FONT, marginLeft: 10 }}>{subtitle}</span>
         )}
       </div>
-      {collapsed && (
+      {collapsed && done && (
         <span style={{ fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>Done ✓</span>
       )}
     </div>
     {locked && lockedMessage && (
-      <div style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT, marginTop: 8, fontStyle: 'italic' }}>
+      <div style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT, marginTop: 8 }}>
         {lockedMessage}
       </div>
     )}
@@ -223,9 +330,9 @@ const ToolOverview: React.FC<{
 );
 
 const ActionBtn: React.FC<{
-  icon: React.ReactNode; label: string; onClick: () => void;
-  primary?: boolean; accent?: boolean; disabled?: boolean;
-}> = ({ icon, label, onClick, primary, accent, disabled }) => {
+  icon?: React.ReactNode; label: string; onClick: () => void;
+  primary?: boolean; accent?: boolean; disabled?: boolean; iconAfter?: React.ReactNode;
+}> = ({ icon, label, onClick, primary, accent, disabled, iconAfter }) => {
   const bg = primary ? '#38B2AC' : accent ? '#5A67D8' : '#FFFFFF';
   const fg = primary || accent ? '#FFFFFF' : '#4A5568';
   const border = primary || accent ? 'none' : '1px solid #E2E8F0';
@@ -240,59 +347,21 @@ const ActionBtn: React.FC<{
         transition: 'opacity 0.2s',
       }}
     >
-      {icon} {label}
+      {icon} {label} {iconAfter}
     </button>
   );
 };
 
-/* ─── Info Tooltip ─── */
-const InfoTooltip: React.FC<{ content: string }> = ({ content }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} style={{ display: 'inline-block', position: 'relative' }}>
-      <button
-        onClick={() => setOpen(!open)}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 6, color: '#A0AEC0' }}
-        aria-label="More information"
-      >
-        <Info size={15} />
-      </button>
-      {open && (
-        <div
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-          style={{
-            position: 'absolute', zIndex: 50, left: 0, top: '100%', marginTop: 8,
-            background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10,
-            padding: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            maxWidth: 340, minWidth: 260,
-          }}
-        >
-          <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>{content}</div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* ─── Educational defaults for PRD sections ─── */
-const EDUCATIONAL_PRD_SECTIONS = PRD_SECTIONS.map((s) => ({
-  ...s,
-  color: LEVEL_ACCENT_DARK,
-}));
+/* ─── Build guide refinement questions (platform-aware) ─── */
+function getBuildPlanRefinementQuestions(platformLabel: string): string[] {
+  return [
+    `Are there specific error scenarios for this ${platformLabel} workflow you want the guide to address?`,
+    'Should any steps include alternative approaches or fallback options?',
+    'Are there team-specific naming conventions or folder structures to follow?',
+    `What level of detail do you need for the ${platformLabel} configuration — beginner-friendly or advanced?`,
+    'Are there any compliance or security requirements to document?',
+  ];
+}
 
 /* ════════════════════════════════════════════════
    MAIN COMPONENT
@@ -307,10 +376,10 @@ const AppDashboardDesigner: React.FC = () => {
 
   // ─── PRD state ───
   const [prdResult, setPrdResult] = useState<NewPRDResult | null>(null);
-  const [showMarkdown, setShowMarkdown] = useState(false);
+  const [activeView, setActiveView] = useState<'cards' | 'markdown'>('cards');
   const [visibleBlocks, setVisibleBlocks] = useState(0);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedPrdSections, setExpandedPrdSections] = useState<Set<string>>(new Set());
   const [savedToLibrary, setSavedToLibrary] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -325,15 +394,28 @@ const AppDashboardDesigner: React.FC = () => {
   const [prdRefinementCount, setPrdRefinementCount] = useState(0);
   const [prdRefineExpanded, setPrdRefineExpanded] = useState(false);
 
-  // ─── Platform + Build Guide (Step 3) ───
+  // ─── Platform (Step 3) ───
   const [prdApproved, setPrdApproved] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
-  const [buildGuide, setBuildGuide] = useState<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string } | null>(null);
+  const [platformStepDone, setPlatformStepDone] = useState(false);
+
+  // ─── Build Guide output (Step 4) ───
+  const [buildGuide, setBuildGuide] = useState<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string; prd_snippet: string } | null>(null);
   const [buildGuideLoadingStep, setBuildGuideLoadingStep] = useState(0);
+  const [buildPlanViewMode, setBuildPlanViewMode] = useState<'cards' | 'markdown'>('cards');
+  const [buildPlanVisibleBlocks, setBuildPlanVisibleBlocks] = useState(0);
+  const [buildPlanCopied, setBuildPlanCopied] = useState(false);
+  const [expandedBuildSteps, setExpandedBuildSteps] = useState<Set<number>>(new Set());
+  const [buildPlanSaved, setBuildPlanSaved] = useState(false);
+  const [buildPlanRefineExpanded, setBuildPlanRefineExpanded] = useState(false);
+  const [buildPlanRefinementAnswers, setBuildPlanRefinementAnswers] = useState<Record<number, string>>({});
+  const [buildPlanAdditionalContext, setBuildPlanAdditionalContext] = useState('');
+  const [checkedTests, setCheckedTests] = useState<Set<number>>(new Set());
 
   // ─── Refs ───
   const prdRef = useRef<HTMLDivElement>(null);
   const step3Ref = useRef<HTMLDivElement>(null);
+  const step4Ref = useRef<HTMLDivElement>(null);
   const toolUsedRef = useRef(false);
 
   // ─── API ───
@@ -346,7 +428,8 @@ const AppDashboardDesigner: React.FC = () => {
   // ─── Derived step state ───
   const step1Done = prdResult !== null || isPrdLoading;
   const step2Done = prdApproved;
-  const step3Done = buildGuide !== null;
+  const step3Done = platformStepDone;
+  const step4Done = buildGuide !== null;
 
   const canGenerate = brief.q1_purpose.trim().length > 0;
 
@@ -412,17 +495,30 @@ const AppDashboardDesigner: React.FC = () => {
     return () => timers.forEach(clearTimeout);
   }, [isBuildGuideLoading]);
 
-  // ─── PRD staggered animation ───
+  // ─── PRD staggered animation (Design Review Output Standard §9) ───
   useEffect(() => {
     if (!prdResult) return;
     setVisibleBlocks(0);
     const timers: ReturnType<typeof setTimeout>[] = [];
-    const sectionCount = Object.keys(prdResult.sections).length;
-    for (let i = 0; i < sectionCount; i++) {
-      timers.push(setTimeout(() => setVisibleBlocks(v => v + 1), 150 + i * 80));
+    const totalBlocks = 7; // score banner, primary output, actions, refinement, buffer
+    for (let i = 0; i < totalBlocks; i++) {
+      timers.push(setTimeout(() => setVisibleBlocks(v => v + 1), 150 + i * 120));
     }
     return () => timers.forEach(clearTimeout);
   }, [prdResult]);
+
+  // ─── Build plan staggered animation (Step 4) ───
+  useEffect(() => {
+    if (!buildGuide) return;
+    setBuildPlanVisibleBlocks(0);
+    setBuildPlanViewMode('cards');
+    const totalBlocks = 4; // content + actions + refinement + buffer
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < totalBlocks; i++) {
+      timers.push(setTimeout(() => setBuildPlanVisibleBlocks(v => v + 1), 150 + i * 80));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [buildGuide]);
 
   // ─── Helpers ───
   const toast = useCallback((msg: string) => {
@@ -447,11 +543,25 @@ const AppDashboardDesigner: React.FC = () => {
     setBrief(prev => ({ ...prev, [key]: val }));
   }, []);
 
+  /* ─── Toggle expanded sections (readiness detail) ─── */
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
   /* ─── Textarea auto-height helper ─── */
   const autoHeight = (el: HTMLTextAreaElement) => {
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
   };
+
+  /* Auto-resize textareas when brief changes (e.g., example fill, draft restore) */
+  useEffect(() => {
+    document.querySelectorAll<HTMLTextAreaElement>('[data-autoheight]').forEach(autoHeight);
+  }, [brief.q1_purpose, brief.q4_metrics]);
 
   // ─── Generate PRD directly from brief ───
   const handleGeneratePRD = async () => {
@@ -461,8 +571,7 @@ const AppDashboardDesigner: React.FC = () => {
     const updatedBrief = { ...brief, q5_dataSources: dataSourcesText.trim() ? [dataSourcesText.trim()] : [] };
     setBrief(updatedBrief);
 
-    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
-    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
+    setPrdResult(null); setActiveView('cards');    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
     setSavedToLibrary(false);
 
     setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -508,28 +617,41 @@ const AppDashboardDesigner: React.FC = () => {
 
   // ─── Step-back navigation ───
   const handleGoBackToStep1 = () => {
-    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
-    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
+    setPrdResult(null); setActiveView('cards');    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
     setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
-    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
-    setSavedToLibrary(false);
+    setPrdApproved(false); setSelectedPlatform(null); setPlatformStepDone(false); setBuildGuide(null);
+    setSavedToLibrary(false); resetBuildPlanState();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleGoBackToStep2 = () => {
     setPrdApproved(false);
-    setSelectedPlatform(null); setBuildGuide(null);
+    setSelectedPlatform(null); setPlatformStepDone(false); setBuildGuide(null);
+    resetBuildPlanState();
+  };
+
+  const handleGoBackToStep3 = () => {
+    setBuildGuide(null);
+    setPlatformStepDone(false);
+    resetBuildPlanState();
+  };
+
+  const resetBuildPlanState = () => {
+    setBuildPlanViewMode('cards'); setBuildPlanVisibleBlocks(0);
+    setBuildPlanCopied(false); setBuildPlanSaved(false);
+    setExpandedBuildSteps(new Set()); setCheckedTests(new Set());
+    setBuildPlanRefineExpanded(false); setBuildPlanRefinementAnswers({});
+    setBuildPlanAdditionalContext('');
   };
 
   // ─── Start over ───
   const handleStartOver = () => {
     setBrief({ ...INITIAL_BRIEF });
     setDataSourcesText('');
-    setPrdResult(null); setShowMarkdown(false); setExpandedPrdSections(new Set());
-    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
+    setPrdResult(null); setActiveView('cards');    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
     setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
-    setPrdApproved(false); setSelectedPlatform(null); setBuildGuide(null);
-    setSavedToLibrary(false);
+    setPrdApproved(false); setSelectedPlatform(null); setPlatformStepDone(false); setBuildGuide(null);
+    setSavedToLibrary(false); resetBuildPlanState();
     resetCounts();
     localStorage.removeItem('oxygy_dashboard-designer_draft');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -543,23 +665,111 @@ const AppDashboardDesigner: React.FC = () => {
   };
 
   // ─── Generate Build Guide ───
-  const handleGenerateBuildGuide = async () => {
+  const handleGenerateBuildGuide = async (refinementNote?: string) => {
     if (!prdResult || !selectedPlatform) return;
     clearError();
+
+    setPlatformStepDone(true);
 
     const platformLabel = VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || selectedPlatform;
     const fullPrd = buildFullPRD(prdResult);
 
+    const appDesc = refinementNote
+      ? `${brief.q1_purpose}\n\n[REFINEMENT CONTEXT]\n${refinementNote}`
+      : brief.q1_purpose;
+
+    setTimeout(() => step4Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
     const guide = await generateBuildGuide({
       platform: platformLabel,
       prd_content: fullPrd,
-      app_description: brief.q1_purpose,
+      app_description: appDesc,
     });
 
     if (guide) {
       setBuildGuide(guide);
-      setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      setBuildPlanCopied(false);
+      setBuildPlanSaved(false);
+      setCheckedTests(new Set());
+      setTimeout(() => step4Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
+  };
+
+  // ─── Build full markdown for build guide ───
+  const buildFullBuildGuide = (): string => {
+    if (!buildGuide || !prdResult) return '';
+    const platformLabel = VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform';
+    const parts: string[] = [
+      `# Build Guide`,
+      `## ${brief.q1_purpose.slice(0, 80)}`,
+      `**Platform:** ${platformLabel}`,
+      `**Steps:** ${buildGuide.steps.length}`,
+      `---`,
+      `## Setup Steps`,
+    ];
+    buildGuide.steps.forEach((step: { title: string; instruction: string }, i: number) => {
+      parts.push(`### Step ${i + 1} — ${step.title}`);
+      parts.push(step.instruction);
+    });
+    if (buildGuide.prd_snippet) {
+      parts.push(`---`, `## PRD — Ready to Paste`, '```', buildGuide.prd_snippet, '```');
+    }
+    if (buildGuide.tips.length > 0) {
+      parts.push(`---`, `## Pro Tips`);
+      buildGuide.tips.forEach((tip: string) => parts.push(`- ${tip}`));
+    }
+    if (buildGuide.limitations) {
+      parts.push(`---`, `> **Note:** ${buildGuide.limitations}`);
+    }
+    return parts.join('\n\n');
+  };
+
+  // ─── Build guide refinement ───
+  const hasBuildPlanRefinementInput = Object.values(buildPlanRefinementAnswers).some(a => typeof a === 'string' && a.trim()) || buildPlanAdditionalContext.trim() !== '';
+
+  const handleRefineBuildGuide = async () => {
+    if (!hasBuildPlanRefinementInput || isBuildGuideLoading) return;
+    const platformLabel = VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || selectedPlatform || '';
+    const buildPlanRefinementQuestions = getBuildPlanRefinementQuestions(platformLabel);
+    const refinementParts = buildPlanRefinementQuestions
+      .map((q: string, idx: number) => {
+        const a = buildPlanRefinementAnswers[idx]?.trim();
+        return a ? `Q: ${q}\nA: ${a}` : null;
+      })
+      .filter(Boolean)
+      .join('\n\n');
+    const extra = buildPlanAdditionalContext.trim();
+    const refinementNote = [refinementParts, extra ? `Additional: ${extra}` : ''].filter(Boolean).join('\n\n');
+
+    setBuildPlanRefinementAnswers({});
+    setBuildPlanAdditionalContext('');
+    setBuildPlanRefineExpanded(false);
+
+    await handleGenerateBuildGuide(refinementNote);
+  };
+
+  // ─── Build guide copy handler ───
+  const handleCopyBuildGuide = async () => {
+    const md = buildFullBuildGuide();
+    if (!md) return;
+    await copyText(md);
+    setBuildPlanCopied(true);
+    toast('Build Guide copied to clipboard');
+    setTimeout(() => setBuildPlanCopied(false), 2000);
+  };
+
+  // ─── Build guide save handler ───
+  const handleSaveBuildGuide = async () => {
+    if (!buildGuide || !user) return;
+    const md = buildFullBuildGuide();
+    await dbSavePrompt(user.id, {
+      level: 4,
+      title: `Build Guide: ${brief.q1_purpose.slice(0, 50)}`,
+      content: md,
+      source_tool: 'dashboard-designer',
+    });
+    setBuildPlanSaved(true);
+    toast('Build Guide saved to library');
   };
 
   // ─── PRD refinement handler ───
@@ -568,13 +778,7 @@ const AppDashboardDesigner: React.FC = () => {
   const handleRefinePRD = async () => {
     if (!hasPrdRefinementInput || !prdResult || isPrdLoading) return;
 
-    const questions = [
-      'Are there specific features or screens that need more detail in the PRD?',
-      'What third-party integrations or APIs should be included?',
-      'Are there specific performance requirements or constraints?',
-      'What authentication or permission model does the app need?',
-      'Any design system preferences (colors, typography, component library)?',
-    ];
+    const questions = prdResult.refinement_questions || [];
     const answeredQuestions = questions
       .map((q, i) => {
         const answer = prdRefinementAnswers[i]?.trim();
@@ -618,25 +822,6 @@ const AppDashboardDesigner: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCopySection = async (key: string, val: string) => {
-    await copyText(val);
-    setCopiedSection(key);
-    toast('Section copied');
-    setTimeout(() => setCopiedSection(null), 2000);
-  };
-
-  const handleDownloadPRD = () => {
-    if (!prdResult) return;
-    const md = buildFullPRD(prdResult);
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'app-prd.md';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('PRD downloaded as Markdown');
-  };
 
   const handleSaveToLibrary = async () => {
     if (!prdResult || !user) return;
@@ -683,9 +868,10 @@ const AppDashboardDesigner: React.FC = () => {
       {/* ─── How It Works Overview ─── */}
       <ToolOverview
         steps={[
-          { number: 1, label: 'Complete your brief', detail: 'Describe what you\'re building, who it\'s for, and what it needs to do', done: step1Done, active: !step1Done },
+          { number: 1, label: 'Complete your brief', detail: 'Describe what you\'re building', done: step1Done, active: !step1Done },
           { number: 2, label: 'Your app PRD', detail: '12-section product requirements document', done: step2Done, active: step1Done && !step2Done },
-          { number: 3, label: 'Build guide', detail: 'Platform-specific instructions to start building', done: step3Done, active: step2Done && !step3Done },
+          { number: 3, label: 'Choose platform', detail: 'Pick your AI coding tool', done: step3Done, active: step2Done && !step3Done },
+          { number: 4, label: 'Build guide', detail: 'Platform-specific build instructions', done: step4Done, active: step3Done && !step4Done },
         ]}
         outcome="A production-ready PRD plus a step-by-step build guide tailored to your chosen AI coding tool."
       />
@@ -698,7 +884,7 @@ const AppDashboardDesigner: React.FC = () => {
         title="Complete your brief"
         subtitle="Describe what you're building, who it's for, and what it needs to do."
         done={step1Done}
-        collapsed={step1Done && step2Done}
+        collapsed={step1Done}
       >
         {/* Example quick-fills */}
         <div style={{ marginBottom: 16 }}>
@@ -730,14 +916,15 @@ const AppDashboardDesigner: React.FC = () => {
               What does this app do? <span style={{ color: '#E53E3E' }}>*</span>
             </label>
             <textarea
+              data-autoheight
               value={brief.q1_purpose}
               onChange={e => { updateBrief('q1_purpose', e.target.value); autoHeight(e.target); }}
               placeholder="Describe the app's purpose — what problem does it solve and what will it do?"
-              rows={3}
+              rows={1}
               style={{
                 width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
                 fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
-                outline: 'none', boxSizing: 'border-box',
+                outline: 'none', boxSizing: 'border-box', overflow: 'hidden',
               }}
               onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
               onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
@@ -788,14 +975,15 @@ const AppDashboardDesigner: React.FC = () => {
               Key features or metrics to display
             </label>
             <textarea
+              data-autoheight
               value={brief.q4_metrics}
               onChange={e => { updateBrief('q4_metrics', e.target.value); autoHeight(e.target); }}
               placeholder="List the main features, screens, or data points (e.g., user auth, CRUD for recipes, streak tracking, charts)"
-              rows={2}
+              rows={1}
               style={{
                 width: '100%', borderRadius: 10, border: '1px solid #E2E8F0', padding: '10px 14px',
                 fontSize: 13, fontFamily: FONT, color: '#2D3748', resize: 'none', lineHeight: 1.6,
-                outline: 'none', boxSizing: 'border-box',
+                outline: 'none', boxSizing: 'border-box', overflow: 'hidden',
               }}
               onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
               onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
@@ -892,44 +1080,11 @@ const AppDashboardDesigner: React.FC = () => {
           title="Your app PRD"
           subtitle="A comprehensive product requirements document for development handoff."
           done={step2Done}
-          collapsed={step2Done && step3Done}
+          collapsed={step2Done}
+          locked={!step1Done && !isPrdLoading}
+          lockedMessage="Complete Step 1 to generate your app PRD"
         >
-          {!step1Done && !isPrdLoading ? (
-            /* ─── Educational default ─── */
-            <div>
-              <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, marginBottom: 16, fontFamily: FONT }}>
-                Your PRD will be structured using <strong>12 production-grade sections</strong> optimised for AI coding tools like Cursor, Lovable, Bolt.new, and Claude Code. Each section gives the AI the exact constraints and specifications it needs — tech stack, data models, feature behaviours, design tokens, and acceptance criteria. Complete your brief above and each section will be filled with content tailored to your specific app.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {EDUCATIONAL_PRD_SECTIONS.map((s, i) => {
-                  const Icon = PRD_SECTION_ICONS[s.key];
-                  return (
-                    <div
-                      key={s.key}
-                      style={{
-                        borderLeft: `4px solid ${s.color}`,
-                        background: `${s.color}08`,
-                        borderRadius: 10, padding: '16px 18px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        {Icon && <Icon size={14} color={s.color} />}
-                        <span style={{ fontSize: 12, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: FONT }}>
-                          {s.title}
-                        </span>
-                        <span style={{ fontSize: 10, color: '#A0AEC0', fontFamily: FONT, marginLeft: 'auto' }}>
-                          {i + 1}/{EDUCATIONAL_PRD_SECTIONS.length}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>
-                        {s.description}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : isPrdLoading ? (
+          {isPrdLoading ? (
             /* ─── PRD Loading ─── */
             <ProcessingProgress
               steps={isPrdRefineLoading ? PRD_REFINE_LOADING_STEPS : PRD_LOADING_STEPS}
@@ -938,182 +1093,262 @@ const AppDashboardDesigner: React.FC = () => {
               subtext="This usually takes 15–20 seconds"
             />
           ) : prdResult ? (
-            /* ─── PRD Result ─── */
-            <div>
-              {/* Top action row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-                {/* Cards / Markdown toggle */}
+            /* ═══ Design Review Output (per DESIGN-REVIEW-OUTPUT-STANDARD) ═══ */
+            <>
+              {/* ── §2.2 Quality Score Banner ── */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 16,
+                background: '#F7FAFC', borderRadius: 14,
+                border: '1px solid #E2E8F0', padding: '18px 22px',
+                marginBottom: 16,
+                opacity: visibleBlocks >= 1 ? 1 : 0,
+                transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
                 <div style={{
-                  display: 'inline-flex', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0',
-                  overflow: 'hidden',
+                  width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                  background: `conic-gradient(${getScoreColor(prdResult.readiness?.overall_score || 0)} ${(prdResult.readiness?.overall_score || 0) * 3.6}deg, #E2E8F0 0deg)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <button
-                    onClick={() => setShowMarkdown(false)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                      border: 'none', cursor: 'pointer', borderRadius: 8,
-                      background: !showMarkdown ? '#1A202C' : 'transparent',
-                      color: !showMarkdown ? '#FFFFFF' : '#718096',
-                    }}
-                  >
-                    <Eye size={13} /> Cards
-                  </button>
-                  <button
-                    onClick={() => setShowMarkdown(true)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                      border: 'none', cursor: 'pointer', borderRadius: 8,
-                      background: showMarkdown ? '#2B6CB0' : 'transparent',
-                      color: showMarkdown ? '#FFFFFF' : '#718096',
-                    }}
-                  >
-                    <Code size={13} /> Markdown
-                  </button>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', background: '#F7FAFC',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, fontWeight: 800, color: getScoreColor(prdResult.readiness?.overall_score || 0),
+                    fontFamily: FONT,
+                  }}>
+                    {prdResult.readiness?.overall_score || 0}%
+                  </div>
                 </div>
-                <InfoTooltip content="Markdown view shows the cohesive PRD deliverable — ready to paste into AI coding tools. Cards view shows all sections for individual review." />
-
-                <div style={{ flex: 1 }} />
-
-                <ActionBtn
-                  icon={copied ? <Check size={13} /> : <Copy size={13} />}
-                  label={copied ? 'Copied!' : 'Copy Full PRD'}
-                  onClick={handleCopyFullPRD}
-                  primary
-                />
-                <ActionBtn
-                  icon={<Download size={13} />}
-                  label="Download (.md)"
-                  onClick={handleDownloadPRD}
-                />
-                <ActionBtn
-                  icon={<Library size={13} />}
-                  label={savedToLibrary ? 'Saved!' : 'Save to Prompt Library'}
-                  onClick={handleSaveToLibrary}
-                  accent
-                  disabled={savedToLibrary}
-                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', fontFamily: FONT, lineHeight: 1.3 }}>
+                    {prdResult.readiness?.verdict || 'PRD Generated'}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5, fontFamily: FONT, marginTop: 4 }}>
+                    {(prdResult.readiness?.rationale || '').length > 200
+                      ? prdResult.readiness.rationale.slice(0, 200) + '…'
+                      : prdResult.readiness?.rationale || ''}
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleSection('readiness')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 12, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontFamily: FONT, flexShrink: 0, padding: '4px 0',
+                  }}
+                >
+                  {expandedSections.has('readiness') ? 'Hide' : 'Learn more'}
+                  <ChevronDown size={13} style={{
+                    transform: expandedSections.has('readiness') ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s',
+                  }} />
+                </button>
               </div>
 
-              {/* Next Step Banner */}
-              {!prdApproved && (
-                <NextStepBanner
-                  accentColor={LEVEL_ACCENT}
-                  accentDark={LEVEL_ACCENT_DARK}
-                  title="Review your PRD"
-                  text="Scroll through each section below. When you're happy, approve the PRD and choose your coding platform to get a step-by-step build guide."
-                />
-              )}
-
-              {showMarkdown ? (
-                /* ─── Markdown view ─── */
+              {/* Expanded readiness detail */}
+              {expandedSections.has('readiness') && prdResult.readiness?.criteria && (
                 <div style={{
-                  background: '#1A202C', borderRadius: 12, padding: '22px 24px',
-                  position: 'relative',
+                  background: '#FFFFFF', borderRadius: 12,
+                  border: '1px solid #E2E8F0', padding: '18px 20px',
+                  marginBottom: 16, marginTop: -8,
+                  animation: 'ppSlideDown 0.2s ease both',
                 }}>
-                  <button
-                    onClick={handleCopyFullPRD}
-                    style={{
-                      position: 'absolute', top: 12, right: 12,
-                      background: '#2D3748', color: '#A0AEC0', border: 'none', borderRadius: 6,
-                      padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT,
-                    }}
-                  >
-                    {copied ? <><Check size={11} /> Copied!</> : <><Copy size={11} /> Copy</>}
-                  </button>
-                  <pre style={{
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                    fontSize: 13, lineHeight: 1.8, color: '#E2E8F0',
-                    whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
-                  }}>
-                    {buildFullPRD(prdResult)}
-                  </pre>
-                </div>
-              ) : (
-                /* ─── Cards view — all collapsed by default ─── */
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {Object.entries(prdResult.sections).map(([key, rawVal], i) => {
-                    const val = rawVal as string;
-                    const def = PRD_SECTIONS.find(s => s.key === key);
-                    const color = LEVEL_ACCENT_DARK;
-                    const Icon = PRD_SECTION_ICONS[key];
-                    const isVisible = i < visibleBlocks;
-                    const isExpanded = expandedPrdSections.has(key);
-                    return (
-                      <div
-                        key={key}
-                        style={{
-                          borderLeft: `4px solid ${color}`,
-                          background: `${color}12`,
-                          borderRadius: 10, padding: '14px 16px',
-                          position: 'relative',
-                          opacity: isVisible ? 1 : 0,
-                          transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
-                          transition: 'opacity 0.3s, transform 0.3s',
-                        }}
-                      >
-                        <button
-                          onClick={() => setExpandedPrdSections(prev => {
-                            const next = new Set(prev);
-                            if (next.has(key)) next.delete(key); else next.add(key);
-                            return next;
-                          })}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                            textAlign: 'left',
-                          }}
-                        >
-                          {Icon && <Icon size={14} color={color} />}
-                          <span style={{
-                            fontSize: 12, fontWeight: 700, color, textTransform: 'uppercase',
-                            letterSpacing: '0.04em', fontFamily: FONT, flex: 1,
-                          }}>
-                            {def?.title || key}
-                          </span>
-                          <span
-                            onClick={e => { e.stopPropagation(); handleCopySection(key, val); }}
-                            style={{ color: '#A0AEC0', padding: 2, flexShrink: 0, display: 'flex' }}
-                          >
-                            {copiedSection === key ? <Check size={13} color="#38A169" /> : <Copy size={13} />}
-                          </span>
-                          <ChevronDown size={14} color="#A0AEC0" style={{
-                            flexShrink: 0,
-                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.2s ease',
-                          }} />
-                        </button>
-
-                        {!isExpanded && (
-                          <div style={{
-                            fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT,
-                            marginTop: 6,
-                            overflow: 'hidden', textOverflow: 'ellipsis',
-                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
-                          }}>
-                            {summariseSection(val)}
-                          </div>
-                        )}
-
-                        {isExpanded && (
-                          <div style={{
-                            fontSize: 13, color: '#2D3748', lineHeight: 1.7, fontFamily: FONT,
-                            whiteSpace: 'pre-wrap', marginTop: 10,
-                            animation: 'ppSlideDown 0.2s ease both',
-                          }}>
-                            {val}
-                          </div>
-                        )}
+                  {Object.entries(prdResult.readiness.criteria).map(([key, val]) => (
+                    <div key={key} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
+                      borderBottom: '1px solid #F7FAFC',
+                    }}>
+                      <div style={{ width: 120, flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>
+                        {CRITERIA_LABELS[key] || val.label || key}
                       </div>
-                    );
-                  })}
+                      <div style={{ flex: 1, fontSize: 12, color: '#718096', fontFamily: FONT }}>{val.assessment}</div>
+                      <div style={{ width: 80, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ flex: 1, height: 5, borderRadius: 3, background: '#E2E8F0', overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 3,
+                            width: `${val.score}%`, background: getScoreColor(val.score),
+                            transition: 'width 0.7s ease',
+                          }} />
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', width: 28, textAlign: 'right' as const }}>{val.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.6, marginTop: 12, fontFamily: FONT }}>
+                    {prdResult.readiness.rationale}
+                  </div>
                 </div>
               )}
+
+              {/* ── §2.3 Primary Output Section ── */}
+              <div style={{
+                marginBottom: 16,
+                opacity: visibleBlocks >= 2 ? 1 : 0,
+                transform: visibleBlocks >= 2 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.3s, transform 0.3s',
+              }}>
+                {/* Section header */}
+                <div style={{
+                  fontSize: 13, fontWeight: 700, color: '#1A202C',
+                  textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontFamily: FONT,
+                  display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10,
+                }}>
+                  <span style={{ fontSize: 15 }}>📄</span> Your App PRD
+                </div>
+
+                {/* View Toggle Row — Cards/Markdown toggle + Copy inline */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <div style={{
+                    display: 'flex', background: '#F7FAFC', borderRadius: 8,
+                    border: '1px solid #E2E8F0', overflow: 'hidden',
+                  }}>
+                    <button
+                      onClick={() => setActiveView('cards')}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '6px 14px', fontSize: 12, fontWeight: activeView === 'cards' ? 700 : 600, fontFamily: FONT,
+                        border: 'none', cursor: 'pointer', borderRadius: 8,
+                        background: activeView === 'cards' ? '#1A202C' : 'transparent',
+                        color: activeView === 'cards' ? '#FFFFFF' : '#718096',
+                      }}
+                    >
+                      <Eye size={12} /> Review
+                    </button>
+                    <button
+                      onClick={() => setActiveView('markdown')}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '6px 14px', fontSize: 12, fontWeight: activeView === 'markdown' ? 700 : 600, fontFamily: FONT,
+                        border: 'none', cursor: 'pointer', borderRadius: 8,
+                        background: activeView === 'markdown' ? '#2B6CB0' : 'transparent',
+                        color: activeView === 'markdown' ? '#FFFFFF' : '#718096',
+                      }}
+                    >
+                      <Code size={12} /> Markdown
+                    </button>
+                  </div>
+                  <span style={{ fontSize: 11, color: '#A0AEC0', fontFamily: FONT }}>
+                    {Object.keys(prdResult.sections).length} sections
+                  </span>
+                  <div style={{ marginLeft: 'auto' }}>
+                    <ActionBtn
+                      icon={copied ? <Check size={13} /> : <Copy size={13} />}
+                      label={copied ? 'Copied!' : 'Copy PRD'}
+                      onClick={handleCopyFullPRD}
+                      primary
+                    />
+                  </div>
+                </div>
+
+                {/* Content area */}
+                {activeView === 'markdown' ? (
+                  <div style={{
+                    background: '#1A202C', borderRadius: 12,
+                    padding: '20px 22px', overflow: 'auto', maxHeight: 600,
+                  }}>
+                    <pre style={{
+                      color: '#E2E8F0', fontSize: 13, lineHeight: 1.7,
+                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                      whiteSpace: 'pre-wrap', margin: 0,
+                    }}>
+                      {buildFullPRD(prdResult)}
+                    </pre>
+                  </div>
+                ) : (
+                  /* Review view — summary + expandable sections */
+                  <div style={{
+                    background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 12,
+                    padding: '20px 24px',
+                  }}>
+                    {/* Summary paragraph from project_overview */}
+                    {prdResult.sections.project_overview && (
+                      <div style={{
+                        fontSize: 14, color: '#2D3748', lineHeight: 1.8,
+                        fontFamily: FONT, marginBottom: 20,
+                      }}>
+                        {prdResult.sections.project_overview.length > 400
+                          ? prdResult.sections.project_overview.slice(0, 400).replace(/\s+\S*$/, '') + '…'
+                          : prdResult.sections.project_overview}
+                      </div>
+                    )}
+
+                    {/* Section list — collapsed by default, expandable */}
+                    <div style={{
+                      fontSize: 12, fontWeight: 700, color: '#718096',
+                      textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontFamily: FONT,
+                      marginBottom: 10,
+                    }}>
+                      {Object.keys(prdResult.sections).length} sections in this PRD
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {Object.entries(prdResult.sections).map(([key, rawVal]) => {
+                        const val = rawVal as string;
+                        const def = PRD_SECTIONS.find(s => s.key === key);
+                        const sectionColor = PRD_SECTION_COLORS[key] || { bg: '#F7FAFC', border: '#E2E8F0', label: key };
+                        const Icon = PRD_SECTION_ICONS[key];
+                        const isOpen = expandedPrdSections.has(key);
+                        return (
+                          <div key={key}>
+                            <button
+                              onClick={() => setExpandedPrdSections(prev => {
+                                const next = new Set(prev);
+                                if (next.has(key)) next.delete(key); else next.add(key);
+                                return next;
+                              })}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                                padding: '9px 14px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                                background: isOpen ? sectionColor.bg : '#FAFBFC',
+                                borderLeft: `3px solid ${isOpen ? sectionColor.border : '#E2E8F0'}`,
+                                borderRadius: isOpen ? '8px 8px 0 0' : 8,
+                                transition: 'background 0.15s, border-color 0.15s',
+                              }}
+                            >
+                              {Icon && <Icon size={13} color={isOpen ? LEVEL_ACCENT_DARK : '#A0AEC0'} style={{ flexShrink: 0 }} />}
+                              <span style={{
+                                flex: 1, fontSize: 13, fontWeight: 600, fontFamily: FONT,
+                                color: isOpen ? '#1A202C' : '#4A5568',
+                              }}>
+                                {def?.title || key}
+                              </span>
+                              {isOpen ? <ChevronUp size={14} color="#718096" /> : <ChevronDown size={14} color="#A0AEC0" />}
+                            </button>
+                            {isOpen && (
+                              <div style={{
+                                padding: '14px 18px', background: sectionColor.bg,
+                                borderLeft: `3px solid ${sectionColor.border}`,
+                                borderRadius: '0 0 8px 8px', marginBottom: 2,
+                              }}>
+                                <div style={{
+                                  fontSize: 13, color: '#2D3748', lineHeight: 1.7,
+                                  fontFamily: FONT, whiteSpace: 'pre-wrap',
+                                }}>
+                                  {val}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* View full PRD hint */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6, marginTop: 16,
+                      paddingTop: 14, borderTop: '1px solid #EDF2F7',
+                    }}>
+                      <Info size={13} color="#A0AEC0" />
+                      <span style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT }}>
+                        Switch to <strong>Markdown</strong> view to see the full PRD document.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Output Actions Panel */}
-              <div style={{ marginTop: 24 }}>
+              <div style={{ marginBottom: 16, opacity: visibleBlocks >= 3 ? 1 : 0, transform: visibleBlocks >= 3 ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 0.3s, transform 0.3s' }}>
                 <OutputActionsPanel
                   workflowName={`PRD: ${prdResult.prd_content?.slice(0, 50) || 'App PRD'}`}
                   fullMarkdown={buildFullPRD(prdResult)}
@@ -1122,136 +1357,101 @@ const AppDashboardDesigner: React.FC = () => {
                 />
               </div>
 
-              {/* Refinement Card (collapsible per §4.5) */}
-              <div style={{
-                background: '#F7FAFC', borderRadius: 14, border: '1px solid #E2E8F0',
-                padding: '20px 24px', marginTop: 20, marginBottom: 20,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: prdRefineExpanded ? 16 : 12 }}>
-                  <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
-                    This PRD is a strong starting point built from your brief — not the final word.
-                    Review each section, refine the areas that matter most, and adapt it to your specific tools and constraints.
-                  </div>
-                </div>
+              {/* ── §2.4 Refinement Section ── */}
+              {(() => {
+                const questions = prdResult.refinement_questions || [];
+                return (
+                  <div style={{
+                    background: '#F7FAFC', borderRadius: 14, border: '1px solid #E2E8F0',
+                    padding: '20px 24px', marginBottom: 16,
+                    opacity: visibleBlocks >= 4 ? 1 : 0, transform: visibleBlocks >= 4 ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    <div style={{ display: 'flex', gap: 10, marginBottom: prdRefineExpanded ? 20 : 0 }}>
+                      <Info size={16} color="#A0AEC0" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                          This PRD is a strong starting point built from your brief — not the final word.
+                          Review each section, test assumptions against your actual requirements,
+                          and refine the areas that matter most before building.
+                        </div>
+                        {!prdRefineExpanded && (
+                          <button
+                            onClick={() => setPrdRefineExpanded(true)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '8px 0 0', fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK, cursor: 'pointer', fontFamily: FONT }}
+                            onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; }}
+                            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                          >
+                            Would you like to refine this PRD further?
+                            <ChevronDown size={14} />
+                            {prdRefinementCount > 0 && (
+                              <span style={{ fontSize: 11, fontWeight: 600, background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK, borderRadius: 20, padding: '2px 10px', fontFamily: FONT, marginLeft: 4 }}>
+                                Refinement #{prdRefinementCount}
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-                {!prdRefineExpanded && (
-                  <button
-                    onClick={() => setPrdRefineExpanded(true)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      padding: 0, fontSize: 13, fontWeight: 600,
-                      color: LEVEL_ACCENT_DARK, fontFamily: FONT,
-                    }}
-                  >
-                    <ChevronDown size={14} />
-                    Would you like to refine this PRD further?
-                    {prdRefinementCount > 0 && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 600,
-                        background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
-                        borderRadius: 20, padding: '2px 10px', marginLeft: 6,
-                      }}>
-                        Refinement #{prdRefinementCount}
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {prdRefineExpanded && (
-                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16, animation: 'ppSlideDown 0.3s ease-out both' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                          Refine Your PRD
+                    {prdRefineExpanded && (
+                      <div style={{ animation: 'ppSlideDown 0.3s ease-out' }}>
+                        <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontFamily: FONT }}>
+                                Refine Your PRD
+                              </div>
+                              {prdRefinementCount > 0 && (
+                                <div style={{ fontSize: 11, fontWeight: 600, background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK, borderRadius: 20, padding: '2px 10px', fontFamily: FONT }}>
+                                  Refinement #{prdRefinementCount}
+                                </div>
+                              )}
+                            </div>
+                            <button onClick={() => setPrdRefineExpanded(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#A0AEC0', display: 'flex', alignItems: 'center' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#4A5568'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = '#A0AEC0'; }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
+                            {questions.length > 0 ? "Answer any of these to add context and get a more targeted PRD. You don't need to answer all of them — even one helps." : 'Add any additional context below to refine your PRD.'}
+                          </p>
+                          {questions.map((question: string, i: number) => (
+                            <div key={i} style={{ marginBottom: 16 }}>
+                              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>{question}</label>
+                              <input type="text" value={prdRefinementAnswers[i] || ''} onChange={e => setPrdRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))} placeholder="Your answer…"
+                                style={{ width: '100%', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.15s', background: '#FFFFFF' }}
+                                onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                                onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                              />
+                            </div>
+                          ))}
+                          <div style={{ marginBottom: 18 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>Anything else to add?</label>
+                            <textarea value={prdAdditionalContext} onChange={e => setPrdAdditionalContext(e.target.value)} placeholder="Any additional requirements, constraints, or context…"
+                              style={{ width: '100%', minHeight: 60, resize: 'none', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.15s', background: '#FFFFFF', lineHeight: 1.5 }}
+                              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                            />
+                          </div>
+                          <ActionBtn label={isPrdLoading ? 'Refining…' : 'Refine PRD'} onClick={handleRefinePRD} primary disabled={!hasPrdRefinementInput || isPrdLoading}
+                            iconAfter={isPrdLoading ? <div style={{ width: 13, height: 13, border: '2px solid #FFFFFF40', borderTopColor: '#FFFFFF', borderRadius: '50%', animation: 'ppSpin 0.6s linear infinite' }} /> : <ArrowRight size={13} />}
+                          />
                         </div>
                       </div>
-                      <button onClick={() => setPrdRefineExpanded(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#A0AEC0' }}>
-                        <X size={16} />
-                      </button>
-                    </div>
-                    <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
-                      Answer any of these to add context and get a more targeted PRD. You don't need to answer all of them — even one helps.
-                    </p>
-
-                    {[
-                      'Are there specific features or screens that need more detail in the PRD?',
-                      'What third-party integrations or APIs should be included?',
-                      'Are there specific performance requirements or constraints?',
-                      'What authentication or permission model does the app need?',
-                      'Any design system preferences (colors, typography, component library)?',
-                    ].map((question, i) => (
-                      <div key={i} style={{ marginBottom: 16 }}>
-                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
-                          {question}
-                        </label>
-                        <input
-                          type="text"
-                          value={prdRefinementAnswers[i] || ''}
-                          onChange={e => setPrdRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
-                          placeholder="Your answer…"
-                          style={{
-                            width: '100%', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px',
-                            fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none', boxSizing: 'border-box' as const,
-                            background: '#FFFFFF',
-                          }}
-                          onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
-                          onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
-                        />
-                      </div>
-                    ))}
-
-                    <div style={{ marginBottom: 18 }}>
-                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
-                        Anything else to add?
-                      </label>
-                      <textarea
-                        value={prdAdditionalContext}
-                        onChange={e => setPrdAdditionalContext(e.target.value)}
-                        placeholder="Any additional requirements, constraints, or context…"
-                        style={{
-                          width: '100%', minHeight: 60, resize: 'none', border: '1px solid #E2E8F0', borderRadius: 10,
-                          padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none',
-                          boxSizing: 'border-box' as const, background: '#FFFFFF', lineHeight: 1.5,
-                        }}
-                        onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
-                        onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
-                      />
-                    </div>
-
-                    <ActionBtn
-                      icon={isPrdLoading ? (
-                        <div style={{ width: 13, height: 13, border: '2px solid #FFFFFF40', borderTopColor: '#FFFFFF', borderRadius: '50%', animation: 'ppSpin 0.6s linear infinite' }} />
-                      ) : <ArrowRight size={13} />}
-                      label={isPrdLoading ? 'Refining…' : 'Refine PRD'}
-                      onClick={handleRefinePRD}
-                      primary
-                      disabled={!hasPrdRefinementInput || isPrdLoading}
-                    />
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
-              {/* Approve / Back / Start Over */}
-              {!prdApproved && (
-                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                  <button
-                    onClick={handleApprovePRD}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      background: '#38A169', color: '#FFFFFF', border: 'none', borderRadius: 24,
-                      padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Check size={15} /> Approve PRD
-                  </button>
-                  <ActionBtn icon={<ArrowLeft size={13} />} label="Back to Brief" onClick={handleGoBackToStep1} />
-                  <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleStartOver} />
-                </div>
-              )}
-            </div>
+              {/* ── §2.5 Bottom Navigation Row ── */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                <ActionBtn icon={<ArrowRight size={13} style={{ transform: 'rotate(180deg)' }} />} label="Back to Step 1" onClick={handleGoBackToStep1} />
+                <ActionBtn label="Approve PRD" onClick={handleApprovePRD} iconAfter={<ArrowRight size={13} />} primary />
+                <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleStartOver} />
+              </div>
+            </>
           ) : null}
         </StepCard>
       </div>
@@ -1259,165 +1459,534 @@ const AppDashboardDesigner: React.FC = () => {
       <StepConnector />
 
       {/* ═══════════════════════════════════════════
-          STEP 3 — Choose platform & build guide
+          STEP 3 — Choose your platform
       ═══════════════════════════════════════════ */}
       <div ref={step3Ref}>
         <StepCard
           stepNumber={3}
-          title="Build guide"
-          subtitle={selectedPlatform ? `Setup guide for ${VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label}` : 'Choose your AI coding platform and get a step-by-step build guide.'}
+          title="Choose your platform"
+          subtitle="Pick the AI coding tool you'll use to build this app."
           done={step3Done}
-          collapsed={false}
+          collapsed={step3Done}
           locked={!step2Done}
           lockedMessage="Approve your PRD above to choose your platform"
         >
-          {/* Platform selection grid */}
-          {!buildGuide && !isBuildGuideLoading && (
-            <div>
-              <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, marginBottom: 16, fontFamily: FONT }}>
-                Which AI coding tool will you use to build this app? We'll generate a step-by-step guide tailored to your platform.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-                {VIBE_CODING_PLATFORMS.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedPlatform(p.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: 14,
-                      background: selectedPlatform === p.id ? '#FFFDF5' : '#FFFFFF',
-                      border: selectedPlatform === p.id ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
-                      borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                      transition: 'border-color 0.3s, background 0.3s',
-                    }}
-                  >
+          <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, marginBottom: 16, fontFamily: FONT }}>
+            Which AI coding tool will you use to build this app? We'll generate a step-by-step guide tailored to your platform.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+            {VIBE_CODING_PLATFORMS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPlatform(p.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: 14,
+                  background: selectedPlatform === p.id ? '#FFFDF5' : '#FFFFFF',
+                  border: selectedPlatform === p.id ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
+                  borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                  transition: 'border-color 0.3s, background 0.3s',
+                }}
+              >
+                <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {p.logo ? (
+                    <img src={p.logo} alt={p.label} style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                  ) : (
                     <span style={{ fontSize: 18 }}>{p.icon}</span>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>{p.label}</div>
-                      <div style={{ fontSize: 11, color: '#718096', fontFamily: FONT }}>{p.description}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={handleGenerateBuildGuide}
-                  disabled={!selectedPlatform || isBuildGuideLoading}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: selectedPlatform ? LEVEL_ACCENT_DARK : '#CBD5E0',
-                    color: '#FFFFFF', border: 'none', borderRadius: 24,
-                    padding: '12px 28px', fontSize: 14, fontWeight: 700, fontFamily: FONT,
-                    cursor: selectedPlatform ? 'pointer' : 'not-allowed',
-                  }}
-                >
-                  <Sparkles size={16} />
-                  Generate Build Guide
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Build guide loading */}
-          {isBuildGuideLoading && (
-            <ProcessingProgress
-              steps={BUILD_GUIDE_LOADING_STEPS}
-              currentStep={buildGuideLoadingStep}
-              header="Generating your build guide…"
-              subtext={`Tailoring instructions for ${VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform'}`}
-            />
-          )}
-
-          {/* Build guide result */}
-          {buildGuide && !isBuildGuideLoading && (
-            <div>
-              <NextStepBanner
-                accentColor={LEVEL_ACCENT}
-                accentDark={LEVEL_ACCENT_DARK}
-                title={`Build with ${VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform'}`}
-                text="Follow these steps to turn your PRD into a working app. Copy the PRD first, then follow each step below."
-              />
-
-              {/* Steps */}
-              <div style={{
-                background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
-                padding: '20px 24px', marginBottom: 16,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <Code2 size={16} color={LEVEL_ACCENT_DARK} />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>
-                    Build Plan — {VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label}
-                  </span>
+                  )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {buildGuide.steps.map((step, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 14 }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        background: `${LEVEL_ACCENT}40`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 12, fontWeight: 700, color: LEVEL_ACCENT_DARK, fontFamily: FONT,
-                      }}>
-                        {i + 1}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
-                          {step.title}
-                        </div>
-                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, fontFamily: FONT, whiteSpace: 'pre-wrap' }}>
-                          {step.instruction}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>{p.label}</div>
+                  <div style={{ fontSize: 11, color: '#718096', fontFamily: FONT }}>{p.description}</div>
                 </div>
-              </div>
+              </button>
+            ))}
+          </div>
 
-              {/* Tips */}
-              {buildGuide.tips.length > 0 && (
-                <div style={{
-                  background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
-                  padding: '20px 24px', marginBottom: 16,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <Sparkles size={16} color={LEVEL_ACCENT_DARK} />
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>Pro Tips</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {buildGuide.tips.map((tip, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                        <div style={{
-                          width: 6, height: 6, borderRadius: '50%', background: LEVEL_ACCENT,
-                          flexShrink: 0, marginTop: 7,
-                        }} />
-                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>{tip}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Limitations */}
-              {buildGuide.limitations && (
-                <div style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic', fontFamily: FONT, marginBottom: 16 }}>
-                  {buildGuide.limitations}
-                </div>
-              )}
-
-              {/* Bottom actions */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <ActionBtn icon={<ArrowLeft size={13} />} label="Back to PRD" onClick={handleGoBackToStep2} />
-                <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleStartOver} />
-              </div>
-            </div>
-          )}
-
-          {error && !isBuildGuideLoading && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: 10, fontSize: 13, color: '#C53030', fontFamily: FONT }}>
-              {error}
-            </div>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button
+              onClick={() => handleGenerateBuildGuide()}
+              disabled={!selectedPlatform || isBuildGuideLoading}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: selectedPlatform ? LEVEL_ACCENT_DARK : '#CBD5E0',
+                color: '#FFFFFF', border: 'none', borderRadius: 24,
+                padding: '12px 28px', fontSize: 14, fontWeight: 700, fontFamily: FONT,
+                cursor: selectedPlatform ? 'pointer' : 'not-allowed',
+              }}
+            >
+              <Sparkles size={16} />
+              Generate Build Guide
+            </button>
+          </div>
         </StepCard>
       </div>
+
+      <StepConnector />
+
+      {/* ═══════════════════════════════════════════
+          STEP 4 — Download your Build Guide
+      ═══════════════════════════════════════════ */}
+      {(() => {
+        const platformObj = VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform);
+        const platformLabel = platformObj?.label || 'your platform';
+        const platformLogo = platformObj?.logo || '';
+        const platformIcon = platformObj?.icon || '';
+        const fullBuildGuideMd = buildFullBuildGuide();
+        const MONO = "'JetBrains Mono', 'Fira Code', Consolas, monospace";
+        const buildPlanRefinementQuestions = getBuildPlanRefinementQuestions(platformLabel);
+
+        return (
+          <div ref={step4Ref}>
+            <StepCard
+              stepNumber={4}
+              title="Download your Build Guide"
+              subtitle="Your complete, platform-specific implementation document."
+              done={!!buildGuide}
+              collapsed={false}
+              locked={!buildGuide && !isBuildGuideLoading}
+              lockedMessage="Complete Step 3 to generate your Build Guide"
+            >
+              {/* §2.1 Loading State */}
+              {isBuildGuideLoading && (
+                <ProcessingProgress
+                  steps={BUILD_GUIDE_LOADING_STEPS}
+                  currentStep={buildGuideLoadingStep}
+                  header="Generating your build guide…"
+                  subtext={`Tailoring instructions for ${platformLabel}`}
+                />
+              )}
+
+              {/* §2.2–2.7 Generated Output */}
+              {buildGuide && !isBuildGuideLoading && (
+                <div>
+                  {/* §2.2 Next Step Banner */}
+                  <NextStepBanner
+                    accentColor={LEVEL_ACCENT}
+                    accentDark={LEVEL_ACCENT_DARK}
+                    title="What's next"
+                    text={`Download your Build Guide and follow the steps in ${platformLabel}. Use the test checklist to verify each step.`}
+                  />
+
+                  {/* §2.3 Top Action Row */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap',
+                    opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
+                    transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    {/* View toggle */}
+                    <div style={{
+                      display: 'inline-flex', background: '#F7FAFC', borderRadius: 10,
+                      border: '1px solid #E2E8F0',
+                    }}>
+                      <button
+                        onClick={() => setBuildPlanViewMode('cards')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                          border: 'none', cursor: 'pointer', borderRadius: 10,
+                          background: buildPlanViewMode === 'cards' ? '#1A202C' : 'transparent',
+                          color: buildPlanViewMode === 'cards' ? '#FFFFFF' : '#718096',
+                        }}
+                      >
+                        <Eye size={13} /> Cards
+                      </button>
+                      <button
+                        onClick={() => setBuildPlanViewMode('markdown')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                          border: 'none', cursor: 'pointer', borderRadius: 10,
+                          background: buildPlanViewMode === 'markdown' ? '#2B6CB0' : 'transparent',
+                          color: buildPlanViewMode === 'markdown' ? '#FFFFFF' : '#718096',
+                        }}
+                      >
+                        <Code size={13} /> Markdown
+                      </button>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                      <ActionBtn
+                        icon={buildPlanCopied ? <Check size={13} /> : <Copy size={13} />}
+                        label={buildPlanCopied ? 'Copied!' : 'Copy Build Guide'}
+                        onClick={handleCopyBuildGuide}
+                        primary
+                      />
+                      <ActionBtn
+                        icon={<Download size={13} />}
+                        label="Download (.md)"
+                        onClick={() => {
+                          const blob = new Blob([fullBuildGuideMd], { type: 'text/markdown' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `build-guide-${new Date().toISOString().slice(0, 10)}.md`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      />
+                      <ActionBtn
+                        icon={<BookOpen size={13} />}
+                        label={buildPlanSaved ? 'Saved!' : 'Save to Library'}
+                        onClick={handleSaveBuildGuide}
+                        accent
+                        disabled={buildPlanSaved}
+                      />
+                    </div>
+                  </div>
+
+                  {/* §2.4 Build Guide Content */}
+                  <div style={{
+                    marginBottom: 16,
+                    opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
+                    transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    {buildPlanViewMode === 'markdown' ? (
+                      /* §2.4b Markdown View */
+                      <div style={{
+                        background: '#1A202C', borderRadius: 12, padding: '22px 24px',
+                        maxHeight: 600, overflow: 'auto',
+                      }}>
+                        <pre style={{
+                          color: '#E2E8F0', fontSize: 13, lineHeight: 1.8,
+                          fontFamily: MONO, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
+                        }}>
+                          {fullBuildGuideMd}
+                        </pre>
+                      </div>
+                    ) : (
+                      /* §2.4a Cards View */
+                      <div style={{
+                        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16,
+                        padding: '28px 32px',
+                      }}>
+                        {/* Header row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <FileText size={20} color={LEVEL_ACCENT} />
+                            <span style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT, textTransform: 'uppercase', letterSpacing: '2px', fontFamily: FONT }}>
+                              BUILD GUIDE
+                            </span>
+                          </div>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            background: '#E6FFFA', color: '#1A7A76', border: '1px solid #38B2AC44',
+                            borderRadius: 99, padding: '6px 16px', fontSize: 14, fontWeight: 700, fontFamily: FONT,
+                          }}>
+                            {platformLogo ? (
+                              <img src={platformLogo} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'contain' }} />
+                            ) : platformIcon ? (
+                              <span style={{ fontSize: 18, lineHeight: 1 }}>{platformIcon}</span>
+                            ) : null}
+                            {platformLabel}
+                          </span>
+                        </div>
+
+                        {/* Title & overview */}
+                        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 12px 0', fontFamily: FONT }}>
+                          {brief.q1_purpose.slice(0, 80)}
+                        </h2>
+                        <p style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.7, margin: '0 0 20px 0', fontFamily: FONT }}>
+                          Step-by-step instructions for building your app with {platformLabel}. Follow each step, then use the test checklist to verify.
+                        </p>
+
+                        {/* Stat pills */}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+                          <span style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
+                            {buildGuide.steps.length} steps
+                          </span>
+                          <span style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
+                            {platformLabel}
+                          </span>
+                          {buildGuide.tips.length > 0 && (
+                            <span style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
+                              {buildGuide.tips.length} pro tips
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Steps section */}
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 12 }}>
+                          {buildGuide.steps.length} steps in this build guide
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+                          {buildGuide.steps.map((step: { title: string; instruction: string }, i: number) => {
+                            const isExpanded = expandedBuildSteps.has(i);
+                            return (
+                              <div key={i}>
+                                <button
+                                  onClick={() => setExpandedBuildSteps(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(i)) next.delete(i); else next.add(i);
+                                    return next;
+                                  })}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                                    padding: '10px 14px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                                    background: isExpanded ? '#F0FFF4' : '#F7FAFC',
+                                    borderWidth: 1, borderStyle: 'solid',
+                                    borderColor: isExpanded ? '#C6F6D5' : '#E2E8F0',
+                                    borderRadius: isExpanded ? '10px 10px 0 0' : 10,
+                                    transition: 'background 0.15s, border-color 0.15s',
+                                  }}
+                                >
+                                  <div style={{
+                                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                                    background: LEVEL_ACCENT, color: '#FFFFFF',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 11, fontWeight: 700,
+                                  }}>
+                                    {i + 1}
+                                  </div>
+                                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>
+                                    {step.title}
+                                  </span>
+                                  {isExpanded ? <ChevronUp size={16} color="#718096" /> : <ChevronDown size={16} color="#718096" />}
+                                </button>
+                                {isExpanded && (
+                                  <div style={{
+                                    padding: '16px 18px', background: '#FAFFFE',
+                                    border: '1px solid #C6F6D5', borderTop: 'none',
+                                    borderRadius: '0 0 10px 10px',
+                                  }}>
+                                    <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, fontFamily: FONT }}>
+                                      {renderFormattedText(step.instruction)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* PRD Snippet — Ready to Paste */}
+                        {buildGuide.prd_snippet && (
+                          <div style={{ marginBottom: 24 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 12 }}>
+                              Your PRD — Ready to Paste
+                            </div>
+                            <div style={{
+                              background: '#1A202C', borderRadius: 10, overflow: 'hidden',
+                            }}>
+                              <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '8px 14px', background: '#2D3748', borderBottom: '1px solid #4A5568',
+                              }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT }}>
+                                  Copy this into {platformLabel}
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    await navigator.clipboard.writeText(buildGuide.prd_snippet);
+                                    setBuildPlanCopied(true);
+                                    setTimeout(() => setBuildPlanCopied(false), 2000);
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 4, background: 'none',
+                                    border: '1px solid #4A5568', borderRadius: 6, padding: '4px 10px',
+                                    fontSize: 11, fontWeight: 600, color: '#E2E8F0', cursor: 'pointer', fontFamily: FONT,
+                                  }}
+                                >
+                                  {buildPlanCopied ? <Check size={12} /> : <Copy size={12} />}
+                                  {buildPlanCopied ? 'Copied' : 'Copy'}
+                                </button>
+                              </div>
+                              <pre style={{
+                                padding: '16px 18px', margin: 0, fontSize: 12, lineHeight: 1.7,
+                                color: '#E2E8F0', fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                                maxHeight: 400, overflowY: 'auto',
+                              }}>
+                                {buildGuide.prd_snippet}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pro Tips */}
+                        {buildGuide.tips.length > 0 && (
+                          <div style={{ marginBottom: 24 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 12 }}>
+                              Pro Tips
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {buildGuide.tips.map((tip: string, i: number) => (
+                                <div key={i} style={{
+                                  display: 'flex', gap: 10, alignItems: 'flex-start',
+                                  padding: '10px 14px', background: '#F7FAFC',
+                                  border: '1px solid #E2E8F0', borderRadius: 10,
+                                }}>
+                                  <Sparkles size={14} color={LEVEL_ACCENT_DARK} style={{ flexShrink: 0, marginTop: 2 }} />
+                                  <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>{tip}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Limitations */}
+                        {buildGuide.limitations && (
+                          <div style={{
+                            fontSize: 12, color: '#A0AEC0', fontStyle: 'italic', fontFamily: FONT,
+                            marginBottom: 24,
+                          }}>
+                            {buildGuide.limitations}
+                          </div>
+                        )}
+
+                        {/* Want the full guide? CTA */}
+                        <div style={{
+                          background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10,
+                          padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                        }}>
+                          <Download size={18} color="#718096" />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>Want the full guide?</div>
+                            <div style={{ fontSize: 12, color: '#A0AEC0', fontFamily: FONT, marginTop: 2 }}>Download as a Markdown or Word document using the buttons below.</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* §2.5 Output Actions Panel */}
+                  <div style={{
+                    marginBottom: 16,
+                    opacity: buildPlanVisibleBlocks >= 2 ? 1 : 0,
+                    transform: buildPlanVisibleBlocks >= 2 ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    <OutputActionsPanel
+                      workflowName={`Build Guide: ${brief.q1_purpose.slice(0, 50)}`}
+                      fullMarkdown={fullBuildGuideMd}
+                      onSaveToArtefacts={handleSaveBuildGuide}
+                      isSaved={buildPlanSaved}
+                    />
+                  </div>
+
+                  {/* §2.6 Refinement Section */}
+                  <div style={{
+                    background: '#F7FAFC', borderRadius: 14, border: '1px solid #E2E8F0',
+                    padding: '20px 24px', marginBottom: 16,
+                    opacity: buildPlanVisibleBlocks >= 3 ? 1 : 0,
+                    transform: buildPlanVisibleBlocks >= 3 ? 'translateY(0)' : 'translateY(8px)',
+                    transition: 'opacity 0.3s, transform 0.3s',
+                  }}>
+                    <div style={{ display: 'flex', gap: 10, marginBottom: buildPlanRefineExpanded ? 20 : 0 }}>
+                      <Info size={16} color="#A0AEC0" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                          This Build Guide is a strong starting point, but every environment is different.
+                          Test each step in your actual {platformLabel} workspace, and adjust field mappings or credentials as needed.
+                        </div>
+                        {!buildPlanRefineExpanded && (
+                          <button
+                            onClick={() => setBuildPlanRefineExpanded(true)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              background: 'none', border: 'none', padding: '8px 0 0',
+                              fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK,
+                              cursor: 'pointer', fontFamily: FONT,
+                            }}
+                          >
+                            Would you like to refine this Build Guide further?
+                            <ChevronDown size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {buildPlanRefineExpanded && (
+                      <div style={{ animation: 'ppSlideDown 0.3s ease-out' }}>
+                        <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontFamily: FONT }}>
+                              Refine Your Build Guide
+                            </div>
+                            <button
+                              onClick={() => setBuildPlanRefineExpanded(false)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#A0AEC0', display: 'flex', alignItems: 'center' }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>
+                            Answer any of these to add context and get a more targeted Build Guide. You don't need to answer all.
+                          </p>
+                          {buildPlanRefinementQuestions.map((question: string, i: number) => (
+                            <div key={i} style={{ marginBottom: 16 }}>
+                              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                                {question}
+                              </label>
+                              <input
+                                type="text"
+                                value={buildPlanRefinementAnswers[i] || ''}
+                                onChange={e => setBuildPlanRefinementAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                                placeholder="Your answer…"
+                                style={{
+                                  width: '100%', border: '1px solid #E2E8F0', borderRadius: 10,
+                                  padding: '10px 14px', fontSize: 13, fontFamily: FONT, color: '#1A202C',
+                                  outline: 'none', boxSizing: 'border-box' as const, background: '#FFFFFF',
+                                  transition: 'border-color 0.15s',
+                                }}
+                                onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                                onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                              />
+                            </div>
+                          ))}
+                          <div style={{ marginBottom: 18 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>
+                              Anything else to add?
+                            </label>
+                            <textarea
+                              value={buildPlanAdditionalContext}
+                              onChange={e => setBuildPlanAdditionalContext(e.target.value)}
+                              placeholder="Any additional requirements, constraints, or context…"
+                              style={{
+                                width: '100%', minHeight: 60, resize: 'none',
+                                border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px',
+                                fontSize: 13, fontFamily: FONT, color: '#1A202C', outline: 'none',
+                                boxSizing: 'border-box' as const, background: '#FFFFFF', lineHeight: 1.5,
+                                transition: 'border-color 0.15s',
+                              }}
+                              onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                            />
+                          </div>
+                          <ActionBtn
+                            label={isBuildGuideLoading ? 'Refining…' : 'Refine Build Guide'}
+                            onClick={handleRefineBuildGuide}
+                            primary
+                            disabled={!hasBuildPlanRefinementInput || isBuildGuideLoading}
+                            iconAfter={isBuildGuideLoading
+                              ? <div style={{ width: 13, height: 13, border: '2px solid #FFFFFF40', borderTopColor: '#FFFFFF', borderRadius: '50%', animation: 'ppSpin 0.6s linear infinite' }} />
+                              : <ArrowRight size={13} />
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* §2.7 Bottom Navigation Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+                    <ActionBtn icon={<ArrowLeft size={14} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
+                    <ActionBtn icon={<RotateCcw size={14} />} label="Start Over" onClick={handleStartOver} />
+                  </div>
+                </div>
+              )}
+
+              {error && !isBuildGuideLoading && (
+                <div style={{ marginTop: 12, padding: '10px 14px', background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: 10, fontSize: 13, color: '#C53030', fontFamily: FONT }}>
+                  {error}
+                </div>
+              )}
+            </StepCard>
+          </div>
+        );
+      })()}
 
       {/* ─── Toast notification ─── */}
       {toastMessage && (
@@ -1470,27 +2039,28 @@ const ProcessingProgress: React.FC<{
               transition: 'opacity 0.3s',
             }}>
               <div style={{
-                width: 22, height: 22, borderRadius: '50%', display: 'flex',
+                width: 18, height: 18, borderRadius: '50%', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 ...(isComplete
-                  ? { background: '#38A169', color: '#FFFFFF' }
+                  ? { background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK }
                   : isActive
                     ? { border: `2px solid ${LEVEL_ACCENT}`, background: '#FFFFFF' }
-                    : { border: '2px solid #E2E8F0', background: '#FFFFFF' }),
+                    : { border: '2px solid #E2E8F0', background: '#F7FAFC' }),
               }}>
                 {isComplete ? (
-                  <Check size={11} />
+                  <Check size={10} />
                 ) : isActive ? (
                   <div style={{
                     width: 8, height: 8, borderRadius: '50%', border: `2px solid ${LEVEL_ACCENT}`,
                     borderTopColor: LEVEL_ACCENT_DARK, animation: 'ppSpin 0.8s linear infinite',
+                    boxSizing: 'border-box',
                   }} />
                 ) : null}
               </div>
               <span style={{
                 fontSize: 13, fontFamily: FONT,
                 fontWeight: isActive ? 600 : 400,
-                color: isComplete ? '#38A169' : isActive ? '#1A202C' : '#A0AEC0',
+                color: isComplete ? '#2D3748' : isActive ? '#2D3748' : '#A0AEC0',
               }}>
                 {label}
               </span>
