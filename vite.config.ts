@@ -2060,6 +2060,162 @@ RESPONSE FORMAT (JSON only, no markdown):
   };
 }
 
+function evaluateAppBuildPlanProxyPlugin(apiKey: string, model: string): Plugin {
+  const systemPrompt = `You are the OXYGY AI Build Plan Generator — an expert in creating actionable, tech-stack-specific implementation plans for AI-powered applications.
+
+You will receive:
+1. An application description and its approved design assessment
+2. The user's CHOSEN tech stack: specific hosting platform, database/auth provider, and AI model provider
+
+Your job is to generate a detailed, practical build plan that is FULLY CUSTOMISED to the user's selected technology stack. Reference their specific tools by name (e.g., "Vercel", "Supabase", "Claude Sonnet 4") — the user has explicitly chosen these.
+
+You must respond with a JSON object containing these sections:
+
+SECTION 1: BUILD PLAN SUMMARY
+A 2-3 sentence overview of the build plan that names the chosen stack and summarises the approach.
+
+SECTION 2: IMPLEMENTATION PHASES
+3-5 phases, each with:
+- phase: Phase name (e.g., "Phase 1: Foundation & Scaffold")
+- description: What happens in this phase
+- tasks: Array of 3-6 specific tasks. Be VERY specific — include actual CLI commands, file names, configuration steps referencing the chosen tools.
+- duration_estimate: Realistic time estimate
+- dependencies: Array of phases this depends on
+- tech_stack_notes: 1-2 sentences on how the chosen stack specifically applies to this phase
+
+SECTION 3: ARCHITECTURE COMPONENTS
+4-8 components, each with:
+- name, description, tools (specific to chosen stack), level_connection, priority
+These should reference the ACTUAL chosen tools, not generic alternatives.
+
+SECTION 4: RISKS & GAPS
+3-5 risks specific to the chosen stack combination. For each:
+- name, severity, description, mitigation
+
+SECTION 5: STACK INTEGRATION NOTES
+A paragraph explaining how the 3 chosen tools work together.
+
+SECTION 6: GETTING STARTED
+An array of 3-5 terminal commands to scaffold the project with the chosen stack.
+
+SECTION 7: REFINEMENT QUESTIONS
+3-5 follow-up questions to improve the build plan further.
+
+If the user selected "Not sure yet" for any stack component, provide platform-agnostic guidance for that layer and suggest 2-3 options with trade-offs.
+
+RESPONSE FORMAT (JSON only, no markdown):
+
+{
+  "build_plan_summary": "...",
+  "implementation_phases": [
+    { "phase": "...", "description": "...", "tasks": ["..."], "duration_estimate": "...", "dependencies": [], "tech_stack_notes": "..." }
+  ],
+  "architecture_components": [
+    { "name": "...", "description": "...", "tools": ["..."], "level_connection": 1, "priority": "essential" }
+  ],
+  "risks_and_gaps": {
+    "summary": "...",
+    "items": [
+      { "name": "...", "severity": "high", "description": "...", "mitigation": "..." }
+    ]
+  },
+  "stack_integration_notes": "...",
+  "getting_started": ["npx create-next-app@latest ...", "..."],
+  "refinement_questions": ["...", "..."]
+}`;
+
+  return {
+    name: 'evaluate-app-build-plan-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/evaluate-app-build-plan', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { appDescription, problemAndUsers, architecture_summary, design_score_summary, matrix_quadrant, tech_stack, refinement_context } = JSON.parse(body);
+
+            const baseParts = [
+              `APP DESCRIPTION:\n${appDescription || 'Not provided'}`,
+              `PROBLEM & USERS:\n${problemAndUsers || 'Not provided'}`,
+              `DESIGN SCORE SUMMARY:\n${design_score_summary || 'Not provided'}`,
+              `ARCHITECTURE OVERVIEW:\n${architecture_summary || 'Not provided'}`,
+              `MATRIX QUADRANT: ${matrix_quadrant || 'Not determined'}`,
+              `\nSELECTED TECH STACK:`,
+              `- Hosting: ${tech_stack?.hosting || 'Not selected'}`,
+              `- Database & Auth: ${tech_stack?.database_auth || 'Not selected'}`,
+              `- AI Engine: ${tech_stack?.ai_engine || 'Not selected'}`,
+            ];
+            if (refinement_context && typeof refinement_context === 'string') {
+              baseParts.push(`\n${refinement_context}`);
+            }
+            const userMessage = baseParts.join('\n');
+
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'evaluate-app-build-plan');
+
+            if (!geminiResponse.ok) {
+              const errText = await geminiResponse.text();
+              console.error('Gemini API error (evaluate-app-build-plan):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await geminiResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+
+            let parsed;
+            try {
+              const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+              parsed = JSON.parse(cleaned);
+            } catch {
+              console.error('Failed to parse Gemini response (evaluate-app-build-plan):', text);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Failed to parse AI response', retryable: true }));
+              return;
+            }
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (evaluate-app-build-plan):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 function n8nGenerateProxyPlugin(apiKey: string): Plugin {
   // Lazy-load the system prompt from the constants file
   let systemPrompt: string | null = null;
@@ -2416,6 +2572,7 @@ export default defineConfig(({ mode }) => {
       prdProxyPlugin(env.OpenRouter_API, geminiModel),
       appBuildGuideProxyPlugin(env.OpenRouter_API, geminiModel),
       insightAnalysisProxyPlugin(env.OpenRouter_API, geminiModel),
+      evaluateAppBuildPlanProxyPlugin(env.OpenRouter_API, geminiModel),
       evaluateAppProxyPlugin(env.OpenRouter_API, geminiModel),
       n8nGenerateProxyPlugin(env.OpenRouter_API),
       buildGuideProxyPlugin(env.OpenRouter_API),

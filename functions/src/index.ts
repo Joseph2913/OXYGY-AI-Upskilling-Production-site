@@ -984,7 +984,7 @@ const EVALUATE_APP_SYSTEM = `You are the OXYGY AI Application Evaluator — an e
 
 You will receive a description of an AI application the user wants to build, including what it does, who it serves, and what data it uses.
 
-You must respond with a JSON object containing exactly 4 sections:
+You must respond with a JSON object containing exactly 5 sections:
 
 SECTION 1: DESIGN SCORE
 Evaluate the application design across 5 criteria:
@@ -998,7 +998,14 @@ Calculate an overall score (weighted average — User Clarity 25%, Data Architec
 
 Provide a verdict, a rationale paragraph explaining the score.
 
-SECTION 2: ARCHITECTURE & COMPONENTS
+SECTION 2: MATRIX PLACEMENT
+Position the application on a 2D strategic matrix:
+- technical_complexity (0-100): Derived from how complex the build is. Higher = more complex. Consider: number of integrations, data pipeline complexity, real-time requirements, security needs. Approximate formula: 100 - ((technical_feasibility * 0.6 + scalability * 0.4) * 0.8 + 10). Clamp to 10-95 range.
+- business_impact (0-100): Derived from how much value this delivers. Higher = more impact. Consider: user base size, problem urgency, revenue potential, competitive advantage. Approximate formula: (user_clarity * 0.5 + personalisation * 0.3 + data_architecture * 0.2). Clamp to 10-95 range.
+- quadrant: One of "Quick Win" (complexity<50, impact>=50), "Strategic Investment" (complexity>=50, impact>=50), "Nice to Have" (complexity<50, impact<50), "Rethink" (complexity>=50, impact<50)
+- quadrant_description: One sentence explaining WHY this app falls in this quadrant, specific to the user's app.
+
+SECTION 3: ARCHITECTURE & COMPONENTS
 Break the application into its core components. For each component, provide:
 - name: Component name (e.g., "Authentication Layer", "Content Engine", "Analytics Dashboard")
 - description: What this component does and why it's needed
@@ -1007,16 +1014,6 @@ Break the application into its core components. For each component, provide:
 - priority: "essential" | "recommended" | "optional"
 
 Include 4-8 components. Always include authentication, core AI logic, data storage, and user interface.
-
-SECTION 3: IMPLEMENTATION PLAN
-Break the build into phased steps. For each step:
-- phase: Phase name (e.g., "Phase 1: Foundation & Scaffold")
-- description: What happens in this phase
-- tasks: Array of specific tasks (3-6 per phase)
-- duration_estimate: Realistic time estimate (e.g., "1-2 weeks")
-- dependencies: Array of phases this depends on (empty array for Phase 1)
-
-Include 3-5 phases covering the full build from scaffold to deployment.
 
 SECTION 4: RISKS & GAPS
 Identify 3-5 potential risks or gaps in the design. For each:
@@ -1027,7 +1024,7 @@ Identify 3-5 potential risks or gaps in the design. For each:
 
 Include at least one risk from each severity level when possible.
 
-Provide a summary sentence for each of sections 2, 3, and 4.
+Provide a summary sentence for sections 3 and 4.
 
 ABSOLUTE RULE — TOOL AND MODEL AGNOSTIC:
 Never mention specific AI providers (OpenAI, Anthropic, Google) or models (GPT-4, Claude, Gemini) in the output. Use generic terms: "AI model", "LLM", "your chosen AI platform", "the AI model approved by your organisation".
@@ -1050,16 +1047,16 @@ RESPONSE FORMAT (JSON only, no markdown):
       "scalability": { "score": 60, "assessment": "..." }
     }
   },
+  "matrix_placement": {
+    "technical_complexity": 62,
+    "business_impact": 78,
+    "quadrant": "Strategic Investment",
+    "quadrant_description": "Your learning platform has high user value but requires complex data pipelines and real-time personalisation — a worthy investment with careful phasing."
+  },
   "architecture": {
     "summary": "Your application requires 6 core components...",
     "components": [
       { "name": "...", "description": "...", "tools": ["..."], "level_connection": 1, "priority": "essential" }
-    ]
-  },
-  "implementation_plan": {
-    "summary": "A 4-phase build over approximately 6-8 weeks...",
-    "steps": [
-      { "phase": "...", "description": "...", "tasks": ["..."], "duration_estimate": "...", "dependencies": [] }
     ]
   },
   "risks_and_gaps": {
@@ -1072,6 +1069,70 @@ RESPONSE FORMAT (JSON only, no markdown):
     "Specific question about the user's app...",
     "Another specific question..."
   ]
+}`;
+
+const EVALUATE_APP_BUILD_PLAN_SYSTEM = `You are the OXYGY AI Build Plan Generator — an expert in creating actionable, tech-stack-specific implementation plans for AI-powered applications.
+
+You will receive:
+1. An application description and its approved design assessment
+2. The user's CHOSEN tech stack: specific hosting platform, database/auth provider, and AI model provider
+
+Your job is to generate a detailed, practical build plan that is FULLY CUSTOMISED to the user's selected technology stack. Reference their specific tools by name (e.g., "Vercel", "Supabase", "Claude Sonnet 4") — the user has explicitly chosen these.
+
+You must respond with a JSON object containing these sections:
+
+SECTION 1: BUILD PLAN SUMMARY
+A 2-3 sentence overview of the build plan that names the chosen stack and summarises the approach.
+
+SECTION 2: IMPLEMENTATION PHASES
+3-5 phases, each with:
+- phase: Phase name (e.g., "Phase 1: Foundation & Scaffold")
+- description: What happens in this phase
+- tasks: Array of 3-6 specific tasks. Be VERY specific — include actual CLI commands, file names, configuration steps referencing the chosen tools.
+- duration_estimate: Realistic time estimate
+- dependencies: Array of phases this depends on
+- tech_stack_notes: 1-2 sentences on how the chosen stack specifically applies to this phase (e.g., "Use \`npx create-next-app\` with Vercel deployment, configure Supabase client in \`lib/supabase.ts\`")
+
+SECTION 3: ARCHITECTURE COMPONENTS
+4-8 components, each with:
+- name, description, tools (specific to chosen stack), level_connection, priority
+These should reference the ACTUAL chosen tools, not generic alternatives.
+
+SECTION 4: RISKS & GAPS
+3-5 risks specific to the chosen stack combination. For each:
+- name, severity, description, mitigation
+Include at least one risk about how the chosen tools interact with each other.
+
+SECTION 5: STACK INTEGRATION NOTES
+A paragraph explaining how the 3 chosen tools (hosting, database, AI engine) work together — what connects them, common patterns, and any gotchas specific to this combination.
+
+SECTION 6: GETTING STARTED
+An array of 3-5 terminal commands the user should run first to scaffold their project with the chosen stack. Be specific (e.g., "npx create-next-app@latest my-app --typescript", "npx supabase init", etc.).
+
+SECTION 7: REFINEMENT QUESTIONS
+3-5 follow-up questions to improve the build plan further.
+
+If the user selected "Not sure yet" for any stack component, provide platform-agnostic guidance for that layer and suggest 2-3 options with trade-offs.
+
+RESPONSE FORMAT (JSON only, no markdown):
+
+{
+  "build_plan_summary": "...",
+  "implementation_phases": [
+    { "phase": "...", "description": "...", "tasks": ["..."], "duration_estimate": "...", "dependencies": [], "tech_stack_notes": "..." }
+  ],
+  "architecture_components": [
+    { "name": "...", "description": "...", "tools": ["..."], "level_connection": 1, "priority": "essential" }
+  ],
+  "risks_and_gaps": {
+    "summary": "...",
+    "items": [
+      { "name": "...", "severity": "high", "description": "...", "mitigation": "..." }
+    ]
+  },
+  "stack_integration_notes": "...",
+  "getting_started": ["npx create-next-app@latest ...", "..."],
+  "refinement_questions": ["...", "..."]
 }`;
 
 export const evaluateapp = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
@@ -1096,6 +1157,43 @@ export const evaluateapp = onRequest({ secrets: [openRouterApiKey] }, async (req
     res.status(200).json(result.data);
   } catch (err) {
     console.error("evaluate-app error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 10b. EVALUATE APP BUILD PLAN (Level 5 — Step 3)
+// ═══════════════════════════════════════════════════════════════
+
+export const evaluateappbuildplan = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { appDescription, problemAndUsers, architecture_summary, design_score_summary, matrix_quadrant, tech_stack, refinement_context } = req.body;
+
+    const baseParts = [
+      `APP DESCRIPTION:\n${appDescription || "Not provided"}`,
+      `PROBLEM & USERS:\n${problemAndUsers || "Not provided"}`,
+      `DESIGN SCORE SUMMARY:\n${design_score_summary || "Not provided"}`,
+      `ARCHITECTURE OVERVIEW:\n${architecture_summary || "Not provided"}`,
+      `MATRIX QUADRANT: ${matrix_quadrant || "Not determined"}`,
+      `\nSELECTED TECH STACK:`,
+      `- Hosting: ${tech_stack?.hosting || "Not selected"}`,
+      `- Database & Auth: ${tech_stack?.database_auth || "Not selected"}`,
+      `- AI Engine: ${tech_stack?.ai_engine || "Not selected"}`,
+    ];
+    if (refinement_context && typeof refinement_context === "string") {
+      baseParts.push(`\n${refinement_context}`);
+    }
+    const userMessage = baseParts.join("\n");
+
+    const result = await callGemini({ apiKey, model, systemPrompt: EVALUATE_APP_BUILD_PLAN_SYSTEM, userMessage, label: "evaluate-app-build-plan" });
+    if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
+    res.status(200).json(result.data);
+  } catch (err) {
+    console.error("evaluate-app-build-plan error:", err);
     res.status(500).json({ error: "Internal server error", retryable: true });
   }
 });

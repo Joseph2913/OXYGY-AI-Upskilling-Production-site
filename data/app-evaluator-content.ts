@@ -79,6 +79,87 @@ export const EXAMPLE_APPS = [
   },
 ];
 
+/* ─── Tech Stack Options (Step 3) ─── */
+
+export interface TechStackOption {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+export const TECH_STACK_HOSTING: TechStackOption[] = [
+  { id: 'vercel', label: 'Vercel', icon: '▲', description: 'React/Next.js, zero-config deploys' },
+  { id: 'firebase', label: 'Firebase Hosting', icon: '🔥', description: 'Google ecosystem, static + Cloud Functions' },
+  { id: 'netlify', label: 'Netlify', icon: '◆', description: 'JAMstack, edge functions, forms' },
+  { id: 'aws-amplify', label: 'AWS Amplify', icon: '☁️', description: 'Enterprise AWS, full-stack hosting' },
+  { id: 'railway', label: 'Railway', icon: '🚂', description: 'Full-stack containers, easy scaling' },
+  { id: 'unsure-hosting', label: 'Not sure yet', icon: '🤷', description: 'Platform-agnostic guidance' },
+];
+
+export const TECH_STACK_DATABASE: TechStackOption[] = [
+  { id: 'supabase', label: 'Supabase', icon: '⚡', description: 'Postgres + Auth + Realtime + Storage' },
+  { id: 'firebase-db', label: 'Firebase', icon: '🔥', description: 'Firestore + Firebase Auth' },
+  { id: 'planetscale', label: 'PlanetScale', icon: '🪐', description: 'Serverless MySQL, branching workflow' },
+  { id: 'mongodb', label: 'MongoDB Atlas', icon: '🍃', description: 'Document database, flexible schemas' },
+  { id: 'neon', label: 'Neon', icon: '💚', description: 'Serverless Postgres, branching' },
+  { id: 'unsure-db', label: 'Not sure yet', icon: '🤷', description: 'Database-agnostic guidance' },
+];
+
+export const TECH_STACK_AI_ENGINE: TechStackOption[] = [
+  { id: 'anthropic', label: 'Anthropic Claude', icon: '🟠', description: 'Claude Sonnet 4, Claude Haiku — strong reasoning' },
+  { id: 'openai', label: 'OpenAI', icon: '🟢', description: 'GPT-4o, GPT-4o-mini — broad ecosystem' },
+  { id: 'google', label: 'Google Gemini', icon: '🔵', description: 'Gemini 2.0 Flash, Gemini Pro — multimodal' },
+  { id: 'open-source', label: 'Open Source', icon: '🟣', description: 'Llama, Mistral via Ollama or Together AI' },
+  { id: 'hybrid', label: 'Multiple / Hybrid', icon: '🔀', description: 'Mix models by task (e.g., fast + powerful)' },
+  { id: 'unsure-ai', label: 'Not sure yet', icon: '🤷', description: 'Model-agnostic guidance' },
+];
+
+/* ─── Matrix Quadrant Definitions ─── */
+
+export const MATRIX_QUADRANTS = {
+  'Quick Win': {
+    color: '#F0FFF4', border: '#C6F6D5', textColor: '#276749',
+    description: 'Low complexity with high business impact — ship it fast and iterate.',
+  },
+  'Strategic Investment': {
+    color: '#EBF4FF', border: '#BEE3F8', textColor: '#2B6CB0',
+    description: 'High complexity with high business impact — worth the investment, plan carefully.',
+  },
+  'Nice to Have': {
+    color: '#F7FAFC', border: '#E2E8F0', textColor: '#718096',
+    description: 'Low complexity, lower business impact — a good learning project or internal tool.',
+  },
+  'Rethink': {
+    color: '#FFFAF0', border: '#FEEBC8', textColor: '#C05621',
+    description: 'High complexity with lower business impact — consider simplifying the scope.',
+  },
+};
+
+/* ─── Build Plan Loading Steps (§9.5) ─── */
+
+export const BUILD_PLAN_LOADING_STEPS = [
+  'Analysing your tech stack choices…',
+  'Mapping architecture to selected tools…',
+  'Building implementation phases…',
+  'Generating setup commands…',
+  'Identifying stack-specific risks…',
+  'Creating integration guide…',
+  'Finalising your build plan…',
+];
+
+export const BUILD_PLAN_REFINE_LOADING_STEPS = [
+  'Processing your refinement context…',
+  'Re-evaluating architecture fit…',
+  'Updating implementation phases…',
+  'Revising stack integration…',
+  'Reassessing risks…',
+  'Generating deeper questions…',
+  'Finalising refined build plan…',
+];
+
+export const BUILD_PLAN_STEP_DELAYS = [800, 1500, 3000, 3500, 4000, 4500, -1];
+
 /* ─── Priority badge styling ─── */
 export function getPriorityStyle(priority: string) {
   switch (priority) {

@@ -295,8 +295,16 @@ export interface RiskItem {
   mitigation: string;
 }
 
+export interface MatrixPlacement {
+  technical_complexity: number;  // 0-100
+  business_impact: number;       // 0-100
+  quadrant: 'Quick Win' | 'Strategic Investment' | 'Nice to Have' | 'Rethink';
+  quadrant_description: string;
+}
+
 export interface AppEvaluatorResult {
   design_score: DesignScore;
+  matrix_placement: MatrixPlacement;
   architecture: {
     summary: string;
     components: ArchitectureComponent[];
@@ -309,6 +317,43 @@ export interface AppEvaluatorResult {
     summary: string;
     items: RiskItem[];
   };
+  refinement_questions?: string[];
+}
+
+// App Evaluator — Build Plan (Step 3)
+export interface AppBuildPlanInputs {
+  appDescription: string;
+  problemAndUsers: string;
+  architecture_summary: string;
+  design_score_summary: string;
+  matrix_quadrant: string;
+  tech_stack: {
+    hosting: string;
+    database_auth: string;
+    ai_engine: string;
+  };
+  refinement_context?: string;
+}
+
+export interface BuildPlanPhase {
+  phase: string;
+  description: string;
+  tasks: string[];
+  duration_estimate: string;
+  dependencies: string[];
+  tech_stack_notes: string;
+}
+
+export interface AppBuildPlanResult {
+  build_plan_summary: string;
+  implementation_phases: BuildPlanPhase[];
+  architecture_components: ArchitectureComponent[];
+  risks_and_gaps: {
+    summary: string;
+    items: RiskItem[];
+  };
+  stack_integration_notes: string;
+  getting_started: string[];
   refinement_questions?: string[];
 }
 
