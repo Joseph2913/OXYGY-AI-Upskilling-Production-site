@@ -76,7 +76,7 @@ const AppPromptPlayground: React.FC = () => {
   const outputRef = useRef<HTMLDivElement>(null);
 
   /* ── Derived step state ── */
-  const step1Done = result !== null;
+  const step1Done = result !== null || isLoading;
   const step2Done = false; // output step is never "done" per se
 
   /* ── Draft persistence ── */

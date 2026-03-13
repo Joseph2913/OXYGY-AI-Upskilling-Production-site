@@ -108,74 +108,98 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
   );
 };
 
-/* ─── ProcessingProgress (§9.5) ─── */
+/* ─── ProcessingProgress (matches L1 Prompt Playground gold standard) ─── */
 
 const ProcessingProgress: React.FC<{
   steps: string[];
   currentStep: number;
   header: string;
   subtext: string;
-}> = ({ steps, currentStep, header, subtext }) => (
-  <div style={{
-    background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
-    padding: '28px 32px',
-  }}>
-    <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
-      {header}
-    </div>
-    <div style={{ fontSize: 12, color: '#A0AEC0', marginBottom: 20, fontFamily: FONT }}>
-      {subtext}
-    </div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-      {steps.map((label, i) => {
-        const stepNum = i + 1;
-        const isComplete = stepNum < currentStep;
-        const isActive = stepNum === currentStep;
-        return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-              background: isComplete ? LEVEL_ACCENT : 'transparent',
-              border: isActive
-                ? `2px solid ${LEVEL_ACCENT}`
-                : isComplete ? 'none' : '2px solid #E2E8F0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              position: 'relative',
+}> = ({ steps, currentStep, header, subtext }) => {
+  const completedSteps = Math.min(currentStep, steps.length);
+  const progressPercent = (completedSteps / steps.length) * 100;
+
+  return (
+    <div style={{
+      background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+      padding: '28px 32px',
+    }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', marginBottom: 4, fontFamily: FONT }}>
+        {header}
+      </div>
+      <div style={{ fontSize: 12, color: '#A0AEC0', marginBottom: 24, fontFamily: FONT }}>
+        {subtext}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {steps.map((label, i) => {
+          const stepNum = i + 1;
+          const isComplete = stepNum <= completedSteps;
+          const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
+          const isPending = !isComplete && !isActive;
+
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'opacity 0.2s',
+              opacity: isPending ? 0.5 : 1,
             }}>
-              {isComplete && <Check size={10} color={LEVEL_ACCENT_DARK} />}
-              {isActive && (
-                <div style={{
-                  width: 10, height: 10, borderRadius: '50%',
-                  border: `2px solid ${LEVEL_ACCENT_DARK}`, borderTopColor: 'transparent',
-                  animation: 'ppSpin 0.7s linear infinite',
-                }} />
-              )}
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
+                border: isActive
+                  ? `2px solid ${LEVEL_ACCENT}`
+                  : isComplete ? 'none' : '2px solid #E2E8F0',
+                position: 'relative',
+              }}>
+                {isComplete && (
+                  <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />
+                )}
+                {isActive && (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: '2px solid transparent',
+                    borderTopColor: LEVEL_ACCENT_DARK,
+                    animation: 'ppSpin 0.7s linear infinite',
+                    position: 'absolute', top: -2, left: -2,
+                  }} />
+                )}
+              </div>
+              <div style={{
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                color: isPending ? '#A0AEC0' : '#2D3748',
+                fontFamily: FONT,
+                transition: 'color 0.2s, font-weight 0.2s',
+              }}>
+                {label}
+              </div>
             </div>
-            <span style={{
-              fontSize: 13, fontFamily: FONT,
-              color: isActive || isComplete ? '#2D3748' : '#A0AEC0',
-              fontWeight: isActive ? 600 : 400,
-            }}>
-              {label}
-            </span>
-            {isComplete && <Check size={12} color={LEVEL_ACCENT_DARK} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
-          </div>
-        );
-      })}
-    </div>
-    {/* Progress bar */}
-    <div style={{ height: 4, borderRadius: 2, background: '#EDF2F7', overflow: 'hidden' }}>
+          );
+        })}
+      </div>
+      {/* Progress bar */}
       <div style={{
-        height: '100%', borderRadius: 2, background: LEVEL_ACCENT,
-        width: `${(Math.max(0, currentStep - 1) / steps.length) * 100}%`,
-        transition: 'width 0.3s ease',
-      }} />
+        width: '100%', height: 4, borderRadius: 2,
+        background: '#EDF2F7', overflow: 'hidden',
+      }}>
+        <div style={{
+          height: '100%', borderRadius: 2,
+          background: LEVEL_ACCENT,
+          width: `${progressPercent}%`,
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+      <div style={{
+        fontSize: 11, color: '#A0AEC0',
+        textAlign: 'right', marginTop: 6,
+        fontFamily: FONT,
+      }}>
+        {completedSteps} of {steps.length}
+      </div>
     </div>
-    <div style={{ fontSize: 11, color: '#A0AEC0', textAlign: 'right', marginTop: 4, fontFamily: FONT }}>
-      {Math.min(currentStep, steps.length)} of {steps.length}
-    </div>
-  </div>
-);
+  );
+};
 
 /* ─── Main Component ─── */
 
@@ -400,7 +424,7 @@ const AppAppEvaluator: React.FC = () => {
       lines.push('');
       lines.push(comp.description);
       lines.push('');
-      lines.push(`**Tools:** ${comp.tools.join(', ')}`);
+      lines.push(`**Tools:** ${(comp.tools || []).join(', ')}`);
       lines.push(`**Level Connection:** Level ${comp.level_connection}`);
       lines.push('');
     }
@@ -413,16 +437,16 @@ const AppAppEvaluator: React.FC = () => {
     lines.push('');
 
     for (const step of r.implementation_plan.steps) {
-      lines.push(`### ${step.phase} (${step.duration_estimate})`);
+      lines.push(`### ${step.phase} (${step.duration_estimate || 'TBD'})`);
       lines.push('');
       lines.push(step.description);
       lines.push('');
-      for (const task of step.tasks) {
+      for (const task of (step.tasks || [])) {
         lines.push(`- ${task}`);
       }
-      if (step.dependencies.length > 0) {
+      if ((step.dependencies || []).length > 0) {
         lines.push('');
-        lines.push(`**Dependencies:** ${step.dependencies.join(', ')}`);
+        lines.push(`**Dependencies:** ${(step.dependencies || []).join(', ')}`);
       }
       lines.push('');
     }
@@ -501,7 +525,7 @@ const AppAppEvaluator: React.FC = () => {
   };
 
   // Step indicators
-  const step1Done = appDescription.trim().length > 0 && result !== null;
+  const step1Done = appDescription.trim().length > 0 && (result !== null || isLoading);
 
   /* ─── Build section-specific copy content ─── */
   const getSectionCopyContent = (key: string): string => {
@@ -856,7 +880,7 @@ const AppAppEvaluator: React.FC = () => {
                     </div>
                     {/* Criteria bars */}
                     <div style={{ marginBottom: 16 }}>
-                      {(Object.entries(result.design_score.criteria) as [string, DesignScoreCriteria][]).map(([key, val]) => (
+                      {(Object.entries(result.design_score.criteria || {}) as [string, DesignScoreCriteria][]).map(([key, val]) => (
                         <div key={key} style={{
                           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
                           borderBottom: '1px solid #F7FAFC',
@@ -950,7 +974,7 @@ const AppAppEvaluator: React.FC = () => {
                                 {comp.description}
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                                {comp.tools.map((tool: string, i: number) => (
+                                {(comp.tools || []).map((tool: string, i: number) => (
                                   <span key={i} style={{
                                     fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK,
                                     background: `${LEVEL_ACCENT}30`, borderRadius: 8, padding: '3px 8px',
@@ -1035,15 +1059,15 @@ const AppAppEvaluator: React.FC = () => {
                               {step.description}
                             </div>
                             <div style={{ paddingLeft: 4 }}>
-                              {step.tasks.map((task: string, i: number) => (
+                              {(step.tasks || []).map((task: string, i: number) => (
                                 <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, display: 'flex', gap: 6, marginBottom: 3, fontFamily: FONT }}>
                                   <span style={{ color: LEVEL_ACCENT_DARK, flexShrink: 0 }}>&bull;</span>{task}
                                 </div>
                               ))}
                             </div>
-                            {step.dependencies.length > 0 && (
+                            {(step.dependencies || []).length > 0 && (
                               <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 6, fontFamily: FONT }}>
-                                Depends on: {step.dependencies.join(', ')}
+                                Depends on: {(step.dependencies || []).join(', ')}
                               </div>
                             )}
                           </div>

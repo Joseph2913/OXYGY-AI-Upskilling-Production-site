@@ -21,6 +21,140 @@ const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 const LEVEL_ACCENT = '#F7E8A4';
 const LEVEL_ACCENT_DARK = '#8A6A00';
 
+/* ─── Copyable code block for build guide steps ─── */
+const AgentBuildGuideCodeBlock: React.FC<{ code: string }> = ({ code }) => {
+  const [copied, setCopied] = React.useState(false);
+  const handleCopy = React.useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [code]);
+
+  return (
+    <div style={{ position: 'relative', margin: '8px 0' }}>
+      <button
+        onClick={handleCopy}
+        style={{
+          position: 'absolute', top: 8, right: 8,
+          background: copied ? '#38B2AC' : 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: 6, padding: '4px 8px',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+          transition: 'all 0.15s ease',
+        }}
+        title="Copy code"
+      >
+        {copied ? <Check size={13} color="#fff" /> : <Copy size={13} color="#A0AEC0" />}
+        <span style={{ fontSize: 11, color: copied ? '#fff' : '#A0AEC0', fontFamily: FONT }}>
+          {copied ? 'Copied' : 'Copy'}
+        </span>
+      </button>
+      <pre style={{
+        background: '#1A202C', color: '#E2E8F0', padding: '14px 18px',
+        borderRadius: 8, fontSize: 12, fontFamily: MONO,
+        overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordWrap: 'break-word',
+        margin: 0,
+      }}>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
+
+/* ─── Render inline markdown: bold, italic, code, links ─── */
+function renderAgentInlineParts(line: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = regex.exec(line)) !== null) {
+    if (match.index > lastIndex) parts.push(line.slice(lastIndex, match.index));
+    if (match[2]) {
+      parts.push(<strong key={key++} style={{ fontWeight: 700, color: '#1A202C' }}>{match[2]}</strong>);
+    } else if (match[3]) {
+      parts.push(<em key={key++} style={{ fontStyle: 'italic' }}>{match[3]}</em>);
+    } else if (match[4]) {
+      parts.push(
+        <code key={key++} style={{
+          background: '#EDF2F7', padding: '1px 6px', borderRadius: 4,
+          fontSize: '0.92em', fontFamily: MONO, color: '#8A6A00',
+        }}>{match[4]}</code>
+      );
+    } else if (match[5] && match[6]) {
+      parts.push(
+        <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" style={{
+          color: '#2B6CB0', textDecoration: 'underline', fontWeight: 600,
+        }}>{match[5]}</a>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < line.length) parts.push(line.slice(lastIndex));
+  return parts;
+}
+
+/* ─── Rich markdown renderer for build guide steps ─── */
+function renderAgentFormattedText(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let key = 0;
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code blocks (``` delimited)
+    if (line.trimStart().startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing ```
+      elements.push(<AgentBuildGuideCodeBlock key={key++} code={codeLines.join('\n')} />);
+      continue;
+    }
+
+    // Heuristic: unfenced JSON blocks
+    if (line.trim() === '{') {
+      const codeLines: string[] = [line];
+      let depth = 1;
+      let j = i + 1;
+      while (j < lines.length && depth > 0) {
+        codeLines.push(lines[j]);
+        const trimmed = lines[j].trim();
+        for (const ch of trimmed) {
+          if (ch === '{') depth++;
+          else if (ch === '}') depth--;
+        }
+        j++;
+      }
+      if (depth === 0) {
+        elements.push(<AgentBuildGuideCodeBlock key={key++} code={codeLines.join('\n')} />);
+        i = j;
+        continue;
+      }
+    }
+
+    // Empty lines / dividers
+    if (line.trim() === '' || line.trim() === '---') { i++; continue; }
+
+    // Regular paragraph with inline formatting
+    elements.push(
+      <p key={key++} style={{ margin: '4px 0', lineHeight: 1.7, fontSize: 13, color: '#4A5568', fontFamily: FONT }}>
+        {renderAgentInlineParts(line)}
+      </p>
+    );
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
 /* ── Loading progress steps (per PRD §9.5) ── */
 const INITIAL_LOADING_STEPS = [
   'Evaluating readiness…',
@@ -1712,12 +1846,9 @@ const AppAgentBuilder: React.FC = () => {
                                         borderTop: 'none',
                                         borderRadius: '0 0 10px 10px',
                                       }}>
-                                        <p style={{
-                                          fontSize: 13, color: '#4A5568', lineHeight: 1.7,
-                                          margin: 0, fontFamily: FONT, whiteSpace: 'pre-wrap',
-                                        }}>
-                                          {step.instruction}
-                                        </p>
+                                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, fontFamily: FONT }}>
+                                          {renderAgentFormattedText(step.instruction)}
+                                        </div>
                                       </div>
                                     )}
                                   </div>

@@ -33,6 +33,7 @@ All step cards are **always rendered on the page**, even before the user reaches
 Each step collapses to its "Done ✓" state **immediately** when its completion condition is met — not when a later step also completes. This ensures exactly one step is expanded at any time, keeping the user focused on their current task.
 
 - `collapsed={stepDone}` — collapse is tied solely to the step's own done state, never gated on downstream steps (e.g., never `collapsed={step1Done && step2Done}`)
+- **Step 1 must collapse immediately when Generate is clicked**, not when results arrive. The `step1Done` condition must include the loading state: `const step1Done = result !== null || isLoading;` (or equivalent). This ensures the input card closes and the user sees the loading progress in Step 2 without delay. **Gold standard:** Level 1 (Prompt Playground) and Level 2 (Agent Builder) — reference their implementations.
 - Loading indicators (e.g., `ProcessingProgress`) belong **inside the next step's children**, not the step that triggered the action. When the user clicks "Generate", Step 1 collapses and Step 2 shows the loading state.
 - The final output step of each tool is never collapsed (`collapsed={false}`) since there is no subsequent step to focus on.
 
@@ -877,6 +878,29 @@ interface ActionBtnProps {
 ### 7.1 Font
 
 All tool pages use `'DM Sans', sans-serif` as the base font. Monospace code blocks use `'JetBrains Mono', 'Fira Code', monospace`.
+
+### 7.1a Copyable Text Blocks in Build Guide Steps (Mandatory)
+
+**All** build guide / setup guide step instructions across every tool must render text using a rich markdown renderer that converts fenced code blocks (` ``` `), unfenced JSON blocks, and code-like expressions into **dark copyable blocks with a Copy button** — never as plain text. This applies to every tool that has a build guide output (Agent Builder Step 4, Dashboard Designer Step 4, Workflow Canvas Step 4, etc.).
+
+**Required rendering rules for step instruction text:**
+
+| Pattern | Rendered as |
+|---------|-------------|
+| ` ``` ` fenced code blocks | `CodeBlockWithCopy` — dark block (`#1A202C`) with Copy button |
+| `{ ... }` unfenced JSON | `CodeBlockWithCopy` (auto-detected by brace matching) |
+| `**bold**` | `<strong>` with `fontWeight: 700`, `color: #1A202C` |
+| `*italic*` | `<em>` |
+| `` `inline code` `` | Inline code span with `background: #EDF2F7`, monospace font, level accent color |
+| `[text](url)` | Clickable link, `color: #2B6CB0`, `fontWeight: 600` |
+| Regular text | Paragraph, `fontSize: 13`, `color: #4A5568`, `lineHeight: 1.7` |
+
+**CodeBlockWithCopy spec** (same across all tools):
+- Container: `position: relative`, `margin: 8px 0`
+- Code block: `background: #1A202C`, `color: #E2E8F0`, `padding: 14px 18px`, `borderRadius: 8`, `fontSize: 12`, monospace font
+- Copy button: `position: absolute`, `top: 8`, `right: 8`, idle `background: rgba(255,255,255,0.1)`, success `background: #38B2AC` with "Copied" label for 2s
+
+**Never** render step instructions as plain `<p>` text with `whiteSpace: pre-wrap`. Always use the rich renderer so that system prompts, JSON schemas, configuration snippets, and code examples are presented as copyable blocks the user can directly paste into their platform.
 
 ### 7.2 Type Scale
 

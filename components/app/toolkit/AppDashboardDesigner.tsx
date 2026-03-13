@@ -154,62 +154,144 @@ function buildFullPRD(result: NewPRDResult): string {
   return [`# ${result.prd_content}`, '', ...sectionBlocks].join('\n\n---\n\n');
 }
 
-/* ─── Simple inline markdown renderer for build guide steps ─── */
+/* ─── Copyable code block for build guide steps ─── */
+const BuildGuideCodeBlock: React.FC<{ code: string }> = ({ code }) => {
+  const [copied, setCopied] = React.useState(false);
+  const handleCopy = React.useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [code]);
+
+  return (
+    <div style={{ position: 'relative', margin: '8px 0' }}>
+      <button
+        onClick={handleCopy}
+        style={{
+          position: 'absolute', top: 8, right: 8,
+          background: copied ? '#38B2AC' : 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: 6, padding: '4px 8px',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+          transition: 'all 0.15s ease',
+        }}
+        title="Copy code"
+      >
+        {copied ? <Check size={13} color="#fff" /> : <Copy size={13} color="#A0AEC0" />}
+        <span style={{ fontSize: 11, color: copied ? '#fff' : '#A0AEC0', fontFamily: FONT }}>
+          {copied ? 'Copied' : 'Copy'}
+        </span>
+      </button>
+      <pre style={{
+        background: '#1A202C', color: '#E2E8F0', padding: '14px 18px',
+        borderRadius: 8, fontSize: 12, fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+        overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordWrap: 'break-word',
+        margin: 0,
+      }}>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+/* ─── Render inline markdown: bold, italic, code, links ─── */
+function renderInlineParts(line: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = regex.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(line.slice(lastIndex, match.index));
+    }
+    if (match[2]) {
+      parts.push(<strong key={key++} style={{ fontWeight: 700, color: '#1A202C' }}>{match[2]}</strong>);
+    } else if (match[3]) {
+      parts.push(<em key={key++} style={{ fontStyle: 'italic' }}>{match[3]}</em>);
+    } else if (match[4]) {
+      parts.push(
+        <code key={key++} style={{
+          background: '#EDF2F7', padding: '1px 6px', borderRadius: 4,
+          fontSize: '0.92em', fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+          color: '#8C3A1A',
+        }}>{match[4]}</code>
+      );
+    } else if (match[5] && match[6]) {
+      parts.push(
+        <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" style={{
+          color: '#2B6CB0', textDecoration: 'underline', fontWeight: 600,
+        }}>{match[5]}</a>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < line.length) {
+    parts.push(line.slice(lastIndex));
+  }
+  return parts;
+}
+
+/* ─── Rich markdown renderer for build guide steps ─── */
+/* Supports: **bold**, *italic*, `code`, [links](url), ```code blocks```, and unfenced JSON/code blocks */
 function renderFormattedText(text: string): React.ReactNode {
-  // Split on markdown patterns and render as React elements
-  // Supports: **bold**, *italic*, `code`, [links](url), \n\n for paragraphs
-  const paragraphs = text.split(/\n\n/);
-  return paragraphs.map((para, pIdx) => {
-    // Process inline formatting within each paragraph
-    const parts: React.ReactNode[] = [];
-    // Regex to match **bold**, *italic*, `code`, [text](url)
-    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    let key = 0;
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let key = 0;
+  let i = 0;
 
-    const line = para.replace(/\n/g, ' ');
+  while (i < lines.length) {
+    const line = lines[i];
 
-    while ((match = regex.exec(line)) !== null) {
-      // Text before this match
-      if (match.index > lastIndex) {
-        parts.push(line.slice(lastIndex, match.index));
+    // Fenced code blocks (``` delimited)
+    if (line.trimStart().startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
       }
-
-      if (match[2]) {
-        // **bold**
-        parts.push(<strong key={key++} style={{ fontWeight: 700, color: '#1A202C' }}>{match[2]}</strong>);
-      } else if (match[3]) {
-        // *italic*
-        parts.push(<em key={key++} style={{ fontStyle: 'italic' }}>{match[3]}</em>);
-      } else if (match[4]) {
-        // `code`
-        parts.push(
-          <code key={key++} style={{
-            background: '#EDF2F7', padding: '1px 6px', borderRadius: 4,
-            fontSize: '0.92em', fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-            color: '#8C3A1A',
-          }}>{match[4]}</code>
-        );
-      } else if (match[5] && match[6]) {
-        // [text](url)
-        parts.push(
-          <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" style={{
-            color: '#2B6CB0', textDecoration: 'underline', fontWeight: 600,
-          }}>{match[5]}</a>
-        );
-      }
-
-      lastIndex = match.index + match[0].length;
-    }
-    // Remaining text after last match
-    if (lastIndex < line.length) {
-      parts.push(line.slice(lastIndex));
+      i++; // skip closing ```
+      elements.push(<BuildGuideCodeBlock key={key++} code={codeLines.join('\n')} />);
+      continue;
     }
 
-    if (paragraphs.length === 1) return <>{parts}</>;
-    return <p key={pIdx} style={{ margin: pIdx === 0 ? 0 : '10px 0 0 0' }}>{parts}</p>;
-  });
+    // Heuristic: unfenced JSON blocks (line starts with { and a matching } exists)
+    if (line.trim() === '{') {
+      const codeLines: string[] = [line];
+      let depth = 1;
+      let j = i + 1;
+      while (j < lines.length && depth > 0) {
+        codeLines.push(lines[j]);
+        const trimmed = lines[j].trim();
+        for (const ch of trimmed) {
+          if (ch === '{') depth++;
+          else if (ch === '}') depth--;
+        }
+        j++;
+      }
+      if (depth === 0) {
+        elements.push(<BuildGuideCodeBlock key={key++} code={codeLines.join('\n')} />);
+        i = j;
+        continue;
+      }
+    }
+
+    // Empty lines
+    if (line.trim() === '' || line.trim() === '---') { i++; continue; }
+
+    // Regular paragraph with inline formatting
+    elements.push(
+      <p key={key++} style={{ margin: '4px 0', lineHeight: 1.7 }}>
+        {renderInlineParts(line)}
+      </p>
+    );
+    i++;
+  }
+
+  return <>{elements}</>;
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -2004,7 +2086,7 @@ const AppDashboardDesigner: React.FC = () => {
   );
 };
 
-/* ─── ProcessingProgress (matches L1 Prompt Playground pattern) ─── */
+/* ─── ProcessingProgress (matches L1 Prompt Playground gold standard) ─── */
 const ProcessingProgress: React.FC<{
   steps: string[];
   currentStep: number;
@@ -2031,47 +2113,53 @@ const ProcessingProgress: React.FC<{
           const stepNum = i + 1;
           const isComplete = stepNum <= completedSteps;
           const isActive = stepNum === completedSteps + 1 && completedSteps < steps.length;
+          const isPending = !isComplete && !isActive;
 
           return (
             <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0',
-              opacity: isComplete || isActive ? 1 : 0.4,
-              transition: 'opacity 0.3s',
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'opacity 0.2s',
+              opacity: isPending ? 0.5 : 1,
             }}>
               <div style={{
-                width: 18, height: 18, borderRadius: '50%', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                ...(isComplete
-                  ? { background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK }
-                  : isActive
-                    ? { border: `2px solid ${LEVEL_ACCENT}`, background: '#FFFFFF' }
-                    : { border: '2px solid #E2E8F0', background: '#F7FAFC' }),
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isComplete ? LEVEL_ACCENT : '#F7FAFC',
+                border: isActive
+                  ? `2px solid ${LEVEL_ACCENT}`
+                  : isComplete ? 'none' : '2px solid #E2E8F0',
+                position: 'relative',
               }}>
-                {isComplete ? (
-                  <Check size={10} />
-                ) : isActive ? (
+                {isComplete && (
+                  <Check size={10} color={LEVEL_ACCENT_DARK} strokeWidth={3} />
+                )}
+                {isActive && (
                   <div style={{
-                    width: 8, height: 8, borderRadius: '50%', border: `2px solid ${LEVEL_ACCENT}`,
-                    borderTopColor: LEVEL_ACCENT_DARK, animation: 'ppSpin 0.8s linear infinite',
-                    boxSizing: 'border-box',
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: '2px solid transparent',
+                    borderTopColor: LEVEL_ACCENT_DARK,
+                    animation: 'ppSpin 0.7s linear infinite',
+                    position: 'absolute', top: -2, left: -2,
                   }} />
-                ) : null}
+                )}
               </div>
-              <span style={{
-                fontSize: 13, fontFamily: FONT,
+              <div style={{
+                fontSize: 13,
                 fontWeight: isActive ? 600 : 400,
-                color: isComplete ? '#2D3748' : isActive ? '#2D3748' : '#A0AEC0',
+                color: isPending ? '#A0AEC0' : '#2D3748',
+                fontFamily: FONT,
+                transition: 'color 0.2s, font-weight 0.2s',
               }}>
                 {label}
-              </span>
+              </div>
             </div>
           );
         })}
       </div>
 
       <div style={{
-        height: 4, background: '#EDF2F7', borderRadius: 2,
-        overflow: 'hidden',
+        width: '100%', height: 4, borderRadius: 2,
+        background: '#EDF2F7', overflow: 'hidden',
       }}>
         <div style={{
           height: '100%', borderRadius: 2,
