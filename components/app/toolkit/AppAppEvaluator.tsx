@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowRight, ArrowDown, Copy, Check, RotateCcw, Code, Library, Download,
   Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, X, Server, Database, Cpu,
+  Users, HardDrive, Wand2, Settings, TrendingUp, Zap, Target, RefreshCw, Lightbulb,
 } from 'lucide-react';
 import {
   EVALUATOR_SECTIONS, EXAMPLE_APPS, SCORE_CRITERIA_LABELS,
@@ -69,9 +70,26 @@ function getVerdictText(score: number) {
   return 'Needs more refinement before implementation';
 }
 
+/* ─── Criterion Lucide icons (replace emojis) ─── */
+const CRITERIA_ICONS: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  user_clarity: Users,
+  data_architecture: HardDrive,
+  personalisation: Wand2,
+  technical_feasibility: Settings,
+  scalability: TrendingUp,
+};
+
+/* ─── Quadrant Lucide icons (replace emojis) ─── */
+const QUADRANT_ICONS: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  'Quick Win': Zap,
+  'Strategic Investment': Target,
+  'Rethink': RefreshCw,
+  'Nice to Have': Lightbulb,
+};
+
 /* ─── Score Circle ─── */
 
-const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, animated }) => {
+const ScoreCircle: React.FC<{ score: number; animated: boolean; size?: number }> = ({ score, animated, size = 56 }) => {
   const [displayScore, setDisplayScore] = useState(0);
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -94,7 +112,7 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <svg width="56" height="56" viewBox="0 0 120 120" role="img" aria-label={`Design score: ${score} percent`}>
+      <svg width={size} height={size} viewBox="0 0 120 120" role="img" aria-label={`Design score: ${score} percent`}>
         <circle cx="60" cy="60" r={radius} fill="none" stroke="#E2E8F0" strokeWidth="8" />
         <circle cx="60" cy="60" r={radius} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={circumference} strokeDashoffset={offset}
@@ -109,77 +127,353 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
   );
 };
 
+/* ─── Mini Score Circle (for breakdown rows) ─── */
+
+const MiniScoreCircle: React.FC<{ score: number; size?: number }> = ({ score, size = 36 }) => {
+  const radius = 14;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = getScoreColor(score);
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" role="img" aria-label={`${score}%`}>
+      <circle cx="18" cy="18" r={radius} fill="none" stroke="#E2E8F0" strokeWidth="3" />
+      <circle cx="18" cy="18" r={radius} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+        strokeDasharray={circumference} strokeDashoffset={offset}
+        style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
+      />
+      <text x="18" y="18" textAnchor="middle" dominantBaseline="central"
+        style={{ fontSize: 10, fontWeight: 700, fill: '#1A202C', fontFamily: FONT }}>
+        {score}
+      </text>
+    </svg>
+  );
+};
+
+/* ─── Quadrant Circle (collapsed matrix card) ─── */
+
+const QUADRANT_COLORS: Record<string, string> = {
+  'Quick Win': '#38A169',
+  'Strategic Investment': '#3182CE',
+  'Nice to Have': '#A0AEC0',
+  'Rethink': '#DD6B20',
+};
+
+const QuadrantCircle: React.FC<{
+  quadrant: string;
+  animated: boolean;
+  size?: number;
+}> = ({ quadrant, animated, size = 130 }) => {
+  const color = QUADRANT_COLORS[quadrant] || '#3182CE';
+  const QuadIcon = QUADRANT_ICONS[quadrant] || Zap;
+  const bgAlpha = '18'; // subtle tinted background
+
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      border: `2px solid ${color}30`,
+      background: `${color}${bgAlpha}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: `0 2px 8px ${color}15`,
+    }}>
+      <div style={{
+        animation: animated ? 'ppQuadrantPulse 2s ease-in-out infinite' : 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <QuadIcon size={size * 0.48} color={color} strokeWidth={1.5} />
+      </div>
+    </div>
+  );
+};
+
 /* ─── Matrix Chart (SVG quadrant) ─── */
+
+const MATRIX_Q_STYLES: { key: string; label: string; shortLabel: string; bg: string; bgActive: string; color: string; description: string }[] = [
+  { key: 'Quick Win',            label: 'Quick Win',            shortLabel: 'QW', bg: '#F0FFF4', bgActive: '#C6F6D5', color: '#276749', description: 'Low complexity, high impact — ship fast and capture value early.' },
+  { key: 'Strategic Investment', label: 'Strategic Investment',  shortLabel: 'SI', bg: '#EBF4FF', bgActive: '#BEE3F8', color: '#2B6CB0', description: 'High complexity, high impact — worth the effort but plan carefully.' },
+  { key: 'Nice to Have',        label: 'Nice to Have',          shortLabel: 'NH', bg: '#F7FAFC', bgActive: '#E2E8F0', color: '#718096', description: 'Low complexity, low impact — easy to build but limited value.' },
+  { key: 'Rethink',             label: 'Rethink',               shortLabel: 'RT', bg: '#FFFAF0', bgActive: '#FEEBC8', color: '#C05621', description: 'High complexity, low impact — reconsider before investing effort.' },
+];
 
 const MatrixChart: React.FC<{
   technicalComplexity: number;
   businessImpact: number;
   quadrant: string;
-  quadrantDescription: string;
   animated: boolean;
-}> = ({ technicalComplexity, businessImpact, quadrant, quadrantDescription, animated }) => {
+}> = ({ technicalComplexity, businessImpact, quadrant, animated }) => {
   const [dotScale, setDotScale] = useState(0);
-  const chartW = 400;
-  const chartH = 280;
-  const pad = 40;
-  const innerW = chartW - pad * 2;
-  const innerH = chartH - pad * 2;
-  const midX = pad + innerW / 2;
-  const midY = pad + innerH / 2;
-  const dotX = pad + (technicalComplexity / 100) * innerW;
-  const dotY = pad + ((100 - businessImpact) / 100) * innerH;
-  const color = getScoreColor(businessImpact);
-  const qInfo = MATRIX_QUADRANTS[quadrant as keyof typeof MATRIX_QUADRANTS] || MATRIX_QUADRANTS['Nice to Have'];
+  const [dotClicked, setDotClicked] = useState(false);
+  const [hoveredQ, setHoveredQ] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!animated) return;
+    if (!animated) { setDotScale(1); return; }
     const t = setTimeout(() => setDotScale(1), 400);
     return () => clearTimeout(t);
   }, [animated]);
 
+  const dotColor = QUADRANT_COLORS[quadrant] || '#3182CE';
+
+  // Quadrant grid positions: [row, col] — Quick Win top-left, Strategic top-right, Nice bottom-left, Rethink bottom-right
+  const qGrid: { key: string; row: number; col: number }[] = [
+    { key: 'Quick Win', row: 0, col: 0 },
+    { key: 'Strategic Investment', row: 0, col: 1 },
+    { key: 'Nice to Have', row: 1, col: 0 },
+    { key: 'Rethink', row: 1, col: 1 },
+  ];
+
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ overflow: 'hidden' }}>
-        <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} style={{ maxWidth: 500, display: 'block', margin: '0 auto' }}>
-          {/* Quadrant backgrounds */}
-          <rect x={pad} y={pad} width={innerW / 2} height={innerH / 2} fill="#F0FFF4" opacity="0.5" />
-          <rect x={midX} y={pad} width={innerW / 2} height={innerH / 2} fill="#EBF4FF" opacity="0.5" />
-          <rect x={pad} y={midY} width={innerW / 2} height={innerH / 2} fill="#F7FAFC" opacity="0.5" />
-          <rect x={midX} y={midY} width={innerW / 2} height={innerH / 2} fill="#FFFAF0" opacity="0.5" />
-
-          {/* Grid lines */}
-          <line x1={midX} y1={pad} x2={midX} y2={pad + innerH} stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
-          <line x1={pad} y1={midY} x2={pad + innerW} y2={midY} stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
-
-          {/* Quadrant labels */}
-          <text x={pad + innerW * 0.25} y={pad + innerH * 0.15} textAnchor="middle" style={{ fontSize: 10, fontWeight: 600, fill: '#276749', fontFamily: FONT }}>Quick Win</text>
-          <text x={pad + innerW * 0.75} y={pad + innerH * 0.15} textAnchor="middle" style={{ fontSize: 10, fontWeight: 600, fill: '#2B6CB0', fontFamily: FONT }}>Strategic Investment</text>
-          <text x={pad + innerW * 0.25} y={pad + innerH * 0.88} textAnchor="middle" style={{ fontSize: 10, fontWeight: 600, fill: '#718096', fontFamily: FONT }}>Nice to Have</text>
-          <text x={pad + innerW * 0.75} y={pad + innerH * 0.88} textAnchor="middle" style={{ fontSize: 10, fontWeight: 600, fill: '#C05621', fontFamily: FONT }}>Rethink</text>
-
-          {/* Axes */}
-          <line x1={pad} y1={pad + innerH} x2={pad + innerW} y2={pad + innerH} stroke="#A0AEC0" strokeWidth="1" />
-          <line x1={pad} y1={pad} x2={pad} y2={pad + innerH} stroke="#A0AEC0" strokeWidth="1" />
-
-          {/* Axis labels */}
-          <text x={pad + innerW / 2} y={chartH - 4} textAnchor="middle" style={{ fontSize: 10, fill: '#718096', fontFamily: FONT }}>Technical Complexity →</text>
-          <text x={12} y={pad + innerH / 2} textAnchor="middle" style={{ fontSize: 10, fill: '#718096', fontFamily: FONT }} transform={`rotate(-90, 12, ${pad + innerH / 2})`}>Business Impact →</text>
-
-          {/* Dot */}
-          <circle cx={dotX} cy={dotY} r={10} fill={color} opacity="0.2" style={{ transform: `scale(${dotScale})`, transformOrigin: `${dotX}px ${dotY}px`, transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-            <animate attributeName="r" values="10;16;10" dur="2s" repeatCount="indefinite" />
-          </circle>
-          <circle cx={dotX} cy={dotY} r={6} fill={color} stroke="#FFFFFF" strokeWidth="2" style={{ transform: `scale(${dotScale})`, transformOrigin: `${dotX}px ${dotY}px`, transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
-        </svg>
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Axis labels */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+        <span style={{ fontSize: 9, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Business Impact ↑</span>
       </div>
-      {/* Quadrant banner */}
-      <div style={{
-        marginTop: 10, padding: '10px 14px', borderRadius: 10,
-        background: qInfo.color, border: `1px solid ${qInfo.border}`,
-        display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: qInfo.textColor, fontFamily: FONT }}>{quadrant}</div>
-        <div style={{ fontSize: 12, color: qInfo.textColor, opacity: 0.85, fontFamily: FONT }}>{quadrantDescription}</div>
+
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        {/* Y-axis label (rotated) */}
+        <div style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingRight: 6 }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: '#A0AEC0', fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Complexity →</span>
+        </div>
+
+        {/* Chart grid */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr',
+            borderRadius: 10, overflow: 'hidden', border: '1px solid #E2E8F0',
+            aspectRatio: '1',
+          }}>
+            {qGrid.map(({ key, row, col }) => {
+              const qs = MATRIX_Q_STYLES.find(q => q.key === key)!;
+              const isActive = key === quadrant;
+              const isHov = hoveredQ === key;
+              return (
+                <div
+                  key={key}
+                  onMouseEnter={() => setHoveredQ(key)}
+                  onMouseLeave={() => setHoveredQ(null)}
+                  style={{
+                    gridRow: row + 1, gridColumn: col + 1,
+                    background: isActive ? qs.bgActive : isHov ? qs.bgActive : qs.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 8, transition: 'background 0.15s',
+                    borderRight: col === 0 ? '1px dashed #E2E8F0' : 'none',
+                    borderBottom: row === 0 ? '1px dashed #E2E8F0' : 'none',
+                    position: 'relative', cursor: 'default',
+                  }}
+                >
+                  <span style={{
+                    fontSize: 10, fontWeight: isActive ? 700 : 500, color: qs.color,
+                    fontFamily: FONT, textAlign: 'center', lineHeight: 1.3,
+                    opacity: isActive ? 1 : isHov ? 0.9 : 0.55,
+                    transition: 'opacity 0.15s',
+                  }}>
+                    {qs.label}
+                  </span>
+                  {/* Hover tooltip */}
+                  {isHov && (
+                    <div style={{
+                      position: 'absolute',
+                      left: '50%', transform: 'translateX(-50%)',
+                      ...(row === 0 ? { bottom: -4, transform: 'translateX(-50%) translateY(100%)' } : { top: -4, transform: 'translateX(-50%) translateY(-100%)' }),
+                      background: '#1A202C', color: '#FFFFFF', fontSize: 10, fontFamily: FONT,
+                      padding: '6px 10px', borderRadius: 6, lineHeight: 1.4,
+                      width: 180, textAlign: 'center', zIndex: 20,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                      pointerEvents: 'none',
+                    }}>
+                      <div style={{ fontWeight: 700, marginBottom: 2 }}>{qs.label}</div>
+                      <div style={{ color: '#CBD5E0', fontWeight: 400 }}>{qs.description}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dot overlay — positioned over the grid */}
+          <div
+            onClick={() => setDotClicked(prev => !prev)}
+            style={{
+              position: 'absolute',
+              left: `${technicalComplexity}%`, top: `${100 - businessImpact}%`,
+              transform: `translate(-50%, -50%) scale(${dotScale})`,
+              transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              zIndex: 5, cursor: 'pointer',
+            }}
+          >
+            {/* Pulse ring */}
+            <div style={{
+              position: 'absolute', inset: -6,
+              borderRadius: '50%', background: `${dotColor}20`,
+              animation: 'ppDotPulse 2s ease-in-out infinite',
+            }} />
+            {/* Solid dot */}
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%',
+              background: dotColor, border: '2.5px solid #FFFFFF',
+              boxShadow: `0 0 0 2px ${dotColor}40, 0 2px 6px rgba(0,0,0,0.15)`,
+              position: 'relative',
+            }} />
+          </div>
+
+          {/* Score tooltip on click */}
+          {dotClicked && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${technicalComplexity}%`, top: `${100 - businessImpact}%`,
+                transform: `translate(-50%, ${businessImpact > 60 ? '16px' : '-100%'}) translateY(${businessImpact > 60 ? '0' : '-12px'})`,
+                background: '#1A202C', borderRadius: 8, padding: '8px 12px',
+                zIndex: 10, whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                animation: 'ppSlideDown 0.15s ease-out both',
+              }}
+            >
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', fontFamily: FONT, marginBottom: 4 }}>Your app's position</div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 8, color: '#A0AEC0', fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Complexity</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', fontFamily: FONT }}>{technicalComplexity}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, color: '#A0AEC0', fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Impact</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', fontFamily: FONT }}>{businessImpact}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Radar Chart (score breakdown spider chart) ─── */
+
+/* Criterion color helper — derived from getScoreColor thresholds (>=80 teal, >=50 amber, <50 red) */
+function getCriterionColor(score: number): { bg: string; border: string; text: string } {
+  if (score >= 80) return { bg: '#E6FFFA', border: '#81E6D9', text: '#276749' };
+  if (score >= 50) return { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' };
+  return { bg: '#FFF5F5', border: '#FEB2B2', text: '#C53030' };
+}
+
+/* Short keys for radar axis labels */
+const RADAR_LABELS: Record<string, string> = {
+  user_clarity: 'UC',
+  data_architecture: 'DA',
+  personalisation: 'P',
+  technical_feasibility: 'TF',
+  scalability: 'S',
+};
+
+const RadarChart: React.FC<{
+  criteria: [string, { score: number }][];
+}> = ({ criteria }) => {
+  const vb = 300;
+  const cx = vb / 2;
+  const cy = vb / 2;
+  const levels = 5;
+  const maxR = 100;
+  const angleStep = (2 * Math.PI) / criteria.length;
+  const startAngle = -Math.PI / 2;
+
+  const getPoint = (index: number, value: number) => {
+    const angle = startAngle + index * angleStep;
+    const r = (value / 100) * maxR;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  };
+
+  const polygonPoints = criteria.map(([, val], i) => {
+    const p = getPoint(i, val.score);
+    return `${p.x},${p.y}`;
+  }).join(' ');
+
+  return (
+    <div>
+      <svg width="100%" viewBox={`0 0 ${vb} ${vb}`} style={{ display: 'block' }}>
+        {/* Grid levels */}
+        {Array.from({ length: levels }, (_, level) => {
+          const r = ((level + 1) / levels) * maxR;
+          const points = criteria.map((_, i) => {
+            const angle = startAngle + i * angleStep;
+            return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+          }).join(' ');
+          return (
+            <polygon key={level} points={points} fill="none"
+              stroke={level === levels - 1 ? '#CBD5E0' : '#EDF2F7'}
+              strokeWidth={level === levels - 1 ? 1.5 : 0.8}
+            />
+          );
+        })}
+
+        {/* Axis lines */}
+        {criteria.map((_, i) => {
+          const p = getPoint(i, 100);
+          return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#EDF2F7" strokeWidth="0.8" />;
+        })}
+
+        {/* Filled data area */}
+        <polygon points={polygonPoints} fill={`${LEVEL_ACCENT_DARK}20`} stroke={LEVEL_ACCENT_DARK} strokeWidth="2.5" strokeLinejoin="round" />
+
+        {/* Data dots + axis icons with scores beside them */}
+        {criteria.map(([key, val], i) => {
+          const p = getPoint(i, val.score);
+          const color = getScoreColor(val.score);
+          const cColor = getCriterionColor(val.score);
+          const CIcon = CRITERIA_ICONS[key] || Info;
+          const angle = startAngle + i * angleStep;
+          const lr = maxR + 22;
+          const ix = cx + lr * Math.cos(angle);
+          const iy = cy + lr * Math.sin(angle);
+          const iconSize = 26;
+          const cos = Math.cos(angle);
+          // Score always horizontally aligned with icon center
+          // For left-side icons: score to the left; right-side: score to the right; top/bottom: score to the right
+          const isLeft = cos < -0.3;
+          const scoreTx = isLeft ? ix - 18 : ix + 18;
+          const scoreTy = iy;
+          const scoreAnchor = isLeft ? 'end' : 'start';
+          const foW = iconSize + 4;
+          const foH = iconSize + 4;
+          return (
+            <g key={key}>
+              <circle cx={p.x} cy={p.y} r={5} fill={color} stroke="#FFFFFF" strokeWidth="2" />
+              {/* Icon at axis endpoint */}
+              <foreignObject x={ix - foW / 2} y={iy - foH / 2} width={foW} height={foH} style={{ overflow: 'visible' }}>
+                <div style={{
+                  width: iconSize, height: iconSize, borderRadius: 6, margin: 2,
+                  background: cColor.bg, border: `1px solid ${cColor.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <CIcon size={13} color={cColor.text} />
+                </div>
+              </foreignObject>
+              {/* Score horizontally aligned with icon */}
+              <text x={scoreTx} y={scoreTy} textAnchor={scoreAnchor} dominantBaseline="central"
+                style={{ fontSize: 12, fontWeight: 700, fill: color, fontFamily: FONT }}>
+                {val.score}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Legend below chart */}
+      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px 18px', justifyContent: 'center', marginTop: 10, padding: '0 8px' }}>
+        {criteria.map(([key, val]) => {
+          const CIcon = CRITERIA_ICONS[key] || Info;
+          const cColor = getCriterionColor(val.score);
+          return (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                background: cColor.bg, border: `1px solid ${cColor.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <CIcon size={11} color={cColor.text} />
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 500, color: '#4A5568', fontFamily: FONT }}>{SCORE_CRITERIA_LABELS[key]?.label || key}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -308,7 +602,11 @@ const TechStackGroup: React.FC<{
             onMouseEnter={e => { if (!isSel) { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.background = `${LEVEL_ACCENT}10`; } }}
             onMouseLeave={e => { if (!isSel) { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#FFFFFF'; } }}
           >
-            <span style={{ fontSize: 18, flexShrink: 0 }}>{opt.icon}</span>
+            {opt.logo ? (
+              <img src={opt.logo} alt={opt.label} style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, objectFit: 'contain' }} />
+            ) : (
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{opt.icon}</span>
+            )}
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: isSel ? LEVEL_ACCENT_DARK : '#1A202C', fontFamily: FONT }}>{opt.label}</div>
               <div style={{ fontSize: 11, color: '#A0AEC0', fontFamily: FONT }}>{opt.description}</div>
@@ -370,9 +668,15 @@ const AppAppEvaluator: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [isRefineLoading, setIsRefineLoading] = useState(false);
 
-  // Step 2 — Card expand state
-  const [scoreExpanded, setScoreExpanded] = useState(false);
-  const [matrixExpanded, setMatrixExpanded] = useState(false);
+  // Step 2 — Card expand state (mutually exclusive)
+  const [expandedCard, setExpandedCard] = useState<'score' | 'matrix' | null>(null);
+  const toggleCard = (card: 'score' | 'matrix') =>
+    setExpandedCard(prev => prev === card ? null : card);
+
+  // Step 2 — Inline breakdown answers (keyed by criterion key)
+  const [breakdownAnswers, setBreakdownAnswers] = useState<Record<string, string>>({});
+  // Step 2 — Which "what to define" sections are expanded (click to reveal)
+  const [expandedCriteria, setExpandedCriteria] = useState<Set<string>>(new Set());
 
   // Step 2 — Refinement state
   const [refineExpanded, setRefineExpanded] = useState(false);
@@ -419,8 +723,9 @@ const AppAppEvaluator: React.FC = () => {
     if (!result) return;
     setVisibleBlocks(0);
     setScoreAnimated(false);
-    setScoreExpanded(false);
-    setMatrixExpanded(false);
+    setExpandedCard(null);
+    setBreakdownAnswers({});
+    setExpandedCriteria(new Set());
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < 2; i++) {
       timers.push(setTimeout(() => {
@@ -642,7 +947,8 @@ const AppAppEvaluator: React.FC = () => {
     ? result.refinement_questions
     : FALLBACK_REFINEMENT_QUESTIONS;
 
-  const hasRefinementInput = Object.values(refinementAnswers).some(a => typeof a === 'string' && a.trim()) || refinementAdditional.trim() !== '';
+  const hasBreakdownInput = Object.values(breakdownAnswers).some(a => typeof a === 'string' && a.trim());
+  const hasRefinementInput = Object.values(refinementAnswers).some(a => typeof a === 'string' && a.trim()) || refinementAdditional.trim() !== '' || hasBreakdownInput;
 
   const handleRefineEvaluation = async () => {
     if (!hasRefinementInput || isLoading) return;
@@ -656,9 +962,16 @@ const AppAppEvaluator: React.FC = () => {
       })
       .filter(Boolean).join('\n\n');
 
+    // Include inline breakdown answers
+    const breakdownContext = Object.entries(breakdownAnswers)
+      .filter(([, a]) => a?.trim())
+      .map(([key, a]) => `Criterion "${SCORE_CRITERIA_LABELS[key]?.label || key}" — additional detail: ${a.trim()}`)
+      .join('\n');
+
     const parts = [
       `[REFINEMENT]\n\nOriginal task: ${appDescription}`,
       answeredQuestions ? `\nContext from follow-up questions:\n\n${answeredQuestions}` : '',
+      breakdownContext ? `\nScore breakdown clarifications:\n${breakdownContext}` : '',
       refinementAdditional.trim() ? `\nAdditional context: ${refinementAdditional.trim()}` : '',
     ];
     const refinementContext = parts.filter(Boolean).join('\n');
@@ -681,6 +994,8 @@ const AppAppEvaluator: React.FC = () => {
       setRefinementCount(c => c + 1);
       setRefinementAnswers({});
       setRefinementAdditional('');
+      setBreakdownAnswers({});
+    setExpandedCriteria(new Set());
       setRefineExpanded(false);
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
@@ -753,17 +1068,29 @@ const AppAppEvaluator: React.FC = () => {
     lines.push('');
     lines.push(bp.build_plan_summary);
     lines.push('');
-    lines.push('## Getting Started');
-    lines.push('');
-    for (const cmd of (bp.getting_started || [])) { lines.push('```'); lines.push(cmd); lines.push('```'); lines.push(''); }
+    if (bp.build_overview) {
+      lines.push('## Build Overview');
+      lines.push('');
+      lines.push(bp.build_overview);
+      lines.push('');
+    }
     lines.push('## Implementation Phases');
     lines.push('');
     for (const phase of (bp.implementation_phases || [])) {
       lines.push(`### ${phase.phase} (${phase.duration_estimate || 'TBD'})`);
       lines.push(''); lines.push(phase.description); lines.push('');
-      for (const task of (phase.tasks || [])) { lines.push(`- ${task}`); }
-      if (phase.tech_stack_notes) { lines.push(''); lines.push(`> **Stack notes:** ${phase.tech_stack_notes}`); }
-      lines.push('');
+      if (phase.why_this_matters) { lines.push(`> **Why this matters:** ${phase.why_this_matters}`); lines.push(''); }
+      if ((phase.key_activities || []).length > 0) {
+        lines.push('**Key activities:**'); lines.push('');
+        for (const activity of phase.key_activities) { lines.push(`- ${activity}`); }
+        lines.push('');
+      }
+      if ((phase.deliverables || []).length > 0) {
+        lines.push('**Deliverables:**'); lines.push('');
+        for (const d of phase.deliverables) { lines.push(`- [ ] ${d}`); }
+        lines.push('');
+      }
+      if (phase.tech_stack_notes) { lines.push(`> **Stack notes:** ${phase.tech_stack_notes}`); lines.push(''); }
     }
     lines.push('## Architecture Components');
     lines.push('');
@@ -832,8 +1159,16 @@ const AppAppEvaluator: React.FC = () => {
           100% { background-position: 0 20px; }
         }
         @keyframes ppSlideDown {
-          from { opacity: 0; max-height: 0; transform: translateY(-8px); }
-          to { opacity: 1; max-height: 800px; transform: translateY(0); }
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes ppQuadrantPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.08); opacity: 0.85; }
+        }
+        @keyframes ppDotPulse {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50% { transform: scale(1.8); opacity: 0; }
         }
       `}</style>
 
@@ -958,133 +1293,8 @@ const AppAppEvaluator: React.FC = () => {
           ) : result ? (
             <>
               {/* ── Side-by-side: Score (left) + Matrix (right) ── */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
-                opacity: visibleBlocks >= 1 ? 1 : 0,
-                transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
-                transition: 'opacity 0.3s, transform 0.3s',
-                marginBottom: 14,
-              }}>
-                {/* ── Left: Design Score Card ── */}
-                <div style={{
-                  background: '#FFFFFF', borderRadius: 14,
-                  border: scoreExpanded ? `1.5px solid ${LEVEL_ACCENT}` : '1px solid #E2E8F0',
-                  overflow: 'hidden', transition: 'border-color 0.15s',
-                }}>
-                  <button
-                    onClick={() => setScoreExpanded(prev => !prev)}
-                    style={{
-                      width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      padding: '20px 20px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', gap: 10,
-                    }}
-                  >
-                    <ScoreCircle score={result.design_score.overall_score} animated={scoreAnimated} />
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>Design Score</div>
-                      <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT, marginTop: 4 }}>
-                        {getVerdictText(result.design_score.overall_score)}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>
-                        {scoreExpanded ? 'Hide details' : 'View breakdown'}
-                      </span>
-                      <ChevronDown size={13} color={LEVEL_ACCENT_DARK} style={{ transform: scoreExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-                    </div>
-                  </button>
-                </div>
-
-                {/* ── Right: Strategic Matrix Card ── */}
-                {(() => {
-                  const criteria = result.design_score.criteria || {};
-                  const mp = result.matrix_placement || {
-                    technical_complexity: Math.round(Math.min(95, Math.max(10, 100 - ((((criteria as Record<string, DesignScoreCriteria>).technical_feasibility?.score || 50) * 0.6 + ((criteria as Record<string, DesignScoreCriteria>).scalability?.score || 50) * 0.4) * 0.8 + 10)))),
-                    business_impact: Math.round(Math.min(95, Math.max(10, ((criteria as Record<string, DesignScoreCriteria>).user_clarity?.score || 50) * 0.5 + ((criteria as Record<string, DesignScoreCriteria>).personalisation?.score || 50) * 0.3 + ((criteria as Record<string, DesignScoreCriteria>).data_architecture?.score || 50) * 0.2))),
-                    quadrant: '' as string,
-                    quadrant_description: '',
-                  };
-                  if (!result.matrix_placement) {
-                    mp.quadrant = mp.technical_complexity < 50
-                      ? (mp.business_impact >= 50 ? 'Quick Win' : 'Nice to Have')
-                      : (mp.business_impact >= 50 ? 'Strategic Investment' : 'Rethink');
-                    const qd: Record<string, string> = {
-                      'Quick Win': 'Low complexity with high business impact — ship it fast and iterate.',
-                      'Strategic Investment': 'High complexity with high business impact — worth the investment, plan carefully.',
-                      'Nice to Have': 'Low complexity, lower business impact — a good learning project or internal tool.',
-                      'Rethink': 'High complexity with lower business impact — consider simplifying the scope.',
-                    };
-                    mp.quadrant_description = qd[mp.quadrant] || '';
-                  }
-                  const qInfo = MATRIX_QUADRANTS[mp.quadrant as keyof typeof MATRIX_QUADRANTS] || MATRIX_QUADRANTS['Nice to Have'];
-                  const qIcon = mp.quadrant === 'Quick Win' ? '⚡' : mp.quadrant === 'Strategic Investment' ? '🎯' : mp.quadrant === 'Rethink' ? '🔄' : '💡';
-
-                  return (
-                    <div style={{
-                      background: '#FFFFFF', borderRadius: 14,
-                      border: matrixExpanded ? `1.5px solid ${qInfo.border}` : '1px solid #E2E8F0',
-                      overflow: 'hidden', transition: 'border-color 0.15s',
-                    }}>
-                      <button
-                        onClick={() => setMatrixExpanded(prev => !prev)}
-                        style={{
-                          width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                          padding: '20px 20px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', gap: 10,
-                        }}
-                      >
-                        <div style={{
-                          width: 56, height: 56, borderRadius: 14, flexShrink: 0,
-                          background: qInfo.color, border: `2px solid ${qInfo.border}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 24,
-                        }}>
-                          {qIcon}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: qInfo.textColor, fontFamily: FONT }}>{mp.quadrant}</div>
-                          <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT, marginTop: 4 }}>
-                            {mp.quadrant_description}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>
-                            {matrixExpanded ? 'Hide chart' : 'View chart'}
-                          </span>
-                          <ChevronDown size={13} color={LEVEL_ACCENT_DARK} style={{ transform: matrixExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* ── Expanded: Score breakdown (full width below the grid) ── */}
-              {scoreExpanded && (
-                <div style={{
-                  background: '#FFFFFF', borderRadius: 14, border: `1.5px solid ${LEVEL_ACCENT}`,
-                  padding: '18px 22px', marginBottom: 14,
-                  animation: 'ppSlideDown 0.25s ease-out both',
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, fontFamily: FONT }}>Score Breakdown</div>
-                  {(Object.entries(result.design_score.criteria || {}) as [string, DesignScoreCriteria][]).map(([key, val]) => (
-                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid #F7FAFC' }}>
-                      <div style={{ width: 150, flexShrink: 0, fontSize: 13, fontWeight: 700, color: '#1A202C', display: 'flex', alignItems: 'center', gap: 6, fontFamily: FONT }}>
-                        <span style={{ fontSize: 14 }}>{SCORE_CRITERIA_LABELS[key]?.icon || ''}</span>
-                        {SCORE_CRITERIA_LABELS[key]?.label || key}
-                      </div>
-                      <div style={{ flex: 1, fontSize: 12, color: '#4A5568', fontFamily: FONT }}>{val.assessment}</div>
-                      <div style={{ width: 90, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#E2E8F0', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', borderRadius: 3, width: `${val.score}%`, background: getScoreColor(val.score), transition: 'width 0.7s ease' }} />
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', fontFamily: FONT, width: 24, textAlign: 'right' }}>{val.score}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ── Expanded: Matrix chart (full width below the grid) ── */}
-              {matrixExpanded && (() => {
+              {(() => {
+                // Compute matrix placement once for both cards
                 const criteria = result.design_score.criteria || {};
                 const mp = result.matrix_placement || {
                   technical_complexity: Math.round(Math.min(95, Math.max(10, 100 - ((((criteria as Record<string, DesignScoreCriteria>).technical_feasibility?.score || 50) * 0.6 + ((criteria as Record<string, DesignScoreCriteria>).scalability?.score || 50) * 0.4) * 0.8 + 10)))),
@@ -1104,20 +1314,473 @@ const AppAppEvaluator: React.FC = () => {
                   };
                   mp.quadrant_description = qd[mp.quadrant] || '';
                 }
+                const qInfo = MATRIX_QUADRANTS[mp.quadrant as keyof typeof MATRIX_QUADRANTS] || MATRIX_QUADRANTS['Nice to Have'];
+                const QuadrantIcon = QUADRANT_ICONS[mp.quadrant] || Lightbulb;
+                const playbookFirstMove = result.matrix_placement?.playbook_first_move;
+                const playbookFraming = result.matrix_placement?.playbook_framing;
+                const playbookQuestions = result.matrix_placement?.playbook_questions;
+                const criteriaEntries = (Object.entries(criteria) as [string, DesignScoreCriteria][]);
+                // Sort: strongest first for collapsed view
+                const sortedStrongestFirst = [...criteriaEntries].sort(([, a], [, b]) => b.score - a.score);
+                // Weakest two for highlight
+                const weakest = [...criteriaEntries].sort(([, a], [, b]) => a.score - b.score).slice(0, 2);
+                const weakKeys = new Set(weakest.map(([k]) => k));
+
                 return (
-                  <div style={{
-                    background: '#FFFFFF', borderRadius: 14, border: '1.5px solid #E2E8F0',
-                    padding: '18px 22px', marginBottom: 14,
-                    animation: 'ppSlideDown 0.25s ease-out both',
-                  }}>
-                    <MatrixChart
-                      technicalComplexity={mp.technical_complexity}
-                      businessImpact={mp.business_impact}
-                      quadrant={mp.quadrant}
-                      quadrantDescription={mp.quadrant_description}
-                      animated={scoreAnimated}
-                    />
-                  </div>
+                  <>
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
+                      opacity: visibleBlocks >= 1 ? 1 : 0,
+                      transform: visibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                      transition: 'opacity 0.3s, transform 0.3s',
+                      marginBottom: 14,
+                    }}>
+                      {/* ── Left: Design Score Card ── */}
+                      <div style={{
+                        background: '#FFFFFF', borderRadius: 14,
+                        border: expandedCard === 'score' ? `1.5px solid ${LEVEL_ACCENT}` : '1px solid #E2E8F0',
+                        overflow: 'hidden', transition: 'border-color 0.15s',
+                      }}>
+                        <button
+                          onClick={() => toggleCard('score')}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'stretch',
+                            padding: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                          }}
+                        >
+                          {/* Left column: Score circle vertically centred */}
+                          <div style={{
+                            flexShrink: 0, width: 150,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '24px 10px',
+                          }}>
+                            <ScoreCircle score={result.design_score.overall_score} animated={scoreAnimated} size={130} />
+                          </div>
+
+                          {/* Right column */}
+                          <div style={{ flex: 1, padding: '18px 22px 18px 8px', display: 'flex', flexDirection: 'column' }}>
+                            {/* Title + Details toggle */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>Design Score</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginTop: 2 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>
+                                  {expandedCard === 'score' ? 'Hide' : 'Details'}
+                                </span>
+                                <ChevronDown size={12} color={LEVEL_ACCENT_DARK} style={{ transform: expandedCard === 'score' ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                              </div>
+                            </div>
+
+                            {/* Verdict */}
+                            <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT }}>
+                              {getVerdictText(result.design_score.overall_score)}
+                            </div>
+
+                            {/* Weakest callout — right under the description */}
+                            {weakest.length > 0 && (
+                              <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, alignSelf: 'flex-start',
+                                background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6,
+                                padding: '4px 9px',
+                              }}>
+                                <Info size={11} color="#92400E" />
+                                <span style={{ fontSize: 11, color: '#92400E', fontFamily: FONT, fontWeight: 500 }}>
+                                  Weakest: {weakest.map(([k]) => SCORE_CRITERIA_LABELS[k]?.label || k).join(' & ')}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 5 dimension rows: icon | label | bar | score — equidistant */}
+                            <div style={{
+                              display: 'flex', flexDirection: 'column', gap: 7,
+                              marginTop: 14, paddingTop: 14, borderTop: '1px solid #F0F0F0',
+                            }}>
+                              {sortedStrongestFirst.map(([key, val]) => {
+                                const CriterionIcon = CRITERIA_ICONS[key] || Info;
+                                const isWeak = weakKeys.has(key);
+                                const barColor = getScoreColor(val.score);
+                                return (
+                                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 22 }}>
+                                    <div style={{ width: 20, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                                      <CriterionIcon size={14} color={isWeak ? '#ED8936' : '#A0AEC0'} />
+                                    </div>
+                                    <span style={{
+                                      width: 130, flexShrink: 0, fontSize: 11.5,
+                                      fontWeight: isWeak ? 600 : 500, color: isWeak ? '#744210' : '#4A5568',
+                                      fontFamily: FONT, whiteSpace: 'nowrap',
+                                    }}>
+                                      {SCORE_CRITERIA_LABELS[key]?.label || key}
+                                    </span>
+                                    <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#EDF2F7', overflow: 'hidden' }}>
+                                      <div style={{ height: '100%', borderRadius: 3, width: `${val.score}%`, background: barColor, transition: 'width 0.7s ease' }} />
+                                    </div>
+                                    <span style={{ width: 28, textAlign: 'right', flexShrink: 0, fontSize: 12, fontWeight: 700, color: isWeak ? '#ED8936' : barColor, fontFamily: FONT }}>
+                                      {val.score}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* ── Right: Strategic Matrix Card ── */}
+                      <div style={{
+                        background: '#FFFFFF', borderRadius: 14,
+                        border: expandedCard === 'matrix' ? `1.5px solid ${qInfo.border}` : '1px solid #E2E8F0',
+                        overflow: 'hidden', transition: 'border-color 0.15s',
+                      }}>
+                        <button
+                          onClick={() => toggleCard('matrix')}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'stretch',
+                            padding: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                          }}
+                        >
+                          {/* Left column: Quadrant circle */}
+                          <div style={{
+                            flexShrink: 0, width: 150,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            padding: '18px 12px 14px',
+                          }}>
+                            <QuadrantCircle quadrant={mp.quadrant} animated={true} size={130} />
+                          </div>
+
+                          {/* Right column */}
+                          <div style={{ flex: 1, padding: '18px 22px 18px 4px', display: 'flex', flexDirection: 'column' }}>
+                            {/* Title + Details toggle */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{mp.quadrant}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginTop: 2 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}>
+                                  {expandedCard === 'matrix' ? 'Hide' : 'Details'}
+                                </span>
+                                <ChevronDown size={12} color={LEVEL_ACCENT_DARK} style={{ transform: expandedCard === 'matrix' ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                              </div>
+                            </div>
+
+                            {/* Description */}
+                            <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, fontFamily: FONT }}>
+                              {mp.quadrant_description}
+                            </div>
+
+                            {/* First move preview — below separator */}
+                            {playbookFirstMove && (
+                              <div style={{
+                                marginTop: 14, paddingTop: 14, borderTop: '1px solid #F0F0F0',
+                              }}>
+                                <div style={{
+                                  background: '#1A202C', borderRadius: 8, padding: '10px 14px',
+                                }}>
+                                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: LEVEL_ACCENT, letterSpacing: '0.06em', marginBottom: 4, fontFamily: FONT }}>
+                                    Suggested first move
+                                  </div>
+                                  <div style={{
+                                    fontSize: 11.5, color: '#CBD5E0', lineHeight: 1.5, fontFamily: FONT,
+                                    overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+                                  }}>
+                                    {playbookFirstMove}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Complexity & Impact score rows */}
+                            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                              {[
+                                { label: 'Complexity', value: mp.technical_complexity, icon: Settings },
+                                { label: 'Impact', value: mp.business_impact, icon: TrendingUp },
+                              ].map(row => {
+                                const barColor = row.value >= 70 ? '#38A169' : row.value >= 40 ? '#D69E2E' : '#E57A5A';
+                                return (
+                                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 22 }}>
+                                    <row.icon size={14} color="#718096" style={{ flexShrink: 0 }} />
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: '#4A5568', fontFamily: FONT, width: 80, flexShrink: 0 }}>{row.label}</span>
+                                    <div style={{ flex: 1, height: 6, background: '#EDF2F7', borderRadius: 3, overflow: 'hidden' }}>
+                                      <div style={{ width: `${row.value}%`, height: '100%', background: barColor, borderRadius: 3, transition: 'width 0.6s ease-out' }} />
+                                    </div>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1A202C', fontFamily: FONT, width: 28, textAlign: 'right', flexShrink: 0 }}>{row.value}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* ── Expanded: Score breakdown (full width below the grid) ── */}
+                    {expandedCard === 'score' && (
+                      <div style={{
+                        background: '#FFFFFF', borderRadius: 14, border: `1.5px solid ${LEVEL_ACCENT}`,
+                        padding: '22px 24px', marginBottom: 14,
+                        animation: 'ppSlideDown 0.25s ease-out both',
+                      }}>
+                        {/* Header with collapse button */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>Score Breakdown</div>
+                          <button
+                            onClick={() => toggleCard('score')}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                              background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8,
+                              cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#718096', fontFamily: FONT,
+                            }}
+                          >
+                            Collapse <ChevronUp size={12} color="#718096" />
+                          </button>
+                        </div>
+
+                        {/* Two-column layout: radar left, dimensions right */}
+                        <div style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}>
+                          {/* Left: radar chart */}
+                          <div style={{ flexShrink: 0, width: 380, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <RadarChart criteria={[...criteriaEntries].sort(([, a], [, b]) => a.score - b.score)} />
+                          </div>
+
+                          {/* Right: dimension rows with visible text, textarea on click */}
+                          <div style={{ flex: 1, minWidth: 0, borderLeft: '1px solid #F0F0F0', paddingLeft: 22 }}>
+                            {[...criteriaEntries].sort(([, a], [, b]) => a.score - b.score).map(([key, val], idx, arr) => {
+                              const confidence = val.confidence ?? 'inferred';
+                              const whatToDefine = val.what_to_define ?? null;
+                              const CriterionIcon = CRITERIA_ICONS[key] || Info;
+                              const isRowExpanded = expandedCriteria.has(key);
+                              const cColor = getCriterionColor(val.score);
+
+                              return (
+                                <div key={key} style={{ borderBottom: idx < arr.length - 1 ? '1px solid #F0F0F0' : 'none', padding: '12px 0' }}>
+                                  {/* Header row: icon + name + score (large) */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                                    <div style={{
+                                      width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                                      background: cColor.bg, border: `1px solid ${cColor.border}`,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                      <CriterionIcon size={14} color={cColor.text} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>
+                                        {SCORE_CRITERIA_LABELS[key]?.label || key}
+                                      </span>
+                                      <span style={{ fontSize: 10, color: '#A0AEC0', fontFamily: FONT, marginLeft: 8 }}>
+                                        Evaluation method: {confidence === 'explicit' ? 'Based on description' : 'AI inferred'}
+                                      </span>
+                                    </div>
+                                    <div style={{ flexShrink: 0 }}>
+                                      <MiniScoreCircle score={val.score} size={42} />
+                                    </div>
+                                  </div>
+
+                                  {/* Assessment — always visible */}
+                                  <div style={{ fontSize: 11.5, color: '#4A5568', lineHeight: 1.55, fontFamily: FONT, paddingLeft: 38 }}>
+                                    {val.assessment}
+                                  </div>
+
+                                  {/* What to define — always visible */}
+                                  {whatToDefine && (
+                                    <div style={{ paddingLeft: 38, marginTop: 6 }}>
+                                      <div style={{ fontSize: 11, color: '#744210', lineHeight: 1.5, fontFamily: FONT }}>
+                                        <span style={{ fontWeight: 700 }}>What to define: </span>{whatToDefine}
+                                      </div>
+
+                                      {/* Toggle for textarea */}
+                                      {!isRowExpanded ? (
+                                        <button
+                                          onClick={() => setExpandedCriteria(prev => { const next = new Set(prev); next.add(key); return next; })}
+                                          style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+                                            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                            fontSize: 11, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+                                          }}
+                                        >
+                                          <ChevronDown size={12} color={LEVEL_ACCENT_DARK} />
+                                          {(breakdownAnswers[key] || '').trim() ? 'Edit your answer' : 'Add your answer'}
+                                        </button>
+                                      ) : (
+                                        <div style={{ marginTop: 6, animation: 'ppSlideDown 0.2s ease-out both' }}>
+                                          <textarea
+                                            value={breakdownAnswers[key] || ''}
+                                            onChange={e => setBreakdownAnswers(prev => ({ ...prev, [key]: e.target.value }))}
+                                            placeholder={`Your thoughts on ${(SCORE_CRITERIA_LABELS[key]?.label || key).toLowerCase()}...`}
+                                            onClick={e => e.stopPropagation()}
+                                            rows={2}
+                                            style={{
+                                              width: '100%', border: '1px solid #E2E8F0', borderRadius: 8,
+                                              padding: '8px 10px', fontSize: 12, fontFamily: FONT, color: '#1A202C',
+                                              outline: 'none', boxSizing: 'border-box' as const, background: '#FFFFFF',
+                                              resize: 'vertical' as const, lineHeight: 1.5,
+                                            }}
+                                            onFocus={e => (e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK)}
+                                            onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                                          />
+                                          <button
+                                            onClick={() => setExpandedCriteria(prev => { const next = new Set(prev); next.delete(key); return next; })}
+                                            style={{
+                                              display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 3,
+                                              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                              fontSize: 10, fontWeight: 500, color: '#A0AEC0', fontFamily: FONT,
+                                            }}
+                                          >
+                                            <ChevronUp size={11} color="#A0AEC0" /> Done
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            {/* Next Question callout */}
+                            {result.next_question && (
+                              <div style={{
+                                marginTop: 12,
+                                background: `${LEVEL_ACCENT}15`,
+                                border: `1.5px solid ${LEVEL_ACCENT_DARK}30`,
+                                borderRadius: 10, padding: '10px 14px',
+                              }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: LEVEL_ACCENT_DARK, letterSpacing: '0.06em', marginBottom: 4, fontFamily: FONT }}>
+                                  Next question to answer
+                                </div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontFamily: FONT }}>
+                                  {result.next_question}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Refine button if any inline answers provided */}
+                        {hasBreakdownInput && (
+                          <div style={{ marginTop: 14 }}>
+                            <ActionBtn
+                              label={isLoading ? 'Refining...' : 'Refine with these answers'}
+                              onClick={handleRefineEvaluation}
+                              primary
+                              disabled={isLoading}
+                              iconAfter={isLoading ? <span style={{ width: 13, height: 13, border: '2px solid #FFFFFF40', borderTopColor: '#FFFFFF', borderRadius: '50%', display: 'inline-block', animation: 'ppSpin 0.6s linear infinite' }} /> : <ArrowRight size={13} />}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Expanded: Matrix breakdown (full width below the grid) ── */}
+                    {expandedCard === 'matrix' && (
+                      <div style={{
+                        background: '#FFFFFF', borderRadius: 14, border: `1.5px solid ${qInfo.border}`,
+                        padding: '22px 24px', marginBottom: 14,
+                        animation: 'ppSlideDown 0.25s ease-out both',
+                      }}>
+                        {/* Header with collapse button — matches score breakdown */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>Strategic Matrix</div>
+                          <button
+                            onClick={() => toggleCard('matrix')}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                              background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8,
+                              cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#718096', fontFamily: FONT,
+                            }}
+                          >
+                            Collapse <ChevronUp size={12} color="#718096" />
+                          </button>
+                        </div>
+
+                        {/* Two-column layout: chart left, text right */}
+                        <div style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}>
+                          {/* Left: matrix chart — fixed width, fills height */}
+                          <div style={{ flexShrink: 0, width: 380, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                              <MatrixChart
+                                technicalComplexity={mp.technical_complexity}
+                                businessImpact={mp.business_impact}
+                                quadrant={mp.quadrant}
+                                animated={scoreAnimated}
+                              />
+                            </div>
+                            <div style={{ fontSize: 10, color: '#A0AEC0', fontFamily: FONT, textAlign: 'center', marginTop: 6 }}>
+                              Click the dot to see scores
+                            </div>
+                          </div>
+
+                          {/* Right: all text content */}
+                          <div style={{ flex: 1, minWidth: 0, borderLeft: '1px solid #F0F0F0', paddingLeft: 22 }}>
+                            {/* Quadrant rationale header */}
+                            <div style={{ marginBottom: 16 }}>
+                              <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8,
+                                background: qInfo.color, border: `1px solid ${qInfo.border}`,
+                                borderRadius: 8, padding: '6px 12px', marginBottom: 10,
+                              }}>
+                                <QuadrantIcon size={14} color={qInfo.textColor} />
+                                <span style={{ fontSize: 12, fontWeight: 700, color: qInfo.textColor, fontFamily: FONT }}>{mp.quadrant}</span>
+                              </div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 6 }}>
+                                Why is this a {mp.quadrant.toLowerCase()}?
+                              </div>
+                              <div style={{ fontSize: 12.5, color: '#4A5568', lineHeight: 1.65, fontFamily: FONT }}>
+                                {mp.quadrant_description}
+                              </div>
+                            </div>
+
+                            {/* Strategic Framing */}
+                            {playbookFraming && (
+                              <div style={{ borderTop: '1px solid #F0F0F0', paddingTop: 14, marginBottom: 16 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 6 }}>
+                                  What this means for you
+                                </div>
+                                <div style={{ fontSize: 12.5, color: '#4A5568', lineHeight: 1.65, fontFamily: FONT }}>
+                                  {playbookFraming}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Questions */}
+                            {playbookQuestions && playbookQuestions.length > 0 && (
+                              <div style={{ borderTop: '1px solid #F0F0F0', paddingTop: 14, marginBottom: 16 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 8 }}>
+                                  Before you build, answer these
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                  {playbookQuestions.map((q: string, i: number) => (
+                                    <div key={i} style={{
+                                      display: 'flex', gap: 8, alignItems: 'flex-start',
+                                      fontSize: 12, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT,
+                                    }}>
+                                      <span style={{ color: LEVEL_ACCENT_DARK, fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+                                      <span>{q}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Suggested first move — dark banner */}
+                            {playbookFirstMove && (
+                              <div style={{
+                                background: '#1A202C', borderRadius: 8, padding: '12px 14px',
+                              }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: LEVEL_ACCENT, letterSpacing: '0.06em', marginBottom: 4, fontFamily: FONT }}>
+                                  Suggested first move
+                                </div>
+                                <div style={{ fontSize: 12, color: '#E2E8F0', lineHeight: 1.6, fontFamily: FONT }}>
+                                  {playbookFirstMove}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Fallback */}
+                            {!playbookFraming && !playbookFirstMove && (
+                              <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+                                {mp.quadrant_description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 );
               })()}
 
@@ -1132,7 +1795,7 @@ const AppAppEvaluator: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: refineExpanded ? 16 : 12 }}>
                   <Info size={16} color="#718096" style={{ flexShrink: 0, marginTop: 2 }} />
                   <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
-                    This evaluation is a strong starting point. Review the score and matrix placement, then approve to continue to tech stack selection and build planning.
+                    Review the score and matrix placement above. Use the per-dimension "What to define" fields to strengthen individual scores, or refine the overall evaluation below with broader context.
                   </div>
                 </div>
 
@@ -1140,7 +1803,7 @@ const AppAppEvaluator: React.FC = () => {
                   <button onClick={() => setRefineExpanded(true)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT }}
                   >
-                    <ChevronDown size={14} /> Want to refine this evaluation first?
+                    <ChevronDown size={14} /> Want to refine the overall evaluation?
                     {refinementCount > 0 && (
                       <span style={{ fontSize: 11, fontWeight: 600, background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK, borderRadius: 20, padding: '2px 10px', marginLeft: 6 }}>
                         Refinement #{refinementCount}
@@ -1153,7 +1816,7 @@ const AppAppEvaluator: React.FC = () => {
                   <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 16, animation: 'ppSlideDown 0.3s ease-out both' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>Refine Your Evaluation</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>Overall Refinement</div>
                         {refinementCount > 0 && (
                           <div style={{ fontSize: 11, fontWeight: 600, background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK, borderRadius: 20, padding: '2px 10px', fontFamily: FONT }}>Refinement #{refinementCount}</div>
                         )}
@@ -1162,7 +1825,7 @@ const AppAppEvaluator: React.FC = () => {
                         <X size={16} />
                       </button>
                     </div>
-                    <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>Answer any of these to add context and get a more targeted evaluation.</p>
+                    <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, margin: '0 0 18px', fontFamily: FONT }}>These questions look at your design holistically — across both the score and strategic matrix. Answer any to get a more targeted evaluation.</p>
                     {refinementQuestions.map((question, i) => (
                       <div key={i} style={{ marginBottom: 16 }}>
                         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6, fontFamily: FONT }}>{question}</label>
@@ -1304,20 +1967,20 @@ const AppAppEvaluator: React.FC = () => {
               {buildPlanViewMode === 'cards' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                  {/* ─── 1. Getting Started ─── */}
-                  {(buildPlan.getting_started || []).length > 0 && (
+                  {/* ─── 1. Build Overview ─── */}
+                  {buildPlan.build_overview && (
                     <div style={{
                       opacity: buildPlanVisibleBlocks >= 2 ? 1 : 0, transform: buildPlanVisibleBlocks >= 2 ? 'translateY(0)' : 'translateY(8px)',
                       transition: 'opacity 0.3s, transform 0.3s',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                         <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#38B2AC', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>1</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>Getting Started</div>
-                        <div style={{ fontSize: 12, color: '#718096', fontFamily: FONT }}>— Run these commands to scaffold your project</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>Build Overview</div>
+                        <div style={{ fontSize: 12, color: '#718096', fontFamily: FONT }}>— How your selected tools work together</div>
                       </div>
-                      {(buildPlan.getting_started || []).map((cmd, i) => (
-                        <CodeBlockWithCopy key={i} code={cmd} />
-                      ))}
+                      <div style={{ background: `${LEVEL_ACCENT}12`, border: `1px solid ${LEVEL_ACCENT}40`, borderRadius: 12, padding: '16px 20px' }}>
+                        <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.7, fontFamily: FONT }}>{buildPlan.build_overview}</div>
+                      </div>
                     </div>
                   )}
 
@@ -1395,7 +2058,7 @@ const AppAppEvaluator: React.FC = () => {
                               </div>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{phase.phase}</div>
-                                {!isExp && <div style={{ fontSize: 12, color: '#718096', fontFamily: FONT, marginTop: 2 }}>{phase.description?.slice(0, 80)}{(phase.description?.length || 0) > 80 ? '…' : ''}</div>}
+                                {!isExp && <div style={{ fontSize: 12, color: '#718096', fontFamily: FONT, marginTop: 2 }}>{(phase.why_this_matters || phase.description || '').slice(0, 90)}{((phase.why_this_matters || phase.description || '').length) > 90 ? '…' : ''}</div>}
                               </div>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#718096', background: '#F7FAFC', borderRadius: 8, padding: '3px 10px', border: '1px solid #E2E8F0', fontFamily: FONT, flexShrink: 0 }}>
                                 {phase.duration_estimate || 'TBD'}
@@ -1405,21 +2068,38 @@ const AppAppEvaluator: React.FC = () => {
                             {isExp && (
                               <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0F0F0' }}>
                                 <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 10, fontFamily: FONT }}>{phase.description}</div>
-                                <div style={{ paddingLeft: 4 }}>
-                                  {(phase.tasks || []).map((task: string, i: number) => (
-                                    <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.7, display: 'flex', gap: 8, marginBottom: 4, fontFamily: FONT }}>
-                                      <span style={{ color: LEVEL_ACCENT_DARK, flexShrink: 0, fontWeight: 700 }}>&bull;</span>{task}
+                                {phase.why_this_matters && (
+                                  <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginBottom: 12, fontStyle: 'italic', fontFamily: FONT }}>{phase.why_this_matters}</div>
+                                )}
+                                {/* Key Activities */}
+                                {(phase.key_activities || []).length > 0 && (
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: FONT }}>Key Activities</div>
+                                    <div style={{ paddingLeft: 4 }}>
+                                      {phase.key_activities.map((activity: string, i: number) => (
+                                        <div key={i} style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.7, display: 'flex', gap: 8, marginBottom: 4, fontFamily: FONT }}>
+                                          <span style={{ color: LEVEL_ACCENT_DARK, flexShrink: 0, fontWeight: 700 }}>&bull;</span>{activity}
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
-                                {phase.tech_stack_notes && (
-                                  <div style={{ marginTop: 10, padding: '10px 14px', background: `${LEVEL_ACCENT}15`, borderRadius: 10, border: `1px solid ${LEVEL_ACCENT}35`, fontSize: 12, color: LEVEL_ACCENT_DARK, lineHeight: 1.6, fontFamily: FONT }}>
-                                    <strong>Stack notes:</strong> {phase.tech_stack_notes}
                                   </div>
                                 )}
-                                {(phase.dependencies || []).length > 0 && (
-                                  <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 6, fontFamily: FONT }}>
-                                    Depends on: {(phase.dependencies || []).join(', ')}
+                                {/* Deliverables */}
+                                {(phase.deliverables || []).length > 0 && (
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: FONT }}>Deliverables</div>
+                                    <div style={{ paddingLeft: 4 }}>
+                                      {phase.deliverables.map((d: string, i: number) => (
+                                        <div key={i} style={{ fontSize: 12, color: '#276749', lineHeight: 1.7, display: 'flex', gap: 8, marginBottom: 4, fontFamily: FONT }}>
+                                          <span style={{ color: '#38B2AC', flexShrink: 0 }}>✓</span>{d}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {phase.tech_stack_notes && (
+                                  <div style={{ marginTop: 4, padding: '10px 14px', background: `${LEVEL_ACCENT}15`, borderRadius: 10, border: `1px solid ${LEVEL_ACCENT}35`, fontSize: 12, color: LEVEL_ACCENT_DARK, lineHeight: 1.6, fontFamily: FONT }}>
+                                    <strong>Stack notes:</strong> {phase.tech_stack_notes}
                                   </div>
                                 )}
                               </div>

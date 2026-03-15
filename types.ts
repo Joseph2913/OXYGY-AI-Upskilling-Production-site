@@ -257,6 +257,8 @@ export interface AppEvaluatorInputs {
 export interface DesignScoreCriteria {
   score: number;
   assessment: string;
+  confidence?: 'explicit' | 'inferred';
+  what_to_define?: string;
 }
 
 export interface DesignScore {
@@ -300,6 +302,9 @@ export interface MatrixPlacement {
   business_impact: number;       // 0-100
   quadrant: 'Quick Win' | 'Strategic Investment' | 'Nice to Have' | 'Rethink';
   quadrant_description: string;
+  playbook_framing?: string;
+  playbook_questions?: string[];
+  playbook_first_move?: string;
 }
 
 export interface AppEvaluatorResult {
@@ -317,6 +322,7 @@ export interface AppEvaluatorResult {
     summary: string;
     items: RiskItem[];
   };
+  next_question?: string;
   refinement_questions?: string[];
 }
 
@@ -338,14 +344,16 @@ export interface AppBuildPlanInputs {
 export interface BuildPlanPhase {
   phase: string;
   description: string;
-  tasks: string[];
-  duration_estimate: string;
-  dependencies: string[];
+  why_this_matters: string;
+  key_activities: string[];
+  deliverables: string[];
   tech_stack_notes: string;
+  duration_estimate: string;
 }
 
 export interface AppBuildPlanResult {
   build_plan_summary: string;
+  build_overview: string;
   implementation_phases: BuildPlanPhase[];
   architecture_components: ArchitectureComponent[];
   risks_and_gaps: {
@@ -353,7 +361,6 @@ export interface AppBuildPlanResult {
     items: RiskItem[];
   };
   stack_integration_notes: string;
-  getting_started: string[];
   refinement_questions?: string[];
 }
 

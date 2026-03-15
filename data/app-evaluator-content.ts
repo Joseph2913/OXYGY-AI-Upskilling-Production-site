@@ -85,34 +85,35 @@ export interface TechStackOption {
   id: string;
   label: string;
   icon: string;
+  logo?: string;
   description: string;
 }
 
 export const TECH_STACK_HOSTING: TechStackOption[] = [
-  { id: 'vercel', label: 'Vercel', icon: '▲', description: 'React/Next.js, zero-config deploys' },
-  { id: 'firebase', label: 'Firebase Hosting', icon: '🔥', description: 'Google ecosystem, static + Cloud Functions' },
-  { id: 'netlify', label: 'Netlify', icon: '◆', description: 'JAMstack, edge functions, forms' },
-  { id: 'aws-amplify', label: 'AWS Amplify', icon: '☁️', description: 'Enterprise AWS, full-stack hosting' },
-  { id: 'railway', label: 'Railway', icon: '🚂', description: 'Full-stack containers, easy scaling' },
-  { id: 'unsure-hosting', label: 'Not sure yet', icon: '🤷', description: 'Platform-agnostic guidance' },
+  { id: 'vercel', label: 'Vercel', icon: '▲', logo: '/logos/brands/vercel.svg', description: 'React/Next.js, zero-config deploys' },
+  { id: 'firebase', label: 'Firebase Hosting', icon: '🔥', logo: '/logos/brands/firebase.svg', description: 'Google ecosystem, static + Cloud Functions' },
+  { id: 'netlify', label: 'Netlify', icon: '◆', logo: '/logos/brands/netlify.svg', description: 'JAMstack, edge functions, forms' },
+  { id: 'aws-amplify', label: 'AWS Amplify', icon: '☁️', logo: '/logos/brands/aws-amplify.svg', description: 'Enterprise AWS, full-stack hosting' },
+  { id: 'railway', label: 'Railway', icon: '🚂', logo: '/logos/brands/railway.svg', description: 'Full-stack containers, easy scaling' },
+  { id: 'unsure-hosting', label: 'Not sure yet', icon: '🤷', logo: '/logos/brands/unsure.svg', description: 'Platform-agnostic guidance' },
 ];
 
 export const TECH_STACK_DATABASE: TechStackOption[] = [
-  { id: 'supabase', label: 'Supabase', icon: '⚡', description: 'Postgres + Auth + Realtime + Storage' },
-  { id: 'firebase-db', label: 'Firebase', icon: '🔥', description: 'Firestore + Firebase Auth' },
-  { id: 'planetscale', label: 'PlanetScale', icon: '🪐', description: 'Serverless MySQL, branching workflow' },
-  { id: 'mongodb', label: 'MongoDB Atlas', icon: '🍃', description: 'Document database, flexible schemas' },
-  { id: 'neon', label: 'Neon', icon: '💚', description: 'Serverless Postgres, branching' },
-  { id: 'unsure-db', label: 'Not sure yet', icon: '🤷', description: 'Database-agnostic guidance' },
+  { id: 'supabase', label: 'Supabase', icon: '⚡', logo: '/logos/brands/supabase.svg', description: 'Postgres + Auth + Realtime + Storage' },
+  { id: 'firebase-db', label: 'Firebase', icon: '🔥', logo: '/logos/brands/firebase.svg', description: 'Firestore + Firebase Auth' },
+  { id: 'planetscale', label: 'PlanetScale', icon: '🪐', logo: '/logos/brands/planetscale.svg', description: 'Serverless MySQL, branching workflow' },
+  { id: 'mongodb', label: 'MongoDB Atlas', icon: '🍃', logo: '/logos/brands/mongodb.svg', description: 'Document database, flexible schemas' },
+  { id: 'neon', label: 'Neon', icon: '💚', logo: '/logos/brands/neon.svg', description: 'Serverless Postgres, branching' },
+  { id: 'unsure-db', label: 'Not sure yet', icon: '🤷', logo: '/logos/brands/unsure.svg', description: 'Database-agnostic guidance' },
 ];
 
 export const TECH_STACK_AI_ENGINE: TechStackOption[] = [
-  { id: 'anthropic', label: 'Anthropic Claude', icon: '🟠', description: 'Claude Sonnet 4, Claude Haiku — strong reasoning' },
-  { id: 'openai', label: 'OpenAI', icon: '🟢', description: 'GPT-4o, GPT-4o-mini — broad ecosystem' },
-  { id: 'google', label: 'Google Gemini', icon: '🔵', description: 'Gemini 2.0 Flash, Gemini Pro — multimodal' },
-  { id: 'open-source', label: 'Open Source', icon: '🟣', description: 'Llama, Mistral via Ollama or Together AI' },
-  { id: 'hybrid', label: 'Multiple / Hybrid', icon: '🔀', description: 'Mix models by task (e.g., fast + powerful)' },
-  { id: 'unsure-ai', label: 'Not sure yet', icon: '🤷', description: 'Model-agnostic guidance' },
+  { id: 'anthropic', label: 'Anthropic Claude', icon: '🟠', logo: '/logos/brands/anthropic.svg', description: 'Claude Sonnet 4, Claude Haiku — strong reasoning' },
+  { id: 'openai', label: 'OpenAI', icon: '🟢', logo: '/logos/brands/openai.svg', description: 'GPT-4o, GPT-4o-mini — broad ecosystem' },
+  { id: 'google', label: 'Google Gemini', icon: '🔵', logo: '/logos/brands/google-gemini.svg', description: 'Gemini 2.0 Flash, Gemini Pro — multimodal' },
+  { id: 'open-source', label: 'Open Source', icon: '🟣', logo: '/logos/brands/open-source.svg', description: 'Llama, Mistral via Ollama or Together AI' },
+  { id: 'hybrid', label: 'Multiple / Hybrid', icon: '🔀', logo: '/logos/brands/hybrid-ai.svg', description: 'Mix models by task (e.g., fast + powerful)' },
+  { id: 'unsure-ai', label: 'Not sure yet', icon: '🤷', logo: '/logos/brands/unsure.svg', description: 'Model-agnostic guidance' },
 ];
 
 /* ─── Matrix Quadrant Definitions ─── */
@@ -139,13 +140,13 @@ export const MATRIX_QUADRANTS = {
 /* ─── Build Plan Loading Steps (§9.5) ─── */
 
 export const BUILD_PLAN_LOADING_STEPS = [
-  'Analysing your tech stack choices…',
-  'Mapping architecture to selected tools…',
-  'Building implementation phases…',
-  'Generating setup commands…',
-  'Identifying stack-specific risks…',
-  'Creating integration guide…',
-  'Finalising your build plan…',
+  'Mapping how your tools work together…',
+  'Planning your PRD generation strategy…',
+  'Structuring the core AI pipeline…',
+  'Designing data quality validation…',
+  'Defining your full feature set…',
+  'Planning authentication & database setup…',
+  'Creating user testing framework…',
 ];
 
 export const BUILD_PLAN_REFINE_LOADING_STEPS = [

@@ -695,37 +695,51 @@ interface CollapsibleOutputCardProps {
 
 | Step | Title | Content |
 |------|-------|---------|
-| 1 | Describe your task | Auto-growing textarea with example chips for quick-fill. Collapses to a summary card once output is generated. |
-| 2 | Your optimised prompt | Strategy-aware output: AI-generated prompt with strategy cards, prompt highlighting, practitioner caveat, and iterative refinement. |
+| 1 | Describe your task | Auto-growing textarea with example chips for quick-fill. Collapses immediately when Generate is clicked. |
+| 2 | Your optimised prompt | Strategy-aware output: AI-generated prompt with numbered strategy badges, prompt highlighting, combined caveat + refinement card (collapsed by default), OutputActionsPanel, and bottom navigation. |
+
+**Progressive disclosure:**
+- **Step 1** expanded on load. Step 2 visible but locked (`locked={!result && !isLoading}`, `lockedMessage="Complete Step 1 to generate your optimised prompt"`).
+- **Step 1 collapses immediately on Generate click** — `step1Done = result !== null || isLoading` ensures the input card closes and Step 2 shows the `ProcessingProgress` indicator without delay.
+- **Step 2** unlocks when loading starts. It is never collapsed (`collapsed={false}`) since it is the final output step.
 
 **Input (Step 1):**
+- Example chips above the textarea (`PLAYGROUND_EXAMPLE_CHIPS`) — clicking one populates the textarea with that text
 - Auto-growing textarea (`minHeight: 120`, `maxHeight: 300`, `resize: none`) with character-level auto-height
-- Example chips below the textarea (`PLAYGROUND_EXAMPLE_CHIPS`) — clicking one populates the textarea
-- "Generate Prompt" button with validation (red flash on empty submit)
-- Step 1 collapses to a summary showing the user's input text with a "Done ✓" indicator once output is generated
+- Character count displayed below-right
+- "Build My Prompt" button with validation (red border flash on empty submit)
+- Error messages displayed in a red-tinted card below the button
 
-**Educational default (Step 2):** Show all 8 prompting strategies in a 2-column grid using `STRATEGY_DEFINITIONS`. Each card shows: icon + name (uppercase), definition text, and a "Best for:" block with `whenToUse` content. Summary footer below lists all 8 strategies with icons.
+**Educational default (Step 2 — exception to §1.4):** The Prompt Playground retains educational strategy cards before generation because the strategies themselves are core learning content. Shows all 8 prompting strategies in a 2-column grid using `STRATEGY_DEFINITIONS`. Each card uses `LEVEL_ACCENT` (not per-strategy colors) for left border and background tint, with: icon + name (uppercase), definition text, and a "Best for:" block with `whenToUse` content. Summary footer below lists all 8 strategies with icons.
 
 **Generated output (Step 2) — structure from top to bottom:**
 
-1. **Top action row** (right-aligned): Copy Optimised Prompt (primary), Download .md (default), Save to Prompt Library (accent `#5A67D8`)
-2. **Cards / Markdown toggle** with info tooltip explaining when Markdown is better
-3. **Prompt card**: White card displaying the full generated prompt. Supports **prompt excerpt highlighting** — when a strategy card is clicked, the relevant excerpt is highlighted inline with the strategy's accent color (`background: {color}40`, `borderBottom: 2px solid {color}`)
-4. **Strategy cards** (2-column grid): One card per strategy used (2–4 cards). Each card shows:
-   - Header: strategy icon + name + accent-colored left border
-   - `why`: Practitioner rationale specific to this task
-   - `how_applied`: 1–2 sentences describing exactly how the strategy was applied, referencing actual prompt content
-   - `prompt_excerpt`: Verbatim excerpt shown in a tinted block. Clicking the card toggles highlight of this excerpt in the prompt above
-   - Expandable/collapsible via chevron toggle
-5. **Practitioner caveat**: Muted card with ℹ️ icon — "No prompt is perfect on the first pass…" — sets expectations for refinement
-6. **Iterative refinement card** (see §4.5)
-7. **Bottom action row** (left-aligned): Start Over (default), Save to Prompt Library (accent)
+1. **Next Step Banner** (§4.8): `<NextStepBanner>` component — "Copy your prompt and test it in your AI tool of choice. Come back and refine it based on what you learn."
+2. **Top action row**: Left: Cards/Markdown toggle + InfoTooltip. Right: Copy Optimised Prompt (primary), Download .md (default), Save to Prompt Library (primary).
+3. **Prompt card**: White card displaying the full generated prompt with **numbered badge annotations** — each strategy's excerpt is marked with a `BadgeCircle` (circled digit) inline at the start of the excerpt, plus a subtle highlight (`LEVEL_ACCENT` tint). Clicking a strategy card intensifies the highlight for that excerpt.
+4. **Strategy cards** (2-column grid): One card per strategy used (2–4 cards). All cards use `LEVEL_ACCENT` as their accent color (left border, background tint) — not per-strategy colors. Each card shows:
+   - Header: strategy icon + `BadgeCircle` number (matching the prompt annotation) + name
+   - Collapsed summary: 2-line truncation of `how_applied`
+   - Expandable via chevron toggle. Expanding a card also activates its highlight in the prompt above.
+   - Expanded detail sections: "How it was applied" (tinted block with `LEVEL_ACCENT`), "Why this strategy was chosen", "What this strategy does" (general definition)
+5. **OutputActionsPanel** (§4.2 Zone 2): Download Markdown, Download Word, Save to Library
+6. **Combined caveat + refinement card** (§4.5): Collapsed by default. Warm-toned card (`#FFFBF0` background, `#F7E8A4` border). Practitioner caveat always visible. "Sharpen this prompt — add more context" CTA expands the refinement questions section.
+7. **Bottom navigation row**: Start Over (default)
 
-**Strategy highlight interaction:**
-- Each strategy card is clickable. Clicking it sets `activeHighlight` to that strategy's ID
-- The prompt card's `renderHighlightedPrompt()` function finds the `prompt_excerpt` substring in the prompt and wraps it with a highlight span using the strategy's accent color from `STRATEGY_COLORS`
-- Clicking the same card again deactivates the highlight
-- Only one strategy can be highlighted at a time
+**Strategy ↔ prompt linking (BadgeCircle system):**
+- Each strategy is assigned a number (1-based index from `strategies_used`)
+- `BadgeCircle` components (18px circles, `LEVEL_ACCENT_DARK` background, white number) appear both in the prompt text (at the start of each excerpt) and in the strategy card header
+- This visual link helps the user immediately see which part of the prompt each strategy influenced
+- All excerpts are subtly highlighted by default (`LEVEL_ACCENT` at 18% opacity, dashed underline). Clicking a strategy card intensifies its highlight (`40%` opacity, solid underline).
+
+**Fuzzy excerpt matching (`findExcerptRange`):**
+The AI sometimes returns excerpts with slightly different whitespace or casing than the actual prompt. The `findExcerptRange()` function uses a 4-level fallback:
+1. Exact substring match
+2. Normalised whitespace match (collapse runs of whitespace in both strings, then map back to original positions)
+3. Case-insensitive match
+4. Prefix match (first ~60 characters) — extends to end of paragraph
+
+This ensures strategy highlighting works reliably even when the AI's excerpt isn't character-perfect.
 
 **Level accent:** `#A8F0E0` (light) / `#1A6B5F` (dark)
 

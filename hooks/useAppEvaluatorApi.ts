@@ -100,12 +100,11 @@ export function useAppEvaluatorApi() {
 
       const data = await res.json();
 
-      // Validate response structure
+      // Validate response structure (accept both old getting_started and new build_overview formats)
       if (
         !data.build_plan_summary ||
         !Array.isArray(data.implementation_phases) ||
-        !Array.isArray(data.architecture_components) ||
-        !Array.isArray(data.getting_started)
+        !Array.isArray(data.architecture_components)
       ) {
         setError('Received an unexpected response format. Please try again.');
         return null;

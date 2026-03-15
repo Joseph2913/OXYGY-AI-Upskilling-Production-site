@@ -1898,7 +1898,7 @@ function evaluateAppProxyPlugin(apiKey: string, model: string): Plugin {
 
 You will receive a description of an AI application the user wants to build, including what it does, who it serves, and what data it uses.
 
-You must respond with a JSON object containing exactly 4 sections:
+You must respond with a JSON object containing these sections:
 
 SECTION 1: DESIGN SCORE
 Evaluate the application design across 5 criteria:
@@ -1912,7 +1912,21 @@ Calculate an overall score (weighted average — User Clarity 25%, Data Architec
 
 Provide a verdict, a rationale paragraph explaining the score.
 
-SECTION 2: ARCHITECTURE & COMPONENTS
+For EACH criterion, also provide:
+- "confidence": "explicit" if the user's description gave enough information to score this directly, "inferred" if you had to make assumptions to score it.
+- "what_to_define": A specific, 1-2 sentence prompt describing exactly what the user needs to clarify to improve this criterion. Reference their actual app — not generic advice. E.g., "You haven't specified how users will be segmented. Will personalisation be role-based, behaviour-based, or both — and what signals will the AI use?"
+
+SECTION 2: MATRIX PLACEMENT
+Position the application on a 2D strategic matrix:
+- technical_complexity (0-100): Derived from how complex the build is. Higher = more complex. Consider: number of integrations, data pipeline complexity, real-time requirements, security needs. Approximate formula: 100 - ((technical_feasibility * 0.6 + scalability * 0.4) * 0.8 + 10). Clamp to 10-95 range.
+- business_impact (0-100): Derived from how much value this delivers. Higher = more impact. Consider: user base size, problem urgency, revenue potential, competitive advantage. Approximate formula: (user_clarity * 0.5 + personalisation * 0.3 + data_architecture * 0.2). Clamp to 10-95 range.
+- quadrant: One of "Quick Win" (complexity<50, impact>=50), "Strategic Investment" (complexity>=50, impact>=50), "Nice to Have" (complexity<50, impact<50), "Rethink" (complexity>=50, impact<50)
+- quadrant_description: One sentence explaining WHY this app falls in this quadrant, specific to the user's app.
+- playbook_framing: 2-3 sentences directly addressing the user's situation given their quadrant, score, and app context. Acknowledge specifics from their description. Tone: a senior colleague giving honest advice.
+- playbook_questions: Array of exactly 4 questions the user should be able to answer before moving forward. Tailored to their quadrant AND their specific app — not generic. Each question is 1 sentence.
+- playbook_first_move: The single most important next action for this user given their quadrant. 2-3 sentences. Concrete and specific to their app.
+
+SECTION 3: ARCHITECTURE & COMPONENTS
 Break the application into its core components. For each component, provide:
 - name: Component name (e.g., "Authentication Layer", "Content Engine", "Analytics Dashboard")
 - description: What this component does and why it's needed
@@ -1921,16 +1935,6 @@ Break the application into its core components. For each component, provide:
 - priority: "essential" | "recommended" | "optional"
 
 Include 4-8 components. Always include authentication, core AI logic, data storage, and user interface.
-
-SECTION 3: IMPLEMENTATION PLAN
-Break the build into phased steps. For each step:
-- phase: Phase name (e.g., "Phase 1: Foundation & Scaffold")
-- description: What happens in this phase
-- tasks: Array of specific tasks (3-6 per phase)
-- duration_estimate: Realistic time estimate (e.g., "1-2 weeks")
-- dependencies: Array of phases this depends on (empty array for Phase 1)
-
-Include 3-5 phases covering the full build from scaffold to deployment.
 
 SECTION 4: RISKS & GAPS
 Identify 3-5 potential risks or gaps in the design. For each:
@@ -1941,7 +1945,16 @@ Identify 3-5 potential risks or gaps in the design. For each:
 
 Include at least one risk from each severity level when possible.
 
-Provide a summary sentence for each of sections 2, 3, and 4.
+Provide a summary sentence for sections 3 and 4.
+
+ABSOLUTE RULE — TOOL AND MODEL AGNOSTIC:
+Never mention specific AI providers (OpenAI, Anthropic, Google) or models (GPT-4, Claude, Gemini) in the output. Use generic terms: "AI model", "LLM", "your chosen AI platform", "the AI model approved by your organisation".
+
+SECTION 5: NEXT QUESTION
+Provide a "next_question" field: the single most important unresolved question the evaluation surfaced. 1-2 sentences. This should be the thing most likely to change the score or the quadrant if answered well.
+
+SECTION 6: REFINEMENT QUESTIONS
+Generate 3-5 follow-up questions that would help you produce a significantly improved evaluation if the user answered them. Questions must be specific to the user's particular application — not generic. Reference their app name, domain, or specific features in the questions.
 
 RESPONSE FORMAT (JSON only, no markdown):
 
@@ -1951,12 +1964,21 @@ RESPONSE FORMAT (JSON only, no markdown):
     "verdict": "Promising design with solid user clarity",
     "rationale": "...",
     "criteria": {
-      "user_clarity": { "score": 85, "assessment": "..." },
-      "data_architecture": { "score": 70, "assessment": "..." },
-      "personalisation": { "score": 65, "assessment": "..." },
-      "technical_feasibility": { "score": 80, "assessment": "..." },
-      "scalability": { "score": 60, "assessment": "..." }
+      "user_clarity": { "score": 85, "assessment": "...", "confidence": "explicit", "what_to_define": "..." },
+      "data_architecture": { "score": 70, "assessment": "...", "confidence": "inferred", "what_to_define": "..." },
+      "personalisation": { "score": 65, "assessment": "...", "confidence": "inferred", "what_to_define": "..." },
+      "technical_feasibility": { "score": 80, "assessment": "...", "confidence": "explicit", "what_to_define": "..." },
+      "scalability": { "score": 60, "assessment": "...", "confidence": "inferred", "what_to_define": "..." }
     }
+  },
+  "matrix_placement": {
+    "technical_complexity": 62,
+    "business_impact": 78,
+    "quadrant": "Strategic Investment",
+    "quadrant_description": "...",
+    "playbook_framing": "...",
+    "playbook_questions": ["...", "...", "...", "..."],
+    "playbook_first_move": "..."
   },
   "architecture": {
     "summary": "Your application requires 6 core components...",
@@ -1975,7 +1997,12 @@ RESPONSE FORMAT (JSON only, no markdown):
     "items": [
       { "name": "...", "severity": "high", "description": "...", "mitigation": "..." }
     ]
-  }
+  },
+  "next_question": "The single most important unresolved question...",
+  "refinement_questions": [
+    "Specific question about the user's app...",
+    "Another specific question..."
+  ]
 }`;
 
   return {
