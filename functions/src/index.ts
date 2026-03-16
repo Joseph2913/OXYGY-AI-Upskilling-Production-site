@@ -2676,7 +2676,7 @@ export const admininviteuser = onRequest(
 // ═══════════════════════════════════════════════════════════════
 
 export const adminscanbydomian = onRequest(
-  { secrets: [supabaseUrl, supabaseServiceKey], cors: true },
+  { secrets: [supabaseUrl, supabaseServiceKey], cors: true, cpu: "gcf_gen1", minInstances: 0, maxInstances: 3 },
   async (req, res) => {
     if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
 
@@ -2726,9 +2726,17 @@ export const adminscanbydomian = onRequest(
           { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
           "list-users"
         );
+
+        if (!listRes.ok) {
+          const errText = await listRes.text();
+          console.error(`[scan-domain] Admin API returned ${listRes.status}: ${errText}`);
+          res.status(502).json({ error: `Failed to list users from auth (${listRes.status})` });
+          return;
+        }
+
         const data = await listRes.json();
-        const users = data?.users || [];
-        console.log(`[scan-domain] Page ${page}: ${users.length} users returned`);
+        const users = Array.isArray(data) ? data : (data?.users || []);
+        console.log(`[scan-domain] Page ${page}: ${users.length} users returned (response keys: ${Object.keys(data || {}).join(",")})`);
 
         for (const u of users) {
           const emailDomain = (u.email || "").split("@")[1]?.toLowerCase();
