@@ -15,7 +15,7 @@ import {
 } from '../../../data/workflow-designer-content';
 import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
 import { useAuth } from '../../../context/AuthContext';
-import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
@@ -978,28 +978,27 @@ const AppWorkflowCanvas: React.FC = () => {
   };
 
   const handleSaveToArtefacts = async () => {
-    if (!user || savedToArtefacts || !buildGuideIntermediate || !buildGuideMarkdown) return;
-    const artefactId = `wf_${Date.now()}`;
-    // Store in localStorage for share link access (TODO: Supabase)
-    localStorage.setItem(`build_guide_${artefactId}`, JSON.stringify({
-      intermediate: buildGuideIntermediate,
-      buildGuide: buildGuideMarkdown,
-      platform: selectedPlatform,
-      generatedAt: new Date().toISOString(),
-    }));
-    const result = await dbSavePrompt(user.id, {
+    if (!user || savedToArtefacts) return;
+    const wfName = workflowName;
+    const nodes = generateResult?.nodes || buildGuideIntermediate?.nodes || [];
+    const saved = await createArtefactFromTool(user.id, {
+      name: `Workflow: ${wfName}`,
+      type: 'workflow',
       level: 3,
-      title: `Workflow: ${workflowName}`,
-      content: JSON.stringify({
-        intermediate: buildGuideIntermediate,
-        buildGuide: buildGuideMarkdown,
-        platform: selectedPlatform,
-      }, null, 2),
-      source_tool: 'workflow-canvas',
+      sourceTool: 'workflow-canvas',
+      content: {
+        designMarkdown: buildGuideMarkdown || '',
+        nodeCount: nodes.length,
+        agentCount: nodes.filter((n: any) => n.type === 'agent').length,
+        humanCheckpoints: nodes.filter((n: any) => n.type === 'human_review').length,
+        nodes,
+        workflowName: wfName,
+      },
+      preview: `${nodes.length} nodes — ${wfName}`,
     });
-    if (result) {
+    if (saved) {
       setSavedToArtefacts(true);
-      toast('Saved to Library');
+      toast('Workflow saved to your library');
     } else {
       toast('Failed to save — please try again');
     }
@@ -1557,7 +1556,7 @@ const AppWorkflowCanvas: React.FC = () => {
                   />
                   <ActionBtn
                     icon={<Library size={13} />}
-                    label={savedToArtefacts ? 'Saved!' : 'Save to Library'}
+                    label={savedToArtefacts ? 'Saved!' : 'Save to your library'}
                     onClick={handleSaveToArtefacts}
                     accent
                     disabled={savedToArtefacts}

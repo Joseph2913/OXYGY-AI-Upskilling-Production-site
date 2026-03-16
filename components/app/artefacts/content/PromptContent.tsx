@@ -78,6 +78,32 @@ const PromptContent: React.FC<Props> = ({ content, onSave }) => {
           </button>
         </>
       )}
+
+      {content.strategies && content.strategies.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={sectionLabel}>Strategies Applied</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {content.strategies.map((s, i) => (
+              <div key={i} style={{
+                border: '1px solid #E2E8F0', borderRadius: 8,
+                padding: '10px 14px',
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>{s.how_applied}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {content.userInput && (
+        <div style={{ marginTop: 16 }}>
+          <div style={sectionLabel}>Original Input</div>
+          <div style={{ fontSize: 13, color: '#718096', fontStyle: 'italic' }}>
+            {content.userInput}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

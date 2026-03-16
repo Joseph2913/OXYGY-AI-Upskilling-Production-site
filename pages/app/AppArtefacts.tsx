@@ -30,11 +30,8 @@ const AppArtefacts: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelContent, setPanelContent] = useState<ArtefactContent | null>(null);
 
-  // Available levels (only levels that have artefacts)
-  const availableLevels = useMemo(() => {
-    const levels = new Set(artefacts.map((a) => a.level));
-    return Array.from(levels).sort();
-  }, [artefacts]);
+  // All levels always available for filtering
+  const availableLevels = useMemo(() => [1, 2, 3, 4, 5], []);
 
   // Filter and sort
   const filteredArtefacts = useMemo(() => {
@@ -232,7 +229,7 @@ const AppArtefacts: React.FC = () => {
       </div>
 
       {/* Search & Filter Bar */}
-      <div style={{ animation: 'fadeSlideUp 0.3s ease-out 60ms both' }}>
+      <div style={{ animation: 'fadeSlideUp 0.3s ease-out 60ms both', position: 'relative', zIndex: 10 }}>
         <SearchFilterBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}

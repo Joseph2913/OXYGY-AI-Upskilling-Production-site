@@ -500,3 +500,80 @@ export interface NewPRDResult {
   screen_map?: string;
   data_model?: string;
 }
+
+// ─── Multi-tenancy types (PRD-10) ───
+
+export type PlatformRole = 'learner' | 'client_admin' | 'oxygy_admin' | 'super_admin';
+export type OrgTier = 'foundation' | 'accelerator' | 'catalyst';
+export type OrgMemberRole = 'learner' | 'facilitator' | 'admin';
+export type ChannelType = 'link' | 'code' | 'domain';
+
+export interface Organisation {
+  id: string;
+  name: string;
+  domain: string | null;
+  tier: OrgTier | null;
+  active: boolean;
+  levelAccess: number[];
+  branding: OrgBranding;
+  maxUsers: number | null;
+  contactEmail: string | null;
+  contactName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgBranding {
+  logoUrl?: string;
+  programmeName?: string;
+  welcomeMessage?: string;
+  primaryColor?: string;
+}
+
+export interface OrgMembership {
+  id: string;
+  userId: string;
+  orgId: string;
+  orgName: string;
+  role: OrgMemberRole;
+  cohortId: string | null;
+  enrolledVia: string | null;
+  enrolledAt: string;
+  active: boolean;
+}
+
+export interface Cohort {
+  id: string;
+  orgId: string;
+  name: string;
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  active: boolean;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface EnrollmentChannel {
+  id: string;
+  orgId: string;
+  cohortId: string | null;
+  type: ChannelType;
+  value: string;
+  label: string | null;
+  maxUses: number | null;
+  usesCount: number;
+  expiresAt: string | null;
+  active: boolean;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  actorId: string;
+  action: string;
+  targetType?: string;
+  targetId?: string;
+  orgId?: string;
+  metadata?: Record<string, unknown>;
+}

@@ -136,6 +136,12 @@ Every Level artifact page (L1 Playground, L2 Agent Builder, L3 Workflow Designer
 - All new artifact pages MUST follow these standards
 - Shared closing component: `components/ArtifactClosing.tsx`
 
+## Local Development
+
+**Always start the dev server on port 5173:** `npx vite --port 5173 --strictPort`
+
+If port 5173 is occupied, kill existing processes first: `lsof -ti:5173 | xargs kill -9`, then start Vite. Never let Vite auto-pick another port — the user expects `http://localhost:5173/`.
+
 ## Hosting — Firebase ONLY (NO Vercel)
 
 **This project is hosted entirely on Firebase. Vercel is NOT used.**
@@ -185,9 +191,24 @@ After deploying, verify the release timestamp in Firebase Console → Hosting �
 - **Firebase secret:** `OPEN_ROUTER_API` (set via `firebase functions:secrets:set OPEN_ROUTER_API`)
 - **Shared helpers:** `functions/src/gemini.ts` exports `callGemini()` / `callOpenRouter()` / `callOpenRouterRaw()`
 
+## Supabase RLS Policies — Recursion Prevention
+
+**READ `docs/SUPABASE_RLS_RECURSION_GUIDE.md` before writing or modifying ANY RLS policy.**
+
+This project experienced a critical RLS infinite recursion bug (2026-03-16) where cross-table policy references created a cycle: `profiles` → `user_org_memberships` → `profiles`. Key rules:
+
+1. **Never create circular cross-table references** in RLS policies. If table A's policies query table B, table B's policies must NOT query table A.
+2. **Always use `LANGUAGE plpgsql`** for SECURITY DEFINER functions. `LANGUAGE sql` functions get inlined by PostgreSQL, silently stripping SECURITY DEFINER context.
+3. **Use existing helper functions** instead of raw subqueries in policies:
+   - `is_oxygy_admin()` — safely checks if current user is oxygy_admin/super_admin
+   - `get_admin_org_ids()` — safely returns org_ids where current user is admin
+4. **Audit all existing policies** before adding new ones: `SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'your_table'`
+5. **PostgreSQL evaluates ALL select policies (OR'd)** — one recursive policy poisons every query on that table, even if simpler policies exist.
+
 ## Reference
 - Full content spec: OXYGY_AI_UPSKILLING_SYSTEM_PROMPT.md
 - PDF content source: OXYGY_AI_Upskilling.pdf
+- RLS recursion guide: SUPABASE_RLS_RECURSION_GUIDE.md
 
 ## Skills
 

@@ -3,6 +3,9 @@ import { defineSecret } from "firebase-functions/params";
 import { callGemini, fetchWithRetry, callOpenRouterRaw } from "./gemini";
 
 const openRouterApiKey = defineSecret("OPEN_ROUTER_API");
+const resendApiKey = defineSecret("RESEND_API_KEY");
+const supabaseUrl = defineSecret("SUPABASE_URL");
+const supabaseServiceKey = defineSecret("SUPABASE_SERVICE_KEY");
 // Note: All API calls go through OpenRouter. Use the appropriate model ID
 // (e.g. "anthropic/claude-sonnet-4-20250514") to access different providers.
 
@@ -2358,3 +2361,431 @@ export const generateplaygroundprompt = onRequest({ secrets: [openRouterApiKey],
     res.status(500).json({ error: "Internal server error", retryable: true });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// SEND INVITE EMAIL (via Resend)
+// Looks up the user's org by email domain, finds their invite
+// code, and sends a formatted email with the code.
+// ═══════════════════════════════════════════════════════════════
+
+export const sendinviteemail = onRequest(
+  { secrets: [resendApiKey, supabaseUrl, supabaseServiceKey], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    try {
+      const { email, name } = req.body;
+      if (!email || typeof email !== "string") {
+        res.status(400).json({ error: "Email is required" });
+        return;
+      }
+
+      const domain = email.split("@")[1]?.toLowerCase();
+      if (!domain) {
+        res.status(400).json({ error: "Invalid email" });
+        return;
+      }
+
+      // Query Supabase for the org matching this email domain
+      const sbUrl = supabaseUrl.value();
+      const sbKey = supabaseServiceKey.value();
+
+      // 1. Find org by domain
+      const orgRes = await fetchWithRetry(
+        `${sbUrl}/rest/v1/organisations?domain=eq.${encodeURIComponent(domain)}&active=eq.true&limit=1`,
+        {
+          headers: {
+            apikey: sbKey,
+            Authorization: `Bearer ${sbKey}`,
+            "Content-Type": "application/json",
+          },
+        },
+        "org-lookup"
+      );
+      const orgs = await orgRes.json();
+
+      if (!Array.isArray(orgs) || orgs.length === 0) {
+        res.status(404).json({
+          error: "No organisation found for your email domain. Please contact your facilitator for an invite code.",
+        });
+        return;
+      }
+
+      const org = orgs[0];
+
+      // 2. Find an available (unaccepted) invite code for this org
+      const inviteRes = await fetchWithRetry(
+        `${sbUrl}/rest/v1/org_invites?org_id=eq.${org.id}&accepted_by=is.null&order=created_at.desc&limit=1`,
+        {
+          headers: {
+            apikey: sbKey,
+            Authorization: `Bearer ${sbKey}`,
+            "Content-Type": "application/json",
+          },
+        },
+        "invite-lookup"
+      );
+      const invites = await inviteRes.json();
+
+      if (!Array.isArray(invites) || invites.length === 0) {
+        res.status(404).json({
+          error: "No invite codes are currently available for your organisation. Please contact your facilitator.",
+        });
+        return;
+      }
+
+      const inviteCode = invites[0].invite_code;
+      const firstName = (name || email.split("@")[0]).split(" ")[0];
+
+      // 3. Send email via Resend
+      const resendKey = resendApiKey.value();
+      const emailRes = await fetchWithRetry("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Oxygy AI Upskilling <onboarding@resend.dev>",
+          to: [email],
+          subject: `Your Oxygy Cohort Code: ${inviteCode}`,
+          html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:'DM Sans',Helvetica,Arial,sans-serif;background:#F7FAFC;">
+  <div style="max-width:520px;margin:32px auto;background:#FFFFFF;border-radius:16px;border:1px solid #E2E8F0;overflow:hidden;">
+    <!-- Header -->
+    <div style="background:#1A202C;padding:28px 32px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#FFFFFF;letter-spacing:-0.3px;">Oxygy AI Upskilling</div>
+      <div style="font-size:13px;color:#A0AEC0;margin-top:4px;">Your Cohort Invite Code</div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:32px;">
+      <div style="font-size:16px;color:#1A202C;font-weight:600;margin-bottom:8px;">
+        Hi ${firstName},
+      </div>
+      <div style="font-size:14px;color:#4A5568;line-height:1.65;margin-bottom:24px;">
+        You're part of the <strong>${org.name}</strong> cohort on Oxygy. Enter the code below in the app to join your team's leaderboard and track progress together.
+      </div>
+
+      <!-- Code box -->
+      <div style="background:#F7FAFC;border:2px dashed #38B2AC;border-radius:12px;padding:20px;text-align:center;margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+          Your Invite Code
+        </div>
+        <div style="font-size:32px;font-weight:800;color:#1A202C;letter-spacing:0.15em;font-family:monospace;">
+          ${inviteCode}
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:#718096;line-height:1.6;margin-bottom:24px;">
+        <strong>How to use it:</strong><br>
+        1. Open the Oxygy app and go to your Dashboard<br>
+        2. Find the "Join your cohort" card on the right<br>
+        3. Enter the code above and click "Join"
+      </div>
+
+      <div style="text-align:center;">
+        <a href="https://oxygy-ai-upskilling-site.web.app/app/dashboard" style="display:inline-block;background:#38B2AC;color:#FFFFFF;text-decoration:none;padding:12px 28px;border-radius:24px;font-size:14px;font-weight:700;">
+          Open Oxygy Dashboard →
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="border-top:1px solid #E2E8F0;padding:20px 32px;text-align:center;">
+      <div style="font-size:11px;color:#A0AEC0;">
+        This email was sent by the Oxygy AI Upskilling platform.<br>
+        If you didn't request this, you can safely ignore it.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`,
+        }),
+      }, "resend-email");
+
+      if (!emailRes.ok) {
+        const errBody = await emailRes.text();
+        console.error("Resend API error:", emailRes.status, errBody);
+        res.status(500).json({ error: "Failed to send email. Please try again." });
+        return;
+      }
+
+      res.status(200).json({ success: true, message: "Invite code sent to your email." });
+    } catch (err) {
+      console.error("send-invite-email error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN: INVITE USER (PRD-13)
+// ═══════════════════════════════════════════════════════════════
+
+export const admininviteuser = onRequest(
+  { secrets: [supabaseUrl, supabaseServiceKey], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const sbUrl = supabaseUrl.value();
+    const sbKey = supabaseServiceKey.value();
+
+    // Verify caller is admin
+    const token = authHeader.split(" ")[1];
+    const userRes = await fetchWithRetry(`${sbUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: sbKey },
+    }, "verify-user");
+    if (!userRes.ok) { res.status(401).json({ error: "Invalid session" }); return; }
+    const caller = await userRes.json();
+
+    // Check platform_role
+    const profileRes = await fetchWithRetry(`${sbUrl}/rest/v1/profiles?id=eq.${caller.id}&select=platform_role`, {
+      headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+    }, "check-profile");
+    const profiles = await profileRes.json();
+    const role = profiles?.[0]?.platform_role;
+    if (role !== "oxygy_admin" && role !== "super_admin") {
+      res.status(403).json({ error: "Forbidden — admin access required" });
+      return;
+    }
+
+    const { email, orgId, cohortId, role: memberRole } = req.body;
+    if (!email || !orgId) { res.status(400).json({ error: "email and orgId are required" }); return; }
+
+    try {
+      // Check if user already exists by searching admin users API
+      const searchRes = await fetchWithRetry(
+        `${sbUrl}/auth/v1/admin/users?page=1&per_page=50`,
+        { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+        "search-users"
+      );
+      const allUsers = await searchRes.json();
+      const existingUser = allUsers?.users?.find((u: { email: string }) => u.email === email);
+
+      let userId: string;
+      let invited = false;
+
+      if (existingUser) {
+        userId = existingUser.id;
+
+        // Check for duplicate membership
+        const dupRes = await fetchWithRetry(
+          `${sbUrl}/rest/v1/user_org_memberships?user_id=eq.${userId}&org_id=eq.${orgId}&active=eq.true&select=id`,
+          { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+          "check-dup"
+        );
+        const dups = await dupRes.json();
+        if (dups && dups.length > 0) {
+          res.status(409).json({ error: "This user is already enrolled in this organisation." });
+          return;
+        }
+      } else {
+        // Invite new user
+        const inviteRes = await fetchWithRetry(`${sbUrl}/auth/v1/admin/invite`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sbKey}`,
+            apikey: sbKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }, "invite-user");
+
+        if (!inviteRes.ok) {
+          const errText = await inviteRes.text();
+          console.error("Invite error:", errText);
+          res.status(500).json({ error: "Failed to send invite" });
+          return;
+        }
+        const inviteData = await inviteRes.json();
+        userId = inviteData.id || inviteData.user?.id;
+        invited = true;
+      }
+
+      // Create membership
+      const membershipBody: Record<string, unknown> = {
+        user_id: userId,
+        org_id: orgId,
+        role: memberRole || "learner",
+        cohort_id: cohortId || null,
+        enrolled_via: "admin_invite",
+        active: true,
+      };
+      if (invited) membershipBody.pending_email = email;
+
+      const memRes = await fetchWithRetry(`${sbUrl}/rest/v1/user_org_memberships`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sbKey}`,
+          apikey: sbKey,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(membershipBody),
+      }, "create-membership");
+
+      if (!memRes.ok) {
+        const errText = await memRes.text();
+        console.error("Membership creation error:", errText);
+        res.status(500).json({ error: "Failed to create membership" });
+        return;
+      }
+
+      // Write audit log
+      await fetchWithRetry(`${sbUrl}/rest/v1/audit_log`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sbKey}`,
+          apikey: sbKey,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          actor_id: caller.id,
+          action: "user.invite",
+          target_type: "user",
+          target_id: userId,
+          org_id: orgId,
+          metadata: { email, role: memberRole || "learner", invited },
+        }),
+      }, "audit-log");
+
+      res.status(200).json({ success: true, userId, invited });
+    } catch (err) {
+      console.error("admin-invite-user error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN: SCAN USERS BY DOMAIN (PRD-13 — Retroactive Domain Enrollment)
+// ═══════════════════════════════════════════════════════════════
+
+export const adminscanbydomian = onRequest(
+  { secrets: [supabaseUrl, supabaseServiceKey], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const sbUrl = supabaseUrl.value();
+    const sbKey = supabaseServiceKey.value();
+
+    // Verify caller is admin
+    const token = authHeader.split(" ")[1];
+    const userRes = await fetchWithRetry(`${sbUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: sbKey },
+    }, "verify-user");
+    if (!userRes.ok) { res.status(401).json({ error: "Invalid session" }); return; }
+    const caller = await userRes.json();
+
+    // Use the caller's own token to read their profile (RLS allows self-read)
+    const profileRes = await fetchWithRetry(`${sbUrl}/rest/v1/profiles?id=eq.${caller.id}&select=platform_role`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: sbKey },
+    }, "check-profile");
+    const profiles = await profileRes.json();
+    const role = profiles?.[0]?.platform_role;
+    if (role !== "oxygy_admin" && role !== "super_admin") {
+      res.status(403).json({ error: "Forbidden — admin access required" });
+      return;
+    }
+
+    const { domain, orgId } = req.body;
+    if (!domain || !orgId) { res.status(400).json({ error: "domain and orgId are required" }); return; }
+
+    try {
+      // Paginate through all auth users to find domain matches
+      const matchingUsers: { id: string; email: string; fullName: string; alreadyEnrolled: boolean }[] = [];
+      let page = 1;
+      const perPage = 100;
+      let hasMore = true;
+
+      console.log(`[scan-domain] Scanning for domain="${domain}" orgId="${orgId}"`);
+
+      while (hasMore) {
+        const listRes = await fetchWithRetry(
+          `${sbUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+          { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+          "list-users"
+        );
+        const data = await listRes.json();
+        const users = data?.users || [];
+        console.log(`[scan-domain] Page ${page}: ${users.length} users returned`);
+
+        for (const u of users) {
+          const emailDomain = (u.email || "").split("@")[1]?.toLowerCase();
+          if (emailDomain === domain.toLowerCase()) {
+            matchingUsers.push({
+              id: u.id,
+              email: u.email,
+              fullName: u.user_metadata?.full_name || "",
+              alreadyEnrolled: false,
+            });
+          }
+        }
+
+        hasMore = users.length === perPage;
+        page++;
+        // Safety cap at 50 pages (5000 users)
+        if (page > 50) break;
+      }
+
+      console.log(`[scan-domain] Total matching users for "${domain}": ${matchingUsers.length}`);
+      if (matchingUsers.length === 0) {
+        res.status(200).json({ users: [] });
+        return;
+      }
+
+      // Check which users already have active memberships in this org
+      const userIds = matchingUsers.map(u => u.id);
+      // Supabase REST API supports in filter
+      const inFilter = userIds.map(id => `"${id}"`).join(",");
+      const memRes = await fetchWithRetry(
+        `${sbUrl}/rest/v1/user_org_memberships?user_id=in.(${inFilter})&org_id=eq.${orgId}&active=eq.true&select=user_id`,
+        { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+        "check-memberships"
+      );
+      const existingMemberships = await memRes.json();
+      const enrolledSet = new Set((existingMemberships || []).map((m: { user_id: string }) => m.user_id));
+
+      // Also fetch profile names for users that have them
+      const profilesRes = await fetchWithRetry(
+        `${sbUrl}/rest/v1/profiles?id=in.(${inFilter})&select=id,full_name`,
+        { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+        "fetch-profiles"
+      );
+      const profileData = await profilesRes.json();
+      const nameMap = new Map<string, string>((profileData || []).map((p: { id: string; full_name: string }) => [p.id, p.full_name]));
+
+      for (const u of matchingUsers) {
+        u.alreadyEnrolled = enrolledSet.has(u.id);
+        if (nameMap.has(u.id) && nameMap.get(u.id)) {
+          u.fullName = nameMap.get(u.id)!;
+        }
+      }
+
+      res.status(200).json({ users: matchingUsers });
+    } catch (err) {
+      console.error("admin-scan-domain error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);

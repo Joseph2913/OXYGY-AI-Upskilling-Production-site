@@ -3,20 +3,23 @@ import { SearchX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, Bot, GitBranch, LayoutDashboard, Layers,
+  BookOpen, FileText,
 } from 'lucide-react';
 import { LEVEL_FULL_NAMES } from '../../../data/levelTopics';
 import ArtefactCard from './ArtefactCard';
 import type { Artefact, ArtefactType } from '../../../hooks/useArtefactsData';
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
-  prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard', app_spec: 'App Spec',
+  prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard',
+  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD',
 };
 
 const GHOST_TYPES: { type: ArtefactType; level: number; Icon: React.FC<{ size?: number; color?: string }> }[] = [
   { type: 'prompt', level: 1, Icon: Zap },
   { type: 'agent', level: 2, Icon: Bot },
+  { type: 'build_guide', level: 2, Icon: BookOpen },
   { type: 'workflow', level: 3, Icon: GitBranch },
-  { type: 'dashboard', level: 4, Icon: LayoutDashboard },
+  { type: 'prd', level: 4, Icon: FileText },
   { type: 'app_spec', level: 5, Icon: Layers },
 ];
 

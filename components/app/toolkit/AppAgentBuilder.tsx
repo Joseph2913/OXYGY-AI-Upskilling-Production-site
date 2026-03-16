@@ -12,7 +12,7 @@ import {
 import { useAgentDesignApi } from '../../../hooks/useAgentDesignApi';
 import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck, AgentSetupGuide } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -750,13 +750,30 @@ const AppAgentBuilder: React.FC = () => {
     setTimeout(() => setCopiedSection(null), 2500);
   };
 
-  const handleSaveToLibrary = () => {
+  const handleSaveToLibrary = async () => {
     if (!result || !user) return;
     const fullContent = buildFullSystemPrompt(result);
-    const title = `Agent: ${taskDescription.slice(0, 50)}${taskDescription.length > 50 ? '...' : ''}`;
-    dbSavePrompt(user.id, { level: 2, title, content: fullContent, source_tool: 'agent-builder' });
-    setSavedToLibrary(true); setToastMessage('System prompt saved to your Prompt Library');
-    setTimeout(() => setSavedToLibrary(false), 3000);
+    const title = `Agent: ${taskDescription.slice(0, 55)}${taskDescription.length > 55 ? '\u2026' : ''}`;
+    const saved = await createArtefactFromTool(user.id, {
+      name: title,
+      type: 'agent',
+      level: 2,
+      sourceTool: 'agent-builder',
+      content: {
+        systemPrompt: fullContent,
+        outputFormat: result.output_format || null,
+        accountability: result.accountability || [],
+        readinessScore: result.readiness_score || null,
+        taskDescription: taskDescription,
+        inputDescription: inputDataDescription,
+      },
+      preview: `Agent: ${taskDescription.slice(0, 180)}`,
+    });
+    if (saved) {
+      setSavedToLibrary(true);
+      setToastMessage('Agent saved to your library');
+      setTimeout(() => setSavedToLibrary(false), 3000);
+    }
   };
 
   const handleCopyBuildPlan = async () => {
@@ -767,12 +784,27 @@ const AppAgentBuilder: React.FC = () => {
     setTimeout(() => setBuildPlanCopied(false), 2500);
   };
 
-  const handleSaveBuildPlan = () => {
+  const handleSaveBuildPlan = async () => {
     if (!result || !user || !setupGuide) return;
-    const fullContent = buildFullBuildPlan();
-    const title = `Build Plan: ${taskDescription.slice(0, 50)}${taskDescription.length > 50 ? '...' : ''}`;
-    dbSavePrompt(user.id, { level: 2, title, content: fullContent, source_tool: 'agent-builder' });
-    setBuildPlanSaved(true); setToastMessage('Build plan saved to your library');
+    const md = buildFullBuildPlan();
+    const title = `Build Guide: ${taskDescription.slice(0, 50)}${taskDescription.length > 50 ? '\u2026' : ''}`;
+    const saved = await createArtefactFromTool(user.id, {
+      name: title,
+      type: 'build_guide',
+      level: 2,
+      sourceTool: 'agent-builder',
+      content: {
+        markdown: md,
+        platform: selectedPlatform || 'generic',
+        toolName: 'Agent Builder',
+        taskDescription: taskDescription,
+      },
+      preview: `Build Guide: ${taskDescription.slice(0, 180)}`,
+    });
+    if (saved) {
+      setBuildPlanSaved(true);
+      setToastMessage('Build guide saved to your library');
+    }
   };
 
   const handleDownloadBuildPlan = () => {

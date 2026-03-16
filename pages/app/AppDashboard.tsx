@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, FileText, Video, PenTool, FolderOpen } from 'lucide-react';
+import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, FileText, Video, PenTool, FolderOpen, KeyRound, Mail, Users } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { useDashboardData, LeaderboardMember } from '../../hooks/useDashboardData';
+import { validateAndAcceptInvite } from '../../lib/database';
 import {
   LEVEL_TOPICS,
   LEVEL_FULL_NAMES,
@@ -259,11 +261,46 @@ function JourneySteps({ currentLevel, levelsCompleted }: { currentLevel: number;
    ═══════════════════════════════════════════ */
 const AppDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { userProfile } = useAppContext();
   const { data, loading } = useDashboardData();
   const firstName = userProfile?.fullName?.split(' ')[0] || 'User';
 
-  if (loading || !data) {
+  // Org invite code state (for no-org users)
+  const [inviteCode, setInviteCode] = useState('');
+  const [joinStatus, setJoinStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [joinError, setJoinError] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const handleJoinOrg = async () => {
+    if (!user || !inviteCode.trim()) return;
+    setJoinStatus('loading');
+    const result = await validateAndAcceptInvite(user.id, inviteCode.trim());
+    if (result.success) {
+      setJoinStatus('success');
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      setJoinStatus('error');
+      setJoinError(result.error || 'Invalid code');
+    }
+  };
+
+  const handleRequestCode = async () => {
+    if (!user?.email) return;
+    setEmailSending(true);
+    try {
+      const res = await fetch('/api/send-invite-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, name: user.user_metadata?.full_name || '' }),
+      });
+      if (res.ok) setEmailSent(true);
+    } catch { /* ignore */ }
+    setEmailSending(false);
+  };
+
+  if (loading) {
     return (
       <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
         <style>{pulseStyle}</style>
@@ -277,6 +314,21 @@ const AppDashboard: React.FC = () => {
           </div>
           <Skeleton width="100%" height={600} radius={16} />
         </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif", textAlign: 'center', marginTop: 80 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#1A202C', marginBottom: 8 }}>Unable to load dashboard</div>
+        <div style={{ fontSize: 14, color: '#718096', marginBottom: 20 }}>Check the browser console for details, or try refreshing.</div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ padding: '10px 24px', borderRadius: 8, background: '#38B2AC', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+        >
+          Refresh
+        </button>
       </div>
     );
   }
@@ -582,7 +634,7 @@ const AppDashboard: React.FC = () => {
                 const lvlAccentDark = LEVEL_ACCENT_DARK_COLORS[lvl];
                 const isCurrentLevel = lvl === level;
                 const isCompletedLevel = lvl < level;
-                const isLocked = lvl > level;
+                const isLocked = false; // All levels accessible
                 const progress = data.levelProgress[lvl];
                 const phases = progress?.phasesCompleted || [false, false, false, false];
                 const usage = data.toolUsage[primaryTool.id];
@@ -777,70 +829,186 @@ const AppDashboard: React.FC = () => {
             top: 72,
           }}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Trophy size={16} color="#F6AD55" />
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
-            </div>
-            <button
-              onClick={() => navigate('/app/cohort')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-            >
-              View all →
-            </button>
-          </div>
+          {data.leaderboard.length > 1 ? (
+            <>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Trophy size={16} color="#F6AD55" />
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
+                </div>
+                <button
+                  onClick={() => navigate('/app/cohort')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  View all →
+                </button>
+              </div>
 
-          {/* Summary bar */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 12,
-              marginBottom: 16,
-              padding: '12px 14px',
-              borderRadius: 10,
-              background: '#F7FAFC',
-            }}
-          >
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.activeColleaguesCount}</div>
-              <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Active</div>
-            </div>
-            <div style={{ width: 1, background: '#E2E8F0' }} />
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.sameLevelColleaguesCount}</div>
-              <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Your Level</div>
-            </div>
-            <div style={{ width: 1, background: '#E2E8F0' }} />
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>#{currentUserRank}</div>
-              <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Your Rank</div>
-            </div>
-          </div>
+              {/* Summary bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  marginBottom: 16,
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: '#F7FAFC',
+                }}
+              >
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.activeColleaguesCount}</div>
+                  <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Active</div>
+                </div>
+                <div style={{ width: 1, background: '#E2E8F0' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.sameLevelColleaguesCount}</div>
+                  <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Your Level</div>
+                </div>
+                <div style={{ width: 1, background: '#E2E8F0' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>#{currentUserRank}</div>
+                  <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Your Rank</div>
+                </div>
+              </div>
 
-          {/* Leaderboard list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {data.leaderboard.map((member, i) => (
-              <LeaderboardRow key={i} member={member} rank={i + 1} />
-            ))}
-          </div>
+              {/* Leaderboard list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {data.leaderboard.map((member, i) => (
+                  <LeaderboardRow key={i} member={member} rank={i + 1} />
+                ))}
+              </div>
 
-          {/* Score explainer */}
-          <div
-            style={{
-              marginTop: 14,
-              padding: '10px 12px',
-              borderRadius: 8,
-              background: '#F7FAFC',
-              fontSize: 11,
-              color: '#718096',
-              lineHeight: 1.5,
-            }}
-          >
-            <span style={{ fontWeight: 600, color: '#4A5568' }}>Score</span> = Completion + Use Cases + Assessments + Streak + Activity Rate
-          </div>
+              {/* Score explainer */}
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: '#F7FAFC',
+                  fontSize: 11,
+                  color: '#718096',
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ fontWeight: 600, color: '#4A5568' }}>Score</span> = Phases (&times;4) + Artefacts (&times;25) + Insights (&times;30) + Streak (&times;5) + Activity (&times;2)
+              </div>
+            </>
+          ) : (
+            /* No-org state — invite code entry */
+            <div style={{ padding: '20px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <Trophy size={16} color="#F6AD55" />
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
+              </div>
+
+              <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                <Users size={28} color="#38B2AC" style={{ marginBottom: 8 }} />
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 4 }}>
+                  Join your cohort
+                </div>
+                <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5 }}>
+                  Enter the code from your facilitator to see your team's leaderboard.
+                </div>
+              </div>
+
+              {/* Code entry */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <KeyRound size={13} color="#A0AEC0" style={{ position: 'absolute', left: 10, top: 11 }} />
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. AB3K7NWQ"
+                    maxLength={8}
+                    style={{
+                      width: '100%',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: 8,
+                      padding: '9px 12px 9px 30px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#1A202C',
+                      fontFamily: "'DM Sans', sans-serif",
+                      outline: 'none',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={handleJoinOrg}
+                  disabled={!inviteCode.trim() || joinStatus === 'loading'}
+                  style={{
+                    background: inviteCode.trim() ? '#38B2AC' : '#A0AEC0',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '9px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: inviteCode.trim() ? 'pointer' : 'not-allowed',
+                    fontFamily: "'DM Sans', sans-serif",
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  {joinStatus === 'loading' ? 'Joining...' : 'Join'}
+                </button>
+              </div>
+
+              {joinStatus === 'error' && (
+                <div style={{ fontSize: 12, color: '#C53030', marginBottom: 8 }}>{joinError}</div>
+              )}
+              {joinStatus === 'success' && (
+                <div style={{ fontSize: 12, color: '#38A169', fontWeight: 600, marginBottom: 8 }}>
+                  Joined! Reloading...
+                </div>
+              )}
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
+                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+                <span style={{ fontSize: 11, color: '#A0AEC0' }}>or</span>
+                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+              </div>
+
+              {/* Request code via email */}
+              <button
+                onClick={handleRequestCode}
+                disabled={emailSending || emailSent}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '9px 16px',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 8,
+                  background: emailSent ? '#F0FFF4' : '#F7FAFC',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: emailSent ? '#38A169' : '#4A5568',
+                  cursor: emailSending || emailSent ? 'default' : 'pointer',
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                <Mail size={13} color={emailSent ? '#38A169' : '#718096'} />
+                {emailSent ? 'Code sent to your email!' : emailSending ? 'Sending...' : 'Email me my code'}
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: 10 }}>
+                <span style={{ fontSize: 11, color: '#A0AEC0', lineHeight: 1.4 }}>
+                  No code? You can join a cohort anytime.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

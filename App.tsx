@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-// DEV MODE: Auth disabled — no AuthProvider wrapping
-// import { AuthProvider } from './context/AuthContext';
-// import { AppAuthGuard } from './components/app/AppAuthGuard';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AppAuthGuard } from './components/app/AppAuthGuard';
 import { AppLayout } from './components/app/AppLayout';
 import { MarketingSite } from './MarketingSite';
 
@@ -24,6 +23,26 @@ const AppWorkflowCanvas = React.lazy(() => import('./components/app/toolkit/AppW
 const AppDashboardDesigner = React.lazy(() => import('./components/app/toolkit/AppDashboardDesigner'));
 const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppAppEvaluator'));
 const BuildGuideView = React.lazy(() => import('./pages/app/BuildGuideView'));
+const AppOnboarding = React.lazy(() => import('./pages/app/AppOnboarding'));
+const AppAdmin = React.lazy(() => import('./pages/app/AppAdmin'));
+const JoinPage = React.lazy(() => import('./pages/app/JoinPage'));
+const AppJoinCode = React.lazy(() => import('./pages/app/AppJoinCode'));
+const OrgCheckGuard = React.lazy(() => import('./components/app/OrgCheckGuard'));
+
+// Admin shell (PRD-10/11 — platform administration)
+const AdminAuthGuard = React.lazy(() => import('./components/admin/AdminAuthGuard'));
+const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
+const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminOrgList = React.lazy(() => import('./pages/admin/AdminOrgList'));
+const AdminOrgCreate = React.lazy(() => import('./pages/admin/AdminOrgCreate'));
+const AdminOrgDetail = React.lazy(() => import('./pages/admin/AdminOrgDetail'));
+const AdminOrgEdit = React.lazy(() => import('./pages/admin/AdminOrgEdit'));
+const AdminUsers = React.lazy(() => import('./pages/admin/AdminUsers'));
+const AdminContent = React.lazy(() => import('./pages/admin/AdminContent'));
+const AdminSettings = React.lazy(() => import('./pages/admin/AdminSettings'));
+
+// Login page (renders AuthModal as full-page view)
+const LoginPage = React.lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
 
 function AppSuspense({ children }: { children: React.ReactNode }) {
   return (
@@ -51,12 +70,27 @@ function AppSuspense({ children }: { children: React.ReactNode }) {
 
 /**
  * Redirect old hash-based toolkit routes to new /app/toolkit/* paths.
+ * Also handles post-OAuth redirect: if user lands on / after sign-in,
+ * redirect them to their intended destination.
  */
 function HashRedirector() {
   const location = useLocation();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const hash = window.location.hash;
+
+    // Post-OAuth redirect: user landed on / with tokens in hash
+    // Once auth loads and user is signed in, redirect to stored return path
+    if (!loading && user) {
+      const returnPath = sessionStorage.getItem('oxygy_auth_return_path');
+      if (returnPath) {
+        sessionStorage.removeItem('oxygy_auth_return_path');
+        window.location.href = returnPath;
+        return;
+      }
+    }
+
     const redirectMap: Record<string, string> = {
       '#playground': '/app/toolkit/prompt-playground',
       '#workflow-designer': '/app/toolkit/workflow-canvas',
@@ -70,26 +104,58 @@ function HashRedirector() {
       window.history.replaceState(null, '', target);
       window.location.reload();
     }
-  }, [location]);
+  }, [location, user, loading]);
 
-  return null;
-}
-
-/** Login route redirects straight to app dashboard (no auth) */
-function LoginRedirect() {
-  useEffect(() => {
-    window.location.replace('/app/dashboard');
-  }, []);
   return null;
 }
 
 function App() {
   return (
+    <AuthProvider>
       <Routes>
-        {/* App shell — all /app/* routes (auth disabled for dev) */}
+        {/* Admin shell — platform administration (requires oxygy_admin or super_admin) */}
+        <Route
+          path="/admin"
+          element={
+            <AppSuspense>
+              <AdminAuthGuard>
+                <AdminLayout />
+              </AdminAuthGuard>
+            </AppSuspense>
+          }
+        >
+          <Route index element={<AppSuspense><AdminDashboardPage /></AppSuspense>} />
+          <Route path="organisations" element={<AppSuspense><AdminOrgList /></AppSuspense>} />
+          <Route path="organisations/new" element={<AppSuspense><AdminOrgCreate /></AppSuspense>} />
+          <Route path="organisations/:id" element={<AppSuspense><AdminOrgDetail /></AppSuspense>} />
+          <Route path="organisations/:id/edit" element={<AppSuspense><AdminOrgEdit /></AppSuspense>} />
+          <Route path="users" element={<AppSuspense><AdminUsers /></AppSuspense>} />
+          <Route path="content" element={<AppSuspense><AdminContent /></AppSuspense>} />
+          <Route path="settings" element={<AppSuspense><AdminSettings /></AppSuspense>} />
+        </Route>
+
+        {/* Code entry page — auth-protected but outside OrgCheckGuard */}
+        <Route
+          path="/app/join"
+          element={
+            <AppAuthGuard>
+              <AppSuspense><AppJoinCode /></AppSuspense>
+            </AppAuthGuard>
+          }
+        />
+
+        {/* App shell — all /app/* routes (protected by auth guard + org check) */}
         <Route
           path="/app"
-          element={<AppLayout />}
+          element={
+            <AppAuthGuard>
+              <AppSuspense>
+                <OrgCheckGuard>
+                  <AppLayout />
+                </OrgCheckGuard>
+              </AppSuspense>
+            </AppAuthGuard>
+          }
         >
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<AppSuspense><AppDashboard /></AppSuspense>} />
@@ -111,10 +177,15 @@ function App() {
           <Route path="artefacts/:artefactId" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
           <Route path="artefacts/:id/build-guide" element={<AppSuspense><BuildGuideView /></AppSuspense>} />
           <Route path="cohort" element={<AppSuspense><AppCohort /></AppSuspense>} />
+          <Route path="admin" element={<AppSuspense><AppAdmin /></AppSuspense>} />
+          <Route path="onboarding" element={<AppSuspense><AppOnboarding /></AppSuspense>} />
         </Route>
 
-        {/* Login handler — bridges /login path to existing hash-based auth */}
-        <Route path="/login" element={<LoginRedirect />} />
+        {/* Join org via invite link */}
+        <Route path="/join/:slug" element={<AppSuspense><JoinPage /></AppSuspense>} />
+
+        {/* Login page — full-page sign-in view */}
+        <Route path="/login" element={<AppSuspense><LoginPage /></AppSuspense>} />
 
         {/* Marketing site — all other paths use existing hash-based routing */}
         <Route
@@ -127,6 +198,7 @@ function App() {
           }
         />
       </Routes>
+    </AuthProvider>
   );
 }
 

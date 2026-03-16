@@ -17,7 +17,7 @@ import type {
   ArchitectureComponent, RiskItem, AppBuildPlanResult, BuildPlanPhase,
 } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -1131,13 +1131,52 @@ const AppAppEvaluator: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleSaveBuildPlan = () => {
+  const handleSaveAppSpec = async () => {
+    if (!result || !user) return;
+    const saved = await createArtefactFromTool(user.id, {
+      name: `App Spec: ${appDescription.slice(0, 55)}${appDescription.length > 55 ? '\u2026' : ''}`,
+      type: 'app_spec',
+      level: 5,
+      sourceTool: 'ai-app-evaluator',
+      content: {
+        designScore: result.design_score || null,
+        matrixPlacement: result.matrix_placement || null,
+        architecture: result.architecture || null,
+        implementationPlan: result.implementation_plan || null,
+        risksAndGaps: result.risks_and_gaps || null,
+        refinementQuestions: result.refinement_questions || [],
+        appDescription: appDescription,
+        problemStatement: problemAndUsers || '',
+      },
+      preview: `App Spec: ${appDescription.slice(0, 180)}`,
+    });
+    if (saved) {
+      setToastMessage('App spec saved to your library');
+    }
+  };
+
+  const handleSaveBuildPlan = async () => {
     if (!buildPlan || !user) return;
     const fullContent = buildFullBuildPlan(buildPlan);
-    const title = `Build Plan: ${appDescription.slice(0, 50)}${appDescription.length > 50 ? '...' : ''}`;
-    dbSavePrompt(user.id, { level: 5, title, content: fullContent, source_tool: 'ai-app-evaluator' });
-    setBuildPlanSaved(true); setToastMessage('Build plan saved to your Prompt Library');
-    setTimeout(() => setBuildPlanSaved(false), 3000);
+    const title = `Build Plan: ${appDescription.slice(0, 50)}${appDescription.length > 50 ? '\u2026' : ''}`;
+    const saved = await createArtefactFromTool(user.id, {
+      name: title,
+      type: 'build_guide',
+      level: 5,
+      sourceTool: 'ai-app-evaluator',
+      content: {
+        markdown: fullContent,
+        platform: 'generic',
+        toolName: 'App Evaluator',
+        taskDescription: appDescription,
+      },
+      preview: `Build Plan: ${appDescription.slice(0, 180)}`,
+    });
+    if (saved) {
+      setBuildPlanSaved(true);
+      setToastMessage('Build plan saved to your library');
+      setTimeout(() => setBuildPlanSaved(false), 3000);
+    }
   };
 
   const togglePhase = (idx: number) => {

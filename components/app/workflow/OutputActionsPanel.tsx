@@ -381,7 +381,7 @@ const OutputActionsPanel: React.FC<OutputActionsPanelProps> = ({
             ...FONT,
           }}
         >
-          {isSaved ? '\u2713 Saved' : 'Save to Library \u2192'}
+          {isSaved ? '\u2713 Saved' : 'Save to your library \u2192'}
         </button>
       </div>
     </div>

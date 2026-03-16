@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ArtefactContent } from '../../../../hooks/useArtefactsData';
+import { simpleMarkdownToHtml } from '../../../../utils/markdownToHtml';
 
 const sectionLabel: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: '#718096',
@@ -23,10 +24,19 @@ interface Props {
 
 const WorkflowContent: React.FC<Props> = ({ content }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-    <div>
-      <div style={sectionLabel}>Summary</div>
-      <div style={contentBox}>{content.summary || 'No summary'}</div>
-    </div>
+    {content.workflowName && (
+      <div>
+        <div style={sectionLabel}>Workflow</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{content.workflowName}</div>
+      </div>
+    )}
+
+    {content.summary && (
+      <div>
+        <div style={sectionLabel}>Summary</div>
+        <div style={contentBox}>{content.summary}</div>
+      </div>
+    )}
 
     <div style={{ display: 'flex', gap: 12 }}>
       <div style={statChip}>
@@ -54,6 +64,19 @@ const WorkflowContent: React.FC<Props> = ({ content }) => (
             </div>
           ))}
         </div>
+      </div>
+    )}
+
+    {content.designMarkdown && (
+      <div>
+        <div style={sectionLabel}>Workflow Design</div>
+        <div
+          style={{
+            ...contentBox, maxHeight: 300, overflowY: 'auto', whiteSpace: 'normal',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+          dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(content.designMarkdown) }}
+        />
       </div>
     )}
   </div>

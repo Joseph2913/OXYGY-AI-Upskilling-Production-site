@@ -12,6 +12,9 @@ export const supabase = createClient(supabaseUrl || 'https://placeholder.supabas
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Bypass Navigator.locks API to prevent "lock timed out" errors
+    // that block auth initialization entirely
+    lock: (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
   },
 })
 

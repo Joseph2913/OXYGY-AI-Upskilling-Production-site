@@ -1,16 +1,32 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
+import { useOrg } from '../context/OrgContext';
+import {
+  getAllTopicProgress,
+  getArtefactCountsByLevel,
+  getLevelProgress,
+  getOrgLeaderboard,
+  updateStreak,
+  getActiveDaysThisWeek,
+} from '../lib/database';
+import { LEVEL_TOPICS } from '../data/levelTopics';
+import { ALL_TOOLS } from '../data/toolkitData';
 
 export interface LeaderboardMember {
   name: string;
   initials: string;
   avatarColor: string;
   level: number;
-  score: number;           // Aggregate score (completion + use cases + assessments + streak + rate)
-  completionPct: number;   // 0–100
+  score: number;
+  completionPct: number;
   streakDays: number;
   useCasesIdentified: number;
-  assessmentAvg: number;   // 0–100
+  assessmentAvg: number;
   isCurrentUser: boolean;
+  artefactCount: number;
+  insightCount: number;
+  activeDays30: number;
 }
 
 export interface LevelProgress {
@@ -34,152 +50,249 @@ export interface DashboardData {
   totalSlides: number;
   currentPhase: number;
 
-  // Overall journey progress (across all levels)
   overallCompletedTopics: number;
   overallTotalTopics: number;
   levelsCompleted: number;
 
-  // Per-level topic progress and artefact counts
   levelProgress: Record<number, LevelProgress>;
-
-  // Per-tool usage stats
   toolUsage: Record<string, ToolUsage>;
 
   streakDays: number;
   activeDaysThisWeek: boolean[];
 
-  // Leaderboard
   leaderboard: LeaderboardMember[];
   activeColleaguesCount: number;
   sameLevelColleaguesCount: number;
 
   lastActivityAt: Date | null;
-
   unlockedToolIds: string[];
 }
 
-/**
- * DEV MODE: Returns mock dashboard data.
- * TODO: Replace with real Supabase queries when auth is wired up.
- */
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .filter(Boolean)
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
+}
+
 export function useDashboardData(): { data: DashboardData | null; loading: boolean } {
+  const { user } = useAuth();
+  const { userProfile } = useAppContext();
+  const { orgId } = useOrg();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const monBasedToday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const activeDays = Array(7).fill(false).map((_, i) => i < monBasedToday);
+    if (!user || !userProfile) {
+      setLoading(false);
+      return;
+    }
 
-      const leaderboard: LeaderboardMember[] = [
-        {
-          name: 'Joseph Thomas', initials: 'JT', avatarColor: '#A8F0E0',
-          level: 5, score: 872, completionPct: 82, streakDays: 5,
-          useCasesIdentified: 14, assessmentAvg: 91, isCurrentUser: true,
-        },
-        {
-          name: 'Amira Khalil', initials: 'AK', avatarColor: '#C3D0F5',
-          level: 5, score: 910, completionPct: 88, streakDays: 7,
-          useCasesIdentified: 16, assessmentAvg: 94, isCurrentUser: false,
-        },
-        {
-          name: 'Sam Burton', initials: 'SB', avatarColor: '#F5B8A0',
-          level: 4, score: 745, completionPct: 68, streakDays: 3,
-          useCasesIdentified: 11, assessmentAvg: 85, isCurrentUser: false,
-        },
-        {
-          name: 'Priya Nair', initials: 'PN', avatarColor: '#F7E8A4',
-          level: 4, score: 720, completionPct: 65, streakDays: 4,
-          useCasesIdentified: 10, assessmentAvg: 82, isCurrentUser: false,
-        },
-        {
-          name: 'Marcus Chen', initials: 'MC', avatarColor: '#38B2AC',
-          level: 3, score: 580, completionPct: 52, streakDays: 2,
-          useCasesIdentified: 8, assessmentAvg: 78, isCurrentUser: false,
-        },
-        {
-          name: 'Rachel James', initials: 'RJ', avatarColor: '#E9D5FF',
-          level: 3, score: 540, completionPct: 48, streakDays: 1,
-          useCasesIdentified: 7, assessmentAvg: 75, isCurrentUser: false,
-        },
-        {
-          name: 'Tom Okafor', initials: 'TO', avatarColor: '#FED7AA',
-          level: 2, score: 390, completionPct: 35, streakDays: 6,
-          useCasesIdentified: 5, assessmentAvg: 70, isCurrentUser: false,
-        },
-        {
-          name: 'Lena Fischer', initials: 'LF', avatarColor: '#FECACA',
-          level: 2, score: 350, completionPct: 30, streakDays: 0,
-          useCasesIdentified: 4, assessmentAvg: 68, isCurrentUser: false,
-        },
-        {
-          name: 'David Park', initials: 'DP', avatarColor: '#D1FAE5',
-          level: 1, score: 180, completionPct: 18, streakDays: 1,
-          useCasesIdentified: 2, assessmentAvg: 60, isCurrentUser: false,
-        },
-        {
-          name: 'Nina Alvarez', initials: 'NA', avatarColor: '#E0E7FF',
-          level: 1, score: 120, completionPct: 12, streakDays: 0,
-          useCasesIdentified: 1, assessmentAvg: 55, isCurrentUser: false,
-        },
-      ];
+    (async () => {
+      try {
+      setLoading(true);
 
-      // Sort by score descending
-      leaderboard.sort((a, b) => b.score - a.score);
+      // Parallel fetch all data sources
+      const [topicProgressRows, artefactCounts, levelProgressRows, activeDaysThisWeek] = await Promise.all([
+        getAllTopicProgress(user.id),
+        getArtefactCountsByLevel(user.id),
+        getLevelProgress(user.id),
+        getActiveDaysThisWeek(user.id),
+      ]);
+
+      // Fetch leaderboard if user has an org
+      const scoredMembers = orgId
+        ? await getOrgLeaderboard(orgId, user.id)
+        : [];
+
+      // Update streak from real activity data
+      const streak = await updateStreak(user.id);
+
+      // ── Derive per-level progress ──
+      const levelProgress: Record<number, LevelProgress> = {};
+      let overallCompletedTopics = 0;
+      let overallTotalTopics = 0;
+      let levelsCompleted = 0;
+
+      for (let lvl = 1; lvl <= 5; lvl++) {
+        const topics = LEVEL_TOPICS[lvl] || [];
+        const totalTopics = topics.length;
+        overallTotalTopics += totalTopics;
+
+        const progressForLevel = topicProgressRows.filter(r => r.level === lvl);
+        const progressMap = new Map(progressForLevel.map(r => [r.topic_id, r]));
+
+        const phasesCompleted: boolean[] = [false, false, false, false];
+        let completedTopics = 0;
+
+        topics.forEach(topic => {
+          const row = progressMap.get(topic.id);
+          if (row?.completed_at) completedTopics++;
+          if (row?.elearn_completed_at) phasesCompleted[0] = true;
+          if (row?.read_completed_at) phasesCompleted[1] = true;
+          if (row?.watch_completed_at) phasesCompleted[2] = true;
+          if (row?.practise_completed_at) phasesCompleted[3] = true;
+        });
+
+        overallCompletedTopics += completedTopics;
+        const isLevelComplete = completedTopics === totalTopics && totalTopics > 0;
+        if (isLevelComplete) levelsCompleted++;
+
+        levelProgress[lvl] = {
+          level: lvl,
+          phasesCompleted,
+          artefactCount: artefactCounts[lvl] || 0,
+        };
+      }
+
+      // ── Derive current level topic state ──
+      const currentLevel = userProfile.currentLevel;
+      const currentLevelTopics = LEVEL_TOPICS[currentLevel] || [];
+      const currentLevelProgress = topicProgressRows.filter(r => r.level === currentLevel);
+
+      const completedTopicsInCurrentLevel = currentLevelProgress.filter(r => r.completed_at).length;
+      const activeTopicRow = currentLevelProgress.find(r => !r.completed_at);
+
+      // ── Derive tool usage from level_progress ──
+      const toolUsage: Record<string, ToolUsage> = {};
+      const toolLevelMap: Record<string, number> = {
+        'prompt-playground': 1,
+        'agent-builder': 2,
+        'workflow-canvas': 3,
+        'dashboard-designer': 4,
+        'ai-app-evaluator': 5,
+      };
+
+      Object.entries(toolLevelMap).forEach(([toolId, lvl]) => {
+        const row = levelProgressRows.find(r => r.level === lvl);
+        toolUsage[toolId] = {
+          toolId,
+          artefactsCreated: artefactCounts[lvl] || 0,
+          lastUsedAt: row?.tool_used_at ? new Date(row.tool_used_at) : null,
+        };
+      });
+
+      // ── All tools unlocked by default ──
+      const unlockedToolIds: string[] = ALL_TOOLS.map(tool => tool.id);
+
+      // ── Map leaderboard ──
+      let leaderboard: LeaderboardMember[];
+      let activeColleaguesCount = 0;
+      let sameLevelColleaguesCount = 0;
+
+      if (scoredMembers.length > 0) {
+        leaderboard = scoredMembers.map(m => ({
+          name: m.fullName,
+          initials: m.initials,
+          avatarColor: m.avatarColor,
+          level: m.level,
+          score: m.score,
+          completionPct: m.completionPct,
+          streakDays: m.streakDays,
+          useCasesIdentified: m.insightCount,
+          assessmentAvg: 0,
+          isCurrentUser: m.isCurrentUser,
+          artefactCount: m.artefactCount,
+          insightCount: m.insightCount,
+          activeDays30: m.activeDays30,
+        }));
+        activeColleaguesCount = scoredMembers.length;
+        sameLevelColleaguesCount = scoredMembers.filter(m => m.level === currentLevel).length;
+      } else {
+        // No org — show only current user
+        leaderboard = [{
+          name: userProfile.fullName || 'You',
+          initials: getInitials(userProfile.fullName),
+          avatarColor: '#38B2AC',
+          level: currentLevel,
+          score: overallCompletedTopics * 100,
+          completionPct: overallTotalTopics > 0
+            ? Math.round((overallCompletedTopics / overallTotalTopics) * 100) : 0,
+          streakDays: streak,
+          useCasesIdentified: 0,
+          assessmentAvg: 0,
+          isCurrentUser: true,
+          artefactCount: 0,
+          insightCount: 0,
+          activeDays30: 0,
+        }];
+      }
 
       setData({
-        currentLevel: 5,
-        completedTopics: 0,
-        totalTopics: 1,
-        activeTopicIndex: 0,
-        currentSlide: 7,
-        totalSlides: 13,
-        currentPhase: 1,
+        currentLevel,
+        completedTopics: completedTopicsInCurrentLevel,
+        totalTopics: currentLevelTopics.length,
+        activeTopicIndex: activeTopicRow
+          ? currentLevelTopics.findIndex(t => t.id === activeTopicRow.topic_id)
+          : 0,
+        currentSlide: activeTopicRow?.current_slide ?? 0,
+        totalSlides: 0, // derived per-topic in the component
+        currentPhase: activeTopicRow?.current_phase ?? 1,
 
-        overallCompletedTopics: 4, // levels 1-4 done (1 topic each)
-        overallTotalTopics: 5,     // 5 levels, 1 topic each
-        levelsCompleted: 4,
+        overallCompletedTopics,
+        overallTotalTopics,
+        levelsCompleted,
 
-        levelProgress: {
-          1: { level: 1, phasesCompleted: [true, true, true, true], artefactCount: 2 },
-          2: { level: 2, phasesCompleted: [true, true, true, true], artefactCount: 2 },
-          3: { level: 3, phasesCompleted: [true, true, true, true], artefactCount: 2 },
-          4: { level: 4, phasesCompleted: [true, true, true, true], artefactCount: 1 },
-          5: { level: 5, phasesCompleted: [false, false, false, false], artefactCount: 1 },
-        },
+        levelProgress,
+        toolUsage,
 
-        toolUsage: {
-          'prompt-playground': { toolId: 'prompt-playground', artefactsCreated: 2, lastUsedAt: new Date('2026-03-07T10:30:00') },
-          'agent-builder':     { toolId: 'agent-builder',     artefactsCreated: 2, lastUsedAt: new Date('2026-03-04T15:00:00') },
-          'workflow-canvas':   { toolId: 'workflow-canvas',   artefactsCreated: 2, lastUsedAt: new Date('2026-03-02T14:00:00') },
-          'dashboard-designer':{ toolId: 'dashboard-designer',artefactsCreated: 1, lastUsedAt: new Date('2026-02-28T11:00:00') },
-          'ai-app-evaluator':  { toolId: 'ai-app-evaluator',  artefactsCreated: 1, lastUsedAt: new Date('2026-02-25T09:00:00') },
-        },
-
-        streakDays: 5,
-        activeDaysThisWeek: activeDays,
+        streakDays: streak,
+        activeDaysThisWeek,
 
         leaderboard,
-        activeColleaguesCount: 12,
-        sameLevelColleaguesCount: 4,
+        activeColleaguesCount,
+        sameLevelColleaguesCount,
 
-        lastActivityAt: new Date(now.getTime() - 2 * 3600000),
-
-        unlockedToolIds: [
-          'prompt-playground', 'prompt-library',
-          'agent-builder', 'template-library',
-          'workflow-canvas', 'integration-sandbox',
-          'dashboard-designer', 'journey-mapper',
-          'ai-app-evaluator',
-        ],
+        lastActivityAt: new Date(),
+        unlockedToolIds,
       });
       setLoading(false);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, []);
+      } catch (err) {
+        console.error('useDashboardData error:', err);
+        const currentLevel = userProfile.currentLevel;
+        const currentLevelTopics = LEVEL_TOPICS[currentLevel] || [];
+        setData({
+          currentLevel,
+          completedTopics: 0,
+          totalTopics: currentLevelTopics.length,
+          activeTopicIndex: 0,
+          currentSlide: 0,
+          totalSlides: 0,
+          currentPhase: 1,
+          overallCompletedTopics: 0,
+          overallTotalTopics: 0,
+          levelsCompleted: 0,
+          levelProgress: {},
+          toolUsage: {},
+          streakDays: 0,
+          activeDaysThisWeek: Array(7).fill(false) as boolean[],
+          leaderboard: [{
+            name: userProfile.fullName || 'You',
+            initials: getInitials(userProfile.fullName),
+            avatarColor: '#38B2AC',
+            level: currentLevel,
+            score: 0,
+            completionPct: 0,
+            streakDays: 0,
+            useCasesIdentified: 0,
+            assessmentAvg: 0,
+            isCurrentUser: true,
+            artefactCount: 0,
+            insightCount: 0,
+            activeDays30: 0,
+          }],
+          activeColleaguesCount: 0,
+          sameLevelColleaguesCount: 0,
+          lastActivityAt: new Date(),
+          unlockedToolIds: [],
+        });
+        setLoading(false);
+      }
+    })();
+  }, [user, userProfile, orgId]);
 
   return { data, loading };
 }

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Zap, Bot, GitBranch, LayoutDashboard, Layers,
+  BookOpen, FileText,
 } from 'lucide-react';
 import { LEVEL_ACCENT_COLORS, LEVEL_ACCENT_DARK_COLORS } from '../../../data/levelTopics';
 import { timeAgo } from '../../../utils/timeAgo';
@@ -12,6 +13,8 @@ const TYPE_ICONS: Record<ArtefactType, React.FC<{ size?: number; color?: string 
   workflow: GitBranch,
   dashboard: LayoutDashboard,
   app_spec: Layers,
+  build_guide: BookOpen,
+  prd: FileText,
 };
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
@@ -20,6 +23,8 @@ const TYPE_LABELS: Record<ArtefactType, string> = {
   workflow: 'Workflow',
   dashboard: 'Dashboard',
   app_spec: 'App Spec',
+  build_guide: 'Build Guide',
+  prd: 'PRD',
 };
 
 interface Props {
@@ -85,7 +90,6 @@ const ArtefactCard: React.FC<Props> = ({
       style={{
         borderRadius: 14,
         border: `1px solid ${isSelected || hovered ? accent : '#E2E8F0'}`,
-        borderLeft: `4px solid ${accent}`,
         background: '#FFFFFF',
         padding: '18px 20px',
         cursor: editing ? 'default' : 'pointer',
@@ -126,6 +130,16 @@ const ArtefactCard: React.FC<Props> = ({
             }}
           >
             Level {artefact.level}
+          </span>
+          <span
+            style={{
+              background: '#EDF2F7', border: '1px solid #E2E8F0',
+              borderRadius: 20, padding: '2px 8px',
+              fontSize: 10, fontWeight: 600, color: '#4A5568',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {TYPE_LABELS[artefact.type]}
           </span>
         </div>
         <span style={{ fontSize: 11, color: '#A0AEC0' }}>{timeAgo(timestamp)}</span>
@@ -238,7 +252,7 @@ const ArtefactCard: React.FC<Props> = ({
             <button
               onClick={(e) => { e.stopPropagation(); onOpen(artefact.id); }}
               style={{
-                background: accent, color: accentDark, border: 'none', borderRadius: 20,
+                background: accentDark, color: '#FFFFFF', border: 'none', borderRadius: 20,
                 padding: '5px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >

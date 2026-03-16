@@ -170,13 +170,13 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
 
   const isCompleted = level.status === 'completed';
   const isActive = level.status === 'active';
-  const isAccessible = isCompleted || isActive;
+  const isAccessible = true; // All levels accessible
 
   const completionDate = level.completedAt
     ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(level.completedAt)
     : null;
 
-  const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Locked';
+  const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
 
   return (

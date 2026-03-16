@@ -16,7 +16,7 @@ import {
 } from '../../../hooks/useDashboardDesignApi';
 import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -844,14 +844,23 @@ const AppDashboardDesigner: React.FC = () => {
   const handleSaveBuildGuide = async () => {
     if (!buildGuide || !user) return;
     const md = buildFullBuildGuide();
-    await dbSavePrompt(user.id, {
+    const saved = await createArtefactFromTool(user.id, {
+      name: `Build Guide: ${brief.q1_purpose.slice(0, 50)}`,
+      type: 'build_guide',
       level: 4,
-      title: `Build Guide: ${brief.q1_purpose.slice(0, 50)}`,
-      content: md,
-      source_tool: 'dashboard-designer',
+      sourceTool: 'dashboard-designer',
+      content: {
+        markdown: md,
+        platform: selectedPlatform || 'generic',
+        toolName: 'Dashboard Designer',
+        taskDescription: brief.q1_purpose,
+      },
+      preview: `Build Guide: ${brief.q1_purpose}`.slice(0, 200),
     });
-    setBuildPlanSaved(true);
-    toast('Build Guide saved to library');
+    if (saved) {
+      setBuildPlanSaved(true);
+      toast('Build guide saved to your library');
+    }
   };
 
   // ─── PRD refinement handler ───
@@ -908,14 +917,22 @@ const AppDashboardDesigner: React.FC = () => {
   const handleSaveToLibrary = async () => {
     if (!prdResult || !user) return;
     const md = buildFullPRD(prdResult);
-    await dbSavePrompt(user.id, {
+    const saved = await createArtefactFromTool(user.id, {
+      name: prdResult.prd_content || `PRD: ${brief.q1_purpose.slice(0, 50)}`,
+      type: 'prd',
       level: 4,
-      title: prdResult.prd_content || 'App PRD',
-      content: md,
-      source_tool: 'dashboard-designer',
+      sourceTool: 'dashboard-designer',
+      content: {
+        prdMarkdown: md,
+        sections: prdResult.sections || [],
+        brief: brief,
+      },
+      preview: `PRD: ${brief.q1_purpose}`.slice(0, 200),
     });
-    setSavedToLibrary(true);
-    toast('Saved to Prompt Library');
+    if (saved) {
+      setSavedToLibrary(true);
+      toast('PRD saved to your library');
+    }
   };
 
   /* ════════════════════════════════════════

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Home, Menu, X, User } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useAuth } from '../context/AuthContext';
 
 const AI_TOOLS = [
   { level: 1, emoji: '\uD83C\uDFAF', label: 'Prompt Engineering Fundamentals', href: '#playground' },
@@ -35,6 +36,9 @@ export const Navbar: React.FC = () => {
   const courseResourcesTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const courseResourcesRef = useRef<HTMLDivElement>(null);
 
+
+  const { user } = useAuth();
+  const isSignedIn = !!user;
 
   const [currentHash, setCurrentHash] = useState(() => window.location.hash);
 
@@ -543,10 +547,59 @@ export const Navbar: React.FC = () => {
 
         {/* Right — Dashboard + Contact Us + Mobile Toggle */}
         <div className="flex items-center gap-2">
-          {/* "My Dashboard →" pill CTA — always visible in dev mode */}
-          {(
+          {isSignedIn ? (
+            <>
+              {/* "My Dashboard →" pill CTA */}
+              <a
+                href="/app/dashboard"
+                className="hidden sm:flex items-center transition-all duration-200"
+                style={{
+                  border: '1px solid #1A202C',
+                  borderRadius: 24,
+                  padding: '8px 18px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#1A202C',
+                  background: 'transparent',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap' as const,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = '#1A202C';
+                  (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  (e.currentTarget as HTMLElement).style.color = '#1A202C';
+                }}
+              >
+                My Dashboard →
+              </a>
+
+              {/* User avatar with real initials */}
+              <a
+                href="/app/dashboard"
+                className={cn(
+                  'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
+                )}
+                style={{
+                  width: 40,
+                  height: 40,
+                  textDecoration: 'none',
+                  background: '#38B2AC',
+                  color: '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  borderRadius: '50%',
+                }}
+                title="My Dashboard"
+              >
+                {(user?.user_metadata?.full_name?.[0] || 'U').toUpperCase()}
+              </a>
+            </>
+          ) : (
             <a
-              href="/app/dashboard"
+              href="/login"
               className="hidden sm:flex items-center transition-all duration-200"
               style={{
                 border: '1px solid #1A202C',
@@ -568,22 +621,9 @@ export const Navbar: React.FC = () => {
                 (e.currentTarget as HTMLElement).style.color = '#1A202C';
               }}
             >
-              My Dashboard →
+              Sign In
             </a>
           )}
-
-          {/* User icon — always links to app dashboard */}
-          <a
-            href="/app/dashboard"
-            className={cn(
-              'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
-              'bg-[#F0F2F5] text-[#4A5568] hover:bg-[#E2E6EB]',
-            )}
-            style={{ width: '40px', height: '40px', textDecoration: 'none' }}
-            title="My Dashboard"
-          >
-            <User size={18} />
-          </a>
 
           {/* Mobile hamburger */}
           <button
@@ -787,21 +827,33 @@ export const Navbar: React.FC = () => {
               Case Studies
             </a>
 
-            {/* Dashboard — links to app dashboard */}
-            <a
-              href="/app/dashboard"
-              className={cn(
-                'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
-                isOnDashboard
-                  ? 'bg-[#E6FFFA] text-[#2C9A94]'
-                  : 'hover:bg-[#F7FAFC] text-[#2D3748]',
-              )}
-              style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
-              onClick={() => setMobileOpen(false)}
-            >
-              <User size={16} />
-              <span>My Dashboard</span>
-            </a>
+            {/* Dashboard / Sign In — auth-aware */}
+            {isSignedIn ? (
+              <a
+                href="/app/dashboard"
+                className={cn(
+                  'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
+                  isOnDashboard
+                    ? 'bg-[#E6FFFA] text-[#2C9A94]'
+                    : 'hover:bg-[#F7FAFC] text-[#2D3748]',
+                )}
+                style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
+                onClick={() => setMobileOpen(false)}
+              >
+                <User size={16} />
+                <span>My Dashboard</span>
+              </a>
+            ) : (
+              <a
+                href="/login"
+                className="flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors hover:bg-[#F7FAFC] text-[#2D3748]"
+                style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
+                onClick={() => setMobileOpen(false)}
+              >
+                <User size={16} />
+                <span>Sign In</span>
+              </a>
+            )}
 
           </div>
         </div>

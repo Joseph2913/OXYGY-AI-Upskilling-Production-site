@@ -9,7 +9,7 @@ import {
   STRATEGY_DEFINITIONS, PLAYGROUND_EXAMPLE_CHIPS,
 } from '../../../data/playground-content';
 import { useAuth } from '../../../context/AuthContext';
-import { upsertToolUsed, savePrompt as dbSavePrompt } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -235,15 +235,21 @@ const AppPromptPlayground: React.FC = () => {
   const handleSaveToLibrary = async () => {
     if (!result || !user) return;
     const title = userInput.length > 60 ? userInput.slice(0, 60) + '…' : userInput;
-    const saved = await dbSavePrompt(user.id, {
+    const saved = await createArtefactFromTool(user.id, {
+      name: title,
+      type: 'prompt',
       level: 1,
-      title,
-      content: result.prompt,
-      source_tool: 'prompt-playground',
+      sourceTool: 'prompt-playground',
+      content: {
+        promptText: result.prompt,
+        strategies: result.strategies || [],
+        userInput: userInput,
+      },
+      preview: result.prompt.slice(0, 200),
     });
     if (saved) {
       setSavedToLibrary(true);
-      setToastMessage('Saved to Prompt Library');
+      setToastMessage('Prompt saved to your library');
     }
   };
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Map, BookOpen, Wrench, Folder, Users, Settings } from 'lucide-react';
+import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useOrg } from '../../context/OrgContext';
 
 const LEVEL_SHORT_NAMES: Record<number, string> = {
   1: 'Fundamentals',
@@ -26,6 +27,7 @@ export const SIDEBAR_EXPANDED_WIDTH = 240;
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { userProfile } = useAppContext();
+  const { isAdmin } = useOrg();
   const [expanded, setExpanded] = useState(false);
 
   const firstName = userProfile?.fullName?.split(' ')[0] || 'User';
@@ -242,6 +244,47 @@ export const AppSidebar: React.FC = () => {
             </Link>
           );
         })}
+        {isAdmin && (() => {
+          const adminActive = location.pathname === '/app/admin';
+          return (
+            <Link
+              to="/app/admin"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 0 10px 19px',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                borderLeft: adminActive ? '3px solid #38B2AC' : '3px solid transparent',
+                background: adminActive ? 'rgba(56, 178, 172, 0.10)' : 'transparent',
+                transition: 'background 0.15s, color 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                if (!adminActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.06)';
+              }}
+              onMouseLeave={(e) => {
+                if (!adminActive) (e.currentTarget as HTMLElement).style.background = 'transparent';
+              }}
+            >
+              <Shield
+                size={18}
+                color={adminActive ? '#4FD1C5' : 'rgba(255,255,255,0.40)'}
+                style={{ flexShrink: 0 }}
+              />
+              <span style={{
+                fontSize: 14,
+                fontWeight: adminActive ? 600 : 400,
+                color: adminActive ? '#FFFFFF' : 'rgba(255,255,255,0.50)',
+                opacity: expanded ? 1 : 0,
+                transition: 'opacity 0.15s ease',
+              }}>
+                Admin
+              </span>
+            </Link>
+          );
+        })()}
       </div>
 
       {/* Section 4 — Bottom utilities */}

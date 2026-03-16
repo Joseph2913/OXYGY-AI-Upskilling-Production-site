@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   X, ExternalLink, Copy, ChevronLeft, ChevronRight,
   Zap, Bot, GitBranch, LayoutDashboard, Layers,
+  BookOpen, FileText,
 } from 'lucide-react';
 import { LEVEL_ACCENT_COLORS, LEVEL_ACCENT_DARK_COLORS } from '../../../data/levelTopics';
 import { timeAgo } from '../../../utils/timeAgo';
@@ -13,33 +14,40 @@ import AgentContent from './content/AgentContent';
 import WorkflowContent from './content/WorkflowContent';
 import DashboardContent from './content/DashboardContent';
 import AppSpecContent from './content/AppSpecContent';
+import BuildGuideContent from './content/BuildGuideContent';
+import PrdContent from './content/PrdContent';
 
 const TYPE_ICONS: Record<ArtefactType, React.FC<{ size?: number; color?: string }>> = {
-  prompt: Zap, agent: Bot, workflow: GitBranch, dashboard: LayoutDashboard, app_spec: Layers,
+  prompt: Zap, agent: Bot, workflow: GitBranch, dashboard: LayoutDashboard,
+  app_spec: Layers, build_guide: BookOpen, prd: FileText,
 };
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
-  prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard', app_spec: 'App Spec',
+  prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard',
+  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD',
 };
 
 const TOOL_NAMES: Record<ArtefactType, string> = {
   prompt: 'Prompt Playground', agent: 'Agent Builder', workflow: 'Workflow Canvas',
   dashboard: 'Dashboard Designer', app_spec: 'App Builder',
+  build_guide: 'Various', prd: 'Dashboard Designer',
 };
 
 const TOOL_ROUTES: Record<ArtefactType, string> = {
   prompt: '/app/toolkit/prompt-playground', agent: '/app/toolkit/agent-builder',
   workflow: '/app/toolkit/workflow-canvas', dashboard: '/app/toolkit/dashboard-designer',
-  app_spec: '/app/toolkit/app-builder',
+  app_spec: '/app/toolkit/app-builder', build_guide: '', prd: '/app/toolkit/dashboard-designer',
 };
 
 function getCopyText(content: ArtefactContent, type: ArtefactType): string {
   switch (type) {
     case 'prompt': return content.promptText || '';
     case 'agent': return content.systemPrompt || '';
-    case 'workflow': return content.summary || '';
+    case 'workflow': return content.designMarkdown || content.summary || '';
     case 'dashboard': return content.description || '';
-    case 'app_spec': return content.description || '';
+    case 'app_spec': return content.evaluationMarkdown || content.description || '';
+    case 'build_guide': return content.markdown || '';
+    case 'prd': return content.prdMarkdown || '';
     default: return '';
   }
 }
@@ -260,17 +268,19 @@ const QuickUsePanel: React.FC<Props> = ({
             background: `${accent}08`,
           }}
         >
-          <button
-            onClick={() => navigate(TOOL_ROUTES[artefact.type])}
-            style={{
-              background: '#38B2AC', color: '#FFFFFF', border: 'none', borderRadius: 24,
-              padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            Launch in {TOOL_NAMES[artefact.type]}
-            <ExternalLink size={13} />
-          </button>
+          {TOOL_ROUTES[artefact.type] && (
+            <button
+              onClick={() => navigate(TOOL_ROUTES[artefact.type])}
+              style={{
+                background: '#38B2AC', color: '#FFFFFF', border: 'none', borderRadius: 24,
+                padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              Launch in {TOOL_NAMES[artefact.type]}
+              <ExternalLink size={13} />
+            </button>
+          )}
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button
@@ -318,6 +328,8 @@ const QuickUsePanel: React.FC<Props> = ({
               {artefact.type === 'workflow' && <WorkflowContent content={content} />}
               {artefact.type === 'dashboard' && <DashboardContent content={content} />}
               {artefact.type === 'app_spec' && <AppSpecContent content={content} level={artefact.level} />}
+              {artefact.type === 'build_guide' && <BuildGuideContent content={content} level={artefact.level} />}
+              {artefact.type === 'prd' && <PrdContent content={content} level={artefact.level} />}
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: 40, color: '#A0AEC0', fontSize: 13 }}>

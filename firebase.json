@@ -25,6 +25,9 @@
       { "source": "/api/generate-build-guide", "function": { "functionId": "generatebuildguide" } },
       { "source": "/api/resolve-dispute", "function": { "functionId": "resolvedispute" } },
       { "source": "/api/playground", "function": { "functionId": "generateplaygroundprompt" } },
+      { "source": "/api/send-invite-email", "function": { "functionId": "sendinviteemail" } },
+      { "source": "/api/admin/invite-user", "function": { "functionId": "admininviteuser" } },
+      { "source": "/api/admin/scan-domain", "function": { "functionId": "adminscanbydomian" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [

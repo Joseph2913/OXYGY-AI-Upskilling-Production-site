@@ -86,9 +86,9 @@ const TOOL_GUIDE: Record<string, { steps: string[]; outcome: string }> = {
   },
 };
 
-function getToolState(tool: Tool, currentLevel: number): 'unlocked' | 'locked' {
-  if (tool.levelRequired <= currentLevel) return 'unlocked';
-  return 'locked';
+function getToolState(_tool: Tool, _currentLevel: number): 'unlocked' | 'locked' {
+  // All tools unlocked by default
+  return 'unlocked';
 }
 
 /* ── Skeleton for loading ── */
