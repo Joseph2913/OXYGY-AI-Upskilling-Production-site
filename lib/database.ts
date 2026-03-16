@@ -1782,6 +1782,7 @@ export interface AdminUserRow {
   enrolledVia: string | null;
   pendingEmail: string | null;
   platformRole: string;
+  email: string;
 }
 
 export interface AdminUserDetail {
@@ -1806,7 +1807,7 @@ export async function fetchAdminUsers(params: {
       organisations(name),
       cohorts(name),
       profiles!inner(
-        full_name, current_level, platform_role
+        full_name, current_level, platform_role, email
       )
     `, { count: 'exact' })
     .eq('active', true);
@@ -1849,6 +1850,7 @@ export async function fetchAdminUsers(params: {
       enrolledVia: (row.enrolled_via as string) || null,
       pendingEmail: (row.pending_email as string) || null,
       platformRole: (profile?.platform_role as string) || 'learner',
+      email: (profile?.email as string) || '',
     };
   });
 

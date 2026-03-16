@@ -252,7 +252,7 @@ async function signOut(): Promise<void> {
 async function ensureProfileExists(user: User): Promise<void> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, email, full_name')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -271,8 +271,20 @@ async function ensureProfileExists(user: User): Promise<void> {
       .insert({
         id: user.id,
         full_name: fullName,
+        email: user.email || '',
         onboarding_completed: false,
       });
     if (insertError) console.error('Profile creation error:', insertError);
+  } else {
+    // Patch missing email or empty full_name on subsequent logins
+    const patches: Record<string, string> = {};
+    if (!data.email && user.email) patches.email = user.email;
+    if (!data.full_name) {
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || '';
+      if (name) patches.full_name = name;
+    }
+    if (Object.keys(patches).length > 0) {
+      await supabase.from('profiles').update(patches).eq('id', user.id);
+    }
   }
 }

@@ -202,8 +202,8 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ user, onClose, onRe
               <div style={{ fontSize: 18, fontWeight: 800, color: '#1A202C' }}>
                 {user.fullName || 'Unnamed'}
               </div>
-              {user.pendingEmail && (
-                <div style={{ fontSize: 13, color: '#718096', marginTop: 2 }}>{user.pendingEmail}</div>
+              {(user.email || user.pendingEmail) && (
+                <div style={{ fontSize: 13, color: '#718096', marginTop: 2 }}>{user.email || user.pendingEmail}</div>
               )}
               <div style={{ fontSize: 13, color: '#A0AEC0', marginTop: 2 }}>
                 {user.orgName}{user.cohortName ? ` \u00B7 ${user.cohortName}` : ''}
@@ -410,11 +410,18 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ user, onClose, onRe
                   <button
                     onClick={() => setShowDeactivate(true)}
                     style={{
-                      border: 'none', background: 'none', fontSize: 12, color: '#E53E3E',
-                      cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif",
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      padding: '10px 16px', borderRadius: 10,
+                      border: '1.5px solid #E53E3E', background: '#FFF5F5', color: '#E53E3E',
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif",
+                      transition: 'background 0.15s ease',
                     }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FED7D7'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFF5F5'; }}
                   >
-                    Deactivate this user's membership
+                    <X size={14} />
+                    Remove from Organisation
                   </button>
                 </div>
               </div>
@@ -422,35 +429,36 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ user, onClose, onRe
           </div>
         )}
 
-        {/* Toast */}
-        {toast && (
-          <div style={{
-            position: 'fixed', bottom: 24, right: 24, zIndex: 50,
-            background: '#1A202C', color: '#FFFFFF', padding: '10px 20px',
-            borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          }}>
-            {toast}
-          </div>
-        )}
-
-        {/* Confirm Deactivate */}
-        {showDeactivate && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div onClick={() => setShowDeactivate(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)' }} />
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <ConfirmDialog
-                title="Deactivate User"
-                message={`This will prevent ${user.fullName || 'this user'} from accessing the platform under ${user.orgName}. Their data will be preserved.`}
-                confirmLabel="Deactivate"
-                confirmVariant="danger"
-                onConfirm={handleDeactivate}
-                onCancel={() => setShowDeactivate(false)}
-                isLoading={deactivating}
-              />
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Toast — rendered outside drawer so it's not clipped */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 60,
+          background: '#1A202C', color: '#FFFFFF', padding: '10px 20px',
+          borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        }}>
+          {toast}
+        </div>
+      )}
+
+      {/* Confirm Remove — rendered outside drawer so it's above the stacking context */}
+      {showDeactivate && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={() => setShowDeactivate(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <ConfirmDialog
+              title="Remove from Organisation"
+              message={`This will remove ${user.fullName || user.email || 'this user'} from ${user.orgName}. They will become a general user with no organisation or cohort. Their data will be preserved.`}
+              confirmLabel="Remove"
+              confirmVariant="danger"
+              onConfirm={handleDeactivate}
+              onCancel={() => setShowDeactivate(false)}
+              isLoading={deactivating}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };

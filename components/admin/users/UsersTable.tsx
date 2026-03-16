@@ -184,9 +184,9 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
         searchTerm: searchTerm || undefined,
       });
 
-      const headers = ['name', 'organisation', 'cohort', 'current_level', 'org_role', 'enrolled_at'];
+      const headers = ['name', 'email', 'organisation', 'cohort', 'current_level', 'org_role', 'enrolled_at'];
       const rows = all.users.map(u => [
-        u.fullName, u.orgName, u.cohortName || '', u.currentLevel, u.orgRole, u.enrolledAt,
+        u.fullName, u.email || '', u.orgName, u.cohortName || '', u.currentLevel, u.orgRole, u.enrolledAt,
       ]);
       const csv = [headers.join(','), ...rows.map(r =>
         r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','),
@@ -338,9 +338,16 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
                 }}>
                   {initial}
                 </div>
-                <span style={{ fontWeight: 600, color: '#1A202C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {u.fullName || 'Unnamed'}
-                </span>
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 600, color: '#1A202C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.fullName || 'Unnamed'}
+                  </div>
+                  {u.email && (
+                    <div style={{ fontSize: 11, color: '#A0AEC0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {u.email}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Org */}
