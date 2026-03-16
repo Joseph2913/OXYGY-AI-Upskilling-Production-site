@@ -1766,6 +1766,125 @@ export async function getOrgWeeklyActivity(orgId: string): Promise<number[]> {
   return dayUserSets.map(s => s.size);
 }
 
+// ─── ORG-WIDE ACTIVITY FEED (for cohort sidebar) ───
+
+export async function getOrgRecentActivity(
+  orgId: string,
+  limit: number = 10,
+): Promise<Array<{
+  userId: string;
+  fullName: string;
+  action: string;
+  level: number | null;
+  topicId: number | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}>> {
+  // Get active member IDs
+  const { data: members } = await supabase
+    .from('user_org_memberships')
+    .select('user_id')
+    .eq('org_id', orgId)
+    .eq('active', true);
+
+  if (!members || members.length === 0) return [];
+  const userIds = members.map(m => m.user_id);
+
+  // Fetch recent activity across all members
+  const { data, error } = await supabase
+    .from('activity_log')
+    .select('user_id, action, level, topic_id, metadata, created_at')
+    .in('user_id', userIds)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) { console.error('getOrgRecentActivity error:', error); return []; }
+
+  // Batch fetch names
+  const uniqueUserIds = [...new Set((data || []).map((r: Record<string, unknown>) => r.user_id as string))];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .in('id', uniqueUserIds);
+  const nameMap = new Map((profiles || []).map((p: Record<string, unknown>) => [p.id as string, p.full_name as string]));
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    userId: row.user_id as string,
+    fullName: nameMap.get(row.user_id as string) || 'Unknown',
+    action: row.action as string,
+    level: row.level as number | null,
+    topicId: row.topic_id as number | null,
+    metadata: (row.metadata as Record<string, unknown>) || {},
+    createdAt: row.created_at as string,
+  }));
+}
+
+// ─── MEMBER DETAIL (for cohort detail drawer) ───
+
+export async function getMemberActivityLog(
+  userId: string,
+  limit: number = 8,
+): Promise<Array<{
+  action: string;
+  level: number | null;
+  topicId: number | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}>> {
+  const { data, error } = await supabase
+    .from('activity_log')
+    .select('action, level, topic_id, metadata, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getMemberActivityLog error:', error);
+    return [];
+  }
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    action: row.action as string,
+    level: row.level as number | null,
+    topicId: row.topic_id as number | null,
+    metadata: (row.metadata as Record<string, unknown>) || {},
+    createdAt: row.created_at as string,
+  }));
+}
+
+export async function getMemberArtefacts(
+  userId: string,
+): Promise<Array<{
+  id: string;
+  name: string;
+  type: string;
+  level: number;
+  sourceTool: string | null;
+  createdAt: string;
+}>> {
+  const { data, error } = await supabase
+    .from('artefacts')
+    .select('id, name, type, level, source_tool, created_at')
+    .eq('user_id', userId)
+    .is('archived_at', null)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('getMemberArtefacts error:', error);
+    return [];
+  }
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    type: row.type as string,
+    level: row.level as number,
+    sourceTool: row.source_tool as string | null,
+    createdAt: row.created_at as string,
+  }));
+}
+
 // ─── ADMIN: USER MANAGEMENT (PRD-13) ───
 
 export interface AdminUserRow {
