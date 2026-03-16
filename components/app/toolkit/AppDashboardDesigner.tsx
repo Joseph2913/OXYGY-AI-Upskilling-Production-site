@@ -1557,31 +1557,52 @@ const AppDashboardDesigner: React.FC = () => {
             Which AI coding tool will you use to build this app? We'll generate a step-by-step guide tailored to your platform.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-            {VIBE_CODING_PLATFORMS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPlatform(p.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: 14,
-                  background: selectedPlatform === p.id ? '#FFFDF5' : '#FFFFFF',
-                  border: selectedPlatform === p.id ? `1.5px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
-                  borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                  transition: 'border-color 0.3s, background 0.3s',
-                }}
-              >
-                <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {p.logo ? (
-                    <img src={p.logo} alt={p.label} style={{ width: 24, height: 24, objectFit: 'contain' }} />
-                  ) : (
-                    <span style={{ fontSize: 18 }}>{p.icon}</span>
+            {VIBE_CODING_PLATFORMS.map(p => {
+              const isSelected = selectedPlatform === p.id;
+              const isRecommended = p.recommended;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPlatform(p.id)}
+                  title={isRecommended ? 'Free to use — a great starting point to see your PRD come to life' : undefined}
+                  style={{
+                    position: 'relative',
+                    display: 'flex', alignItems: 'center', gap: 10, padding: 14,
+                    background: isSelected ? '#FFFDF5' : isRecommended ? '#F0FFF4' : '#FFFFFF',
+                    border: isSelected
+                      ? `2px solid ${LEVEL_ACCENT_DARK}`
+                      : isRecommended
+                        ? '2px solid #38B2AC'
+                        : '1px solid #E2E8F0',
+                    borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                    transition: 'border-color 0.3s, background 0.3s, box-shadow 0.3s',
+                    boxShadow: isRecommended && !isSelected ? '0 0 0 3px #38B2AC18' : 'none',
+                  }}
+                >
+                  {isRecommended && (
+                    <span style={{
+                      position: 'absolute', top: -9, left: 14,
+                      background: '#38B2AC', color: '#FFFFFF', fontSize: 10, fontWeight: 700,
+                      padding: '2px 8px', borderRadius: 6, fontFamily: FONT,
+                      letterSpacing: '0.03em',
+                    }}>
+                      Recommended
+                    </span>
                   )}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>{p.label}</div>
-                  <div style={{ fontSize: 11, color: '#718096', fontFamily: FONT }}>{p.description}</div>
-                </div>
-              </button>
-            ))}
+                  <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {p.logo ? (
+                      <img src={p.logo} alt={p.label} style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontSize: 18 }}>{p.icon}</span>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: isRecommended ? '#2C7A7B' : '#718096', fontFamily: FONT }}>{p.description}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
