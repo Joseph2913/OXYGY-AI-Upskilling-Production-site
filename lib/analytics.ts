@@ -64,6 +64,7 @@ export interface OrgAnalytics {
 export interface StalledUser {
   id: string;
   name: string;
+  email: string;
   currentLevel: number;
   lastActive: string | null;
   daysInactive: number;
@@ -393,7 +394,7 @@ export async function fetchOrgAnalytics(orgId: string, dateRange: DateRange): Pr
       .select('user_id, source_tool, saved_at')
       .in('user_id', userIds),
     supabase.from('profiles')
-      .select('id, current_level, full_name, updated_at')
+      .select('id, current_level, full_name, email, updated_at')
       .in('id', userIds),
     supabase.from('cohorts')
       .select('id, name, start_date, end_date')
@@ -499,6 +500,7 @@ export async function fetchOrgAnalytics(orgId: string, dateRange: DateRange): Pr
         stalledUsers.push({
           id: uid,
           name: profile?.full_name || 'Unknown',
+          email: profile?.email || '',
           currentLevel: profile?.current_level || 1,
           lastActive,
           daysInactive,

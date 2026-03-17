@@ -31,9 +31,10 @@ const LEVEL_NAMES: Record<number, string> = {
 
 interface OrgAnalyticsTabProps {
   orgId: string;
+  orgName?: string;
 }
 
-const OrgAnalyticsTab: React.FC<OrgAnalyticsTabProps> = ({ orgId }) => {
+const OrgAnalyticsTab: React.FC<OrgAnalyticsTabProps> = ({ orgId, orgName }) => {
   const [days, setDays] = useState<number | null>(30);
   const [data, setData] = useState<OrgAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +129,7 @@ const OrgAnalyticsTab: React.FC<OrgAnalyticsTabProps> = ({ orgId }) => {
         <StalledUsersList
           users={data.stalledUsers}
           orgId={orgId}
+          orgName={orgName || ''}
           totalStalled={data.stalledUsers.length}
         />
         <CohortComparison cohorts={data.cohortComparison} />

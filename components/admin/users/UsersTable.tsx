@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronUp, ChevronDown, Users } from 'lucide-react';
+import { ChevronUp, ChevronDown, Users, Mail, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { fetchAdminUsers } from '../../../lib/database';
 import { supabase } from '../../../lib/supabase';
@@ -13,6 +13,7 @@ const PAGE_SIZE = 20;
 
 interface UsersTableProps {
   orgId?: string;
+  orgName?: string;
   showOrgColumn?: boolean;
   onInvite?: () => void;
 }
@@ -48,7 +49,7 @@ export interface EnrichedUser extends AdminUserRow {
   lastActive: Date | null;
 }
 
-const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) => {
+const UsersTable: React.FC<UsersTableProps> = ({ orgId, orgName, showOrgColumn = true }) => {
   const { user: authUser } = useAuth();
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -72,6 +73,11 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
 
   // Export
   const [exporting, setExporting] = useState(false);
+
+  // Reminders
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [sendingBulkReminder, setSendingBulkReminder] = useState(false);
+  const [reminderToast, setReminderToast] = useState('');
 
   // Fetch orgs for filter dropdown
   useEffect(() => {
@@ -207,6 +213,74 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
     }
   }
 
+  async function sendReminderToUsers(targetUsers: { email: string; name: string; daysInactive: number; orgName: string }[]) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const res = await fetch('/api/admin/send-reminder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ users: targetUsers }),
+    });
+    return res.json();
+  }
+
+  async function handleSendReminder(u: EnrichedUser) {
+    setSendingReminder(u.membershipId);
+    try {
+      const daysInactive = u.lastActive
+        ? Math.floor((Date.now() - u.lastActive.getTime()) / 86400000)
+        : 999;
+      await sendReminderToUsers([{
+        email: u.email || '',
+        name: u.fullName || 'there',
+        daysInactive,
+        orgName: orgName || u.orgName || 'your organisation',
+      }]);
+      setReminderToast(`Reminder sent to ${u.fullName || 'user'}`);
+    } catch (err) {
+      console.error('Send reminder error:', err);
+      setReminderToast('Failed to send reminder');
+    } finally {
+      setSendingReminder(null);
+      setTimeout(() => setReminderToast(''), 4000);
+    }
+  }
+
+  async function handleBulkReminder() {
+    const stalledUsers = users.filter(u => {
+      const status = getUserStatus(u.lastActive);
+      return status.label === 'Stalled' || status.label === 'Never Active';
+    });
+    if (stalledUsers.length === 0) return;
+    setSendingBulkReminder(true);
+    try {
+      const payload = stalledUsers.map(u => ({
+        email: u.email || '',
+        name: u.fullName || 'there',
+        daysInactive: u.lastActive
+          ? Math.floor((Date.now() - u.lastActive.getTime()) / 86400000)
+          : 999,
+        orgName: orgName || u.orgName || 'your organisation',
+      }));
+      const data = await sendReminderToUsers(payload);
+      setReminderToast(data.message || `Sent ${stalledUsers.length} reminders`);
+    } catch (err) {
+      console.error('Bulk reminder error:', err);
+      setReminderToast('Failed to send reminders');
+    } finally {
+      setSendingBulkReminder(false);
+      setTimeout(() => setReminderToast(''), 4000);
+    }
+  }
+
+  const stalledCount = users.filter(u => {
+    const s = getUserStatus(u.lastActive);
+    return s.label === 'Stalled' || s.label === 'Never Active';
+  }).length;
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const showFrom = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const showTo = Math.min(page * PAGE_SIZE, total);
@@ -219,24 +293,44 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
     { key: 'tools_used', label: 'Tool Usage', width: '10%', sortable: true },
     { key: 'last_active', label: 'Last Active', width: '10%', sortable: true },
     { key: '', label: 'Status', width: '10%', sortable: false },
+    { key: '', label: '', width: '4%', sortable: false },
   ];
 
   return (
     <>
-      <UserSearchBar
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        orgFilter={orgFilter}
-        onOrgFilterChange={setOrgFilter}
-        levelFilter={levelFilter}
-        onLevelFilterChange={setLevelFilter}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        organisations={orgs}
-        hideOrgFilter={!!orgId}
-        onExport={handleExport}
-        exporting={exporting}
-      />
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <UserSearchBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            orgFilter={orgFilter}
+            onOrgFilterChange={setOrgFilter}
+            levelFilter={levelFilter}
+            onLevelFilterChange={setLevelFilter}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            organisations={orgs}
+            hideOrgFilter={!!orgId}
+            onExport={handleExport}
+            exporting={exporting}
+          />
+        </div>
+        {stalledCount > 0 && (
+          <button
+            onClick={handleBulkReminder}
+            disabled={sendingBulkReminder}
+            style={{
+              padding: '8px 16px', borderRadius: 8, background: '#38B2AC', color: '#FFFFFF',
+              fontSize: 12, fontWeight: 600, border: 'none', cursor: sendingBulkReminder ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif",
+              opacity: sendingBulkReminder ? 0.7 : 1, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 1,
+            }}
+          >
+            {sendingBulkReminder ? <Loader2 size={13} style={{ animation: 'app-spin 0.7s linear infinite' }} /> : <Mail size={13} />}
+            Email Inactive ({stalledCount})
+          </button>
+        )}
+      </div>
 
       <div style={{
         background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 12,
@@ -396,6 +490,30 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
                   {status.label}
                 </span>
               </div>
+
+              {/* Reminder action */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                {(status.label === 'Stalled' || status.label === 'Never Active') && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSendReminder(u); }}
+                    disabled={sendingReminder === u.membershipId}
+                    title={`Send reminder to ${u.fullName}`}
+                    style={{
+                      width: 26, height: 26, borderRadius: '50%', border: 'none',
+                      background: sendingReminder === u.membershipId ? '#E2E8F0' : 'transparent',
+                      cursor: sendingReminder === u.membershipId ? 'wait' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { if (sendingReminder !== u.membershipId) (e.currentTarget as HTMLElement).style.background = '#E6FFFA'; }}
+                    onMouseLeave={e => { if (sendingReminder !== u.membershipId) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  >
+                    {sendingReminder === u.membershipId
+                      ? <Loader2 size={13} color="#38B2AC" style={{ animation: 'app-spin 0.7s linear infinite' }} />
+                      : <Mail size={13} color="#38B2AC" />}
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
@@ -447,6 +565,18 @@ const UsersTable: React.FC<UsersTableProps> = ({ orgId, showOrgColumn = true }) 
           onClose={() => setSelectedUser(null)}
           onRefresh={loadUsers}
         />
+      )}
+
+      {/* Reminder toast */}
+      {reminderToast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: '#1A202C', color: '#FFFFFF', padding: '10px 20px', borderRadius: 10,
+          fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+          zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        }}>
+          {reminderToast}
+        </div>
       )}
     </>
   );

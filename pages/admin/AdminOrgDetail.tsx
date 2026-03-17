@@ -391,7 +391,7 @@ const AdminOrgDetail: React.FC = () => {
       {/* Tab Content */}
       {activeTab === 'overview' && <OverviewTab org={org} stats={stats} />}
 
-      {activeTab === 'analytics' && <OrgAnalyticsTab orgId={id!} />}
+      {activeTab === 'analytics' && <OrgAnalyticsTab orgId={id!} orgName={org.name} />}
 
       {activeTab === 'enrollment' && (
         <>
@@ -490,7 +490,7 @@ const AdminOrgDetail: React.FC = () => {
               <Plus size={15} /> Invite User
             </button>
           </div>
-          <UsersTable key={usersRefreshKey} orgId={id} showOrgColumn={false} />
+          <UsersTable key={usersRefreshKey} orgId={id} orgName={org.name} showOrgColumn={false} />
           {showInviteUser && (
             <InviteUserModal
               preSelectedOrgId={id}

@@ -3031,3 +3031,177 @@ export const adminbulkenroll = onRequest(
     }
   }
 );
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN: SEND REMINDER EMAILS (Inactive Users)
+// Sends personalised "we miss you" emails to inactive users
+// via Resend, with audit logging.
+// ═══════════════════════════════════════════════════════════════
+
+export const adminsendreminderemails = onRequest(
+  { secrets: [resendApiKey, supabaseUrl, supabaseServiceKey], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const sbUrl = supabaseUrl.value();
+    const sbKey = supabaseServiceKey.value();
+
+    try {
+      // Verify caller is admin
+      const token = authHeader.split(" ")[1];
+      const userRes = await fetchWithRetry(`${sbUrl}/auth/v1/user`, {
+        headers: { Authorization: `Bearer ${token}`, apikey: sbKey },
+      }, "verify-user");
+      if (!userRes.ok) { res.status(401).json({ error: "Invalid session" }); return; }
+      const caller = await userRes.json();
+
+      // Check platform_role
+      const profileRes = await fetchWithRetry(`${sbUrl}/rest/v1/profiles?id=eq.${caller.id}&select=platform_role`, {
+        headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+      }, "check-profile");
+      const profiles = await profileRes.json();
+      const role = profiles?.[0]?.platform_role;
+      if (role !== "oxygy_admin" && role !== "super_admin") {
+        res.status(403).json({ error: "Forbidden — admin access required" });
+        return;
+      }
+
+      const { users } = req.body;
+
+      // Validate inputs
+      if (!Array.isArray(users) || users.length === 0) {
+        res.status(400).json({ error: "users array is required and must not be empty" });
+        return;
+      }
+      if (users.length > 100) {
+        res.status(400).json({ error: "Maximum 100 users per request" });
+        return;
+      }
+
+      const resendKey = resendApiKey.value();
+      const results: Array<{ email: string; success: boolean; error?: string }> = [];
+      let sentCount = 0;
+      let failedCount = 0;
+
+      for (const user of users) {
+        const { email, name, daysInactive, orgName } = user;
+        if (!email) {
+          results.push({ email: email || "(empty)", success: false, error: "Missing email" });
+          failedCount++;
+          continue;
+        }
+
+        const firstName = (name || email.split("@")[0]).split(" ")[0];
+        const daysLabel = daysInactive ? `${daysInactive} days` : "a while";
+
+        try {
+          const emailRes = await fetchWithRetry("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: "Oxygy AI Upskilling <noreply@oxygyconsulting.com>",
+              to: [email],
+              subject: `We miss you on Oxygy, ${firstName}!`,
+              html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:'DM Sans',Helvetica,Arial,sans-serif;background:#F7FAFC;">
+  <div style="max-width:520px;margin:32px auto;background:#FFFFFF;border-radius:16px;border:1px solid #E2E8F0;overflow:hidden;">
+    <!-- Header -->
+    <div style="background:#1A202C;padding:28px 32px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:#FFFFFF;letter-spacing:-0.3px;">Oxygy AI Upskilling</div>
+      <div style="font-size:13px;color:#A0AEC0;margin-top:4px;">We Miss You!</div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:32px;">
+      <div style="font-size:16px;color:#1A202C;font-weight:600;margin-bottom:8px;">
+        Hey ${firstName} 👋
+      </div>
+      <div style="font-size:14px;color:#4A5568;line-height:1.7;margin-bottom:20px;">
+        We noticed you haven't logged in for <strong>${daysLabel}</strong>. Your${orgName ? ` <strong>${orgName}</strong>` : ""} cohort has been making great progress — and we'd love to see you back on track!
+      </div>
+      <div style="font-size:14px;color:#4A5568;line-height:1.7;margin-bottom:24px;">
+        AI skills are evolving fast, and even a few minutes a day can make a real difference. Pick up right where you left off — your progress is saved and waiting for you.
+      </div>
+
+      <!-- CTA Button -->
+      <div style="text-align:center;margin:28px 0;">
+        <a href="https://oxygy-ai-upskilling-site.web.app/app/dashboard"
+           style="display:inline-block;background:#38B2AC;color:#FFFFFF;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:0.2px;">
+          Jump Back In →
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:20px 32px;background:#F7FAFC;border-top:1px solid #E2E8F0;text-align:center;">
+      <div style="font-size:11px;color:#A0AEC0;line-height:1.6;">
+        You're receiving this because you're enrolled in the Oxygy AI Upskilling programme.<br/>
+        If you believe this was sent in error, please contact your facilitator.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`,
+            }),
+          }, "send-reminder-email");
+
+          if (emailRes.ok) {
+            results.push({ email, success: true });
+            sentCount++;
+          } else {
+            const errText = await emailRes.text();
+            console.error(`[reminder-email] Resend error for ${email}:`, errText);
+            results.push({ email, success: false, error: `Resend API error: ${emailRes.status}` });
+            failedCount++;
+          }
+        } catch (sendErr) {
+          console.error(`[reminder-email] Error sending to ${email}:`, sendErr);
+          results.push({ email, success: false, error: String(sendErr) });
+          failedCount++;
+        }
+      }
+
+      // Write ONE audit log entry with summary
+      await fetchWithRetry(`${sbUrl}/rest/v1/audit_log`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sbKey}`,
+          apikey: sbKey,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          actor_id: caller.id,
+          action: "user.reminder_email",
+          target_type: "users",
+          metadata: {
+            total: users.length,
+            sent: sentCount,
+            failed: failedCount,
+            emails: users.map((u: { email: string }) => u.email),
+          },
+        }),
+      }, "audit-log");
+
+      res.status(200).json({ results, sent: sentCount, failed: failedCount });
+    } catch (err) {
+      console.error("admin-send-reminder-emails error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);

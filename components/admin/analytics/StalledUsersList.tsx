@@ -1,18 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Mail, Loader2 } from 'lucide-react';
 import type { StalledUser } from '../../../lib/analytics';
+import { supabase } from '../../../lib/supabase';
 import AdminCard from '../AdminCard';
 
 interface StalledUsersListProps {
   users: StalledUser[];
   orgId: string;
+  orgName: string;
   totalStalled?: number;
 }
 
-const StalledUsersList: React.FC<StalledUsersListProps> = ({ users, orgId, totalStalled }) => {
+const StalledUsersList: React.FC<StalledUsersListProps> = ({ users, orgId, orgName, totalStalled }) => {
   const navigate = useNavigate();
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState('');
+
+  async function handleSendReminders() {
+    setSending(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/admin/send-reminder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          users: users.map(u => ({ email: u.email, name: u.name, daysInactive: u.daysInactive, orgName })),
+        }),
+      });
+      const data = await res.json();
+      setToast(data.message || `Sent ${users.length} reminders`);
+    } catch (err) {
+      console.error('Send reminders error:', err);
+      setToast('Failed to send reminders');
+    } finally {
+      setSending(false);
+      setTimeout(() => setToast(''), 4000);
+    }
+  }
 
   return (
+  <>
     <AdminCard padding="20px">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -26,6 +58,21 @@ const StalledUsersList: React.FC<StalledUsersListProps> = ({ users, orgId, total
             }}>
               {totalStalled || users.length} users inactive 14+ days
             </span>
+          )}
+          {users.length > 0 && (
+            <button
+              onClick={handleSendReminders}
+              disabled={sending}
+              style={{
+                padding: '5px 12px', borderRadius: 20, background: '#38B2AC', color: '#FFFFFF',
+                fontSize: 11, fontWeight: 600, border: 'none', cursor: sending ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5, fontFamily: "'DM Sans', sans-serif",
+                opacity: sending ? 0.7 : 1,
+              }}
+            >
+              {sending ? <Loader2 size={12} style={{ animation: 'app-spin 0.7s linear infinite' }} /> : <Mail size={12} />}
+              Send Reminders
+            </button>
           )}
         </div>
       </div>
@@ -103,6 +150,18 @@ const StalledUsersList: React.FC<StalledUsersListProps> = ({ users, orgId, total
         </>
       )}
     </AdminCard>
+
+    {toast && (
+      <div style={{
+        position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+        background: '#1A202C', color: '#FFFFFF', padding: '10px 20px', borderRadius: 10,
+        fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+        zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      }}>
+        {toast}
+      </div>
+    )}
+  </>
   );
 };
 
