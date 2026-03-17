@@ -108,6 +108,7 @@ const AppProjectProof: React.FC = () => {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formInitializedRef = useRef(false);
+  const triggerSaveRef = useRef<() => void>(() => {});
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -193,15 +194,17 @@ const AppProjectProof: React.FC = () => {
     setSavedAt(Date.now());
   }, [saveDraft, toolName, platformUsed, toolLink, reflectionText, adoptionScope, outcomeText, caseStudyProblem, caseStudySolution, caseStudyOutcome, caseStudyLearnings]);
 
+  // Keep ref in sync so the stable useEffect can call the latest version
+  triggerSaveRef.current = triggerSave;
+
   useEffect(() => {
-    const handleBeforeUnload = () => { triggerSave(); };
+    const handleBeforeUnload = () => { triggerSaveRef.current(); };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      triggerSave();
     };
-  }, [triggerSave]);
+  }, []);
 
   // Validation
   const totalScreenshots = existingPaths.length + localScreenshots.length;
