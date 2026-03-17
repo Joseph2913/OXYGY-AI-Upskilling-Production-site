@@ -167,6 +167,8 @@ The key diagnostic insight: if `RPC is_oxygy_admin()` returns `true` but `SELECT
 |----------|---------|---------|
 | `is_oxygy_admin()` | Check if current user has oxygy_admin or super_admin role | Policies on profiles, user_org_memberships |
 | `get_admin_org_ids()` | Get org_ids where current user is org admin | Policies on user_org_memberships |
+| `get_user_org_ids()` | Get org_ids where current user is any active member | Policies on user_org_memberships (SELECT, INSERT, UPDATE, DELETE) |
+| `get_org_colleague_ids()` | Get all user_ids in same org(s) as current user | Policies on profiles, topic_progress, activity_log, artefacts, application_insights |
 | `debug_rls_policies()` | Dump all RLS policies for debugging (can be dropped in production) | Admin diagnostics only |
 
 ---
@@ -177,13 +179,33 @@ The key diagnostic insight: if `RPC is_oxygy_admin()` returns `true` but `SELECT
 profiles policies:
   ├── "Users can read own profile"        → auth.uid() = id (safe)
   ├── "Oxygy admins can read all"         → is_oxygy_admin() (safe, SECURITY DEFINER)
-  ├── "Org members can read org profiles" → queries user_org_memberships (safe, no cycle back)
+  ├── "Org members can read org profiles" → get_org_colleague_ids() (safe, SECURITY DEFINER)
   └── "Client admins can read org"        → queries user_org_memberships (safe, no cycle back)
 
 user_org_memberships policies:
   ├── "Users can read/view own"           → auth.uid() = user_id (safe)
   ├── "Oxygy admins can manage/read all"  → is_oxygy_admin() (safe, SECURITY DEFINER)
-  └── "Org admins can read/update/delete" → get_admin_org_ids() (safe, SECURITY DEFINER)
+  ├── "Org members can read org"          → get_user_org_ids() (safe, SECURITY DEFINER)
+  ├── "Admins can insert"                 → is_oxygy_admin() OR get_user_org_ids() (safe)
+  ├── "Org admins can update"             → is_oxygy_admin() OR get_user_org_ids() (safe)
+  └── "Org admins can delete"             → is_oxygy_admin() OR get_user_org_ids() (safe)
+
+topic_progress policies:
+  ├── "Users can read own"                → auth.uid() = user_id (safe)
+  └── "Org members can read org"          → get_org_colleague_ids() (safe, SECURITY DEFINER)
+
+activity_log policies:
+  ├── "Users can read own"                → auth.uid() = user_id (safe)
+  └── "Org members can read org"          → get_org_colleague_ids() (safe, SECURITY DEFINER)
+
+artefacts policies:
+  ├── "Users can read own"                → auth.uid() = user_id (safe)
+  └── "Org members can read org"          → get_org_colleague_ids() (safe, SECURITY DEFINER)
+
+application_insights policies:
+  ├── "Users can read own"                → auth.uid() = user_id (safe)
+  └── "Org members can read org"          → get_org_colleague_ids() (safe, SECURITY DEFINER)
 ```
 
-No table's policies query another table whose policies query back. The cycle is broken by SECURITY DEFINER functions.
+No table's policies query another table whose policies query back. All cross-table lookups
+use SECURITY DEFINER functions (plpgsql) that bypass RLS on the inner query.

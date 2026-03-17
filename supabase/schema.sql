@@ -317,15 +317,31 @@ create policy "Anyone can read invite by code" on org_invites
 -- Helper function to check platform admin status without triggering profiles RLS
 create or replace function is_oxygy_admin()
 returns boolean
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select exists (
+begin
+  return exists (
     select 1 from profiles
     where id = auth.uid()
     and platform_role in ('oxygy_admin', 'super_admin')
   );
+end;
+$$;
+
+-- Helper function to get user's org IDs without triggering RLS recursion on user_org_memberships
+create or replace function get_user_org_ids()
+returns setof uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+    select org_id from user_org_memberships
+    where user_id = auth.uid() and active = true;
+end;
 $$;
 
 -- Allow org members to read profiles of colleagues (via memberships, not profiles self-reference)
@@ -379,31 +395,33 @@ create policy "Org members can read org topic progress" on topic_progress
 create policy "Users can insert own memberships" on user_org_memberships
   for insert with check (auth.uid() = user_id);
 
--- Allow org admins to read all memberships in their org
-create policy "Org admins can read memberships" on user_org_memberships
+-- Allow platform admins and org admins to insert memberships for other users (scan-enroll, invite)
+-- Uses get_user_org_ids() SECURITY DEFINER helper to avoid RLS recursion
+create policy "Admins can insert memberships" on user_org_memberships
+  for insert with check (
+    is_oxygy_admin()
+    OR org_id in (select get_user_org_ids())
+  );
+
+-- Allow any active org member to read all memberships in their org (needed for leaderboard)
+-- Uses get_user_org_ids() SECURITY DEFINER helper to avoid RLS recursion
+create policy "Org members can read org memberships" on user_org_memberships
   for select using (
-    org_id in (
-      select om.org_id from user_org_memberships om
-      where om.user_id = auth.uid() and om.role = 'admin' and om.active = true
-    )
+    org_id in (select get_user_org_ids())
   );
 
 -- Allow org admins to update memberships in their org
 create policy "Org admins can update memberships" on user_org_memberships
   for update using (
-    org_id in (
-      select om.org_id from user_org_memberships om
-      where om.user_id = auth.uid() and om.role = 'admin' and om.active = true
-    )
+    is_oxygy_admin()
+    OR org_id in (select get_user_org_ids())
   );
 
 -- Allow org admins to delete memberships in their org
 create policy "Org admins can delete memberships" on user_org_memberships
   for delete using (
-    org_id in (
-      select om.org_id from user_org_memberships om
-      where om.user_id = auth.uid() and om.role = 'admin' and om.active = true
-    )
+    is_oxygy_admin()
+    OR org_id in (select get_user_org_ids())
   );
 
 -- Allow org admins to manage workshop sessions

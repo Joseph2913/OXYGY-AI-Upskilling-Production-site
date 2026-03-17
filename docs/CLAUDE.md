@@ -199,11 +199,15 @@ This project experienced a critical RLS infinite recursion bug (2026-03-16) wher
 
 1. **Never create circular cross-table references** in RLS policies. If table A's policies query table B, table B's policies must NOT query table A.
 2. **Always use `LANGUAGE plpgsql`** for SECURITY DEFINER functions. `LANGUAGE sql` functions get inlined by PostgreSQL, silently stripping SECURITY DEFINER context.
-3. **Use existing helper functions** instead of raw subqueries in policies:
-   - `is_oxygy_admin()` — safely checks if current user is oxygy_admin/super_admin
-   - `get_admin_org_ids()` — safely returns org_ids where current user is admin
-4. **Audit all existing policies** before adding new ones: `SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'your_table'`
-5. **PostgreSQL evaluates ALL select policies (OR'd)** — one recursive policy poisons every query on that table, even if simpler policies exist.
+3. **Use existing SECURITY DEFINER helper functions** instead of raw subqueries in policies:
+   - `is_oxygy_admin()` — checks if current user is oxygy_admin/super_admin
+   - `get_admin_org_ids()` — returns org_ids where current user is org admin
+   - `get_user_org_ids()` — returns org_ids where current user is any active member
+   - `get_org_colleague_ids()` — returns all user_ids in the same org(s) as current user
+4. **Never use raw subqueries on `user_org_memberships`** within policies on the same table — causes infinite recursion. Always use `get_user_org_ids()`.
+5. **Never use `profiles.org_id`** for org membership checks — multi-tenancy uses `user_org_memberships`, not `profiles.org_id`.
+6. **Audit all existing policies** before adding new ones: `SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'your_table'`
+7. **PostgreSQL evaluates ALL select policies (OR'd)** — one recursive policy poisons every query on that table, even if simpler policies exist.
 
 ## Reference
 - Full content spec: OXYGY_AI_UPSKILLING_SYSTEM_PROMPT.md
