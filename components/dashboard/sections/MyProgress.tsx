@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check, ArrowRight, User, BookOpen, ChevronDown, Target, FileText, Lightbulb, Users, Minus } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -8,8 +9,9 @@ import {
   getSavedPrompts,
   upsertWorkshopAttended,
   validateWorkshopCode,
+  getAllProjectSubmissions,
 } from '../../../lib/database';
-import type { LevelProgressRow } from '../../../lib/database';
+import type { LevelProgressRow, ProjectSubmission } from '../../../lib/database';
 import {
   DEFAULT_PROFILE,
   LEVEL_ACCENTS,
@@ -400,6 +402,7 @@ interface Props {
 
 export const MyProgress: React.FC<Props> = ({ showToast }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const userId = user?.id ?? '';
 
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
@@ -407,6 +410,7 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
   const [savedDepths, setSavedDepths] = useState<Record<string, LevelDepth> | null>(null);
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
   const [levelProgress, setLevelProgress] = useState<LevelProgressRow[]>([]);
+  const [projectSubs, setProjectSubs] = useState<ProjectSubmission[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [expandedPlans, setExpandedPlans] = useState<Set<number>>(new Set());
   const [activeCodePanel, setActiveCodePanel] = useState<number | null>(null);
@@ -420,7 +424,8 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
       getLatestLearningPlan(userId),
       getLevelProgress(userId),
       getSavedPrompts(userId),
-    ]).then(([profileData, planData, progressData, promptsData]) => {
+      getAllProjectSubmissions(userId),
+    ]).then(([profileData, planData, progressData, promptsData, projectData]) => {
       if (profileData) setProfile(profileData);
       if (planData) {
         setSavedPlan(planData.plan);
@@ -428,9 +433,13 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
       }
       setLevelProgress(progressData);
       setPrompts(promptsData);
+      setProjectSubs(projectData);
       setDataLoading(false);
     });
   }, [userId]);
+
+  // Build project submissions map
+  const projectSubMap = new Map<number, ProjectSubmission>(projectSubs.map(s => [s.level, s]));
 
   // Compute dynamic progress rows
   const rows = LEVEL_ROWS.map((row) => {
@@ -438,18 +447,21 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
     const toolUsed: DisplayStatus = progressRow?.tool_used ? 'complete' : 'incomplete';
     const outputSaved: DisplayStatus = hasOutputSaved(row.level, prompts);
     const workshopAttended: DisplayStatus = progressRow?.workshop_attended ? 'complete' : 'incomplete';
-    return { ...row, toolUsed, outputSaved, workshopAttended };
+    const ps = projectSubMap.get(row.level);
+    const projectStatus: 'none' | 'draft' | 'submitted' | 'passed' | 'needs_revision' = ps ? ps.status : 'none';
+    const projectComplete: DisplayStatus = progressRow?.project_completed ? 'complete' : 'incomplete';
+    return { ...row, toolUsed, outputSaved, workshopAttended, projectStatus, projectComplete };
   });
 
-  // Compute stats
+  // Compute stats — 4 activities per level × 5 levels = 20
   const countComplete = (status: DisplayStatus) => status === 'complete' ? 1 : 0;
   const levelsStarted = rows.filter((r) =>
-    r.toolUsed === 'complete' || r.outputSaved === 'complete' || r.workshopAttended === 'complete'
+    r.toolUsed === 'complete' || r.outputSaved === 'complete' || r.workshopAttended === 'complete' || r.projectComplete === 'complete'
   ).length;
   const activitiesCompleted = rows.reduce((sum, r) => {
-    return sum + countComplete(r.toolUsed) + countComplete(r.outputSaved) + countComplete(r.workshopAttended);
+    return sum + countComplete(r.toolUsed) + countComplete(r.outputSaved) + countComplete(r.workshopAttended) + countComplete(r.projectComplete);
   }, 0);
-  const totalActivities = 12;
+  const totalActivities = 20;
   const overallProgress = Math.round((activitiesCompleted / totalActivities) * 100);
 
   const handleWorkshopConfirm = async (level: number, code: string) => {
@@ -597,6 +609,9 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
         <div style={{ width: COL_STATUS, textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Workshop
         </div>
+        <div style={{ width: COL_STATUS, textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          Project
+        </div>
         <div style={{ width: COL_PLAN }} />
       </div>
 
@@ -687,6 +702,57 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
                       </span>
                     </button>
                   )}
+                </div>
+
+                {/* Project column */}
+                <div style={{ width: COL_STATUS, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                  {row.projectStatus === 'none' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: '#EDF2F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Minus size={10} color="#A0AEC0" strokeWidth={3} />
+                      </div>
+                      <span
+                        onClick={() => navigate(`/app/journey/project/${row.level}`)}
+                        style={{ fontSize: 11, color: '#CBD5E0', fontWeight: 400, cursor: 'pointer' }}
+                      >
+                        —
+                      </span>
+                    </div>
+                  ) : row.projectStatus === 'passed' ? (
+                    <div
+                      onClick={() => navigate(`/app/journey/project/${row.level}`)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                    >
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: '#38B2AC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                      </div>
+                      <span style={{ fontSize: 11, color: '#38B2AC', fontWeight: 500 }}>Done</span>
+                    </div>
+                  ) : row.projectStatus === 'draft' ? (
+                    <div
+                      onClick={() => navigate(`/app/journey/project/${row.level}`)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                    >
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#F59E0B', marginTop: 5 }} />
+                      <span style={{ fontSize: 11, color: '#92400E', fontWeight: 500 }}>Draft</span>
+                    </div>
+                  ) : row.projectStatus === 'submitted' ? (
+                    <div
+                      onClick={() => navigate(`/app/journey/project/${row.level}`)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                    >
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#38B2AC', marginTop: 5 }} />
+                      <span style={{ fontSize: 11, color: '#1A6B5F', fontWeight: 500 }}>Submitted</span>
+                    </div>
+                  ) : row.projectStatus === 'needs_revision' ? (
+                    <div
+                      onClick={() => navigate(`/app/journey/project/${row.level}`)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                    >
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#F59E0B', marginTop: 5 }} />
+                      <span style={{ fontSize: 11, color: '#9A3412', fontWeight: 500 }}>Revision</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Explore Plan button */}

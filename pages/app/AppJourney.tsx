@@ -1,10 +1,15 @@
-import React, { useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { useJourneyData } from '../../hooks/useJourneyData';
+import { getProfile, getLatestLearningPlan } from '../../lib/database';
 import { LevelCard } from '../../components/app/LevelCard';
 import { LEVEL_META } from '../../data/levelTopics';
 import { LEVEL_TOPICS } from '../../data/levelTopics';
+import OnboardingSurvey from '../../components/app/journey/OnboardingSurvey';
+import type { PathwayFormData, PathwayApiResponse } from '../../types';
 
 const pulseStyle = `
 @keyframes journeyPulse {
@@ -14,6 +19,14 @@ const pulseStyle = `
 @keyframes journeyFadeSlideUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes onbFadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes onbFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
 }
 `;
 
@@ -26,9 +39,107 @@ const Skeleton: React.FC<{ height: number }> = ({ height }) => (
 );
 
 const AppJourney: React.FC = () => {
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { user } = useAuth();
   const { data, loading, error, retry } = useJourneyData();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const levelRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Fetch learning plan for project titles on level cards
+  const [planData, setPlanData] = useState<PathwayApiResponse | null>(null);
+  useEffect(() => {
+    if (user) {
+      getLatestLearningPlan(user.id).then(d => {
+        if (d?.plan) setPlanData(d.plan);
+      });
+    }
+  }, [user]);
+
+  // DEV: ?simulate=new-user forces State A for testing the onboarding flow
+  const simulateNewUser = searchParams.get('simulate') === 'new-user';
+
+  // State A/B transition
+  const [showOnboarding, setShowOnboarding] = useState(!hasLearningPlan || simulateNewUser);
+  const [transitioning, setTransitioning] = useState(false);
+  const [prefillData, setPrefillData] = useState<Partial<PathwayFormData> | null>(null);
+
+  // Sync showOnboarding with hasLearningPlan on mount / context change
+  useEffect(() => {
+    if (simulateNewUser) {
+      setShowOnboarding(true);
+      return;
+    }
+    if (!learningPlanLoading && !hasLearningPlan) {
+      setShowOnboarding(true);
+    }
+  }, [hasLearningPlan, learningPlanLoading, simulateNewUser]);
+
+  // Load prefill data for regeneration
+  const handleRegenerate = useCallback(async () => {
+    if (user) {
+      const profile = await getProfile(user.id);
+      if (profile) {
+        setPrefillData(profile as Partial<PathwayFormData>);
+      }
+    }
+    setShowOnboarding(true);
+  }, [user]);
+
+  const handlePlanGenerated = useCallback(() => {
+    setTransitioning(true);
+    // Fade out State A, then show State B
+    setTimeout(() => {
+      setShowOnboarding(false);
+      setTransitioning(false);
+      setPrefillData(null);
+      // Scroll to top
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+      window.scrollTo({ top: 0 });
+    }, 500); // fade-out (300ms) + pause (200ms)
+  }, []);
+
+  // Show loading skeleton while learning plan status is loading
+  if (learningPlanLoading) {
+    return (
+      <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
+        <style>{pulseStyle}</style>
+        <Skeleton height={100} />
+        <div style={{ height: 16 }} />
+        {[1, 2, 3].map(i => (
+          <div key={i} style={{ marginBottom: 16 }}><Skeleton height={200} /></div>
+        ))}
+      </div>
+    );
+  }
+
+  // ─── STATE A: Onboarding Mode (full-screen takeover) ───
+  if (showOnboarding) {
+    return (
+      <div
+        ref={contentRef}
+        style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          zIndex: 9999, fontFamily: "'DM Sans', sans-serif",
+          background: 'linear-gradient(135deg, #F7FAFC 0%, #EDF2F7 50%, #F0FFFC 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: transitioning ? 'onbFadeOut 0.3s ease-in forwards' : undefined,
+          overflow: 'auto',
+        }}
+      >
+        <style>{pulseStyle}</style>
+        <OnboardingSurvey
+          prefillData={prefillData}
+          onPlanGenerated={handlePlanGenerated}
+        />
+      </div>
+    );
+  }
+
+  // ─── STATE B: Full Journey View ───
 
   if (loading || !data) {
     return (
@@ -92,7 +203,7 @@ const AppJourney: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
+    <div ref={contentRef} style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
       <style>{pulseStyle}</style>
 
       {/* Page Header */}
@@ -243,21 +354,41 @@ const AppJourney: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Regeneration link */}
+        <div style={{ marginTop: 8 }}>
+          <span
+            onClick={handleRegenerate}
+            style={{
+              fontSize: 12, fontWeight: 500, color: '#38B2AC',
+              cursor: 'pointer', textDecoration: 'none',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+          >
+            Regenerate your learning plan →
+          </span>
+        </div>
       </div>
 
       {/* Level Cards */}
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
-        {levels.map((level, idx) => (
-          <div
-            key={level.levelNumber}
-            ref={el => { levelRefs.current[level.levelNumber] = el; }}
-          >
-            <LevelCard
-              level={level}
-              animDelay={60 + idx * 60}
-            />
-          </div>
-        ))}
+        {levels.map((level, idx) => {
+          const planLevel = planData?.levels?.[`L${level.levelNumber}`];
+          return (
+            <div
+              key={level.levelNumber}
+              ref={el => { levelRefs.current[level.levelNumber] = el; }}
+            >
+              <LevelCard
+                level={level}
+                animDelay={60 + idx * 60}
+                projectTitle={planLevel?.projectTitle || null}
+                deliverable={planLevel?.deliverable || null}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Completion Banner */}

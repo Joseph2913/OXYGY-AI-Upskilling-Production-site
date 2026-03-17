@@ -3205,3 +3205,262 @@ export const adminsendreminderemails = onRequest(
     }
   }
 );
+
+// ═══════════════════════════════════════════════════════════════
+// REVIEW PROJECT (PRD 18)
+// ═══════════════════════════════════════════════════════════════
+
+const REVIEW_PROJECT_SYSTEM_BASE = `You are the OXYGY AI Project Reviewer — a supportive, experienced mentor who evaluates project submissions from professionals completing an AI upskilling programme.
+
+Your role is to review a learner's project submission and provide constructive, specific feedback across four dimensions. You are NOT a gatekeeper — you are a development coach. Your feedback should make the learner feel seen and supported, while being honest about areas that need more depth.
+
+CRITICAL TONE RULES:
+- Always reference the learner's specific submission — their tool name, their described workflow, their stated outcomes. NEVER give generic feedback.
+- When something is good, say specifically WHY it's good. "Your reflection shows genuine iteration" is better than "Good reflection."
+- When something needs work, explain WHAT is missing and give a concrete suggestion. "Consider describing the specific instructions you gave the agent and how you iterated on them" is better than "Could be more detailed."
+- Assume competence. These are working professionals, not students. Address them as peers.
+- The encouragement field must identify one genuinely specific thing they did well. If you can't find something specific, you're not looking hard enough.
+
+PASS/FAIL LOGIC:
+The submission passes if ALL of these are true:
+1. At least THREE dimensions are "strong" or "developing"
+2. ZERO dimensions are "needs_attention"
+
+If ANY dimension is "needs_attention", the submission needs revision. This should be RARE — only when a section is genuinely empty, clearly irrelevant, or so vague that no meaningful project work can be inferred.
+
+"developing" is a PASS state. A learner with all four dimensions at "developing" passes. "developing" means they've done real work but could go deeper — it's feedback for growth, not a blocker.
+
+DIMENSION DEFINITIONS:
+
+1. BRIEF ALIGNMENT (id: "brief_alignment")
+Does the submitted project roughly match the project brief? Look for alignment between the described deliverable and the brief's stated deliverable. A pivot from the original brief is ACCEPTABLE if the learner explains why — pivots can show adaptive thinking. Only mark "needs_attention" if the submission has no discernible connection to the brief.
+
+2. EVIDENCE QUALITY (id: "evidence_quality")
+Do the screenshots and descriptions demonstrate a real deliverable? For screenshots: Are they relevant to the described project? Do they show a working tool, workflow, or dashboard — not just a setup screen or blank interface? For descriptions: Are they specific enough to indicate real work was done? Only mark "needs_attention" if screenshots are missing (when required), clearly unrelated, or if the description contradicts the visual evidence.
+
+3. REFLECTION DEPTH (id: "reflection_depth")
+Does the reflection show genuine learning and thoughtful application? Look for: specific design decisions, iteration (tried X, changed to Y because Z), challenges overcome, connections between the project and their daily work. Surface-level responses ("I built it and it works") are "developing". Rich, specific reflections with evidence of iteration are "strong". Only mark "needs_attention" if the reflection is essentially empty or copied boilerplate.
+
+4. REAL-WORLD IMPACT (id: "impact")
+Has this created tangible value? Look for: specific descriptions of who uses the tool, what changed, measurable outcomes (time saved, quality improved, processes changed). Vague claims ("my team finds it useful") are "developing". Specific outcomes with evidence are "strong". Only mark "needs_attention" if the impact section is empty or the claims are clearly implausible.
+
+RESPONSE FORMAT (JSON only, no markdown, no preamble):
+
+{
+  "dimensions": [
+    {
+      "id": "brief_alignment",
+      "name": "Brief Alignment",
+      "status": "strong",
+      "feedback": "Your meeting-prep agent closely matches the original brief..."
+    },
+    {
+      "id": "evidence_quality",
+      "name": "Evidence Quality",
+      "status": "developing",
+      "feedback": "Your screenshots show the GPT configuration, but..."
+    },
+    {
+      "id": "reflection_depth",
+      "name": "Reflection Depth",
+      "status": "strong",
+      "feedback": "The way you described iterating on the system prompt..."
+    },
+    {
+      "id": "impact",
+      "name": "Real-World Impact",
+      "status": "developing",
+      "feedback": "You mention your team uses it weekly, which is great..."
+    }
+  ],
+  "overallPassed": true,
+  "summary": "A solid Level 2 submission that demonstrates...",
+  "encouragement": "The fact that you iterated on the system prompt three times..."
+}`;
+
+const LEVEL_PROMPT_ADDITIONS: Record<number, string> = {
+  1: `\n\nLEVEL 1 — ADDITIONAL CONTEXT:
+This is a foundational level. The learner was asked to apply AI prompting to their daily work. They did NOT build a discrete tool — they used AI in the context of their existing job.
+
+Be LENIENT on evidence quality — L1 learners may not have screenshots, and that's acceptable. Focus your evaluation on the quality of their reflection and whether they demonstrate genuine engagement with prompting techniques.
+
+Screenshots are optional for L1. If provided, check that they show AI tool usage (a conversation with an AI tool, prompt inputs and outputs). If not provided, do not mark evidence_quality as needs_attention — evaluate based on written description alone.
+
+The bar for "strong" at L1: The learner describes a specific situation, explains what they prompted, what they got back, and how it changed their approach. They show awareness of prompt structure (role, context, task).`,
+
+  2: `\n\nLEVEL 2 — ADDITIONAL CONTEXT:
+The learner was asked to build a custom AI agent or GPT. They should have a discrete, named tool that others can use.
+
+Screenshots are REQUIRED. At minimum, look for evidence of the agent's configuration or instructions AND evidence of it working (a sample conversation or output). A screenshot of just the builder interface without a working example is "developing" for evidence quality, not "strong".
+
+The bar for "strong" at L2: The learner built a working agent, can explain the design decisions behind their instructions, and shows evidence of iteration. Bonus: evidence that others are actually using it.`,
+
+  3: `\n\nLEVEL 3 — ADDITIONAL CONTEXT:
+The learner was asked to design an automated workflow connecting multiple AI steps. This is a systems-level project.
+
+Screenshots are REQUIRED. Look for a workflow canvas showing connected nodes, not just a single step. The complexity should be proportional to the described workflow — a two-node chain for a complex process described in detail is a mismatch.
+
+The bar for "strong" at L3: The workflow has clear input → processing → output logic with multiple steps. The learner describes where human-in-the-loop checkpoints are and why. They can articulate the end-to-end flow and its business impact.`,
+
+  4: `\n\nLEVEL 4 — ADDITIONAL CONTEXT:
+The learner was asked to build a dashboard or front-end interface. This is a design project.
+
+A link to the live dashboard is REQUIRED. Screenshots should show the actual dashboard with data, not just wireframes or design mockups. At least 2 screenshots are expected.
+
+The bar for "strong" at L4: The dashboard is live and accessible. It has a clear intended audience. The layout shows intentional design decisions (not just a default template). The reflection describes the design rationale — who sees what, why the data is presented this way, what decisions the dashboard enables.`,
+
+  5: `\n\nLEVEL 5 — ADDITIONAL CONTEXT:
+This is the capstone level. The learner was asked to build a full application AND write a structured case study (Problem, Solution, Outcome, Learnings).
+
+A link to the deployed app is REQUIRED. Multiple screenshots (2+) are expected showing different views. The case study sections should each be substantive (100+ words).
+
+The bar for "strong" at L5: The app is deployed and functional. The case study reads like a professional portfolio piece — specific about the problem, detailed about the solution, honest about outcomes and learnings. The learner demonstrates integration of skills from all previous levels.
+
+For the case study dimensions, evaluate:
+- Brief alignment: Does the app match the project brief?
+- Evidence quality: Is the app deployed? Do screenshots show a real, functional product?
+- Reflection depth: Are the case study sections (especially Problem and Solution) specific and detailed?
+- Impact: Does the Outcome section include measurable results or specific user feedback?`,
+};
+
+function buildReviewSystemPrompt(level: number): string {
+  return REVIEW_PROJECT_SYSTEM_BASE + (LEVEL_PROMPT_ADDITIONS[level] || "");
+}
+
+function buildReviewUserMessage(
+  level: number,
+  brief: { projectTitle: string; projectDescription: string; deliverable: string; challengeConnection: string },
+  submission: {
+    toolName: string | null; platformUsed: string | null; toolLink: string | null;
+    reflectionText: string; adoptionScope: string | null; outcomeText: string;
+    caseStudyProblem: string | null; caseStudySolution: string | null;
+    caseStudyOutcome: string | null; caseStudyLearnings: string | null;
+  },
+  profile: { role: string; function: string; seniority: string; aiExperience: string },
+): string {
+  const parts: string[] = [];
+
+  parts.push("=== PROJECT BRIEF (what the learner was asked to do) ===");
+  parts.push(`Title: ${brief.projectTitle}`);
+  parts.push(`Description: ${brief.projectDescription}`);
+  parts.push(`Expected Deliverable: ${brief.deliverable}`);
+  parts.push(`Challenge Connection: ${brief.challengeConnection}`);
+
+  parts.push("\n=== LEARNER PROFILE ===");
+  parts.push(`Role: ${profile.role}`);
+  parts.push(`Function: ${profile.function}`);
+  parts.push(`Seniority: ${profile.seniority}`);
+  parts.push(`AI Experience: ${profile.aiExperience}`);
+
+  parts.push("\n=== SUBMISSION ===");
+
+  if (submission.toolName) {
+    parts.push("\n--- What They Built ---");
+    parts.push(`Tool/Agent Name: ${submission.toolName}`);
+    if (submission.platformUsed) parts.push(`Platform: ${submission.platformUsed}`);
+    if (submission.toolLink) parts.push(`Link: ${submission.toolLink}`);
+  }
+
+  parts.push("\n--- Reflection ---");
+  parts.push(submission.reflectionText || "(No reflection provided)");
+
+  parts.push("\n--- Impact ---");
+  if (submission.adoptionScope) parts.push(`Adoption: ${submission.adoptionScope}`);
+  parts.push(submission.outcomeText || "(No outcome provided)");
+
+  if (level === 5) {
+    parts.push("\n--- Case Study: Problem ---");
+    parts.push(submission.caseStudyProblem || "(Not provided)");
+    parts.push("\n--- Case Study: Solution ---");
+    parts.push(submission.caseStudySolution || "(Not provided)");
+    parts.push("\n--- Case Study: Outcome ---");
+    parts.push(submission.caseStudyOutcome || "(Not provided)");
+    parts.push("\n--- Case Study: Learnings ---");
+    parts.push(submission.caseStudyLearnings || "(Not provided)");
+  }
+
+  parts.push("\n=== SCREENSHOTS: Screenshots attached below ===");
+  parts.push("Evaluate the attached screenshots for relevance and evidence of a working deliverable.");
+
+  return parts.join("\n");
+}
+
+export const reviewproject = onRequest(
+  { secrets: [openRouterApiKey], timeoutSeconds: 60 },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+    const apiKey = openRouterApiKey.value();
+    if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+    try {
+      const { level, projectBrief, submission, screenshots, learnerProfile } = req.body;
+
+      if (!level || !projectBrief || !submission) {
+        res.status(400).json({ error: "Missing required fields" }); return;
+      }
+
+      const systemPrompt = buildReviewSystemPrompt(level);
+      const userMessageText = buildReviewUserMessage(level, projectBrief, submission, learnerProfile || {});
+
+      const imageBlocks = (screenshots || []).slice(0, 5).map((dataUri: string) => ({
+        type: "image_url",
+        image_url: { url: dataUri },
+      }));
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userMessageText },
+            ...imageBlocks,
+          ],
+        },
+      ];
+
+      const response = await fetchWithRetry(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "anthropic/claude-sonnet-4",
+            messages,
+            temperature: 0.4,
+            max_tokens: 2000,
+            response_format: { type: "json_object" },
+          }),
+        },
+        "review-project",
+      );
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("OpenRouter API error (review-project):", response.status, errText);
+        const status = response.status === 429 ? 429 : 502;
+        const message = response.status === 429
+          ? "The AI service is temporarily busy. Please wait a moment and try again."
+          : "AI service error";
+        res.status(status).json({ error: message, retryable: true }); return;
+      }
+
+      const data = await response.json();
+      const rawText = data?.choices?.[0]?.message?.content || "";
+      const cleaned = rawText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+
+      res.status(200).json(parsed);
+    } catch (err) {
+      console.error("review-project error:", err);
+      res.status(500).json({ error: "Internal server error", retryable: true });
+    }
+  }
+);

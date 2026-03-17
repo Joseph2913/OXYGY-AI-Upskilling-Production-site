@@ -12,6 +12,7 @@ import { AgentBuilder } from './components/AgentBuilder';
 // Lazy-load app pages
 const AppDashboard = React.lazy(() => import('./pages/app/AppDashboard'));
 const AppJourney = React.lazy(() => import('./pages/app/AppJourney'));
+const AppProjectProof = React.lazy(() => import('./pages/app/AppProjectProof'));
 const AppCurrentLevel = React.lazy(() => import('./pages/app/AppCurrentLevel'));
 const AppToolkit = React.lazy(() => import('./pages/app/AppToolkit'));
 const AppArtefacts = React.lazy(() => import('./pages/app/AppArtefacts'));
@@ -160,6 +161,7 @@ function App() {
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<AppSuspense><AppDashboard /></AppSuspense>} />
           <Route path="journey" element={<AppSuspense><AppJourney /></AppSuspense>} />
+          <Route path="journey/project/:level" element={<AppSuspense><AppProjectProof /></AppSuspense>} />
           <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
           <Route path="toolkit" element={<AppSuspense><AppToolkit /></AppSuspense>} />
           <Route path="toolkit/prompt-playground" element={<AppSuspense><AppPromptPlayground /></AppSuspense>} />

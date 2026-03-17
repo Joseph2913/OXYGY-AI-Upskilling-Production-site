@@ -7,10 +7,14 @@ import { getPrimaryTool } from '../../data/toolkitData';
 import { LEVELS } from '../../data/content';
 import { LevelProgress } from '../../hooks/useJourneyData';
 import { TOPIC_SVGS } from './TopicSvgs';
+import { ActivityTracker } from './journey/ActivityTracker';
+import { ProjectBriefSection } from './journey/ProjectBriefSection';
 
 interface LevelCardProps {
   level: LevelProgress;
   animDelay: number;
+  projectTitle?: string | null;
+  deliverable?: string | null;
 }
 
 /* ── Phase step data with tooltips ── */
@@ -156,7 +160,7 @@ const TOPIC_CARD_ICON_SIZE = 48;
 /* ════════════════════════════════════════════════
    MAIN LEVEL CARD
    ════════════════════════════════════════════════ */
-export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
+export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable }) => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const meta = LEVEL_META.find(m => m.number === level.levelNumber)!;
@@ -170,6 +174,8 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
 
   const isCompleted = level.status === 'completed';
   const isActive = level.status === 'active';
+  const isProjectPending = level.status === 'project-pending';
+  const isLocked = level.status === 'not-started' && level.completedTopics === 0 && level.levelNumber > 1;
   const isAccessible = true; // All levels accessible
 
   const completionDate = level.completedAt
@@ -183,10 +189,11 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
     <div
       style={{
         borderRadius: 14,
-        border: '1px solid #E2E8F0',
-        borderLeft: `4px solid ${accent}`,
+        border: isProjectPending ? `1px solid ${accent}88` : '1px solid #E2E8F0',
+        borderLeft: `4px solid ${isProjectPending ? accent : accent}`,
         background: '#FFFFFF',
         overflow: 'hidden',
+        cursor: 'pointer',
         animation: `journeyFadeSlideUp 0.3s ease ${animDelay}ms both`,
       }}
     >
@@ -233,6 +240,17 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
               {completionDate && (
                 <span style={{ fontSize: 10, color: '#A0AEC0' }}>{completionDate}</span>
               )}
+              {/* Activity tracker for active/project-pending/completed */}
+              {(isActive || isProjectPending || isCompleted) && (
+                <ActivityTracker
+                  elearningDone={level.completedTopics === level.totalTopics && level.totalTopics > 0}
+                  toolkitDone={level.toolUsed}
+                  workshopDone={level.workshopAttended}
+                  projectDone={level.projectCompleted}
+                  accentColor={accent}
+                  accentDark={accentDark}
+                />
+              )}
               {isCompleted && (
                 <span style={{
                   fontSize: 10, fontWeight: 700, color: '#276749',
@@ -240,6 +258,15 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
                   borderRadius: 10, padding: '1px 8px',
                 }}>
                   Complete
+                </span>
+              )}
+              {isProjectPending && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: '#92400E',
+                  background: '#FEFCE8', border: '1px solid #FDE68A',
+                  borderRadius: 20, padding: '4px 12px',
+                }}>
+                  Project Pending
                 </span>
               )}
               {isActive && (
@@ -365,6 +392,21 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay }) => {
             }} />
           </div>
         </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════
+          PROJECT BRIEF SECTION
+         ════════════════════════════════════════════════ */}
+      <div style={{ padding: '0 24px 16px' }}>
+        <ProjectBriefSection
+          level={level.levelNumber}
+          isLocked={isLocked}
+          projectTitle={projectTitle || null}
+          deliverable={deliverable || null}
+          projectSubmission={level.projectSubmission}
+          accentColor={accent}
+          accentDark={accentDark}
+        />
       </div>
 
       {/* ════════════════════════════════════════════════

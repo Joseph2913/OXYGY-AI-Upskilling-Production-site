@@ -39,6 +39,9 @@ export const AppSidebar: React.FC = () => {
     if (path === '/app/toolkit') {
       return location.pathname.startsWith('/app/toolkit');
     }
+    if (path === '/app/journey') {
+      return location.pathname.startsWith('/app/journey');
+    }
     return location.pathname === path;
   };
 

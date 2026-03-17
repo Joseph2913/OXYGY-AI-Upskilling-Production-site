@@ -126,6 +126,8 @@ export interface LevelProgressRow {
   workshop_attended: boolean;
   workshop_attended_at: string | null;
   workshop_code_used: string | null;
+  project_completed?: boolean;
+  project_completed_at?: string | null;
 }
 
 export async function getLevelProgress(userId: string): Promise<LevelProgressRow[]> {
@@ -2032,4 +2034,342 @@ export async function updateMembershipRole(
     metadata: { new_role: newRole },
   });
   return true;
+}
+
+// ─── PROJECT SUBMISSIONS (PRD 17) ───
+//
+// SQL migration — run in Supabase dashboard before deploying:
+//
+// create table if not exists project_submissions (
+//   id uuid primary key default gen_random_uuid(),
+//   user_id uuid not null references auth.users(id),
+//   level int not null check (level >= 1 and level <= 5),
+//   status text not null default 'draft'
+//     check (status in ('draft', 'submitted', 'passed', 'needs_revision')),
+//   tool_name text,
+//   platform_used text,
+//   tool_link text,
+//   screenshot_paths text[],
+//   reflection_text text,
+//   adoption_scope text
+//     check (adoption_scope is null or adoption_scope in (
+//       'just-me', 'immediate-team', 'wider-department', 'organisation-wide'
+//     )),
+//   outcome_text text,
+//   case_study_problem text,
+//   case_study_solution text,
+//   case_study_outcome text,
+//   case_study_learnings text,
+//   review_dimensions jsonb,
+//   review_summary text,
+//   review_encouragement text,
+//   review_passed boolean,
+//   reviewed_at timestamptz,
+//   submitted_at timestamptz,
+//   completed_at timestamptz,
+//   created_at timestamptz default now(),
+//   updated_at timestamptz default now(),
+//   unique (user_id, level)
+// );
+//
+// alter table project_submissions enable row level security;
+// create policy "Users can read own submissions" on project_submissions for select using (auth.uid() = user_id);
+// create policy "Users can insert own submissions" on project_submissions for insert with check (auth.uid() = user_id);
+// create policy "Users can update own submissions" on project_submissions for update using (auth.uid() = user_id);
+// create index project_submissions_user_level on project_submissions(user_id, level);
+//
+// alter table level_progress
+//   add column if not exists project_completed boolean default false,
+//   add column if not exists project_completed_at timestamptz;
+//
+// Storage bucket: project-screenshots (private, 5MB limit, image/png, image/jpeg, image/webp)
+// create policy "Users upload own screenshots" on storage.objects for insert
+//   with check (bucket_id = 'project-screenshots' and (storage.foldername(name))[1] = auth.uid()::text);
+// create policy "Users read own screenshots" on storage.objects for select
+//   using (bucket_id = 'project-screenshots' and (storage.foldername(name))[1] = auth.uid()::text);
+// create policy "Users delete own screenshots" on storage.objects for delete
+//   using (bucket_id = 'project-screenshots' and (storage.foldername(name))[1] = auth.uid()::text);
+
+export interface ProjectSubmission {
+  id: string;
+  userId: string;
+  level: number;
+  status: 'draft' | 'submitted' | 'passed' | 'needs_revision';
+  toolName: string | null;
+  platformUsed: string | null;
+  toolLink: string | null;
+  screenshotPaths: string[];
+  reflectionText: string | null;
+  adoptionScope: string | null;
+  outcomeText: string | null;
+  caseStudyProblem: string | null;
+  caseStudySolution: string | null;
+  caseStudyOutcome: string | null;
+  caseStudyLearnings: string | null;
+  reviewDimensions: unknown | null;
+  reviewSummary: string | null;
+  reviewEncouragement: string | null;
+  reviewPassed: boolean | null;
+  reviewedAt: number | null;
+  submittedAt: number | null;
+  completedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+function dbToProjectSubmission(row: Record<string, unknown>): ProjectSubmission {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    level: row.level as number,
+    status: row.status as ProjectSubmission['status'],
+    toolName: (row.tool_name as string) || null,
+    platformUsed: (row.platform_used as string) || null,
+    toolLink: (row.tool_link as string) || null,
+    screenshotPaths: (row.screenshot_paths as string[]) || [],
+    reflectionText: (row.reflection_text as string) || null,
+    adoptionScope: (row.adoption_scope as string) || null,
+    outcomeText: (row.outcome_text as string) || null,
+    caseStudyProblem: (row.case_study_problem as string) || null,
+    caseStudySolution: (row.case_study_solution as string) || null,
+    caseStudyOutcome: (row.case_study_outcome as string) || null,
+    caseStudyLearnings: (row.case_study_learnings as string) || null,
+    reviewDimensions: row.review_dimensions || null,
+    reviewSummary: (row.review_summary as string) || null,
+    reviewEncouragement: (row.review_encouragement as string) || null,
+    reviewPassed: row.review_passed as boolean | null,
+    reviewedAt: row.reviewed_at ? new Date(row.reviewed_at as string).getTime() : null,
+    submittedAt: row.submitted_at ? new Date(row.submitted_at as string).getTime() : null,
+    completedAt: row.completed_at ? new Date(row.completed_at as string).getTime() : null,
+    createdAt: new Date((row.created_at as string) || Date.now()).getTime(),
+    updatedAt: new Date((row.updated_at as string) || Date.now()).getTime(),
+  };
+}
+
+export async function getProjectSubmission(userId: string, level: number): Promise<ProjectSubmission | null> {
+  try {
+    const { data, error } = await supabase
+      .from('project_submissions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('level', level)
+      .maybeSingle();
+    if (error || !data) return null;
+    return dbToProjectSubmission(data as Record<string, unknown>);
+  } catch { return null; }
+}
+
+export async function getAllProjectSubmissions(userId: string): Promise<ProjectSubmission[]> {
+  try {
+    const { data, error } = await supabase
+      .from('project_submissions')
+      .select('*')
+      .eq('user_id', userId);
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).map(dbToProjectSubmission);
+  } catch { return []; }
+}
+
+export async function upsertProjectDraft(
+  userId: string,
+  level: number,
+  fields: Partial<{
+    toolName: string;
+    platformUsed: string;
+    toolLink: string;
+    screenshotPaths: string[];
+    reflectionText: string;
+    adoptionScope: string;
+    outcomeText: string;
+    caseStudyProblem: string;
+    caseStudySolution: string;
+    caseStudyOutcome: string;
+    caseStudyLearnings: string;
+  }>,
+): Promise<boolean> {
+  try {
+    const row: Record<string, unknown> = {
+      user_id: userId,
+      level,
+      status: 'draft',
+      updated_at: new Date().toISOString(),
+    };
+    if (fields.toolName !== undefined) row.tool_name = fields.toolName;
+    if (fields.platformUsed !== undefined) row.platform_used = fields.platformUsed;
+    if (fields.toolLink !== undefined) row.tool_link = fields.toolLink;
+    if (fields.screenshotPaths !== undefined) row.screenshot_paths = fields.screenshotPaths;
+    if (fields.reflectionText !== undefined) row.reflection_text = fields.reflectionText;
+    if (fields.adoptionScope !== undefined) row.adoption_scope = fields.adoptionScope;
+    if (fields.outcomeText !== undefined) row.outcome_text = fields.outcomeText;
+    if (fields.caseStudyProblem !== undefined) row.case_study_problem = fields.caseStudyProblem;
+    if (fields.caseStudySolution !== undefined) row.case_study_solution = fields.caseStudySolution;
+    if (fields.caseStudyOutcome !== undefined) row.case_study_outcome = fields.caseStudyOutcome;
+    if (fields.caseStudyLearnings !== undefined) row.case_study_learnings = fields.caseStudyLearnings;
+
+    const { error } = await supabase
+      .from('project_submissions')
+      .upsert(row, { onConflict: 'user_id,level' });
+    if (error) return false;
+    return true;
+  } catch { return false; }
+}
+
+export interface ReviewProjectResponse {
+  dimensions: {
+    id: string;
+    name: string;
+    status: 'strong' | 'developing' | 'needs_attention';
+    feedback: string;
+  }[];
+  overallPassed: boolean;
+  summary: string;
+  encouragement: string;
+}
+
+export async function submitProject(
+  userId: string,
+  level: number,
+  submission: ProjectSubmission,
+  screenshotDataUris: string[],
+  projectBrief: { projectTitle: string; projectDescription: string; deliverable: string; challengeConnection: string },
+  learnerProfile: { role: string; function: string; seniority: string; aiExperience: string },
+): Promise<{ success: boolean; review: ReviewProjectResponse | null; error: string | null }> {
+  try {
+    const now = new Date().toISOString();
+
+    // 1. Set status to 'submitted'
+    await supabase
+      .from('project_submissions')
+      .update({ status: 'submitted', submitted_at: now, updated_at: now })
+      .eq('user_id', userId)
+      .eq('level', level);
+
+    // 2. Call the review API
+    const response = await fetch('/api/review-project', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level,
+        projectBrief,
+        submission: {
+          toolName: submission.toolName,
+          platformUsed: submission.platformUsed,
+          toolLink: submission.toolLink,
+          reflectionText: submission.reflectionText,
+          adoptionScope: submission.adoptionScope,
+          outcomeText: submission.outcomeText,
+          caseStudyProblem: submission.caseStudyProblem,
+          caseStudySolution: submission.caseStudySolution,
+          caseStudyOutcome: submission.caseStudyOutcome,
+          caseStudyLearnings: submission.caseStudyLearnings,
+        },
+        screenshots: screenshotDataUris,
+        learnerProfile,
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      // Revert status to draft on failure
+      await supabase
+        .from('project_submissions')
+        .update({ status: 'draft', updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('level', level);
+      throw new Error(errData.error || 'Review API failed');
+    }
+
+    const review: ReviewProjectResponse = await response.json();
+
+    // 3. Store the review results
+    const newStatus = review.overallPassed ? 'passed' : 'needs_revision';
+    const updateData: Record<string, unknown> = {
+      status: newStatus,
+      review_dimensions: review.dimensions,
+      review_summary: review.summary,
+      review_encouragement: review.encouragement,
+      review_passed: review.overallPassed,
+      reviewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (review.overallPassed) {
+      updateData.completed_at = new Date().toISOString();
+    }
+
+    await supabase
+      .from('project_submissions')
+      .update(updateData)
+      .eq('user_id', userId)
+      .eq('level', level);
+
+    // 4. If passed, update level_progress
+    if (review.overallPassed) {
+      const { data: existing } = await supabase
+        .from('level_progress')
+        .select('user_id')
+        .eq('user_id', userId)
+        .eq('level', level)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('level_progress')
+          .update({ project_completed: true, project_completed_at: new Date().toISOString() })
+          .eq('user_id', userId)
+          .eq('level', level);
+      } else {
+        await supabase
+          .from('level_progress')
+          .insert({
+            user_id: userId,
+            level,
+            tool_used: false,
+            workshop_attended: false,
+            project_completed: true,
+            project_completed_at: new Date().toISOString(),
+          });
+      }
+    }
+
+    return { success: true, review, error: null };
+  } catch (err) {
+    return { success: false, review: null, error: (err as Error).message };
+  }
+}
+
+export async function uploadProjectScreenshot(
+  userId: string,
+  level: number,
+  file: File,
+): Promise<string | null> {
+  try {
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${userId}/${level}/${timestamp}_${safeName}`;
+    const { error } = await supabase.storage
+      .from('project-screenshots')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) return null;
+    return path;
+  } catch { return null; }
+}
+
+export async function deleteProjectScreenshot(path: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.storage
+      .from('project-screenshots')
+      .remove([path]);
+    return !error;
+  } catch { return false; }
+}
+
+export async function getScreenshotUrl(path: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from('project-screenshots')
+      .createSignedUrl(path, 3600);
+    if (error || !data) return null;
+    return data.signedUrl;
+  } catch { return null; }
 }

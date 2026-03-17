@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { getFullProfile, updateCurrentLevel as dbUpdateLevel } from '../lib/database';
+import { getFullProfile, updateCurrentLevel as dbUpdateLevel, getAllProjectSubmissions } from '../lib/database';
+import type { ProjectSubmission } from '../lib/database';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 interface UserProfile {
@@ -21,12 +22,22 @@ interface OrgContextData {
   cohortName: string | null;
 }
 
+interface ProjectSubmissionSummary {
+  status: 'draft' | 'submitted' | 'passed' | 'needs_revision';
+  completedAt: number | null;
+}
+
 interface AppContextValue {
   userProfile: UserProfile | null;
   loading: boolean;
+  hasLearningPlan: boolean;
+  learningPlanLoading: boolean;
+  refreshLearningPlan: () => Promise<void>;
   setCurrentLevel: (level: number) => void;
   refreshProfile: () => void;
   orgContext: OrgContextData | null;
+  projectSubmissions: Record<number, ProjectSubmissionSummary>;
+  refreshProjectSubmissions: () => Promise<void>;
 }
 
 // Fallback profile when Supabase is not configured
@@ -43,9 +54,14 @@ const FALLBACK_PROFILE: UserProfile = {
 const AppContext = createContext<AppContextValue>({
   userProfile: null,
   loading: true,
+  hasLearningPlan: false,
+  learningPlanLoading: true,
+  refreshLearningPlan: async () => {},
   setCurrentLevel: () => {},
   refreshProfile: () => {},
   orgContext: null,
+  projectSubmissions: {},
+  refreshProjectSubmissions: async () => {},
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -53,6 +69,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [orgContext, setOrgContext] = useState<OrgContextData | null>(null);
+  const [hasLearningPlan, setHasLearningPlan] = useState(false);
+  const [learningPlanLoading, setLearningPlanLoading] = useState(true);
+  const [projectSubmissions, setProjectSubmissions] = useState<Record<number, ProjectSubmissionSummary>>({});
+
+  const fetchProjectSubmissions = useCallback(async () => {
+    if (!isSupabaseConfigured || !user) {
+      setProjectSubmissions({});
+      return;
+    }
+    try {
+      const subs = await getAllProjectSubmissions(user.id);
+      const map: Record<number, ProjectSubmissionSummary> = {};
+      for (const s of subs) {
+        map[s.level] = { status: s.status, completedAt: s.completedAt };
+      }
+      setProjectSubmissions(map);
+    } catch {
+      setProjectSubmissions({});
+    }
+  }, [user]);
+
+  const checkLearningPlan = useCallback(async () => {
+    if (!isSupabaseConfigured || !user) {
+      setHasLearningPlan(false);
+      setLearningPlanLoading(false);
+      return;
+    }
+    setLearningPlanLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('learning_plans')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        setHasLearningPlan(false);
+      } else {
+        setHasLearningPlan(!!data);
+      }
+    } catch {
+      setHasLearningPlan(false);
+    }
+    setLearningPlanLoading(false);
+  }, [user]);
 
   const fetchProfile = useCallback(async () => {
     if (!isSupabaseConfigured || !user) {
@@ -135,7 +197,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]);
+    checkLearningPlan();
+    fetchProjectSubmissions();
+  }, [fetchProfile, checkLearningPlan, fetchProjectSubmissions]);
 
   const setCurrentLevel = useCallback((level: number) => {
     if (!user) return;
@@ -147,9 +211,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       userProfile: profile,
       loading,
+      hasLearningPlan,
+      learningPlanLoading,
+      refreshLearningPlan: checkLearningPlan,
       setCurrentLevel,
       refreshProfile: fetchProfile,
       orgContext,
+      projectSubmissions,
+      refreshProjectSubmissions: fetchProjectSubmissions,
     }}>
       {children}
     </AppContext.Provider>

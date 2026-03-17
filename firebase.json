@@ -30,6 +30,7 @@
       { "source": "/api/admin/scan-domain", "function": { "functionId": "adminscanbydomian" } },
       { "source": "/api/admin/bulk-enroll", "function": { "functionId": "adminbulkenroll" } },
       { "source": "/api/admin/send-reminder", "function": { "functionId": "adminsendreminderemails" } },
+      { "source": "/api/review-project", "function": { "functionId": "reviewproject" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [
