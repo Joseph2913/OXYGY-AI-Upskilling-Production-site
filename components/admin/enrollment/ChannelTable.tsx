@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Power, Link as LinkIcon, Hash, Globe, UserPlus } from 'lucide-react';
+import { Copy, Power, Link as LinkIcon, Hash, Globe, UserPlus, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { writeAuditLog } from '../../../lib/database';
 import { getChannelStatus } from '../../../lib/enrollment';
@@ -29,12 +29,80 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
   const { user } = useAuth();
   const [toast, setToast] = useState('');
   const [deactivating, setDeactivating] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [scanChannel, setScanChannel] = useState<EnrollmentChannel | null>(null);
+  const [editing, setEditing] = useState<EnrollmentChannel | null>(null);
+
+  // Edit form state
+  const [editLabel, setEditLabel] = useState('');
+  const [editCohortId, setEditCohortId] = useState('');
+  const [editMaxUses, setEditMaxUses] = useState('');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
+  const [editAutoEnroll, setEditAutoEnroll] = useState(true);
+  const [editActive, setEditActive] = useState(true);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  function openEdit(ch: EnrollmentChannel) {
+    setEditing(ch);
+    setEditLabel(ch.label || '');
+    setEditCohortId(ch.cohortId || '');
+    setEditMaxUses(ch.maxUses ? String(ch.maxUses) : '');
+    setEditExpiresAt(ch.expiresAt ? ch.expiresAt.split('T')[0] : '');
+    setEditAutoEnroll(ch.autoEnroll);
+    setEditActive(ch.active);
+    setEditError('');
+  }
+
+  async function handleEditSave() {
+    if (!editing || !user) return;
+    setEditSaving(true);
+    setEditError('');
+
+    const updates: Record<string, unknown> = {
+      label: editLabel.trim() || null,
+      cohort_id: editCohortId || null,
+      max_uses: editMaxUses ? parseInt(editMaxUses) : null,
+      expires_at: editExpiresAt || null,
+      auto_enroll: editAutoEnroll,
+      active: editActive,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from('enrollment_channels')
+      .update(updates)
+      .eq('id', editing.id);
+
+    if (error) {
+      setEditError(error.message);
+      setEditSaving(false);
+      return;
+    }
+
+    await writeAuditLog({
+      actorId: user.id,
+      action: 'channel.update',
+      targetType: 'enrollment_channel',
+      targetId: editing.id,
+      orgId: editing.orgId,
+      metadata: { type: editing.type, value: editing.value, changes: updates },
+    });
+
+    setEditSaving(false);
+    setEditing(null);
+    onRefresh();
+    showToast('Channel updated');
+  }
 
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
-    setToast('Copied!');
+    showToast('Copied!');
+  }
+
+  function showToast(msg: string) {
+    setToast(msg);
     setTimeout(() => setToast(''), 2000);
   }
 
@@ -69,6 +137,33 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
     setDeactivating(null);
   }
 
+  async function handleDelete(channel: EnrollmentChannel) {
+    if (!user) return;
+    setActionLoading(true);
+    const { error } = await supabase
+      .from('enrollment_channels')
+      .delete()
+      .eq('id', channel.id);
+    if (!error) {
+      await writeAuditLog({
+        actorId: user.id,
+        action: 'channel.delete',
+        targetType: 'enrollment_channel',
+        targetId: channel.id,
+        orgId: channel.orgId,
+        metadata: { type: channel.type, value: channel.value },
+      });
+      onRefresh();
+      showToast('Channel deleted');
+    }
+    setActionLoading(false);
+    setDeleting(null);
+  }
+
+  const iconBtn = (title: string, hoverColor: string): React.CSSProperties => ({
+    background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#A0AEC0',
+  });
+
   if (channels.length === 0) {
     return (
       <div>
@@ -86,13 +181,13 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
   }
 
   const COLS = [
-    { label: 'Label', width: '22%' },
-    { label: 'Type', width: '10%' },
-    { label: 'Value', width: '22%' },
-    { label: 'Cohort', width: '14%' },
-    { label: 'Uses', width: '12%' },
+    { label: 'Label', width: '20%' },
+    { label: 'Type', width: '9%' },
+    { label: 'Value', width: '20%' },
+    { label: 'Cohort', width: '13%' },
+    { label: 'Uses', width: '10%' },
     { label: 'Status', width: '10%' },
-    { label: 'Actions', width: '10%' },
+    { label: 'Actions', width: '18%' },
   ];
 
   return (
@@ -144,12 +239,12 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
             >
               {/* Label */}
-              <div style={{ width: '22%', fontWeight: 500, color: '#2D3748' }}>
+              <div style={{ width: '20%', fontWeight: 500, color: '#2D3748' }}>
                 {ch.label || `${typeStyle?.label} — ${ch.value}`}
               </div>
 
               {/* Type */}
-              <div style={{ width: '10%' }}>
+              <div style={{ width: '9%' }}>
                 <span style={{
                   display: 'inline-block', padding: '3px 10px', borderRadius: 20,
                   fontSize: 11, fontWeight: 600, background: typeStyle?.bg, color: typeStyle?.text,
@@ -159,7 +254,7 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
               </div>
 
               {/* Value */}
-              <div style={{ width: '22%', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: '20%', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {ch.type === 'code' ? (
                   <span style={{
                     fontFamily: "'JetBrains Mono', monospace", background: '#F7FAFC',
@@ -190,10 +285,7 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
                   <button
                     onClick={() => copyToClipboard(ch.type === 'link' ? getFullUrl(ch.value) : ch.value)}
                     title="Copy"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                      color: '#A0AEC0', flexShrink: 0,
-                    }}
+                    style={iconBtn('Copy', '#38B2AC')}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#38B2AC'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
                   >
@@ -203,12 +295,12 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
               </div>
 
               {/* Cohort */}
-              <div style={{ width: '14%', fontSize: 12, color: '#718096' }}>
+              <div style={{ width: '13%', fontSize: 12, color: '#718096' }}>
                 {getCohortName(ch.cohortId)}
               </div>
 
               {/* Uses */}
-              <div style={{ width: '12%', fontSize: 12, color: '#718096' }}>
+              <div style={{ width: '10%', fontSize: 12, color: '#718096' }}>
                 {ch.usesCount} / {ch.maxUses || '\u221E'}
               </div>
 
@@ -223,15 +315,12 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
               </div>
 
               {/* Actions */}
-              <div style={{ width: '10%', display: 'flex', gap: 6 }}>
+              <div style={{ width: '18%', display: 'flex', gap: 4 }}>
                 {ch.type === 'link' && (
                   <button
                     onClick={() => copyToClipboard(getFullUrl(ch.value))}
                     title="Copy Link"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                      color: '#A0AEC0',
-                    }}
+                    style={iconBtn('Copy Link', '#38B2AC')}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#38B2AC'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
                   >
@@ -242,30 +331,42 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
                   <button
                     onClick={() => setScanChannel(ch)}
                     title="Scan & Enroll existing users"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                      color: '#A0AEC0',
-                    }}
+                    style={iconBtn('Scan', '#38B2AC')}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#38B2AC'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
                   >
                     <UserPlus size={14} />
                   </button>
                 )}
+                <button
+                  onClick={() => openEdit(ch)}
+                  title="Edit channel"
+                  style={iconBtn('Edit', '#38B2AC')}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#38B2AC'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
+                >
+                  <Pencil size={14} />
+                </button>
                 {ch.active && (
                   <button
                     onClick={() => setDeactivating(ch.id)}
                     title="Deactivate"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                      color: '#A0AEC0',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E53E3E'; }}
+                    style={iconBtn('Deactivate', '#E53E3E')}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#D69E2E'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
                   >
                     <Power size={14} />
                   </button>
                 )}
+                <button
+                  onClick={() => setDeleting(ch.id)}
+                  title="Delete channel"
+                  style={iconBtn('Delete', '#E53E3E')}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E53E3E'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
 
               {/* Confirm deactivate */}
@@ -285,10 +386,240 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
                   />
                 </div>
               )}
+
+              {/* Confirm delete */}
+              {deleting === ch.id && (
+                <div style={{
+                  position: 'fixed', inset: 0, background: 'rgba(26,32,44,0.5)',
+                  zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <ConfirmDialog
+                    title="Delete Channel"
+                    message={`Permanently delete this ${ch.type} channel "${ch.value}"? This cannot be undone. Existing enrollments made through this channel will not be affected.`}
+                    confirmLabel="Delete"
+                    confirmVariant="danger"
+                    onConfirm={() => handleDelete(ch)}
+                    onCancel={() => setDeleting(null)}
+                    isLoading={actionLoading}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* Edit Channel Modal */}
+      {editing && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(26,32,44,0.5)',
+            zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setEditing(null)}
+        >
+          <div
+            style={{
+              background: '#FFFFFF', borderRadius: 16, width: '100%', maxWidth: 480,
+              overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px', borderBottom: '1px solid #E2E8F0',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Edit Channel</span>
+                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+                  {CHANNEL_TYPE_STYLES[editing.type]?.label} — {editing.value}
+                </div>
+              </div>
+              <button onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A0AEC0' }}>
+                <span style={{ fontSize: 20 }}>&times;</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: 24, maxHeight: '60vh', overflowY: 'auto' as const }}>
+              {/* Label */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6 }}>
+                  Label <span style={{ fontSize: 11, color: '#A0AEC0', fontWeight: 400 }}>(optional)</span>
+                </label>
+                <input
+                  value={editLabel}
+                  onChange={e => setEditLabel(e.target.value)}
+                  placeholder="e.g., Q1 2026 London Workshop"
+                  style={{
+                    width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0',
+                    borderRadius: 10, fontSize: 13, boxSizing: 'border-box' as const, outline: 'none',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                />
+              </div>
+
+              {/* Cohort */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6 }}>
+                  Assign to Cohort
+                </label>
+                <select
+                  value={editCohortId}
+                  onChange={e => setEditCohortId(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0',
+                    borderRadius: 10, fontSize: 13, boxSizing: 'border-box' as const, outline: 'none',
+                    fontFamily: "'DM Sans', sans-serif", background: '#FFFFFF',
+                  }}
+                >
+                  <option value="">No cohort</option>
+                  {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              {/* Auto-enroll toggle (domain only) */}
+              {editing.type === 'domain' && (
+                <div style={{
+                  marginBottom: 16, padding: '12px 14px', borderRadius: 10,
+                  background: '#F7FAFC', border: '1px solid #E2E8F0',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#2D3748' }}>Auto-enroll on sign-up</div>
+                      <div style={{ fontSize: 11, color: '#718096', marginTop: 2, lineHeight: 1.4 }}>
+                        {editAutoEnroll
+                          ? 'Users signing up with this domain are automatically added'
+                          : 'Users must be manually enrolled via Scan & Enroll'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditAutoEnroll(!editAutoEnroll)}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                        background: editAutoEnroll ? '#38B2AC' : '#CBD5E0',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 12,
+                      }}
+                    >
+                      <div style={{
+                        width: 18, height: 18, borderRadius: 9, background: '#FFFFFF',
+                        position: 'absolute', top: 3,
+                        left: editAutoEnroll ? 23 : 3,
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                      }} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Status toggle */}
+              <div style={{
+                marginBottom: 16, padding: '12px 14px', borderRadius: 10,
+                background: '#F7FAFC', border: '1px solid #E2E8F0',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#2D3748' }}>Active</div>
+                    <div style={{ fontSize: 11, color: '#718096', marginTop: 2 }}>
+                      {editActive ? 'Channel is accepting enrollments' : 'Channel is deactivated'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditActive(!editActive)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                      background: editActive ? '#38B2AC' : '#CBD5E0',
+                      position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 12,
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 9, background: '#FFFFFF',
+                      position: 'absolute', top: 3,
+                      left: editActive ? 23 : 3,
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                    }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Advanced: Max Uses & Expires */}
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6 }}>
+                    Max Uses
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editMaxUses}
+                    onChange={e => setEditMaxUses(e.target.value)}
+                    placeholder="Unlimited"
+                    style={{
+                      width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0',
+                      borderRadius: 10, fontSize: 13, boxSizing: 'border-box' as const, outline: 'none',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 6 }}>
+                    Expires
+                  </label>
+                  <input
+                    type="date"
+                    value={editExpiresAt}
+                    onChange={e => setEditExpiresAt(e.target.value)}
+                    style={{
+                      width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0',
+                      borderRadius: 10, fontSize: 13, boxSizing: 'border-box' as const, outline: 'none',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {editError && (
+                <div style={{ fontSize: 12, color: '#E53E3E', marginTop: 12 }}>{editError}</div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px', borderTop: '1px solid #E2E8F0',
+              display: 'flex', justifyContent: 'flex-end', gap: 12,
+            }}>
+              <button
+                onClick={() => setEditing(null)}
+                style={{
+                  padding: '9px 18px', borderRadius: 24, border: '1px solid #E2E8F0',
+                  background: '#FFFFFF', color: '#4A5568', fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                disabled={editSaving}
+                style={{
+                  padding: '9px 18px', borderRadius: 24, border: 'none',
+                  background: '#38B2AC', color: '#FFFFFF', fontSize: 13, fontWeight: 600,
+                  cursor: editSaving ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif",
+                  opacity: editSaving ? 0.6 : 1,
+                }}
+              >
+                {editSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Scan & Enroll Modal */}
       {scanChannel && (
