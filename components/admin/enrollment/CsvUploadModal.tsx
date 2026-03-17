@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { X, Upload, Download, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Upload, Download, Check, AlertCircle, Loader2, FileSpreadsheet } from 'lucide-react';
+import ExcelJS from 'exceljs';
 import { supabase } from '../../../lib/supabase';
 
 interface CsvUploadModalProps {
@@ -51,41 +52,64 @@ export default function CsvUploadModal({
 
   // ---- helpers ----
 
-  const downloadTemplate = useCallback(() => {
-    const lines = [
-      '# OXYGY Bulk Enrollment Template',
-      '# ─────────────────────────────────────────────────────────',
-      '# INSTRUCTIONS:',
-      '#   1. Fill in the table below starting from the header row (email,full_name,role)',
-      '#   2. Delete all lines starting with # before uploading',
-      '#   3. Save as .csv (comma-separated values)',
-      '#',
-      '# COLUMN RULES:',
-      '#   email      (required)  — Must be a valid email address. One entry per row.',
-      '#   full_name  (optional)  — The user\'s display name. If blank, their email will be used.',
-      '#   role       (required)  — Must be one of the following values:',
-      '#                              learner      — Standard participant (default if left blank)',
-      '#                              facilitator  — Can view cohort progress and guide learners',
-      '#                              admin        — Full org-level admin access',
-      '#',
-      '# NOTES:',
-      '#   • Maximum 200 users per upload',
-      '#   • Duplicate emails in the same file will be flagged as errors',
-      '#   • If a user does not yet have an account, they will receive an invite email',
-      '#   • Users are added directly to the org — no access code or link required',
-      '# ─────────────────────────────────────────────────────────',
-      '',
-      'email,full_name,role',
-      'jane.smith@example.com,Jane Smith,learner',
-      'mark.jones@example.com,Mark Jones,facilitator',
-      'sarah.lee@example.com,Sarah Lee,admin',
+  const downloadTemplate = useCallback(async () => {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'OXYGY';
+    const ws = wb.addWorksheet('Enrollment');
+
+    // Define columns with widths
+    ws.columns = [
+      { header: 'email', key: 'email', width: 36 },
+      { header: 'full_name', key: 'full_name', width: 28 },
+      { header: 'role', key: 'role', width: 16 },
     ];
-    const csv = lines.join('\n') + '\n';
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    // Style the header row
+    const headerRow = ws.getRow(1);
+    headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF38B2AC' } };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'left' };
+    headerRow.height = 28;
+    headerRow.eachCell(cell => {
+      cell.border = {
+        bottom: { style: 'thin', color: { argb: 'FF2C9A94' } },
+      };
+    });
+
+    // Add example rows
+    const examples = [
+      { email: 'jane.smith@example.com', full_name: 'Jane Smith', role: 'learner' },
+      { email: 'mark.jones@example.com', full_name: 'Mark Jones', role: 'facilitator' },
+      { email: 'sarah.lee@example.com', full_name: 'Sarah Lee', role: 'admin' },
+    ];
+    examples.forEach(ex => {
+      const row = ws.addRow(ex);
+      row.font = { size: 11, color: { argb: 'FFA0AEC0' }, italic: true };
+    });
+
+    // Add data validation (dropdown) for the role column — rows 2 to 201 (200 data rows)
+    for (let r = 2; r <= 201; r++) {
+      ws.getCell(`C${r}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: ['"learner,facilitator,admin"'],
+        showErrorMessage: true,
+        errorTitle: 'Invalid Role',
+        error: 'Role must be: learner, facilitator, or admin',
+        errorStyle: 'stop',
+      };
+    }
+
+    // Freeze the header row
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+    // Generate and download
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `oxygy_enrollment_template.csv`;
+    a.download = 'oxygy_enrollment_template.xlsx';
     a.click();
     URL.revokeObjectURL(url);
   }, []);
@@ -168,6 +192,41 @@ export default function CsvUploadModal({
     return parsed;
   };
 
+  const parseXlsx = async (file: File): Promise<ParsedRow[]> => {
+    const wb = new ExcelJS.Workbook();
+    const buffer = await file.arrayBuffer();
+    await wb.xlsx.load(buffer);
+    const ws = wb.worksheets[0];
+    if (!ws) return [];
+
+    const seenEmails = new Set<string>();
+    const parsed: ParsedRow[] = [];
+
+    ws.eachRow((row, rowNum) => {
+      if (rowNum === 1) return; // skip header
+      const email = String(row.getCell(1).value || '').trim().toLowerCase();
+      const fullName = String(row.getCell(2).value || '').trim();
+      const role = String(row.getCell(3).value || '').trim().toLowerCase() || 'learner';
+
+      if (!email) return; // skip empty rows
+
+      let error: string | undefined;
+      if (!EMAIL_REGEX.test(email)) {
+        error = 'Invalid email format';
+      } else if (seenEmails.has(email)) {
+        error = 'Duplicate email';
+      } else if (!VALID_ROLES.includes(role)) {
+        error = `Invalid role "${role}" — must be: ${VALID_ROLES.join(', ')}`;
+      }
+
+      if (!error) seenEmails.add(email);
+
+      parsed.push({ rowNum, email, fullName, role, valid: !error, error });
+    });
+
+    return parsed;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
     setFile(f);
@@ -180,25 +239,28 @@ export default function CsvUploadModal({
     setParseError('');
 
     try {
-      const text = await file.text();
-      const parsed = parseCsv(text);
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const parsed = isExcel ? await parseXlsx(file) : parseCsv(await file.text());
 
-      if (parsed.length === 0) {
-        setParseError('CSV has no data rows. Please check the file format.');
+      // Filter out example rows (italic placeholder emails)
+      const filtered = parsed.filter(r => !r.email.endsWith('@example.com'));
+
+      if (filtered.length === 0) {
+        setParseError('No data rows found. Remove the example rows and add your users.');
         setLoading(false);
         return;
       }
 
-      if (parsed.length > MAX_ROWS) {
-        setParseError(`CSV has ${parsed.length} rows. Maximum is ${MAX_ROWS}.`);
+      if (filtered.length > MAX_ROWS) {
+        setParseError(`File has ${filtered.length} rows. Maximum is ${MAX_ROWS}.`);
         setLoading(false);
         return;
       }
 
-      setRows(parsed);
+      setRows(filtered);
       setStage('preview');
     } catch {
-      setParseError('Failed to read the CSV file.');
+      setParseError('Failed to read the file. Make sure it is a valid .xlsx or .csv file.');
     }
 
     setLoading(false);
@@ -433,9 +495,12 @@ export default function CsvUploadModal({
           padding: '14px 16px', borderRadius: 10, marginBottom: 20,
           background: '#F7FAFC', border: '1px solid #E2E8F0',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 8, ...font }}>CSV Format</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <FileSpreadsheet size={16} color="#38B2AC" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', ...font }}>File Format</span>
+          </div>
           <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, ...font }}>
-            Your CSV must have a header row with these columns:
+            Download the Excel template below, fill in your users, and upload it back. The role column has a dropdown to prevent typos. You can also upload a .csv file.
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, marginBottom: 8, ...font }}>
             <thead>
@@ -483,26 +548,29 @@ export default function CsvUploadModal({
         </div>
 
         <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={downloadTemplate} style={secondaryBtn}>
-            <Download size={14} /> Download Template
+          <button onClick={downloadTemplate} style={{ ...secondaryBtn, background: '#E6FFFA', borderColor: '#38B2AC', color: '#2C9A94' }}>
+            <Download size={14} /> Download Excel Template
           </button>
-          <span style={{ fontSize: 11, color: '#A0AEC0', ...font }}>Includes instructions and example rows</span>
+          <span style={{ fontSize: 11, color: '#A0AEC0', ...font }}>(.xlsx with role dropdown validation)</span>
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <span style={label}>CSV File</span>
+          <span style={label}>Upload File</span>
           <div
             style={dropZone}
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload size={24} color="#A0AEC0" style={{ marginBottom: 8 }} />
             <div style={{ fontSize: 13, color: '#718096', ...font }}>
-              {file ? file.name : 'Click to select a .csv file'}
+              {file ? file.name : 'Click to select an .xlsx or .csv file'}
+            </div>
+            <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 4, ...font }}>
+              Accepts Excel (.xlsx) or CSV (.csv)
             </div>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".xlsx,.xls,.csv"
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />
