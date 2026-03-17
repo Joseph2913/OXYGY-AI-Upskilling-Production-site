@@ -148,6 +148,7 @@ export async function checkDomainAutoEnroll(userId: string, email: string): Prom
     .maybeSingle();
 
   if (!domainChannel) return false;
+  if (domainChannel.auto_enroll === false) return false;
 
   const result = await enrollUser(userId, domainChannel);
   return result.success;

@@ -28,6 +28,7 @@ const CreateChannelModal: React.FC<Props> = ({ orgId, orgName, cohorts, onClose,
   const [cohortId, setCohortId] = useState('');
   const [maxUses, setMaxUses] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [autoEnroll, setAutoEnroll] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -92,6 +93,7 @@ const CreateChannelModal: React.FC<Props> = ({ orgId, orgName, cohorts, onClose,
         max_uses: maxUses ? parseInt(maxUses) : null,
         expires_at: expiresAt || null,
         active: true,
+        auto_enroll: channelType === 'domain' ? autoEnroll : true,
         created_by: user.id,
       });
 
@@ -293,7 +295,41 @@ const CreateChannelModal: React.FC<Props> = ({ orgId, orgName, cohorts, onClose,
                 }}
               />
               <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 4, lineHeight: 1.5 }}>
-                Enter the bare domain (e.g. <strong>acme.com</strong>), without the @ symbol or https://. Any user who signs in with an email ending in @{value || 'domain.com'} will be automatically enrolled into this organisation. This only applies to future logins — use "Scan & Enroll" on existing domain channels to retroactively add users who already have accounts.
+                Enter the bare domain (e.g. <strong>acme.com</strong>), without the @ symbol or https://.
+              </div>
+
+              {/* Auto-enroll toggle */}
+              <div style={{
+                marginTop: 14, padding: '12px 14px', borderRadius: 10,
+                background: '#F7FAFC', border: '1px solid #E2E8F0',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#2D3748' }}>Auto-enroll on sign-up</div>
+                    <div style={{ fontSize: 11, color: '#718096', marginTop: 2, lineHeight: 1.4 }}>
+                      {autoEnroll
+                        ? 'Users signing up with this domain are automatically added to the org'
+                        : 'Users must be manually enrolled via Scan & Enroll or sent a code/link'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAutoEnroll(!autoEnroll)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                      background: autoEnroll ? '#38B2AC' : '#CBD5E0',
+                      position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 12,
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 9, background: '#FFFFFF',
+                      position: 'absolute', top: 3,
+                      left: autoEnroll ? 23 : 3,
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                    }} />
+                  </button>
+                </div>
               </div>
             </div>
           )}

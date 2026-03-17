@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Check, X, Users, Link as LinkIcon, Calendar, Sliders, Plus } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Check, X, Users, Link as LinkIcon, Calendar, Sliders, Plus, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getOrganisation, updateOrganisation, writeAuditLog } from '../../lib/database';
 import { supabase } from '../../lib/supabase';
@@ -13,6 +13,7 @@ import CreateChannelModal from '../../components/admin/enrollment/CreateChannelM
 import CohortTable from '../../components/admin/enrollment/CohortTable';
 import type { CohortRow } from '../../components/admin/enrollment/CohortTable';
 import CreateCohortModal from '../../components/admin/enrollment/CreateCohortModal';
+import CsvUploadModal from '../../components/admin/enrollment/CsvUploadModal';
 import WorkshopTable from '../../components/admin/enrollment/WorkshopTable';
 import type { WorkshopRow } from '../../components/admin/enrollment/WorkshopTable';
 import UsersTable from '../../components/admin/users/UsersTable';
@@ -72,6 +73,7 @@ const AdminOrgDetail: React.FC = () => {
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateCohort, setShowCreateCohort] = useState(false);
   const [editingCohort, setEditingCohort] = useState<CohortRow | null>(null);
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
 
   // Workshops tab state
   const [workshops, setWorkshops] = useState<WorkshopRow[]>([]);
@@ -100,6 +102,7 @@ const AdminOrgDetail: React.FC = () => {
         usesCount: (c.uses_count as number) || 0,
         expiresAt: (c.expires_at as string) || null,
         active: c.active as boolean,
+        autoEnroll: (c.auto_enroll as boolean) ?? true,
         createdBy: (c.created_by as string) || null,
         createdAt: c.created_at as string,
       })));
@@ -400,6 +403,30 @@ const AdminOrgDetail: React.FC = () => {
             onRefresh={() => fetchEnrollmentData(id!)}
             onCreateClick={() => setShowCreateChannel(true)}
           />
+
+          {/* CSV Bulk Upload */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginTop: 20, marginBottom: 4, padding: '14px 18px',
+            background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0',
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#2D3748' }}>Bulk Enroll via CSV</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Upload a CSV file to add multiple users at once</div>
+            </div>
+            <button
+              onClick={() => setShowCsvUpload(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 18px', borderRadius: 24, border: '1px solid #E2E8F0',
+                background: '#FFFFFF', color: '#2D3748', fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <Upload size={14} /> Upload CSV
+            </button>
+          </div>
+
           <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 24, marginTop: 24 }}>
             <CohortTable
               cohorts={cohorts}
@@ -416,6 +443,15 @@ const AdminOrgDetail: React.FC = () => {
               cohorts={cohorts.filter(c => c.active).map(c => ({ id: c.id, name: c.name }))}
               onClose={() => setShowCreateChannel(false)}
               onCreated={() => fetchEnrollmentData(id!)}
+            />
+          )}
+          {showCsvUpload && (
+            <CsvUploadModal
+              orgId={id!}
+              orgName={org.name}
+              cohorts={cohorts.filter(c => c.active).map(c => ({ id: c.id, name: c.name }))}
+              onClose={() => setShowCsvUpload(false)}
+              onComplete={() => fetchEnrollmentData(id!)}
             />
           )}
           {(showCreateCohort || editingCohort) && (

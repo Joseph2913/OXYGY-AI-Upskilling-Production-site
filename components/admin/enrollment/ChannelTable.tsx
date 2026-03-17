@@ -175,7 +175,16 @@ const ChannelTable: React.FC<Props> = ({ channels, cohorts, orgId, orgName, onRe
                     {getFullUrl(ch.value)}
                   </span>
                 ) : (
-                  <span style={{ fontSize: 12, color: '#718096' }}>{ch.value}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: '#718096' }}>{ch.value}</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 10,
+                      background: ch.autoEnroll ? '#C6F6D5' : '#FEFCBF',
+                      color: ch.autoEnroll ? '#22543D' : '#975A16',
+                    }}>
+                      {ch.autoEnroll ? 'Auto' : 'Manual'}
+                    </span>
+                  </span>
                 )}
                 {ch.type !== 'domain' && (
                   <button

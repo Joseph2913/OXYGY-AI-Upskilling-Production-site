@@ -2797,3 +2797,237 @@ export const adminscanbydomian = onRequest(
     }
   }
 );
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN: BULK ENROLL USERS (CSV Upload)
+// ═══════════════════════════════════════════════════════════════
+
+export const adminbulkenroll = onRequest(
+  { secrets: [supabaseUrl, supabaseServiceKey], cors: true, cpu: "gcf_gen1", minInstances: 0, maxInstances: 3 },
+  async (req, res) => {
+    if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const sbUrl = supabaseUrl.value();
+    const sbKey = supabaseServiceKey.value();
+
+    // Verify caller is admin
+    const token = authHeader.split(" ")[1];
+    const userRes = await fetchWithRetry(`${sbUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: sbKey },
+    }, "verify-user");
+    if (!userRes.ok) { res.status(401).json({ error: "Invalid session" }); return; }
+    const caller = await userRes.json();
+
+    // Check platform_role
+    const profileRes = await fetchWithRetry(`${sbUrl}/rest/v1/profiles?id=eq.${caller.id}&select=platform_role`, {
+      headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+    }, "check-profile");
+    const profiles = await profileRes.json();
+    const role = profiles?.[0]?.platform_role;
+    if (role !== "oxygy_admin" && role !== "super_admin") {
+      res.status(403).json({ error: "Forbidden — admin access required" });
+      return;
+    }
+
+    const { users, orgId, cohortId } = req.body;
+
+    // Validate inputs
+    if (!orgId) { res.status(400).json({ error: "orgId is required" }); return; }
+    if (!Array.isArray(users) || users.length === 0) { res.status(400).json({ error: "users array is required and must not be empty" }); return; }
+    if (users.length > 200) { res.status(400).json({ error: "Maximum 200 users per request" }); return; }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const u of users) {
+      if (!u.email || !emailRegex.test(u.email)) {
+        res.status(400).json({ error: `Invalid email: ${u.email || "(empty)"}` });
+        return;
+      }
+    }
+
+    try {
+      const results: Array<{ email: string; success: boolean; error?: string; invited: boolean; alreadyEnrolled: boolean }> = [];
+      let enrolledCount = 0;
+      let invitedCount = 0;
+      let failedCount = 0;
+      let alreadyEnrolledCount = 0;
+
+      for (const userEntry of users) {
+        const email = userEntry.email.trim().toLowerCase();
+        const fullName = userEntry.full_name?.trim() || "";
+        const memberRole = userEntry.role || "learner";
+
+        try {
+          // Search for existing user by paginating through auth users
+          let existingUser: { id: string; email: string } | null = null;
+          let page = 1;
+          const perPage = 100;
+          let hasMore = true;
+
+          while (hasMore && !existingUser) {
+            const listRes = await fetchWithRetry(
+              `${sbUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+              { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+              "list-users"
+            );
+
+            if (!listRes.ok) {
+              throw new Error(`Failed to list users from auth (${listRes.status})`);
+            }
+
+            const data = await listRes.json();
+            const authUsers = Array.isArray(data) ? data : (data?.users || []);
+
+            const found = authUsers.find((u: { email: string }) => u.email?.toLowerCase() === email);
+            if (found) {
+              existingUser = { id: found.id, email: found.email };
+            }
+
+            hasMore = authUsers.length === perPage;
+            page++;
+            if (page > 50) break; // Safety cap
+          }
+
+          let userId: string;
+          let invited = false;
+
+          if (existingUser) {
+            userId = existingUser.id;
+          } else {
+            // Invite new user
+            const inviteRes = await fetchWithRetry(`${sbUrl}/auth/v1/admin/invite`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sbKey}`,
+                apikey: sbKey,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email }),
+            }, "invite-user");
+
+            if (!inviteRes.ok) {
+              const errText = await inviteRes.text();
+              console.error(`[bulk-enroll] Invite error for ${email}:`, errText);
+              results.push({ email, success: false, error: "Failed to send invite", invited: false, alreadyEnrolled: false });
+              failedCount++;
+              continue;
+            }
+            const inviteData = await inviteRes.json();
+            userId = inviteData.id || inviteData.user?.id;
+            invited = true;
+          }
+
+          // Check if already has membership in this org
+          const dupRes = await fetchWithRetry(
+            `${sbUrl}/rest/v1/user_org_memberships?user_id=eq.${userId}&org_id=eq.${orgId}&active=eq.true&select=id`,
+            { headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey } },
+            "check-dup"
+          );
+          const dups = await dupRes.json();
+          if (dups && dups.length > 0) {
+            results.push({ email, success: true, invited: false, alreadyEnrolled: true });
+            alreadyEnrolledCount++;
+            continue;
+          }
+
+          // Create membership
+          const membershipBody: Record<string, unknown> = {
+            user_id: userId,
+            org_id: orgId,
+            role: memberRole,
+            cohort_id: cohortId || null,
+            enrolled_via: "csv_upload",
+            active: true,
+          };
+          if (invited) membershipBody.pending_email = email;
+
+          const memRes = await fetchWithRetry(`${sbUrl}/rest/v1/user_org_memberships`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${sbKey}`,
+              apikey: sbKey,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify(membershipBody),
+          }, "create-membership");
+
+          if (!memRes.ok) {
+            const errText = await memRes.text();
+            console.error(`[bulk-enroll] Membership error for ${email}:`, errText);
+            results.push({ email, success: false, error: "Failed to create membership", invited, alreadyEnrolled: false });
+            failedCount++;
+            continue;
+          }
+
+          // If new user with full_name, upsert profile
+          if (invited && fullName) {
+            await fetchWithRetry(`${sbUrl}/rest/v1/profiles`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sbKey}`,
+                apikey: sbKey,
+                "Content-Type": "application/json",
+                Prefer: "resolution=merge-duplicates,return=minimal",
+              },
+              body: JSON.stringify({ id: userId, full_name: fullName }),
+            }, "upsert-profile");
+          }
+
+          results.push({ email, success: true, invited, alreadyEnrolled: false });
+          enrolledCount++;
+          if (invited) invitedCount++;
+
+        } catch (userErr) {
+          console.error(`[bulk-enroll] Error processing ${email}:`, userErr);
+          results.push({ email, success: false, error: String(userErr), invited: false, alreadyEnrolled: false });
+          failedCount++;
+        }
+      }
+
+      // Write ONE audit log entry with summary
+      await fetchWithRetry(`${sbUrl}/rest/v1/audit_log`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sbKey}`,
+          apikey: sbKey,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          actor_id: caller.id,
+          action: "user.bulk_enroll",
+          target_type: "organisation",
+          target_id: orgId,
+          org_id: orgId,
+          metadata: {
+            total: users.length,
+            enrolled: enrolledCount,
+            invited: invitedCount,
+            failed: failedCount,
+            already_enrolled: alreadyEnrolledCount,
+            cohort_id: cohortId || null,
+          },
+        }),
+      }, "audit-log");
+
+      res.status(200).json({
+        results,
+        summary: {
+          enrolled: enrolledCount,
+          invited: invitedCount,
+          failed: failedCount,
+          alreadyEnrolled: alreadyEnrolledCount,
+        },
+      });
+    } catch (err) {
+      console.error("admin-bulk-enroll error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);

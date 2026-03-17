@@ -482,6 +482,7 @@ create table if not exists enrollment_channels (
   created_by uuid references auth.users(id),
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
+  auto_enroll boolean default true,
   constraint uq_enrollment_channel_value unique (value)
 );
 alter table enrollment_channels enable row level security;

@@ -28,6 +28,7 @@
       { "source": "/api/send-invite-email", "function": { "functionId": "sendinviteemail" } },
       { "source": "/api/admin/invite-user", "function": { "functionId": "admininviteuser" } },
       { "source": "/api/admin/scan-domain", "function": { "functionId": "adminscanbydomian" } },
+      { "source": "/api/admin/bulk-enroll", "function": { "functionId": "adminbulkenroll" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [

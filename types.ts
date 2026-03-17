@@ -565,6 +565,7 @@ export interface EnrollmentChannel {
   usesCount: number;
   expiresAt: string | null;
   active: boolean;
+  autoEnroll: boolean;
   createdBy: string | null;
   createdAt: string;
 }
