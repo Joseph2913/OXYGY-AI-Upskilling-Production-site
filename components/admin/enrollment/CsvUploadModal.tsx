@@ -52,12 +52,40 @@ export default function CsvUploadModal({
   // ---- helpers ----
 
   const downloadTemplate = useCallback(() => {
-    const csv = 'email,full_name,role\njane@example.com,Jane Smith,learner\n';
+    const lines = [
+      '# OXYGY Bulk Enrollment Template',
+      '# ─────────────────────────────────────────────────────────',
+      '# INSTRUCTIONS:',
+      '#   1. Fill in the table below starting from the header row (email,full_name,role)',
+      '#   2. Delete all lines starting with # before uploading',
+      '#   3. Save as .csv (comma-separated values)',
+      '#',
+      '# COLUMN RULES:',
+      '#   email      (required)  — Must be a valid email address. One entry per row.',
+      '#   full_name  (optional)  — The user\'s display name. If blank, their email will be used.',
+      '#   role       (required)  — Must be one of the following values:',
+      '#                              learner      — Standard participant (default if left blank)',
+      '#                              facilitator  — Can view cohort progress and guide learners',
+      '#                              admin        — Full org-level admin access',
+      '#',
+      '# NOTES:',
+      '#   • Maximum 200 users per upload',
+      '#   • Duplicate emails in the same file will be flagged as errors',
+      '#   • If a user does not yet have an account, they will receive an invite email',
+      '#   • Users are added directly to the org — no access code or link required',
+      '# ─────────────────────────────────────────────────────────',
+      '',
+      'email,full_name,role',
+      'jane.smith@example.com,Jane Smith,learner',
+      'mark.jones@example.com,Mark Jones,facilitator',
+      'sarah.lee@example.com,Sarah Lee,admin',
+    ];
+    const csv = lines.join('\n') + '\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'enrollment_template.csv';
+    a.download = `oxygy_enrollment_template.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, []);
@@ -95,9 +123,9 @@ export default function CsvUploadModal({
   };
 
   const parseCsv = (text: string): ParsedRow[] => {
-    // Strip BOM
+    // Strip BOM and comment lines (starting with #)
     const cleaned = text.replace(/^\uFEFF/, '');
-    const lines = cleaned.split(/\r?\n/).filter((l) => l.trim() !== '');
+    const lines = cleaned.split(/\r?\n/).filter((l) => l.trim() !== '' && !l.trim().startsWith('#'));
 
     if (lines.length < 2) return [];
 
@@ -122,7 +150,7 @@ export default function CsvUploadModal({
       } else if (seenEmails.has(email)) {
         error = 'Duplicate email in CSV';
       } else if (!VALID_ROLES.includes(role)) {
-        error = `Role must be ${VALID_ROLES.join('/')}`;
+        error = `Invalid role "${role}" — must be: ${VALID_ROLES.join(', ')}`;
       }
 
       if (!error) seenEmails.add(email);
@@ -400,10 +428,65 @@ export default function CsvUploadModal({
   const renderUpload = () => (
     <>
       <div style={body}>
-        <div style={{ marginBottom: 20 }}>
+        {/* Instructions card */}
+        <div style={{
+          padding: '14px 16px', borderRadius: 10, marginBottom: 20,
+          background: '#F7FAFC', border: '1px solid #E2E8F0',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#2D3748', marginBottom: 8, ...font }}>CSV Format</div>
+          <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, ...font }}>
+            Your CSV must have a header row with these columns:
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, marginBottom: 8, ...font }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 700, color: '#2D3748', borderBottom: '1px solid #E2E8F0', ...font }}>Column</th>
+                <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 700, color: '#2D3748', borderBottom: '1px solid #E2E8F0', ...font }}>Required</th>
+                <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 700, color: '#2D3748', borderBottom: '1px solid #E2E8F0', ...font }}>Rules</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: '6px 8px', fontSize: 12, color: '#2D3748', fontWeight: 600, borderBottom: '1px solid #F7FAFC', ...font }}>email</td>
+                <td style={{ padding: '6px 8px', fontSize: 12, color: '#E53E3E', fontWeight: 600, borderBottom: '1px solid #F7FAFC', ...font }}>Yes</td>
+                <td style={{ padding: '6px 8px', fontSize: 11, color: '#718096', borderBottom: '1px solid #F7FAFC', ...font }}>Valid email address, one per row</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '6px 8px', fontSize: 12, color: '#2D3748', fontWeight: 600, borderBottom: '1px solid #F7FAFC', ...font }}>full_name</td>
+                <td style={{ padding: '6px 8px', fontSize: 12, color: '#718096', borderBottom: '1px solid #F7FAFC', ...font }}>No</td>
+                <td style={{ padding: '6px 8px', fontSize: 11, color: '#718096', borderBottom: '1px solid #F7FAFC', ...font }}>Display name (email used if blank)</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '6px 8px', fontSize: 12, color: '#2D3748', fontWeight: 600, ...font }}>role</td>
+                <td style={{ padding: '6px 8px', fontSize: 12, color: '#718096', ...font }}>No</td>
+                <td style={{ padding: '6px 8px', fontSize: 11, color: '#718096', ...font }}>
+                  Must be one of:{' '}
+                  {VALID_ROLES.map((r, i) => (
+                    <span key={r}>
+                      <span style={{
+                        display: 'inline-block', padding: '1px 6px', borderRadius: 8,
+                        background: r === 'admin' ? '#FED7D7' : r === 'facilitator' ? '#FEFCBF' : '#C6F6D5',
+                        color: r === 'admin' ? '#9B2C2C' : r === 'facilitator' ? '#975A16' : '#22543D',
+                        fontSize: 10, fontWeight: 600, ...font,
+                      }}>{r}</span>
+                      {i < VALID_ROLES.length - 1 ? ' ' : ''}
+                    </span>
+                  ))}
+                  <span style={{ display: 'block', marginTop: 2, fontSize: 10, color: '#A0AEC0', ...font }}>Defaults to learner if left blank</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ fontSize: 11, color: '#A0AEC0', lineHeight: 1.5, ...font }}>
+            Max 200 users per upload. New users will receive an invite email automatically.
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={downloadTemplate} style={secondaryBtn}>
             <Download size={14} /> Download Template
           </button>
+          <span style={{ fontSize: 11, color: '#A0AEC0', ...font }}>Includes instructions and example rows</span>
         </div>
 
         <div style={{ marginBottom: 20 }}>
@@ -511,7 +594,14 @@ export default function CsvUploadModal({
                   <td style={td}>{row.rowNum}</td>
                   <td style={td}>{row.email}</td>
                   <td style={td}>{row.fullName}</td>
-                  <td style={td}>{row.role}</td>
+                  <td style={td}>
+                    <span style={{
+                      display: 'inline-block', padding: '1px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                      background: row.role === 'admin' ? '#FED7D7' : row.role === 'facilitator' ? '#FEFCBF' : '#C6F6D5',
+                      color: row.role === 'admin' ? '#9B2C2C' : row.role === 'facilitator' ? '#975A16' : '#22543D',
+                      ...font,
+                    }}>{row.role}</span>
+                  </td>
                   <td style={td}>
                     {row.valid ? (
                       <span
