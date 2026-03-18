@@ -994,7 +994,7 @@ export default function Level1PromptEngineering() {
         <p style={{ fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: 2, margin: "0 0 8px", fontFamily: F.b, textTransform: "uppercase" as const }}>NEXT STEP</p>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: C.navy, fontFamily: F.h, margin: "0 0 8px" }}>Prompt Playground</h2>
         <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 20px" }}>Apply your prompting skills to a real task from your own work. Build prompts, choose your approach, test the modifiers, and compare your outputs against the quality markers from this module \u2014 then save your best work to your personal prompt library.</p>
-        <a href="#playground" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", borderRadius: 24, background: C.teal, color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", fontFamily: F.b }}>Open Prompt Playground \u2192</a>
+        <a href="#playground" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", borderRadius: 24, background: "#00EDFF", color: "#0F172A", fontSize: 14, fontWeight: 600, textDecoration: "none", fontFamily: F.b }}>Open Prompt Playground →</a>
       </div>
     </div>
   );

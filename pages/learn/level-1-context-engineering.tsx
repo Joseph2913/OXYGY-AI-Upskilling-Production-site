@@ -192,17 +192,17 @@ const DROP_ZONES = [
 
 /* ── Data: Articles ── */
 const ARTICLES = [
-  { id: "a1", title: "The Prompt Engineering Playbook: What Separates Power Users from Everyone Else", source: "Harvard Business Review", readTime: "7 min read", desc: "How structured prompting is changing the way knowledge workers interact with AI tools — and what consistently separates professionals who get great outputs from those who get generic ones.", url: "https://hbr.org", reflection: "In one sentence, what was the single most useful idea from this article for your day-to-day work at Oxygy?" },
+  { id: "a1", title: "The Prompt Engineering Playbook: What Separates Power Users from Everyone Else", source: "Harvard Business Review", readTime: "7 min read", desc: "How structured prompting is changing the way knowledge workers interact with AI tools — and what consistently separates professionals who get great outputs from those who get generic ones.", url: "https://hbr.org", reflection: "In one sentence, what was the single most useful idea from this article for your day-to-day work at OXYGY?" },
   { id: "a2", title: "Why Context Is the Most Underrated Variable in AI Prompting", source: "MIT Technology Review", readTime: "8 min read", desc: "A deep-dive into why the Context element of a prompt has more impact on output quality than any other variable — with real examples from professional knowledge work.", url: "https://technologyreview.com", reflection: "Describe one specific situation from your own work where adding more context to a prompt could have meaningfully improved the output you received." },
 ];
 
 /* ── Data: Videos ── */
 const VIDEOS = [
-  { id: "v1", title: "Context Engineering in Practice", channel: "Oxygy Learning", duration: "12 min", desc: "A live walkthrough of all three context engineering layers applied to real consulting and pharma scenarios — including before/after comparisons at each layer.", url: "https://youtube.com", quiz: [
+  { id: "v1", title: "Context Engineering in Practice", channel: "OXYGY Learning", duration: "12 min", desc: "A live walkthrough of all three context engineering layers applied to real consulting and pharma scenarios — including before/after comparisons at each layer.", url: "https://youtube.com", quiz: [
     { q: "In the video, what was identified as the most commonly skipped element of the RCTF framework?", options: ["Role — people feel unnatural assigning a persona to AI", "Context — people assume the AI already knows their situation", "Task — people think their ask is obvious from the prompt", "Format — people let the AI decide the output structure"], correct: 1 },
     { q: "According to the video, when does attaching a document add the most value over a detailed prompt?", options: ["When the document is under 5 pages and easy to summarise", "When the content contains specific names, quotes, and details that would be lost in a text description", "When you don’t have time to write a proper RCTF prompt", "When the AI model has a large context window"], correct: 1 },
   ]},
-  { id: "v2", title: "Building a Team Prompt Library", channel: "Oxygy Learning", duration: "9 min", desc: "How to move from individual prompting habits to a shared, standardised library that scales context engineering capability across your entire team.", url: "https://youtube.com", quiz: [
+  { id: "v2", title: "Building a Team Prompt Library", channel: "OXYGY Learning", duration: "9 min", desc: "How to move from individual prompting habits to a shared, standardised library that scales context engineering capability across your entire team.", url: "https://youtube.com", quiz: [
     { q: "What is the primary benefit of a shared prompt library over individual prompting habits?", options: ["It saves individuals time writing prompts from scratch", "It standardises inputs to produce consistent, comparable outputs across the team", "It prevents people from making mistakes in their prompts", "It allows managers to monitor what questions employees are asking AI"], correct: 1 },
     { q: "In the video, what tagging approach is recommended for organising a prompt library?", options: ["By date created and author name", "By AI tool used (Claude, ChatGPT, Copilot)", "By use case and function (e.g., BD / Meeting Debrief / Strategy)", "By output quality rating from previous uses"], correct: 2 },
   ]},
@@ -961,7 +961,7 @@ export default function Level1Page() {
         <p style={{ fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: 2, margin: "0 0 8px", fontFamily: F.b, textTransform: "uppercase" as const }}>NEXT STEP</p>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: C.navy, fontFamily: F.h, margin: "0 0 8px" }}>Prompt Playground</h2>
         <p style={{ fontSize: 14, color: C.body, fontFamily: F.b, lineHeight: 1.7, margin: "0 0 20px" }}>Apply the Blueprint framework to a real prompt from your work. Build, test, and refine structured prompts — then save your best work to your personal prompt library.</p>
-        <a href="#playground" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", borderRadius: 24, background: C.teal, color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", fontFamily: F.b }}>Open Prompt Playground →</a>
+        <a href="#playground" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", borderRadius: 24, background: "#00EDFF", color: "#0F172A", fontSize: 14, fontWeight: 600, textDecoration: "none", fontFamily: F.b }}>Open Prompt Playground →</a>
       </div>
     </div>
   );

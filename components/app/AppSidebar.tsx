@@ -15,7 +15,7 @@ const LEVEL_SHORT_NAMES: Record<number, string> = {
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: Home, path: '/app/dashboard' },
   { label: 'My Journey', icon: Map, path: '/app/journey' },
-  { label: 'Current Level', icon: BookOpen, path: '/app/level' },
+  { label: 'Current Level', icon: BookOpen, path: '/app/level' }, // path overridden dynamically below
   { label: 'My Toolkit', icon: Wrench, path: '/app/toolkit' },
   { label: 'My Artefacts', icon: Folder, path: '/app/artefacts' },
   { label: 'My Cohort', icon: Users, path: '/app/cohort' },
@@ -193,12 +193,13 @@ export const AppSidebar: React.FC = () => {
       {/* Section 3 — Primary nav */}
       <div style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
         {NAV_ITEMS.map((item) => {
-          const active = isActive(item.path);
+          const resolvedPath = item.label === 'Current Level' ? `/app/level-${level}` : item.path;
+          const active = isActive(resolvedPath) || (item.label === 'Current Level' && isActive(item.path));
           const Icon = item.icon;
           return (
             <Link
               key={item.path}
-              to={item.path}
+              to={resolvedPath}
               style={{
                 display: 'flex',
                 alignItems: 'center',
