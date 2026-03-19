@@ -185,10 +185,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   const isProjectPending = level.status === 'project-pending';
   const isAccessible = true; // All levels accessible
 
-  const completionDate = level.completedAt
-    ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(level.completedAt)
-    : null;
-
   const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
 
@@ -246,11 +242,8 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               }}>
                 Level {level.levelNumber}
               </span>
-              {completionDate && (
-                <span style={{ fontSize: 10, color: '#A0AEC0' }}>{completionDate}</span>
-              )}
-              {/* Activity tracker for active/project-pending/completed */}
-              {(isActive || isProjectPending || isCompleted) && (
+              {/* Activity tracker for active/project-pending/completed — hidden for L1 */}
+              {level.levelNumber !== 1 && (isActive || isProjectPending || isCompleted) && (
                 <ActivityTracker
                   elearningDone={level.completedTopics === level.totalTopics && level.totalTopics > 0}
                   toolkitDone={level.toolUsed}
