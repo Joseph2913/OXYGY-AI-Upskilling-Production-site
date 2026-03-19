@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, ArrowRight, Lock, Play, PenTool } from 'lucide-react';
+import { Check, ChevronDown, ArrowRight, Lock, Play, PenTool, FileText } from 'lucide-react';
 import { LEVEL_META } from '../../data/levelTopics';
 import { LEVEL_TOPICS } from '../../data/levelTopics';
 import { getPrimaryTool } from '../../data/toolkitData';

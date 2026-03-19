@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { getFullProfile, updateCurrentLevel as dbUpdateLevel, getAllProjectSubmissions } from '../lib/database';
 import type { ProjectSubmission } from '../lib/database';
@@ -71,6 +71,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orgContext, setOrgContext] = useState<OrgContextData | null>(null);
   const [hasLearningPlan, setHasLearningPlan] = useState(false);
   const [learningPlanLoading, setLearningPlanLoading] = useState(true);
+  const learningPlanInitialLoadDone = useRef(false);
   const [projectSubmissions, setProjectSubmissions] = useState<Record<number, ProjectSubmissionSummary>>({});
 
   const fetchProjectSubmissions = useCallback(async () => {
@@ -96,7 +97,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLearningPlanLoading(false);
       return;
     }
-    setLearningPlanLoading(true);
+    // Only show loading spinner on the initial check, not background refreshes.
+    // This prevents the skeleton from wiping the UI when refreshing after onboarding.
+    if (!learningPlanInitialLoadDone.current) {
+      setLearningPlanLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('learning_plans')
@@ -114,6 +119,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setHasLearningPlan(false);
     }
     setLearningPlanLoading(false);
+    learningPlanInitialLoadDone.current = true;
   }, [user]);
 
   const fetchProfile = useCallback(async () => {

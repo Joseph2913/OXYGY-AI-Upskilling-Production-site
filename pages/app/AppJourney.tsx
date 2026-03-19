@@ -248,8 +248,13 @@ const AppJourney: React.FC = () => {
   const simulateNewUser = searchParams.get('simulate') === 'new-user';
 
   // State A/B transition — restore from sessionStorage if user navigated away mid-survey
+  // NOTE: During initial load, hasLearningPlan is false and learningPlanLoading is true.
+  // We must NOT default to showing onboarding based on stale hasLearningPlan — wait for loading.
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (!hasLearningPlan || simulateNewUser || demoMode) return true;
+    if (simulateNewUser || demoMode) return true;
+    // If still loading, default to false — the useEffect will correct once loaded
+    if (learningPlanLoading) return false;
+    if (!hasLearningPlan) return true;
     return sessionStorage.getItem('oxygy_survey_active') === 'true';
   });
   const [transitioning, setTransitioning] = useState(false);
@@ -271,8 +276,14 @@ const AppJourney: React.FC = () => {
       setShowOnboarding(true);
       return;
     }
-    if (!learningPlanLoading && !hasLearningPlan) {
+    if (learningPlanLoading) return; // Wait until we know the answer
+    if (!hasLearningPlan) {
       setShowOnboarding(true);
+    } else {
+      // Plan exists — dismiss onboarding unless the user is mid-survey
+      if (sessionStorage.getItem('oxygy_survey_active') !== 'true') {
+        setShowOnboarding(false);
+      }
     }
   }, [hasLearningPlan, learningPlanLoading, simulateNewUser, demoMode]);
 
