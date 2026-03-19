@@ -1846,8 +1846,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </p>
             </div>
 
-            {/* Option buttons — 3×2 grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: fs ? 10 : 8, flexShrink: 0 }}>
+            {/* Option buttons — 3×2 grid, fills remaining space */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr', gap: fs ? 12 : 10, flex: 1, minHeight: 0 }}>
               {flawOptions.map((opt, i) => {
                 const isCorrect = i === flawCorrect;
                 const isSelected = flawSelected === i;
@@ -1857,12 +1857,14 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 else if (wasWrong) { bg = '#FED7D7'; border = '#E53E3E'; color = '#C53030'; }
                 return (
                   <button key={opt} onClick={() => !flawSolved && setFlawSelected(i)} style={{
-                    padding: fs ? '14px 10px' : '11px 8px', borderRadius: 12,
-                    fontSize: fs ? 15 : 13, fontWeight: 700,
+                    padding: fs ? '18px 14px' : '14px 10px', borderRadius: 14,
+                    fontSize: fs ? 18 : 15, fontWeight: 700,
                     background: bg, border: `2px solid ${border}`, color,
                     cursor: flawSolved ? 'default' : 'pointer',
                     transition: 'all 0.15s', fontFamily: 'inherit',
                     boxShadow: !flawSolved ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    height: '100%', textAlign: 'center' as const, lineHeight: 1.3,
                   }}>
                     {flawSolved && isCorrect ? '✓ ' : wasWrong ? '✗ ' : ''}{opt}
                   </button>
@@ -1870,31 +1872,25 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               })}
             </div>
 
-            {/* Feedback */}
-            {flawSolved && s.explanation && (
-              <div style={{
-                flex: 1, background: '#F0FFF4', border: '2px solid #68D391',
-                borderRadius: 12, padding: fs ? '16px 20px' : '12px 16px',
-                fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.75, overflowY: 'auto',
-              }}>
-                <span style={{ fontWeight: 800, fontSize: fs ? 15 : 13, color: '#276749', display: 'block', marginBottom: 6 }}>✓ Correct!</span>
-                {s.explanation}
-              </div>
-            )}
-
-            {/* Wrong answer hint */}
-            {flawChosen && !flawSolved && (
-              <div style={{ flexShrink: 0, textAlign: 'center' as const, fontSize: fs ? 13 : 11, color: '#C53030', fontWeight: 600 }}>
-                Not quite — try another
-              </div>
-            )}
-
-            {/* Idle hint */}
-            {!flawChosen && (
-              <div style={{ flexShrink: 0, textAlign: 'center' as const, fontSize: fs ? 12 : 11, color: '#A0AEC0', fontWeight: 500 }}>
-                Select an answer above
-              </div>
-            )}
+            {/* Feedback / hint strip — fixed at bottom */}
+            <div style={{ flexShrink: 0 }}>
+              {flawSolved && s.explanation && (
+                <div style={{ background: '#F0FFF4', border: '2px solid #68D391', borderRadius: 12, padding: fs ? '16px 20px' : '12px 16px', animation: 'fadeInUp 0.25s ease' }}>
+                  <span style={{ fontWeight: 800, fontSize: fs ? 22 : 18, color: '#276749', display: 'block', marginBottom: 6 }}>✓ Correct!</span>
+                  <span style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.7 }}>{s.explanation}</span>
+                </div>
+              )}
+              {flawChosen && !flawSolved && (
+                <div style={{ textAlign: 'center' as const, fontSize: fs ? 14 : 12, color: '#C53030', fontWeight: 600, padding: '8px 0' }}>
+                  Not quite — try another
+                </div>
+              )}
+              {!flawChosen && (
+                <div style={{ textAlign: 'center' as const, fontSize: fs ? 13 : 11, color: '#A0AEC0', fontWeight: 500, padding: '6px 0' }}>
+                  Select an answer above
+                </div>
+              )}
+            </div>
           </div>
         );
       }
