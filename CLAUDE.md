@@ -240,10 +240,29 @@ This project experienced a critical RLS infinite recursion bug (2026-03-16) wher
 6. **Audit all existing policies** before adding new ones: `SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'your_table'`
 7. **PostgreSQL evaluates ALL select policies (OR'd)** — one recursive policy poisons every query on that table, even if simpler policies exist.
 
+## Component Import Safety
+
+**Every icon or component used in a file MUST be imported.** A missing import (e.g. using `FileText` without importing it from `lucide-react`) will cause a `ReferenceError` at runtime that crashes the entire React tree — the user sees a blank page with no visible error unless they open the console.
+
+**Rules:**
+1. When adding a new icon or component reference to a file, always verify it is listed in the file's import statement.
+2. After editing a component, check the browser console for `ReferenceError` or `is not defined` errors — these indicate missing imports.
+3. Never assume an icon/component is already imported. Grep the import block before using it.
+
+## Async State & Onboarding Guards
+
+**Never derive initial UI state from async values that haven't loaded yet.** Context values like `hasLearningPlan` default to `false` before Supabase responds. If you use them to initialise `useState`, the component will render incorrectly during loading and may never self-correct.
+
+**Rules:**
+1. If a state value depends on an async context value, default to a safe/neutral state and let a `useEffect` set the correct value once loading completes.
+2. Any `useEffect` that sets a boolean to `true` based on a condition must also set it to `false` in the `else` branch — otherwise state can get stuck.
+3. Background refresh functions (e.g. `refreshLearningPlan()`) must NOT set loading flags that cause parent components to re-render with skeletons. Use a ref to track whether the initial load is done, and only show loading UI on the first call.
+
 ## Reference
 - Full content spec: OXYGY_AI_UPSKILLING_SYSTEM_PROMPT.md
 - PDF content source: OXYGY_AI_Upskilling.pdf
 - RLS recursion guide: SUPABASE_RLS_RECURSION_GUIDE.md
+- Journey page post-mortem: docs/JOURNEY_BLANK_PAGE_POSTMORTEM.md
 
 ## Skills
 
