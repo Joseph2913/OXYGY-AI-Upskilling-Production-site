@@ -146,6 +146,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [spectrumPos, setSpectrumPos] = useState(0);
   const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
   const [branchingSelected, setBranchingSelected] = useState<number | null>(null);
+  const [branchingStep, setBranchingStep] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeCompTab, setActiveCompTab] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -551,9 +552,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Chart (Slide 3 — two-column: text + diverging outcomes research visual) ── */
       case 'chart': {
         const outcomes = [
-          { label: 'Casual users', sublabel: 'Used AI but didn\'t develop prompting skills', gain: 11, barW: '18%', color: '#A0AEC0', textColor: '#718096' },
-          { label: 'Regular users', sublabel: 'Used AI frequently with moderate prompting', gain: 37, barW: '55%', color: '#4FD1C5', textColor: '#2C9A94' },
-          { label: 'Skilled prompters', sublabel: 'Invested in structured prompting techniques', gain: 122, barW: '100%', color: '#38B2AC', textColor: '#1A6B5F' },
+          { label: 'Customer support agents', sublabel: 'AI assistance for ticket resolution', gain: 14, barW: '11%', color: '#A0AEC0', textColor: '#718096' },
+          { label: 'Business professionals', sublabel: 'AI-assisted writing & analysis tasks', gain: 59, barW: '47%', color: '#4FD1C5', textColor: '#2C9A94' },
+          { label: 'Software developers', sublabel: 'GitHub Copilot for coding tasks', gain: 126, barW: '100%', color: '#38B2AC', textColor: '#1A6B5F' },
         ];
         return (
           <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
@@ -580,7 +581,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                   </div>
                 ))}
                 <div style={{ marginTop: 4, fontSize: 9, color: '#A0AEC0', fontStyle: 'italic', borderTop: '1px solid #E2E8F0', paddingTop: 6 }}>
-                  Source: Nielsen Norman Group (2023) — 456 knowledge workers across 4 industries. Productivity measured by task completion time and output quality scores.
+                  Sources: Brynjolfsson, Li & Raymond (MIT/Stanford/NBER, 2023); Noy & Zhang (MIT, 2023); GitHub Copilot Research (GitHub, 2022). Gains relative to control groups without AI assistance.
                 </div>
               </div>
             </div>
@@ -1430,7 +1431,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#38B2AC15', border: '1.5px solid #38B2AC55', borderRadius: 10, padding: '7px 14px' }}>
                 <span style={{ fontSize: 16 }}>👆</span>
-                <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#1A6B5F' }}>Click each card to learn more</span>
+                <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#1A6B5F' }}>Click each card or use Next to explore</span>
               </div>
               <div style={{ fontSize: fs ? 12 : 11, color: '#A0AEC0', fontWeight: 500 }}>
                 {approaches.filter((_: any, i: number) => !!flippedCards[i]).length}/{approaches.length} explored
@@ -1973,9 +1974,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setSjScenarioIdx(0);
     setQuizSelected(null);
     setQuizAnswered(false);
-    setSpectrumPos(2);
+    setSpectrumPos(0);
     setFlippedCards({});
     setBranchingSelected(null);
+    setBranchingStep(0);
     setCopiedId(null);
     setActiveCompTab(0);
     setExpandedSections({});
@@ -1991,12 +1993,64 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setFlawSelected(null);
   }, [currentSlide]);
 
-  /* ── Next button interception: situationalJudgment cycling ── */
+  /* ── Next button interception: reveal slides + situationalJudgment cycling ── */
   const handleNextClick = () => {
+    // situationalJudgment: cycle through scenarios
     if (s.type === 'situationalJudgment' && s.scenarios && sjScenarioIdx < s.scenarios.length - 1) {
       setSjScenarioIdx((prev) => prev + 1);
       return;
     }
+    // scenarioComparison: reveal thorough tab on first Next
+    if (s.type === 'scenarioComparison' && scenarioTab === 'rushed') {
+      setScenarioTab('thorough');
+      return;
+    }
+    // contextBar: reveal one card at a time
+    if (s.type === 'contextBar' && contextStep < 6) {
+      setContextStep((prev) => prev + 1);
+      return;
+    }
+    // comparison: advance through tabs
+    if (s.type === 'comparison') {
+      const tabCount = (s as any).tabs?.length ?? 3;
+      if (activeCompTab < tabCount - 1) {
+        setActiveCompTab((prev) => prev + 1);
+        return;
+      }
+    }
+    // flipcard: flip next unflipped card in order
+    if (s.type === 'flipcard') {
+      const cards = (s as any).cards ?? [];
+      const nextUnflipped = cards.findIndex((_: any, i: number) => !flippedCards[i]);
+      if (nextUnflipped !== -1) {
+        setFlippedCards((prev) => ({ ...prev, [nextUnflipped]: true }));
+        return;
+      }
+    }
+    // branching: expand next option in order
+    if (s.type === 'branching') {
+      const opts = (s as any).branchingOptions ?? [];
+      if (branchingStep < opts.length) {
+        setBranchingSelected(branchingStep);
+        setBranchingStep((prev) => prev + 1);
+        return;
+      }
+    }
+    // spectrum: advance through positions 0 → 1 → 2
+    if (s.type === 'spectrum' && spectrumPos < 2) {
+      setSpectrumPos((prev) => prev + 1);
+      return;
+    }
+    // approachIntro: flip next unflipped card in order
+    if (s.type === 'approachIntro') {
+      const approaches = (s as any).approaches ?? [];
+      const nextUnflipped = approaches.findIndex((_: any, i: number) => !flippedCards[i]);
+      if (nextUnflipped !== -1) {
+        setFlippedCards((prev) => ({ ...prev, [nextUnflipped]: true }));
+        return;
+      }
+    }
+    // Default: navigate to next slide
     if (isLastSlide) {
       if (isFullscreen) setIsFullscreen(false);
       setShowReflection(true);
@@ -2042,6 +2096,14 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
             {renderSlide()}
           </div>
+          {s.sourceLink && (
+            <div style={{ flexShrink: 0, padding: '4px 32px', borderTop: '1px solid #EDF2F7', background: '#FAFBFC', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Source</span>
+              <a href={s.sourceLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 9, color: '#A0AEC0', textDecoration: 'underline', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.sourceText || s.sourceLink}
+              </a>
+            </div>
+          )}
         </div>
         {currentSlide > 1 && (
           <div style={{ borderTop: '1px solid #2D3748', padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1A202C', flexShrink: 0 }}>
@@ -2132,6 +2194,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
             {renderSlide()}
           </div>
+          {/* Source citation bar — shown only when slide has an external source */}
+          {s.sourceLink && (
+            <div style={{ flexShrink: 0, padding: '4px 20px', borderTop: '1px solid #EDF2F7', background: '#FAFBFC', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Source</span>
+              <a href={s.sourceLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 9, color: '#A0AEC0', textDecoration: 'underline', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.sourceText || s.sourceLink}
+              </a>
+            </div>
+          )}
           {/* Nav bar lives inside the fixed container so it never pushes content offscreen */}
           <div style={{ flexShrink: 0, borderTop: '1px solid #E2E8F0', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF' }}>
             <button
