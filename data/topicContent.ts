@@ -1,3 +1,9 @@
+import samImg from '../src/assets/face-icons/sam.png';
+import priyaImg from '../src/assets/face-icons/priya.png';
+import marcusImg from '../src/assets/face-icons/marcus.png';
+import aishaImg from '../src/assets/face-icons/aisha.png';
+import jordanImg from '../src/assets/face-icons/jordan.png';
+
 /**
  * Topic Content Registry
  *
@@ -313,7 +319,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Sam — Programme Coordinator",
     predictFirst: true, predictOptions: ["Brain Dump", "Conversational", "Blueprint"], predictCorrect: 0, predictFeedback: ["Exactly right. Sam's input is unstructured by nature — rough notes, half-formed thoughts. A brain dump lets the AI find the structure rather than Sam having to organise first.", "Conversational works better once you have a direction to steer. Sam doesn't have a direction yet — the output shape is still unknown. Brain dump gets you there faster.", "Blueprint requires you to specify format and structure upfront. Sam can't do that yet — the thinking hasn't been organised. Structure before clarity slows you down."],
     personaData: {
-      name: "Sam", initial: "S", role: "Programme Coordinator", color: "#ED8936", iconPath: "/face-icons/sam.png",
+      name: "Sam", initial: "S", role: "Programme Coordinator", color: "#ED8936", iconPath: samImg,
       scenario: "It's 4pm on Monday. Sam has just come out of three back-to-back workshops. There are rough notes in a notebook, a half-finished voice memo, and a half-written email. The manager wants a summary of the key themes by 9am tomorrow — but Sam hasn't even started making sense of it all yet.",
       tags: ["Synthesising notes", "Finding themes", "Making sense of ambiguity"],
       approach: "Brain Dump",
@@ -332,7 +338,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Priya — Strategy Analyst",
     predictFirst: true, predictOptions: ["Brain Dump", "Conversational", "Blueprint"], predictCorrect: 1, predictFeedback: ["Brain dump surfaces ideas but doesn't give you control across turns. Priya wants to steer — to sharpen one argument, then another. That requires back-and-forth, not a single dump.", "Right. Priya doesn't know the final shape when she starts. Conversational lets her co-create — each turn adds specificity based on what the AI gave back. She's steering, not delegating.", "Blueprint works when you know exactly what you want. Priya is still figuring out the angle — locking into a format before the direction is clear creates unnecessary constraints."],
     personaData: {
-      name: "Priya", initial: "P", role: "Strategy Analyst", color: "#805AD5", iconPath: "/face-icons/priya.png",
+      name: "Priya", initial: "P", role: "Strategy Analyst", color: "#805AD5", iconPath: priyaImg,
       scenario: "Priya is drafting the strategic case for centralising procurement across four regions. She has a direction, but isn't sure which argument to lead with or how to handle the likely pushback from regional leaders. The proposal goes to committee in 48 hours.",
       tags: ["Exploring angles", "Drafting proposals", "Pressure-testing ideas"],
       approach: "Conversational",
@@ -352,7 +358,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Marcus — Delivery Lead",
     predictFirst: true, predictOptions: ["Brain Dump", "Conversational", "Blueprint"], predictCorrect: 2, predictFeedback: ["Marcus's output goes straight to senior leaders. Quality needs to be consistent and there's no iteration window. A brain dump might produce something, but the quality would vary.", "Conversational is useful for exploration, but Marcus already knows exactly what he needs. Spending turns refining when you could specify upfront wastes the only advantage conversation offers.", "Correct. Marcus knows the audience, the format, and the constraints before he starts. Front-loading all of that eliminates guesswork and gets it right first time."],
     personaData: {
-      name: "Marcus", initial: "M", role: "Delivery Lead", color: "#38B2AC", iconPath: "/face-icons/marcus.png",
+      name: "Marcus", initial: "M", role: "Delivery Lead", color: "#38B2AC", iconPath: marcusImg,
       scenario: "The quarterly review is tomorrow at 9am. The CFO and two divisional heads want a tight 400-word executive summary — milestone progress, the biggest risk, and one clear recommendation. Marcus needs it to land right first time. There's no window to iterate.",
       tags: ["Executive briefings", "Stakeholder summaries", "Board-ready documents"],
       approach: "Structured Input",
@@ -372,7 +378,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Aisha — Communications Lead",
     predictFirst: true, predictOptions: ["Brain Dump", "Conversational", "Blueprint"], predictCorrect: 1, predictFeedback: ["A brain dump would surface raw material, but Aisha doesn't need more raw material — she needs perspectives and challenges she hasn't considered. That requires a structured interrogation across turns.", "Right. Aisha is using the AI as a thinking partner — asking it to generate alternatives, surface reactions, and stress-test her draft. That back-and-forth structure is exactly the conversational approach.", "Blueprint optimises for a known, repeatable output. Aisha's goal is the opposite — she wants to be surprised, challenged, and shown angles she hasn't considered."],
     personaData: {
-      name: "Aisha", initial: "A", role: "Communications Lead", color: "#E53E3E", iconPath: "/face-icons/aisha.png",
+      name: "Aisha", initial: "A", role: "Communications Lead", color: "#E53E3E", iconPath: aishaImg,
       scenario: "Aisha has to write the internal announcement for a company restructuring — by end of day. She's been too close to the process for months and is worried her draft sounds defensive. She needs to see it through fresh eyes before it goes out.",
       tags: ["Generating alternatives", "Challenging assumptions", "Finding fresh angles"],
       approach: "Brainstorming Partner",
@@ -392,7 +398,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Jordan — Process Designer",
     predictFirst: true, predictOptions: ["Brain Dump", "Conversational", "Blueprint"], predictCorrect: 2, predictFeedback: ["Jordan does this every Friday. A brain dump might produce something each week, but quality would vary. When consistency and repeatability matter, the upfront Blueprint investment pays back every time.", "Conversational would produce a good first draft but Jordan would redo the iteration every Friday. The Blueprint lets him build once and reuse — swapping in new data each week in under 30 seconds.", "Exactly right. Jordan's task is repeatable, the audience is known, and the format is fixed. The Blueprint takes 20 minutes to write once and saves hours across months of weekly reports."],
     personaData: {
-      name: "Jordan", initial: "J", role: "Process Designer", color: "#1A202C", iconPath: "/face-icons/jordan.png",
+      name: "Jordan", initial: "J", role: "Process Designer", color: "#1A202C", iconPath: jordanImg,
       scenario: "Jordan produces a weekly programme status report every Friday for the same four stakeholders. Each week he rewrites it from scratch, reformatting data and second-guessing structure. It takes 90 minutes. The content barely changes — just the numbers.",
       tags: ["Repeatable reports", "Templated outputs", "Team-wide consistency"],
       approach: "Prompt Blueprint",
