@@ -813,7 +813,7 @@ const AppDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ─── RIGHT COLUMN: Cohort Leaderboard. ─── */}
+        {/* ─── RIGHT COLUMN: Cohort Leaderboard ─── */}
         <div
           style={{
             background: '#FFFFFF',
@@ -833,7 +833,7 @@ const AppDashboard: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Trophy size={16} color="#F6AD55" />
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard.</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
                 </div>
                 <button
                   onClick={() => navigate('/app/cohort')}
@@ -885,7 +885,7 @@ const AppDashboard: React.FC = () => {
             <div style={{ padding: '20px 22px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <Trophy size={16} color="#F6AD55" />
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard.</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
               </div>
 
               <div style={{ textAlign: 'center', marginBottom: 18 }}>
