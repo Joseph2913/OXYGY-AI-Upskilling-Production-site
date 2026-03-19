@@ -34,16 +34,25 @@
       { "source": "/api/generate-learning-pathway", "function": { "functionId": "generatelearningpathway" } },
       { "source": "/api/learning-coach-chat", "function": { "functionId": "learningcoachchat" } },
       { "source": "/api/generate-notebook-guide", "function": { "functionId": "generatenotebookguide" } },
+      { "source": "/api/generate-perplexity-guide", "function": { "functionId": "generateperplexityguide" } },
       { "source": "/api/curated-videos", "function": { "functionId": "curatedvideos" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [
       {
-        "source": "index.html",
+        "source": "**",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
+          },
+          {
+            "key": "Pragma",
+            "value": "no-cache"
+          },
+          {
+            "key": "Expires",
+            "value": "0"
           }
         ]
       },

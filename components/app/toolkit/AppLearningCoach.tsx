@@ -126,6 +126,25 @@ interface NotebookGuideResponse {
   studioConfig: NotebookStudioConfig;
 }
 
+interface PerplexitySpaceConfig {
+  spaceName: string;
+  customInstructions: string;
+}
+
+interface PerplexityFocusModeConfig {
+  focusMode: string;
+  searchType: string;
+  rationale: string;
+  followUpSearches: string[];
+}
+
+interface PerplexityGuideResponse {
+  deepResearchPrompt: string;
+  spaceConfig: PerplexitySpaceConfig;
+  focusModeConfig: PerplexityFocusModeConfig;
+  followUpQueries: string[];
+}
+
 /* ── Loading steps ── */
 const INITIAL_LOADING_STEPS = [
   'Analysing your learning gap…',
@@ -164,10 +183,12 @@ const AppLearningCoach: React.FC = () => {
   /* ── Derived: platform-specific modes ── */
   const isNotebookOnly = selectedPlatforms.length === 1 && selectedPlatforms[0] === 'notebooklm';
   const isYoutubeOnly = selectedPlatforms.length === 1 && selectedPlatforms[0] === 'youtube';
+  const isPerplexityOnly = selectedPlatforms.length === 1 && selectedPlatforms[0] === 'perplexity';
 
   /* ── Output state ── */
   const [result, setResult] = useState<LearningCoachResponse | null>(null);
   const [notebookResult, setNotebookResult] = useState<NotebookGuideResponse | null>(null);
+  const [perplexityResult, setPerplexityResult] = useState<PerplexityGuideResponse | null>(null);
   const [youtubeResult, setYoutubeResult] = useState<YouTubeGuideResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefineLoading, setIsRefineLoading] = useState(false);
@@ -214,7 +235,7 @@ const AppLearningCoach: React.FC = () => {
   const card2Done = card2Ready && currentStep > 2;
   const card3Done = card3Ready && currentStep > 3;
   const step1Done = allInputsDone;
-  const step2Done = !!result || !!notebookResult || !!youtubeResult;
+  const step2Done = !!result || !!notebookResult || !!perplexityResult || !!youtubeResult;
 
   /* ── Load coach profile on mount (for Edit Profile panel, no pre-selection) ── */
   useEffect(() => {
@@ -244,6 +265,7 @@ const AppLearningCoach: React.FC = () => {
         if (typeof draft.currentStep === 'number' && draft.currentStep > 1) setCurrentStep(draft.currentStep);
         if (draft.result) setResult(draft.result);
         if (draft.notebookResult) setNotebookResult(draft.notebookResult);
+        if (draft.perplexityResult) setPerplexityResult(draft.perplexityResult);
         if (draft.youtubeResult) setYoutubeResult(draft.youtubeResult);
       }
     } catch {
@@ -252,7 +274,7 @@ const AppLearningCoach: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const hasAnything = selectedLevel || selectedObjective || gapDescription || selectedPlatforms.length || selectedPreferences.length || result || notebookResult || youtubeResult;
+    const hasAnything = selectedLevel || selectedObjective || gapDescription || selectedPlatforms.length || selectedPreferences.length || result || notebookResult || perplexityResult || youtubeResult;
     if (hasAnything) {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         level: selectedLevel,
@@ -263,11 +285,12 @@ const AppLearningCoach: React.FC = () => {
         currentStep,
         result: result || undefined,
         notebookResult: notebookResult || undefined,
+        perplexityResult: perplexityResult || undefined,
         youtubeResult: youtubeResult || undefined,
         savedAt: Date.now(),
       }));
     }
-  }, [selectedLevel, selectedObjective, gapDescription, selectedPlatforms, selectedPreferences, currentStep, result, notebookResult, youtubeResult]);
+  }, [selectedLevel, selectedObjective, gapDescription, selectedPlatforms, selectedPreferences, currentStep, result, notebookResult, perplexityResult, youtubeResult]);
 
   /* ── Loading step progression ── */
   useEffect(() => {
@@ -475,6 +498,7 @@ const AppLearningCoach: React.FC = () => {
         setYoutubeResult(youtubeResponse);
         setResult(null);
         setNotebookResult(null);
+        setPerplexityResult(null);
       } else if (isNotebookOnly) {
         // NotebookLM-specific flow
         const response = await fetch('/api/generate-notebook-guide', {
@@ -495,6 +519,29 @@ const AppLearningCoach: React.FC = () => {
 
         const data: NotebookGuideResponse = await response.json();
         setNotebookResult(data);
+        setPerplexityResult(null);
+        setResult(null);
+      } else if (isPerplexityOnly) {
+        // Perplexity-specific flow
+        const response = await fetch('/api/generate-perplexity-guide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            level: selectedLevel,
+            objective: selectedObjective,
+            gap: gapDescription,
+            preferences: selectedPreferences,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: 'Request failed' }));
+          throw new Error(err.error || 'Request failed');
+        }
+
+        const data: PerplexityGuideResponse = await response.json();
+        setPerplexityResult(data);
+        setNotebookResult(null);
         setResult(null);
       } else {
         // Standard multi-platform pathway flow
@@ -518,6 +565,7 @@ const AppLearningCoach: React.FC = () => {
         const data: LearningCoachResponse = await response.json();
         setResult(data);
         setNotebookResult(null);
+        setPerplexityResult(null);
         setExpandedSteps(new Set([0]));
       }
 
@@ -591,6 +639,7 @@ const AppLearningCoach: React.FC = () => {
   const handleStartOver = () => {
     setResult(null);
     setNotebookResult(null);
+    setPerplexityResult(null);
     setYoutubeResult(null);
     setSelectedLevel(null);
     setSelectedObjective(null);
@@ -1048,7 +1097,7 @@ const AppLearningCoach: React.FC = () => {
             {validationFlash === 'platforms' && <span style={{ color: '#E53E3E', marginLeft: 8 }}>← Select at least one</span>}
           </div>
           <div style={{ fontSize: 12, color: '#A0AEC0', marginBottom: 8 }}>Select all that apply</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             {PLATFORMS.map(p => {
               const sel = selectedPlatforms.includes(p.id);
               return (
@@ -1057,31 +1106,32 @@ const AppLearningCoach: React.FC = () => {
                   onClick={() => togglePlatform(p.id)}
                   style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                     gap: 10,
                     background: sel ? `${LEVEL_ACCENT}18` : '#F7FAFC',
                     border: sel ? `2px solid ${LEVEL_ACCENT_DARK}` : '1px solid #E2E8F0',
                     borderRadius: 12,
-                    padding: '12px 14px',
+                    padding: '18px 14px',
                     fontSize: 13,
                     fontWeight: sel ? 600 : 500,
                     color: sel ? '#1A202C' : '#4A5568',
                     cursor: 'pointer',
                     fontFamily: FONT,
-                    textAlign: 'left' as const,
+                    textAlign: 'center' as const,
                     transition: 'all 0.15s',
                   }}
                 >
                   {sel ? (
-                    <Check size={16} color={LEVEL_ACCENT_DARK} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <Check size={28} color={LEVEL_ACCENT_DARK} style={{ flexShrink: 0 }} />
                   ) : p.logo ? (
-                    <img src={p.logo} alt={p.name} style={{ width: 20, height: 20, flexShrink: 0, marginTop: 1, objectFit: 'contain' }} />
+                    <img src={p.logo} alt={p.name} style={{ width: 32, height: 32, flexShrink: 0, objectFit: 'contain' }} />
                   ) : (
-                    <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{p.icon}</span>
+                    <span style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{p.icon}</span>
                   )}
                   <div>
-                    <div style={{ fontWeight: sel ? 700 : 600, fontSize: 13 }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: '#718096', marginTop: 2, fontWeight: 400, lineHeight: 1.4 }}>
+                    <div style={{ fontWeight: sel ? 700 : 600, fontSize: 14 }}>{p.name}</div>
+                    <div style={{ fontSize: 11, color: '#718096', marginTop: 4, fontWeight: 400, lineHeight: 1.4 }}>
                       {p.shortDescription}
                     </div>
                   </div>
@@ -1139,11 +1189,11 @@ const AppLearningCoach: React.FC = () => {
       <div ref={outputRef}>
         <StepCard
           stepNumber={4}
-          title={isNotebookOnly ? 'Your NotebookLM Deep Research Guide' : isYoutubeOnly ? 'Your YouTube Learning Guide' : 'Your Learning Support Guide'}
-          subtitle={isNotebookOnly ? 'A Deep Research prompt tailored to your topic and learning style' : isYoutubeOnly ? 'Curated videos matched to your topic and learning style' : 'A personalised, sequenced learning journey across your selected platforms'}
-          done={!!result || !!notebookResult || !!youtubeResult}
+          title={isNotebookOnly ? 'Your NotebookLM Deep Research Guide' : isPerplexityOnly ? 'Your Perplexity Research Guide' : isYoutubeOnly ? 'Your YouTube Learning Guide' : 'Your Learning Support Guide'}
+          subtitle={isNotebookOnly ? 'A Deep Research prompt tailored to your topic and learning style' : isPerplexityOnly ? 'A structured research workflow using Perplexity Spaces, Deep Research, and Focus Modes' : isYoutubeOnly ? 'Curated videos matched to your topic and learning style' : 'A personalised, sequenced learning journey across your selected platforms'}
+          done={!!result || !!notebookResult || !!perplexityResult || !!youtubeResult}
           collapsed={false}
-          locked={currentStep < 4 && !isLoading && !result && !notebookResult && !youtubeResult}
+          locked={currentStep < 4 && !isLoading && !result && !notebookResult && !perplexityResult && !youtubeResult}
           lockedMessage="Complete Steps 1, 2, and 3 to generate your Learning Support Guide"
           accentLight={LEVEL_ACCENT}
           accentDark={LEVEL_ACCENT_DARK}
@@ -1189,6 +1239,16 @@ const AppLearningCoach: React.FC = () => {
             />
           )}
 
+          {/* Perplexity output */}
+          {perplexityResult && !isLoading && (
+            <PerplexityGuideOutput
+              result={perplexityResult}
+              accentLight={LEVEL_ACCENT}
+              accentDark={LEVEL_ACCENT_DARK}
+              onStartOver={handleStartOver}
+            />
+          )}
+
           {/* YouTube output */}
           {youtubeResult && !isLoading && (
             <YouTubeGuideOutput
@@ -1200,7 +1260,7 @@ const AppLearningCoach: React.FC = () => {
           )}
 
           {/* Placeholder state */}
-          {!result && !notebookResult && !youtubeResult && !isLoading && !error && (
+          {!result && !notebookResult && !perplexityResult && !youtubeResult && !isLoading && !error && (
             <div style={{
               textAlign: 'center' as const, padding: '40px 20px', color: '#A0AEC0',
             }}>
@@ -2013,7 +2073,8 @@ const YouTubeGuideOutput: React.FC<{
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,
-                      background: YT_RED, color: '#FFFFFF',
+                      background: '#FFFFFF', color: YT_RED,
+                      border: `1px solid ${YT_RED}`,
                       borderRadius: 6, padding: '5px 12px',
                       fontSize: 11, fontWeight: 600,
                       fontFamily: FONT_SUB, textDecoration: 'none',
@@ -2112,8 +2173,8 @@ const YouTubeGuideOutput: React.FC<{
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: YT_RED, color: '#FFFFFF',
-                    border: 'none', borderRadius: 8,
+                    background: '#FFFFFF', color: YT_RED,
+                    border: `1px solid ${YT_RED}`, borderRadius: 8,
                     padding: '10px 18px',
                     fontSize: 13, fontWeight: 600,
                     fontFamily: FONT_SUB, textDecoration: 'none',
@@ -2398,6 +2459,305 @@ const ProcessStep: React.FC<{
 );
 
 /* ── NotebookGuideOutput ── */
+/* ── PerplexityGuideOutput ── */
+const PerplexityGuideOutput: React.FC<{
+  result: PerplexityGuideResponse;
+  accentLight: string;
+  accentDark: string;
+  onStartOver: () => void;
+}> = ({ result, accentLight, accentDark, onStartOver }) => {
+  const [expandedStep, setExpandedStep] = useState<number>(1);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const sc = result.spaceConfig;
+  const fm = result.focusModeConfig;
+
+  const toggleComplete = (step: number) => {
+    setCompletedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(step)) {
+        next.delete(step);
+      } else {
+        next.add(step);
+        for (let i = step + 1; i <= 4; i++) {
+          if (!next.has(i)) { setExpandedStep(i); break; }
+        }
+      }
+      return next;
+    });
+  };
+
+  return (
+    <div>
+      <div style={{
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: 12,
+        padding: '8px 24px 4px',
+      }}>
+        {/* Step 1: Create a Space */}
+        <ProcessStep
+          number={1}
+          title="Create a Perplexity Space"
+          summary="Set up a dedicated Space for this learning topic with custom instructions."
+          expanded={expandedStep === 1}
+          completed={completedSteps.has(1)}
+          onToggle={() => setExpandedStep(expandedStep === 1 ? 0 : 1)}
+          onComplete={() => toggleComplete(1)}
+          accentDark={accentDark}
+          accentLight={accentLight}
+        >
+          {sc && (
+            <div>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: '#A0AEC0',
+                textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8,
+                fontFamily: FONT_SUB,
+              }}>
+                Space Name
+              </div>
+              <div style={{
+                background: '#F7FAFC',
+                border: '1px solid #E2E8F0',
+                borderLeft: `3px solid ${accentDark}`,
+                borderRadius: '0 8px 8px 0',
+                padding: '12px 16px',
+                fontSize: 14,
+                fontFamily: FONT_SUB,
+                fontWeight: 600,
+                color: '#1A202C',
+              }}>
+                {sc.spaceName}
+              </div>
+
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: '#A0AEC0',
+                textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginTop: 16, marginBottom: 8,
+                fontFamily: FONT_SUB,
+              }}>
+                Custom Instructions
+              </div>
+              <div style={{
+                background: '#F7FAFC',
+                border: '1px solid #E2E8F0',
+                borderLeft: `3px solid ${accentDark}`,
+                borderRadius: '0 8px 8px 0',
+                padding: '14px 16px',
+                fontSize: 13,
+                fontFamily: FONT_SUB,
+                color: '#2D3748',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap' as const,
+              }}>
+                {sc.customInstructions}
+              </div>
+              <CopyButton text={sc.customInstructions} label="Copy Instructions" accentDark={accentDark} />
+              <div style={{
+                fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT_SUB,
+                marginTop: 14, fontStyle: 'italic' as const,
+              }}>
+                Go to perplexity.ai → Spaces → Create New Space. Name it as above, then paste the custom instructions into the Space settings.
+              </div>
+            </div>
+          )}
+        </ProcessStep>
+
+        {/* Step 2: Run Deep Research */}
+        <ProcessStep
+          number={2}
+          title="Run Deep Research"
+          summary="Paste this prompt into your Space to run a comprehensive Deep Research query."
+          expanded={expandedStep === 2}
+          completed={completedSteps.has(2)}
+          onToggle={() => setExpandedStep(expandedStep === 2 ? 0 : 2)}
+          onComplete={() => toggleComplete(2)}
+          accentDark={accentDark}
+          accentLight={accentLight}
+        >
+          <div style={{
+            background: '#F7FAFC',
+            border: '1px solid #E2E8F0',
+            borderLeft: `3px solid ${accentDark}`,
+            borderRadius: '0 8px 8px 0',
+            padding: '16px 18px',
+            fontSize: 14,
+            fontFamily: FONT_SUB,
+            color: '#2D3748',
+            lineHeight: 1.7,
+            wordBreak: 'break-word' as const,
+            whiteSpace: 'pre-wrap' as const,
+          }}>
+            {result.deepResearchPrompt}
+          </div>
+          <CopyButton text={result.deepResearchPrompt} accentDark={accentDark} />
+          <div style={{
+            fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT_SUB,
+            marginTop: 14, fontStyle: 'italic' as const,
+          }}>
+            Inside your Space, click the search bar and select "Deep Research" from the search type options. Paste the prompt above and run it. This will take a few minutes — Perplexity will search dozens of sources and compile a comprehensive report.
+          </div>
+        </ProcessStep>
+
+        {/* Step 3: Explore with Focus Mode */}
+        {fm && (
+          <ProcessStep
+            number={3}
+            title={`Explore with ${fm.focusMode} Focus Mode`}
+            summary={fm.rationale}
+            expanded={expandedStep === 3}
+            completed={completedSteps.has(3)}
+            onToggle={() => setExpandedStep(expandedStep === 3 ? 0 : 3)}
+            onComplete={() => toggleComplete(3)}
+            accentDark={accentDark}
+            accentLight={accentLight}
+          >
+            {/* Settings */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: '#A0AEC0',
+                textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8,
+                fontFamily: FONT_SUB,
+              }}>
+                Settings
+              </div>
+              <div style={{
+                background: '#F7FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: 10,
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', padding: '10px 16px',
+                  borderBottom: '1px solid #EDF2F7',
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#718096', width: 140, flexShrink: 0, fontFamily: FONT_SUB }}>
+                    Focus Mode
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT_SUB }}>
+                    {fm.focusMode}
+                  </div>
+                </div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', padding: '10px 16px',
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#718096', width: 140, flexShrink: 0, fontFamily: FONT_SUB }}>
+                    Search Type
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT_SUB }}>
+                    {fm.searchType}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Follow-up searches */}
+            {fm.followUpSearches?.length > 0 && (
+              <div>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, color: '#A0AEC0',
+                  textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10,
+                  fontFamily: FONT_SUB,
+                }}>
+                  Follow-Up Searches
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {fm.followUpSearches.map((q, i) => (
+                    <div key={i} style={{
+                      background: '#F7FAFC',
+                      border: '1px solid #E2E8F0',
+                      borderLeft: `3px solid ${accentDark}`,
+                      borderRadius: '0 8px 8px 0',
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      fontFamily: FONT_SUB,
+                      color: '#2D3748',
+                      lineHeight: 1.5,
+                    }}>
+                      {q}
+                    </div>
+                  ))}
+                </div>
+                <div style={{
+                  fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT_SUB,
+                  marginTop: 14, fontStyle: 'italic' as const,
+                }}>
+                  Switch to {fm.focusMode} Focus Mode using the dropdown next to the search bar, then run each query above. These are designed to deepen your understanding from different angles.
+                </div>
+              </div>
+            )}
+          </ProcessStep>
+        )}
+
+        {/* Step 4: Deepen with Follow-Up Queries */}
+        {result.followUpQueries?.length > 0 && (
+          <ProcessStep
+            number={4}
+            title="Deepen Your Understanding"
+            summary="Run these follow-up queries to explore foundational, practical, and advanced angles."
+            expanded={expandedStep === 4}
+            completed={completedSteps.has(4)}
+            onToggle={() => setExpandedStep(expandedStep === 4 ? 0 : 4)}
+            onComplete={() => toggleComplete(4)}
+            accentDark={accentDark}
+            accentLight={accentLight}
+            isLast
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {result.followUpQueries.map((q, i) => {
+                const labels = ['Foundational', 'Practical / Applied', 'Advanced / Nuanced'];
+                return (
+                  <div key={i}>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: accentDark,
+                      textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4,
+                      fontFamily: FONT_SUB,
+                    }}>
+                      {labels[i] || `Query ${i + 1}`}
+                    </div>
+                    <div style={{
+                      background: '#F7FAFC',
+                      border: '1px solid #E2E8F0',
+                      borderLeft: `3px solid ${accentDark}`,
+                      borderRadius: '0 8px 8px 0',
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      fontFamily: FONT_SUB,
+                      color: '#2D3748',
+                      lineHeight: 1.5,
+                    }}>
+                      {q}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{
+              fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT_SUB,
+              marginTop: 14, fontStyle: 'italic' as const,
+            }}>
+              Run these queries inside your Space using Pro Search. Each targets a different depth — together they give you a well-rounded understanding of the topic.
+            </div>
+          </ProcessStep>
+        )}
+      </div>
+
+      {/* Start Over */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+        <button
+          onClick={onStartOver}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'none', border: '1px solid #E2E8F0', borderRadius: 8,
+            padding: '8px 14px', fontSize: 12, fontWeight: 600,
+            color: '#4A5568', cursor: 'pointer', fontFamily: FONT_SUB,
+          }}
+        >
+          <RotateCcw size={12} /> Start Over
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const NotebookGuideOutput: React.FC<{
   result: NotebookGuideResponse;
   accentLight: string;
@@ -2409,6 +2769,7 @@ const NotebookGuideOutput: React.FC<{
   const sc = result.studioConfig;
   const settings = sc?.settings || {};
 
+  const totalSteps = sc?.steeringPrompt ? 4 : 2;
   const toggleComplete = (step: number) => {
     setCompletedSteps(prev => {
       const next = new Set(prev);
@@ -2417,7 +2778,6 @@ const NotebookGuideOutput: React.FC<{
       } else {
         next.add(step);
         // Auto-advance: expand the next uncompleted step
-        const totalSteps = sc?.steeringPrompt ? 3 : 2;
         for (let i = step + 1; i <= totalSteps; i++) {
           if (!next.has(i)) { setExpandedStep(i); break; }
         }
@@ -2490,12 +2850,12 @@ const NotebookGuideOutput: React.FC<{
           </div>
         </ProcessStep>
 
-        {/* Step 2: Open Studio Feature */}
+        {/* Step 2: Open Studio Feature & Choose Settings */}
         {sc && (
           <ProcessStep
             number={2}
-            title={`Generate ${sc.feature}`}
-            summary={`Open the Studio panel and use the ${sc.feature} tile with the settings below.`}
+            title={`Open ${sc.feature}`}
+            summary={`Open the Studio panel and select the ${sc.feature} tile. Apply these settings before generating.`}
             expanded={expandedStep === 2}
             completed={completedSteps.has(2)}
             onToggle={() => setExpandedStep(expandedStep === 2 ? 0 : 2)}
@@ -2506,7 +2866,7 @@ const NotebookGuideOutput: React.FC<{
           >
             {/* Settings table */}
             {settingRows.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
+              <div>
                 <div style={{
                   fontSize: 11, fontWeight: 700, color: '#A0AEC0',
                   textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8,
@@ -2543,79 +2903,27 @@ const NotebookGuideOutput: React.FC<{
                 </div>
               </div>
             )}
-
-            {/* Feature instructions (numbered tickable checklist) */}
-            {sc.featureInstructions && (() => {
-              const steps = sc.featureInstructions
-                .split(/\n/)
-                .map(s => s.replace(/^\d+[\.\)]\s*/, '').trim())
-                .filter(Boolean);
-              return steps.length > 0 ? (
-                <div>
-                  <div style={{
-                    fontSize: 11, fontWeight: 700, color: '#A0AEC0',
-                    textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10,
-                    fontFamily: FONT_SUB,
-                  }}>
-                    Steps
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {steps.map((s, i) => {
-                      const checked = checkedInstructions.has(i);
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => toggleInstruction(i)}
-                          style={{
-                            display: 'flex', alignItems: 'flex-start', gap: 10,
-                            background: 'none', border: 'none', padding: '4px 0',
-                            cursor: 'pointer', fontFamily: FONT_SUB, textAlign: 'left' as const,
-                          }}
-                        >
-                          <div style={{
-                            width: 22, height: 22, borderRadius: '50%',
-                            border: checked ? 'none' : '2px solid #CBD5E0',
-                            background: checked ? '#38A169' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0, marginTop: 1,
-                            transition: 'all 0.15s',
-                          }}>
-                            {checked
-                              ? <Check size={12} color="#FFFFFF" />
-                              : <span style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0' }}>{i + 1}</span>
-                            }
-                          </div>
-                          <span style={{
-                            fontSize: 13, color: checked ? '#A0AEC0' : '#2D3748',
-                            lineHeight: 1.6, fontFamily: FONT_SUB,
-                            textDecoration: checked ? 'line-through' : 'none',
-                            transition: 'color 0.15s',
-                          }}>
-                            {s}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null;
-            })()}
+            <div style={{
+              fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT_SUB,
+              marginTop: 14, fontStyle: 'italic' as const,
+            }}>
+              Click the {sc.feature} tile in the Studio panel, then apply the settings above. Do not click Generate yet — add the Steering Prompt first.
+            </div>
           </ProcessStep>
         )}
 
-        {/* Step 3: Steering Prompt (only if one exists) */}
+        {/* Step 3: Paste the Steering Prompt */}
         {sc?.steeringPrompt && (
           <ProcessStep
             number={3}
-            title="Add the Steering Prompt"
-            summary="Paste this into the customisation field before you click Generate."
+            title="Paste the Steering Prompt"
+            summary={`Click the pencil/customise icon on the ${sc.feature} tile to open the Steering Prompt field, then paste this prompt.`}
             expanded={expandedStep === 3}
             completed={completedSteps.has(3)}
             onToggle={() => setExpandedStep(expandedStep === 3 ? 0 : 3)}
             onComplete={() => toggleComplete(3)}
             accentDark={accentDark}
             accentLight={accentLight}
-            isLast
           >
             <div style={{
               background: '#F7FAFC',
@@ -2633,11 +2941,33 @@ const NotebookGuideOutput: React.FC<{
               {sc.steeringPrompt}
             </div>
             <CopyButton text={sc.steeringPrompt} label="Copy Steering Prompt" accentDark={accentDark} />
+          </ProcessStep>
+        )}
+
+        {/* Step 4: Click Generate */}
+        {sc?.steeringPrompt && (
+          <ProcessStep
+            number={4}
+            title="Click Generate"
+            summary={`Once your settings and Steering Prompt are in place, click 'Generate' to create your ${sc.feature}.`}
+            expanded={expandedStep === 4}
+            completed={completedSteps.has(4)}
+            onToggle={() => setExpandedStep(expandedStep === 4 ? 0 : 4)}
+            onComplete={() => toggleComplete(4)}
+            accentDark={accentDark}
+            accentLight={accentLight}
+            isLast
+          >
+            <div style={{
+              fontSize: 13, color: '#2D3748', lineHeight: 1.6, fontFamily: FONT_SUB,
+            }}>
+              With your settings configured and Steering Prompt pasted, click the <strong>Generate</strong> button on the {sc.feature} tile. NotebookLM will use your Deep Research sources and steering prompt to create a tailored {sc.feature.toLowerCase()}.
+            </div>
             <div style={{
               fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT_SUB,
               marginTop: 14, fontStyle: 'italic' as const,
             }}>
-              Click the pencil/customise icon on the {sc.feature} tile to open the Steering Prompt field, then paste and click Generate.
+              Generation typically takes 1–3 minutes depending on source length. You can close and return — NotebookLM will keep generating in the background.
             </div>
           </ProcessStep>
         )}

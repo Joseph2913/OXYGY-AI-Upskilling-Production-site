@@ -3034,6 +3034,152 @@ The "featureInstructions" must be 3–5 numbered steps referencing exact UI elem
   };
 }
 
+// ─── Perplexity Guide proxy ───
+
+function perplexityGuideProxyPlugin(apiKey: string, model: string): Plugin {
+  const PERPLEXITY_GUIDE_SYSTEM = `You are a learning guide generator for the OXYGY AI Upskilling platform. The user has selected Perplexity as their learning tool. Your job is to generate a structured guide that walks the learner through using Perplexity's features effectively.
+
+CRITICAL RULE: The output you generate will be pasted directly into Perplexity by the learner. Perplexity has NO knowledge of "Level 1", "Level 2", etc. — these are internal OXYGY framework labels. NEVER use phrases like "Level 1", "Level 2", "Level 3", "Level 4", or "Level 5" in ANY of the output fields (deepResearchPrompt, spaceConfig, focusModeConfig, followUpQueries). Instead, describe the learner's stage using plain, descriptive language based on the level descriptions provided in the user message.
+
+You must generate a JSON object with these fields:
+
+1. "deepResearchPrompt" — a prompt for Perplexity's Deep Research feature. This must: frame the gap as an investigative learning question (e.g. "Research the practical differences between X and Y for a professional trying to understand Z"); request the report be structured pedagogically — foundational concepts first, then practical application, then advanced nuance; reference the user's specific topic and gap description directly; not be a generic "explain me" request. NEVER mention "Level" numbers — describe the learner's competency stage naturally (e.g. "a professional who is new to AI" or "a professional with experience building AI agents who is now learning to chain them into workflows").
+
+2. "spaceConfig" — configuration for setting up a Perplexity Space:
+   - "spaceName": A suggested descriptive name for the Space (e.g. "AI Agent Building — Applied" or "Workflow Orchestration Research"). Do NOT include "Level 2" or similar — use the topic name and a descriptive qualifier.
+   - "customInstructions": Tailored instructions the learner should paste into the Space's custom instructions field. These should describe the learner's experience stage in plain language, their topic, and preferred explanation style. Never reference level numbers.
+
+3. "focusModeConfig" — which Focus Mode to use based on the learner's primary preference, using this mapping:
+
+— "listen" → Focus Mode: "Video". Search type: "Pro Search". Rationale: Find video explainers and podcast-style content. Provide 2 follow-up search queries the learner should run in Video mode to deepen understanding.
+
+— "read" → Focus Mode: "Academic". Search type: "Deep Research". Rationale: Find peer-reviewed papers and in-depth articles. Provide 2 follow-up search queries targeting specific sub-topics.
+
+— "watch" → Focus Mode: "Video". Search type: "Pro Search". Rationale: Find step-by-step tutorials and visual walkthroughs. Provide 2 follow-up search queries focused on practical demonstrations.
+
+— "build" → Focus Mode: "Web". Search type: "Pro Search". Rationale: Find practical guides, GitHub repos, and hands-on tutorials. Provide 2 follow-up search queries targeting implementation resources.
+
+— "talk" → Focus Mode: "Web". Search type: "Pro Search". Rationale: Use Perplexity's conversational follow-up to explore the topic through Q&A. Provide 2 thought-provoking follow-up questions the learner should ask to deepen understanding.
+
+If the user has multiple learning preferences, use the FIRST one in the list to determine the Focus Mode.
+
+4. "followUpQueries" — an array of exactly 3 follow-up search queries the learner should run after reading the Deep Research report. Each query should target a different angle: one foundational, one practical/applied, one advanced/nuanced.
+
+Return ONLY a JSON object with this exact shape:
+{
+  "deepResearchPrompt": "...",
+  "spaceConfig": {
+    "spaceName": "...",
+    "customInstructions": "..."
+  },
+  "focusModeConfig": {
+    "focusMode": "Academic | Video | Web",
+    "searchType": "Pro Search | Deep Research",
+    "rationale": "...",
+    "followUpSearches": ["...", "..."]
+  },
+  "followUpQueries": ["...", "...", "..."]
+}`;
+
+  return {
+    name: 'perplexity-guide-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-perplexity-guide', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { level, objective, gap, preferences } = JSON.parse(body);
+
+            if (!level || !objective || !preferences?.length) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing required fields' }));
+              return;
+            }
+
+            const preferenceLabels: Record<string, string> = {
+              listen: 'Listen & absorb',
+              read: 'Read & reflect',
+              watch: 'Watch & follow',
+              build: 'Build & experiment',
+              talk: 'Talk it through',
+            };
+
+            const levelDescriptions: Record<number, string> = {
+              1: 'AI Fundamentals — a professional who is new to AI and learning the basics of prompt engineering, context engineering, responsible AI use, and multimodal AI (image/video/audio)',
+              2: 'Applied AI — a professional who understands AI basics and is now learning to build and deploy AI agents, including custom GPTs, system prompt design, and human-in-the-loop patterns',
+              3: 'Systemic AI — a professional with agent-building experience who is now learning to design multi-step AI workflows, agent chaining, orchestration, input logic, and automated output generation at scale',
+              4: 'AI Dashboards & Interfaces — a professional who can build AI workflows and is now learning to design user-facing interfaces, dashboards, data visualisation, and role-specific front-ends for AI outputs',
+              5: 'Full-Stack AI Applications — an advanced practitioner learning to architect complete AI-powered applications with personalisation engines, knowledge bases, custom platforms, and full-stack integration',
+            };
+
+            const levelDesc = levelDescriptions[level as number] || `Level ${level}`;
+
+            const userMessage = `Generate a Perplexity learning guide for this learner.
+
+## LEARNER INPUT
+- Learner stage: ${levelDesc}
+- Learning Topic: ${objective}${gap ? `\n- Specific gap: "${gap}"` : ''}
+- Learning Preferences (in priority order): ${preferences.map((p: string) => preferenceLabels[p] || p).join('; ')}
+
+REMINDER: Do NOT use "Level 1", "Level 2", etc. anywhere in your output. Describe the learner's stage using natural language.`;
+
+            const openRouterModel = model.includes('/') ? model : `google/${model}`;
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: PERPLEXITY_GUIDE_SYSTEM },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'perplexity-guide');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (perplexity-guide):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (perplexity-guide):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 // ─── Curated Videos proxy (simple Supabase passthrough, no AI) ───
 
 function curatedVideosProxyPlugin(supabaseUrl: string, supabaseKey: string): Plugin {
@@ -3135,6 +3281,7 @@ export default defineConfig(({ mode }) => {
       learningCoachProxyPlugin(env.OpenRouter_API, geminiModel),
       learningCoachChatProxyPlugin(env.OpenRouter_API, geminiModel),
       notebookGuideProxyPlugin(env.OpenRouter_API, geminiModel),
+      perplexityGuideProxyPlugin(env.OpenRouter_API, geminiModel),
       curatedVideosProxyPlugin(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
     ],
     resolve: {
