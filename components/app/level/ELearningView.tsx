@@ -1441,43 +1441,43 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     style={{
                       background: flipped ? a.light : '#F7FAFC',
                       border: `2px solid ${flipped ? a.color : '#E2E8F0'}`,
-                      borderTop: `4px solid ${flipped ? a.color : '#CBD5E0'}`,
-                      borderRadius: 14, padding: fs ? '22px 22px' : '16px 16px',
+                      borderTop: `5px solid ${flipped ? a.color : '#CBD5E0'}`,
+                      borderRadius: 14, padding: fs ? '28px 26px' : '20px 20px',
                       cursor: 'pointer', textAlign: 'left' as const,
                       display: 'flex', flexDirection: 'column',
-                      gap: fs ? 14 : 12, justifyContent: flipped ? 'flex-start' : 'space-evenly', alignItems: flipped ? 'flex-start' : 'center',
+                      gap: fs ? 20 : 16, justifyContent: flipped ? 'flex-start' : 'space-evenly', alignItems: flipped ? 'flex-start' : 'center',
                       transition: 'all 0.2s ease', height: '100%', boxSizing: 'border-box' as const,
                     }}
                   >
                     {flipped ? (
                       <>
                         {/* Flipped: full detail */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontSize: fs ? 26 : 22 }}>{a.icon}</span>
-                          <div style={{ fontSize: fs ? 20 : 17, fontWeight: 900, color: a.color }}>{a.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontSize: fs ? 32 : 26 }}>{a.icon}</span>
+                          <div style={{ fontSize: fs ? 24 : 20, fontWeight: 900, color: a.color }}>{a.name}</div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                          <div style={{ fontSize: fs ? 11 : 10, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>When to use</div>
-                          <div style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.6 }}>{a.when}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>When to use</div>
+                          <div style={{ fontSize: fs ? 17 : 15, color: '#2D3748', lineHeight: 1.65 }}>{a.when}</div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                          <div style={{ fontSize: fs ? 11 : 10, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>How it works</div>
-                          <div style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.6 }}>{a.how}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>How it works</div>
+                          <div style={{ fontSize: fs ? 17 : 15, color: '#2D3748', lineHeight: 1.65 }}>{a.how}</div>
                         </div>
 
-                        <div style={{ marginTop: 'auto', background: '#FFFFFF', border: `1px solid ${a.color}44`, borderRadius: 8, padding: fs ? '10px 14px' : '8px 12px', width: '100%', boxSizing: 'border-box' as const }}>
-                          <div style={{ fontSize: fs ? 14 : 12, fontWeight: 700, color: a.color }}>{a.connection}</div>
+                        <div style={{ marginTop: 'auto', background: '#FFFFFF', border: `1.5px solid ${a.color}55`, borderRadius: 10, padding: fs ? '12px 16px' : '10px 14px', width: '100%', boxSizing: 'border-box' as const }}>
+                          <div style={{ fontSize: fs ? 16 : 14, fontWeight: 700, color: a.color }}>{a.connection}</div>
                         </div>
                       </>
                     ) : (
                       <>
-                        {/* Default: just icon + name + tagline */}
-                        <span style={{ fontSize: fs ? 40 : 32 }}>{a.icon}</span>
-                        <div style={{ fontSize: fs ? 20 : 17, fontWeight: 900, color: '#4A5568' }}>{a.name}</div>
-                        <div style={{ fontSize: fs ? 15 : 13, color: '#718096', fontWeight: 500, textAlign: 'center' as const, lineHeight: 1.5 }}>{a.tagline}</div>
-                        <div style={{ fontSize: fs ? 13 : 11, color: '#CBD5E0', fontWeight: 600 }}>tap to explore ▸</div>
+                        {/* Default: icon + name + tagline */}
+                        <span style={{ fontSize: fs ? 72 : 56 }}>{a.icon}</span>
+                        <div style={{ fontSize: fs ? 26 : 22, fontWeight: 900, color: '#4A5568', textAlign: 'center' as const }}>{a.name}</div>
+                        <div style={{ fontSize: fs ? 17 : 15, color: '#718096', fontWeight: 500, textAlign: 'center' as const, lineHeight: 1.55 }}>{a.tagline}</div>
+                        <div style={{ fontSize: fs ? 14 : 12, color: '#CBD5E0', fontWeight: 600 }}>tap to explore ▸</div>
                       </>
                     )}
                   </button>
