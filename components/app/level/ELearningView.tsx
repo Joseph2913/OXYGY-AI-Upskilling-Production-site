@@ -156,7 +156,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [scenarioTab, setScenarioTab] = useState<'rushed' | 'thorough'>('rushed'); // Slide 5
   const [expandedMatrixRow, setExpandedMatrixRow] = useState<number | null>(null); // Slide 12
   // buildAPrompt state
-  const [placedComponents, setPlacedComponents] = useState<Record<string, boolean>>({});
+  const [placedComponents, setPlacedComponents] = useState<Record<string, string>>({});
+  const [buildChecked, setBuildChecked] = useState(false);
   const [draggedChip, setDraggedChip] = useState<string | null>(null);
   const [buildComplete, setBuildComplete] = useState(false);
   const [shuffledBuildKeys, setShuffledBuildKeys] = useState<string[]>([]);
@@ -805,27 +806,35 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'buildAPrompt': {
         const comps = s.buildComponents || [];
         const isTouch = 'ontouchstart' in window;
-        const allPlaced = comps.every(c => placedComponents[c.key]);
+        const allPlaced = comps.every((c: any) => !!placedComponents[c.key]);
+        const placedChipKeys = Object.values(placedComponents);
+        const allCorrect = buildChecked && comps.every((c: any) => placedComponents[c.key] === c.key);
 
-        const triggerComplete = (next: Record<string, boolean>) => {
-          if (comps.every(comp => next[comp.key])) {
-            setTimeout(() => setBuildComplete(true), 350);
-          }
+        const handleDrop = (slotKey: string) => {
+          if (!draggedChip) return;
+          setPlacedComponents(prev => ({ ...prev, [slotKey]: draggedChip }));
+          setDraggedChip(null);
+          setBuildChecked(false);
         };
+
+        const unplacedComps = (shuffledBuildKeys.length > 0
+          ? shuffledBuildKeys.map(k => comps.find((c: any) => c.key === k)!).filter(Boolean)
+          : comps
+        ).filter((c: any) => !placedChipKeys.includes(c.key));
 
         return (
           <div style={{ padding: fs ? '14px 28px' : '10px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
-            {/* Instruction banner — swaps to success when done */}
+            {/* Instruction banner */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               {buildComplete ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F0FFF4', border: '1px solid #9AE6B4', borderRadius: 10, padding: '7px 14px', animation: 'fadeInUp 0.25s ease' }}>
                   <span style={{ fontSize: 14 }}>✓</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#276749' }}>All six components placed — prompt assembled below</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#276749' }}>All correct — prompt assembled below</span>
                 </div>
               ) : (
                 <>
                   <span style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.1em', textTransform: 'uppercase', background: '#38B2AC', padding: '3px 10px', borderRadius: 10, flexShrink: 0 }}>{isTouch ? 'TAP TO SELECT' : 'DRAG & DROP'}</span>
-                  <span style={{ fontSize: 12, color: '#4A5568', fontWeight: 500 }}>{isTouch ? 'Tap a chip, then tap its matching slot' : 'Drag each chip into its matching slot on the right'}</span>
+                  <span style={{ fontSize: 12, color: '#4A5568', fontWeight: 500 }}>{isTouch ? 'Tap a chip, then tap any slot' : 'Drag each chip into any slot on the right'}</span>
                 </>
               )}
             </div>
@@ -852,13 +861,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     </div>
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-                        {isTouch ? 'TAP A CARD, THEN TAP ITS SLOT →' : 'DRAG EACH CARD INTO THE RIGHT SLOT →'}
+                        {isTouch ? 'TAP A CARD, THEN TAP A SLOT →' : 'DRAG EACH CARD INTO A SLOT →'}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        {(shuffledBuildKeys.length > 0
-                          ? shuffledBuildKeys.map(k => comps.find((c: any) => c.key === k)!).filter((c: any) => c && !placedComponents[c.key])
-                          : comps.filter((c: any) => !placedComponents[c.key])
-                        ).map(c => {
+                        {unplacedComps.map((c: any) => {
                           const snippet = c.chipText || (c.filledText.length > 60 ? c.filledText.slice(0, 60) + '…' : c.filledText);
                           const isSelected = draggedChip === c.key;
                           return isTouch ? (
@@ -881,48 +887,61 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                             </div>
                           );
                         })}
-                        {allPlaced && <span style={{ fontSize: 11, color: '#48BB78', fontWeight: 600 }}>All placed ✓</span>}
+                        {unplacedComps.length === 0 && !buildComplete && (
+                          <span style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>All chips placed — check your answers →</span>
+                        )}
                       </div>
                     </div>
                   </>
                 )}
               </div>
 
-              {/* Right — drop zones (always visible) */}
+              {/* Right — drop zones */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
-                {comps.map(c => {
-                  const isPlaced = !!placedComponents[c.key];
+                {comps.map((c: any) => {
+                  const placedChipKey = placedComponents[c.key];
+                  const placedComp = placedChipKey ? comps.find((comp: any) => comp.key === placedChipKey) : null;
+                  const isPlaced = !!placedChipKey;
+                  const isCorrect = placedChipKey === c.key;
+                  const isDragTarget = !!draggedChip && draggedChip !== placedChipKey;
                   return (
                     <div
                       key={c.key}
                       onDragOver={e => e.preventDefault()}
-                      onDrop={() => {
-                        if (draggedChip === c.key) {
-                          const next = { ...placedComponents, [c.key]: true };
-                          setPlacedComponents(next);
-                          setDraggedChip(null);
-                          triggerComplete(next);
-                        }
-                      }}
-                      onClick={() => {
-                        if (isTouch && draggedChip === c.key) {
-                          const next = { ...placedComponents, [c.key]: true };
-                          setPlacedComponents(next);
-                          setDraggedChip(null);
-                          triggerComplete(next);
-                        }
-                      }}
-                      style={{ border: isPlaced ? `1px solid ${c.color}` : `1.5px dashed ${c.color}55`, background: isPlaced ? c.light : '#FAFAFA', borderRadius: 8, padding: '8px 12px', minHeight: 40, display: 'flex', alignItems: 'center', gap: 10, transition: 'all 150ms ease' }}
+                      onDrop={() => handleDrop(c.key)}
+                      onClick={() => { if (isTouch && draggedChip) handleDrop(c.key); }}
+                      style={{ border: isPlaced ? `1.5px solid ${c.color}` : `1.5px dashed ${isDragTarget ? c.color : c.color + '55'}`, background: isPlaced ? c.light : isDragTarget ? c.color + '0A' : '#FAFAFA', borderRadius: 8, padding: '8px 12px', minHeight: 40, display: 'flex', alignItems: 'center', gap: 8, transition: 'all 150ms ease' }}
                     >
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', background: c.color, padding: '2px 8px', borderRadius: 10, flexShrink: 0 }}>{c.key}</span>
-                      <span style={{ fontSize: 12, color: isPlaced ? '#2D3748' : '#A0AEC0', fontStyle: isPlaced ? 'normal' : 'italic', lineHeight: 1.5 }}>
-                        {isPlaced ? c.filledText : c.dropHint}
+                      <span style={{ fontSize: 12, color: isPlaced ? '#2D3748' : '#A0AEC0', fontStyle: isPlaced ? 'normal' : 'italic', lineHeight: 1.5, flex: 1 }}>
+                        {placedComp ? (placedComp.chipText || (placedComp.filledText.length > 50 ? placedComp.filledText.slice(0, 50) + '…' : placedComp.filledText)) : c.dropHint}
                       </span>
+                      {buildChecked && isPlaced && (
+                        <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? '#48BB78' : '#FC8181', flexShrink: 0 }}>{isCorrect ? '✓' : '✗'}</span>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
+
+            {/* Check Answers button */}
+            {!buildComplete && (
+              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setBuildChecked(true);
+                    if (comps.every((comp: any) => placedComponents[comp.key] === comp.key)) {
+                      setTimeout(() => setBuildComplete(true), 600);
+                    }
+                  }}
+                  disabled={!allPlaced}
+                  style={{ padding: '8px 20px', borderRadius: 24, fontSize: 13, fontWeight: 700, border: 'none', cursor: allPlaced ? 'pointer' : 'default', background: allPlaced ? '#1A202C' : '#E2E8F0', color: allPlaced ? '#FFFFFF' : '#A0AEC0', transition: 'all 0.15s ease' }}
+                >
+                  Check Answers
+                </button>
+              </div>
+            )}
           </div>
         );
       }
@@ -1987,6 +2006,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setPlacedComponents({});
     setDraggedChip(null);
     setBuildComplete(false);
+    setBuildChecked(false);
     setPredictSelected(null);
     setPredictRevealed(false);
     setPredictChecked(false);
