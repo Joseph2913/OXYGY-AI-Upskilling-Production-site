@@ -484,18 +484,23 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
         setGenerating(false);
         setCompletedPlan(result);
       } else {
-        const [planSaved, profileSaved] = await Promise.all([
-          saveLearningPlan(user!.id, result, depths),
-          upsertProfile(user!.id, {
-            role: formData.role, function: formData.function,
-            functionOther: formData.functionOther, seniority: formData.seniority,
-            aiExperience: formData.aiExperience, ambition: formData.ambition,
-            challenge: formData.challenge, availability: formData.availability,
-            experienceDescription: formData.experienceDescription,
-            goalDescription: formData.goalDescription,
-          } as any),
-        ]);
-        if (!planSaved || !profileSaved) {
+        // Profile must be saved FIRST — learning_plans.user_id has a foreign key
+        // to profiles.id, so inserting the plan before the profile exists will fail.
+        const profileSaved = await upsertProfile(user!.id, {
+          role: formData.role, function: formData.function,
+          functionOther: formData.functionOther, seniority: formData.seniority,
+          aiExperience: formData.aiExperience, ambition: formData.ambition,
+          challenge: formData.challenge, availability: formData.availability,
+          experienceDescription: formData.experienceDescription,
+          goalDescription: formData.goalDescription,
+        } as any);
+        if (!profileSaved) {
+          setGenError('Something went wrong saving your profile. Please try again.');
+          setGenerating(false);
+          return;
+        }
+        const planSaved = await saveLearningPlan(user!.id, result, depths);
+        if (!planSaved) {
           setGenError('Something went wrong saving your plan. Please try again.');
           setGenerating(false);
           return;

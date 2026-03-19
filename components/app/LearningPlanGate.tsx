@@ -14,8 +14,23 @@ const LearningPlanGate: React.FC<LearningPlanGateProps> = ({ children }) => {
   // Check this FIRST so the journey page is never blocked during loading
   if (location.pathname === '/app/journey') return <>{children}</>;
 
-  // Don't make redirect decisions until the check completes
-  if (learningPlanLoading) return null;
+  // Show a spinner while loading — never return null (causes blank white screen)
+  if (learningPlanLoading) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '60vh',
+      }}>
+        <div style={{
+          width: 28, height: 28,
+          border: '3px solid #E2E8F0', borderTopColor: '#38B2AC',
+          borderRadius: '50%',
+          animation: 'gate-spin 0.7s linear infinite',
+        }} />
+        <style>{`@keyframes gate-spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   // Redirect to journey if no learning plan
   if (!hasLearningPlan) {

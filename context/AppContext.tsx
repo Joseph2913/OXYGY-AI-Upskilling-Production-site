@@ -95,6 +95,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isSupabaseConfigured || !user) {
       setHasLearningPlan(false);
       setLearningPlanLoading(false);
+      // Don't mark initial load done — we haven't checked with a real user yet
       return;
     }
     // Only show loading spinner on the initial check, not background refreshes.
