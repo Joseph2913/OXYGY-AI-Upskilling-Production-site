@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Maximize2, Minimize2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Maximize2, Minimize2, ChevronDown, ChevronUp, User, Map, Target, Layout, List, ShieldCheck } from 'lucide-react';
 import { SlideData } from '../../../data/topicContent';
 
 /* ── Glow + animation keyframe CSS (injected once) ── */
@@ -726,12 +726,12 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Context Bar (Slide 6 — click cards to reveal) ── */
       case 'contextBar': {
         const BLUEPRINT = [
-          { key: 'ROLE', color: '#667EEA', light: '#EBF4FF', label: 'Who should the AI be?', detail: 'Tells the AI the expertise level and perspective to adopt', example: 'A senior professional with transformation experience', impact: 'Without this → generic assistant voice' },
-          { key: 'CONTEXT', color: '#38B2AC', light: '#E6FFFA', label: "What's the situation?", detail: 'Background, constraints, and what matters to the audience', example: 'Six weeks into rollout. Leadership cares about risk.', impact: 'Without this → no audience awareness' },
-          { key: 'TASK', color: '#ED8936', light: '#FFFBEB', label: 'What exactly to produce?', detail: 'Specific, unambiguous deliverable', example: 'Draft a stakeholder update covering progress, risks, next steps', impact: 'Without this → vague, unfocused output' },
-          { key: 'FORMAT', color: '#48BB78', light: '#F0FFF4', label: 'What shape and tone?', detail: 'Length, structure, style, constraints', example: 'Three short paragraphs. Professional tone. Max 300 words.', impact: 'Without this → wrong length, wrong tone' },
-          { key: 'STEPS', color: '#9F7AEA', light: '#FAF5FF', label: 'How should it think?', detail: 'The reasoning sequence to follow', example: 'First assess impact, then identify risks, then recommend actions', impact: 'Without this → random ordering' },
-          { key: 'CHECKS', color: '#F6AD55', light: '#FFFBEB', label: 'What rules must it follow?', detail: 'Validation constraints and quality gates', example: 'No generic phrases. Reference specific data points.', impact: 'Without this → filler and assumptions' },
+          { key: 'ROLE', icon: <User size={fs ? 22 : 18} />, color: '#667EEA', light: '#EBF4FF', label: 'Who should the AI be?', detail: 'Tells the AI the expertise level and perspective to adopt', example: 'A senior professional with transformation experience', impact: 'Without this → generic assistant voice' },
+          { key: 'CONTEXT', icon: <Map size={fs ? 22 : 18} />, color: '#38B2AC', light: '#E6FFFA', label: "What's the situation?", detail: 'Background, constraints, and what matters to the audience', example: 'Six weeks into rollout. Leadership cares about risk.', impact: 'Without this → no audience awareness' },
+          { key: 'TASK', icon: <Target size={fs ? 22 : 18} />, color: '#ED8936', light: '#FFFBEB', label: 'What exactly to produce?', detail: 'Specific, unambiguous deliverable', example: 'Draft a stakeholder update covering progress, risks, next steps', impact: 'Without this → vague, unfocused output' },
+          { key: 'FORMAT', icon: <Layout size={fs ? 22 : 18} />, color: '#48BB78', light: '#F0FFF4', label: 'What shape and tone?', detail: 'Length, structure, style, constraints', example: 'Three short paragraphs. Professional tone. Max 300 words.', impact: 'Without this → wrong length, wrong tone' },
+          { key: 'STEPS', icon: <List size={fs ? 22 : 18} />, color: '#9F7AEA', light: '#FAF5FF', label: 'How should it think?', detail: 'The reasoning sequence to follow', example: 'First assess impact, then identify risks, then recommend actions', impact: 'Without this → random ordering' },
+          { key: 'CHECKS', icon: <ShieldCheck size={fs ? 22 : 18} />, color: '#F6AD55', light: '#FFFBEB', label: 'What rules must it follow?', detail: 'Validation constraints and quality gates', example: 'No generic phrases. Reference specific data points.', impact: 'Without this → filler and assumptions' },
         ];
         const levelLabels = ['Empty', 'Minimal', 'Basic', 'Good', 'Rich', 'Strong', 'Complete'];
         const allRevealed = contextStep >= 6;
@@ -764,35 +764,26 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     key={bp.key}
                     onClick={() => setContextStep(revealed ? i : i + 1)}
                     style={{
-                      padding: fs ? '16px 20px' : '12px 14px', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
+                      padding: fs ? '18px 22px' : '14px 16px', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
                       border: `2px solid ${revealed ? bp.color : '#E2E8F0'}`,
                       background: revealed ? bp.light : '#F7FAFC',
-                      transition: 'border-color 0.25s ease, background 0.25s ease',
-                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                      transition: 'border-color 0.3s ease, background 0.3s ease',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: fs ? 10 : 8,
                       height: '100%', boxSizing: 'border-box' as const, overflow: 'hidden',
                     }}
                   >
-                    {/* Key name */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                      <span style={{ fontSize: fs ? 16 : 13, fontWeight: 900, color: revealed ? bp.color : '#CBD5E0', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{bp.key}</span>
-                      {!revealed && <span style={{ fontSize: 12, color: '#CBD5E0' }}>▸</span>}
+                    {/* Icon + KEY row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ color: revealed ? bp.color : '#CBD5E0', display: 'flex', transition: 'color 0.3s ease' }}>{bp.icon}</span>
+                      <span style={{ fontSize: fs ? 15 : 12, fontWeight: 900, color: revealed ? bp.color : '#CBD5E0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, transition: 'color 0.3s ease' }}>{bp.key}</span>
+                      {!revealed && <span style={{ fontSize: 11, color: '#CBD5E0', marginLeft: 'auto' }}>▸</span>}
                     </div>
-                    {/* Question — bigger + vertically centred when unrevealed */}
-                    <div style={{
-                      fontSize: fs ? (revealed ? 14 : 19) : (revealed ? 12 : 17),
-                      fontWeight: 700,
-                      color: revealed ? '#1A202C' : '#718096',
-                      lineHeight: 1.3,
-                      flex: revealed ? 0 : 1,
-                      display: 'flex', alignItems: 'center',
-                    }}>{bp.label}</div>
-                    {/* Revealed content */}
-                    {revealed && (
-                      <>
-                        <div style={{ fontSize: fs ? 13 : 11, color: '#2D3748', lineHeight: 1.5, flex: 1, overflow: 'hidden' }}>{bp.detail}</div>
-                        <div style={{ fontSize: fs ? 15 : 13, fontWeight: 700, color: bp.color, background: '#FFFFFF', border: `1px solid ${bp.color}44`, borderRadius: 8, padding: fs ? '8px 12px' : '6px 10px', flexShrink: 0 }}>{bp.impact}</div>
-                      </>
-                    )}
+                    {/* Question label — always rendered, same size */}
+                    <div style={{ fontSize: fs ? 18 : 15, fontWeight: 700, color: revealed ? '#1A202C' : '#718096', lineHeight: 1.3, flexShrink: 0, transition: 'color 0.3s ease' }}>{bp.label}</div>
+                    {/* Detail — always in DOM, hidden until revealed to lock card height */}
+                    <div style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.55, flex: 1, overflow: 'hidden', opacity: revealed ? 1 : 0, transition: 'opacity 0.3s ease' }}>{bp.detail}</div>
+                    {/* Impact badge — always in DOM, hidden until revealed */}
+                    <div style={{ fontSize: fs ? 15 : 13, fontWeight: 700, color: bp.color, background: '#FFFFFF', border: `1px solid ${bp.color}44`, borderRadius: 8, padding: fs ? '8px 12px' : '6px 10px', flexShrink: 0, opacity: revealed ? 1 : 0, transition: 'opacity 0.3s ease' }}>{bp.impact}</div>
                   </button>
                 );
               })}
