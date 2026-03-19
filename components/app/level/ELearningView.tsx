@@ -229,18 +229,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'l2-adoption-gap':
         return (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>THE ADOPTION GAP</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>THE ADOPTION GAP</div>
             <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: '#4A5568', marginBottom: 4, fontWeight: 600 }}>Individual AI usage</div>
-              <div style={{ height: 28, background: 'linear-gradient(90deg, #38B2AC, #2C9A94)', borderRadius: 6, width: '90%', display: 'flex', alignItems: 'center', paddingLeft: 12 }}>
-                <span style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 700 }}>HIGH</span>
+              <div style={{ fontSize: 13, color: '#4A5568', marginBottom: 4, fontWeight: 600 }}>Individual AI usage</div>
+              <div style={{ height: 32, background: 'linear-gradient(90deg, #38B2AC, #2C9A94)', borderRadius: 6, width: '90%', display: 'flex', alignItems: 'center', paddingLeft: 12 }}>
+                <span style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 700 }}>HIGH</span>
               </div>
             </div>
-            <div style={{ borderLeft: '2px dashed #FC8181', marginLeft: 20, padding: '6px 0 6px 14px', fontSize: 11, color: '#FC8181', fontWeight: 700 }}>Untapped value</div>
+            <div style={{ borderLeft: '2px dashed #FC8181', marginLeft: 20, padding: '6px 0 6px 14px', fontSize: 13, color: '#FC8181', fontWeight: 700 }}>Untapped value</div>
             <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 11, color: '#4A5568', marginBottom: 4, fontWeight: 600 }}>Team-wide standardised AI tools</div>
-              <div style={{ height: 28, background: '#A0AEC0', borderRadius: 6, width: '25%', display: 'flex', alignItems: 'center', paddingLeft: 12 }}>
-                <span style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 700 }}>LOW</span>
+              <div style={{ fontSize: 13, color: '#4A5568', marginBottom: 4, fontWeight: 600 }}>Team-wide standardised AI tools</div>
+              <div style={{ height: 32, background: '#A0AEC0', borderRadius: 6, width: '25%', display: 'flex', alignItems: 'center', paddingLeft: 12 }}>
+                <span style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 700 }}>LOW</span>
               </div>
             </div>
           </div>
@@ -249,9 +249,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'l2-diverging-paths':
         return (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>SAME TASK, THREE PEOPLE</div>
-            <div style={{ background: 'linear-gradient(135deg, #E6FFFA 0%, #EBF8FF 100%)', borderRadius: 8, padding: '8px 12px', marginBottom: 14, textAlign: 'center', border: '1.5px solid #38B2AC44' }}>
-              <span style={{ fontSize: 11, color: '#1E3A5F', fontWeight: 700 }}>Weekly status update</span>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>SAME TASK, THREE PEOPLE</div>
+            <div style={{ background: 'linear-gradient(135deg, #E6FFFA 0%, #EBF8FF 100%)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, textAlign: 'center', border: '1.5px solid #38B2AC44' }}>
+              <span style={{ fontSize: 13, color: '#1E3A5F', fontWeight: 700 }}>Weekly status update</span>
             </div>
             {[
               { who: 'You prompt', result: 'Output A', color: '#38B2AC' },
@@ -259,10 +259,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               { who: 'Colleague prompts', result: 'Output C (completely different)', color: '#FC8181' },
             ].map((path, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 4, height: 28, background: path.color, borderRadius: 2 }} />
+                <div style={{ width: 4, height: 32, background: path.color, borderRadius: 2 }} />
                 <div>
-                  <div style={{ fontSize: 10, color: '#718096', fontWeight: 600 }}>{path.who}</div>
-                  <div style={{ fontSize: 11, color: '#1A202C', fontWeight: 600 }}>{path.result}</div>
+                  <div style={{ fontSize: 12, color: '#718096', fontWeight: 600 }}>{path.who}</div>
+                  <div style={{ fontSize: 13, color: '#1A202C', fontWeight: 600 }}>{path.result}</div>
                 </div>
               </div>
             ))}
@@ -272,29 +272,29 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'l2-level-comparison':
         return (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>THE SHIFT</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>THE SHIFT</div>
             <div style={{ border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 14px', marginBottom: 12, background: '#FFFFFF' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', marginBottom: 6 }}>LEVEL 1</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', marginBottom: 6 }}>LEVEL 1</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {['Prompt', 'Answer', 'Done'].map((step, i) => (
                   <React.Fragment key={i}>
-                    <span style={{ fontSize: 11, color: '#718096', fontWeight: 600, padding: '4px 10px', background: '#F7FAFC', borderRadius: 6, border: '1px solid #E2E8F0' }}>{step}</span>
-                    {i < 2 && <span style={{ color: '#A0AEC0', fontSize: 12 }}>→</span>}
+                    <span style={{ fontSize: 13, color: '#718096', fontWeight: 600, padding: '4px 10px', background: '#F7FAFC', borderRadius: 6, border: '1px solid #E2E8F0' }}>{step}</span>
+                    {i < 2 && <span style={{ color: '#A0AEC0', fontSize: 14 }}>→</span>}
                   </React.Fragment>
                 ))}
               </div>
             </div>
             <div style={{ border: '2px solid #38B2AC', borderRadius: 10, padding: '12px 14px', background: '#E6FFFA' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', marginBottom: 6 }}>LEVEL 2</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#38B2AC', marginBottom: 6 }}>LEVEL 2</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 {['Defined Input', 'System Prompt', 'Structured Output'].map((step, i) => (
                   <React.Fragment key={i}>
-                    <span style={{ fontSize: 11, color: '#1A202C', fontWeight: 600, padding: '4px 10px', background: '#FFFFFF', borderRadius: 6, border: '1px solid #38B2AC44' }}>{step}</span>
-                    {i < 2 && <span style={{ color: '#38B2AC', fontSize: 12 }}>→</span>}
+                    <span style={{ fontSize: 13, color: '#1A202C', fontWeight: 600, padding: '4px 10px', background: '#FFFFFF', borderRadius: 6, border: '1px solid #38B2AC44' }}>{step}</span>
+                    {i < 2 && <span style={{ color: '#38B2AC', fontSize: 14 }}>→</span>}
                   </React.Fragment>
                 ))}
               </div>
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#38B2AC' }}>
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#38B2AC' }}>
                 <span>↻ Reusable</span>
                 <span style={{ color: '#E2E8F0' }}>·</span>
                 <span>👥 Shareable</span>
@@ -308,18 +308,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'l2-three-layers':
         return (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>AGENT ANATOMY</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>AGENT ANATOMY</div>
             {[
               { label: 'INPUT', desc: 'What goes in. Data format, required fields, what the user provides.', color: '#667EEA', light: '#EBF4FF' },
               { label: 'PROCESSING', desc: 'How it behaves. System prompt: role, task, steps, checks.', color: '#38B2AC', light: '#E6FFFA' },
               { label: 'OUTPUT', desc: 'What comes out. Structured format, JSON schema, consistent fields.', color: '#48BB78', light: '#F0FFF4' },
             ].map((layer, i) => (
               <React.Fragment key={i}>
-                <div style={{ borderLeft: `3px solid ${layer.color}`, background: layer.light, borderRadius: '0 8px 8px 0', padding: '10px 14px', marginBottom: i < 2 ? 4 : 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: layer.color, letterSpacing: '0.08em', marginBottom: 2 }}>{layer.label}</div>
-                  <div style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.4 }}>{layer.desc}</div>
+                <div style={{ borderLeft: `3px solid ${layer.color}`, background: layer.light, borderRadius: '0 8px 8px 0', padding: '12px 16px', marginBottom: i < 2 ? 4 : 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: layer.color, letterSpacing: '0.08em', marginBottom: 3 }}>{layer.label}</div>
+                  <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.4 }}>{layer.desc}</div>
                 </div>
-                {i < 2 && <div style={{ textAlign: 'center', color: '#A0AEC0', fontSize: 14, margin: '2px 0' }}>↓</div>}
+                {i < 2 && <div style={{ textAlign: 'center', color: '#A0AEC0', fontSize: 16, margin: '2px 0' }}>↓</div>}
               </React.Fragment>
             ))}
           </div>
@@ -328,8 +328,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'l2-hitl-output':
         return (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>ACCOUNTABILITY IN OUTPUT</div>
-            <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 14px', fontSize: 11, color: '#4A5568', lineHeight: 1.6, position: 'relative' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>ACCOUNTABILITY IN OUTPUT</div>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px', fontSize: 13, color: '#4A5568', lineHeight: 1.6, position: 'relative' }}>
               <div style={{ marginBottom: 8 }}>Project Alpha: <strong>On track</strong></div>
               {[
                 { label: 'Source cited', color: '#38B2AC', text: '[email from J. Lee, 7 Mar]' },
@@ -338,8 +338,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 { label: 'Anomaly flagged', color: '#FC8181', text: 'No update since 28 Feb' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', background: item.color, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{item.label}</span>
-                  <span style={{ fontSize: 10, color: '#718096', fontStyle: 'italic' }}>{item.text}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', background: item.color, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{item.label}</span>
+                  <span style={{ fontSize: 12, color: '#718096', fontStyle: 'italic' }}>{item.text}</span>
                 </div>
               ))}
             </div>
@@ -349,20 +349,20 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'l2-hub-spoke':
         return (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>BUILD ONCE, SHARE ALWAYS</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>BUILD ONCE, SHARE ALWAYS</div>
             {/* Centre: Agent node */}
             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#38B2AC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#FFFFFF', fontWeight: 700 }}>⚙</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#1A202C', marginTop: 4 }}>Agent</div>
-              <div style={{ fontSize: 9, color: '#38B2AC', fontWeight: 600, background: '#E6FFFA', padding: '2px 8px', borderRadius: 4, marginTop: 2 }}>+ Agent Card</div>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#38B2AC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, color: '#FFFFFF', fontWeight: 700 }}>⚙</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#1A202C', marginTop: 4 }}>Agent</div>
+              <div style={{ fontSize: 11, color: '#38B2AC', fontWeight: 600, background: '#E6FFFA', padding: '2px 8px', borderRadius: 4, marginTop: 2 }}>+ Agent Card</div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
               {['Team member 1', 'Team member 2', 'Team member 3', 'New joiner'].map((user, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <div style={{ width: 2, height: 16, background: '#E2E8F0' }} />
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: i === 3 ? '#F7E8A4' : '#F7FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>👤</div>
-                  <div style={{ fontSize: 9, color: i === 3 ? '#8A6A00' : '#718096', fontWeight: i === 3 ? 700 : 400 }}>{user}</div>
-                  {i === 3 && <div style={{ fontSize: 8, color: '#8A6A00', fontWeight: 600 }}>5 min to productive</div>}
+                  <div style={{ width: 2, height: 18, background: '#E2E8F0' }} />
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: i === 3 ? '#F7E8A4' : '#F7FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👤</div>
+                  <div style={{ fontSize: 11, color: i === 3 ? '#8A6A00' : '#718096', fontWeight: i === 3 ? 700 : 400 }}>{user}</div>
+                  {i === 3 && <div style={{ fontSize: 10, color: '#8A6A00', fontWeight: 600 }}>5 min to productive</div>}
                 </div>
               ))}
             </div>
@@ -451,28 +451,28 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Evidence (stat cards with real logos & descriptions) ── */
       case 'evidence':
         return (
-          <div style={{ padding: fs ? '40px 60px' : '24px 32px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {s.body && <p style={{ fontSize: fs ? 16 : 15, color: '#4A5568', lineHeight: 1.75, margin: '0 0 16px' }}>{s.body}</p>}
+          <div style={{ padding: fs ? '28px 48px' : '16px 24px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 14px' }}>{s.body}</p>}
             {s.stats && (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${s.stats.length}, 1fr)`, gap: 16, flex: 1 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${s.stats.length}, 1fr)`, gap: 12, flex: 1 }}>
                 {s.stats.map((stat, i) => (
-                  <div key={i} style={{ background: 'linear-gradient(180deg, #F7FAFC 0%, #FFFFFF 100%)', border: '1px solid #E2E8F0', borderRadius: 14, padding: fs ? '24px 20px' : '18px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={i} style={{ background: 'linear-gradient(180deg, #F7FAFC 0%, #FFFFFF 100%)', border: '1px solid #E2E8F0', borderRadius: 14, padding: fs ? '20px 16px' : '14px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center' }}>
                     {/* Logo */}
                     {stat.logoPath && (
-                      <div style={{ marginBottom: 10, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={stat.logoPath} alt={stat.source} style={{ height: 24, maxWidth: 120, objectFit: 'contain', opacity: 0.85 }} />
+                      <div style={{ marginBottom: 10, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={stat.logoPath} alt={stat.source} style={{ height: 28, maxWidth: 140, objectFit: 'contain', opacity: 0.85 }} />
                       </div>
                     )}
                     {/* Big stat value */}
-                    <div style={{ fontSize: fs ? 56 : 46, fontWeight: 800, color: stat.valueColour, lineHeight: 1, letterSpacing: '-0.02em' }}>{stat.value}</div>
+                    <div style={{ fontSize: fs ? 64 : 52, fontWeight: 800, color: stat.valueColour, lineHeight: 1, letterSpacing: '-0.02em' }}>{stat.value}</div>
                     {/* Stat label */}
-                    <div style={{ fontSize: fs ? 14 : 13, color: '#4A5568', lineHeight: 1.4, margin: '10px 0 6px', maxWidth: 220, fontWeight: 600 }}>{stat.label}</div>
+                    <div style={{ fontSize: fs ? 15 : 14, color: '#4A5568', lineHeight: 1.4, margin: '10px 0 6px', maxWidth: 220, fontWeight: 600 }}>{stat.label}</div>
                     {/* Description */}
                     {stat.desc && (
-                      <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.5, maxWidth: 220, marginTop: 4 }}>{stat.desc}</div>
+                      <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, maxWidth: 220, marginTop: 4 }}>{stat.desc}</div>
                     )}
                     {/* Source */}
-                    <div style={{ fontSize: 10, color: '#A0AEC0', fontStyle: 'italic', marginTop: 6 }}>{stat.source}</div>
+                    <div style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic', marginTop: 6 }}>{stat.source}</div>
                   </div>
                 ))}
               </div>
@@ -492,19 +492,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Evidence Hero (Slide 2 — two-column: text + big stat card) ── */
       case 'evidenceHero': {
         const stat = s.stats?.[0];
-        return (
-          <div style={{ padding: fs ? '36px 56px' : '20px 28px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+        return fs ? (
+          /* Fullscreen: two-column layout */
+          <div style={{ padding: '24px 44px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '55% 45%', gap: 20, flex: 1, alignItems: 'center' }}>
-              {/* Left */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                {s.body && <p style={{ fontSize: fs ? 16 : 15, color: '#4A5568', lineHeight: 1.75, maxWidth: 380, margin: 0 }}>{s.body}</p>}
+                {s.body && <p style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.75, maxWidth: 420, margin: 0 }}>{s.body}</p>}
               </div>
-              {/* Right — stat card */}
               {stat && (
                 <div style={{ padding: '28px 36px', borderRadius: 20, background: 'linear-gradient(135deg, #E6FFFA, #fff)', border: '2px solid #38B2AC', textAlign: 'center', animation: 'fadeInUp 0.4s ease' }}>
-                  <div style={{ fontSize: 24, color: '#38B2AC', marginBottom: 4 }}>{'\u2191'}</div>
-                  <div style={{ fontSize: 56, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{stat.value}</div>
-                  <div style={{ fontSize: 12, color: '#4A5568', marginTop: 8, maxWidth: 180, margin: '8px auto 0' }}>{stat.label}</div>
+                  <div style={{ fontSize: 28, color: '#38B2AC', marginBottom: 4 }}>{'\u2191'}</div>
+                  <div style={{ fontSize: 68, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{stat.value}</div>
+                  <div style={{ fontSize: 14, color: '#4A5568', maxWidth: 200, margin: '8px auto 0' }}>{stat.label}</div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '6px 12px' }}>
                     {stat.logoPath && <img src={stat.logoPath} alt={stat.source} style={{ height: 18, maxWidth: 100, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                     <span style={{ fontWeight: 700, fontSize: 11, color: '#1A202C' }}>{stat.source}</span>
@@ -512,9 +511,36 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 </div>
               )}
             </div>
-            {/* Bottom insight bar */}
             {s.pullQuote && (
-              <div style={{ marginTop: 14, padding: '12px 20px', borderLeft: '3px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 13, color: '#4A5568', lineHeight: 1.6 }}>
+              <div style={{ marginTop: 14, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
+                {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Inline: two-column, stat card centred within its column */
+          <div style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '55% 45%', gap: 16, flex: 1, alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                {s.body && <p style={{ fontSize: 15, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
+              </div>
+              {/* Right column: flex centres the card so it doesn't hug the edge */}
+              {stat && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div style={{ padding: '20px 28px', borderRadius: 20, background: 'linear-gradient(135deg, #E6FFFA, #fff)', border: '2px solid #38B2AC', textAlign: 'center', animation: 'fadeInUp 0.4s ease', maxWidth: 220, width: '100%' }}>
+                    <div style={{ fontSize: 22, color: '#38B2AC', marginBottom: 4 }}>{'\u2191'}</div>
+                    <div style={{ fontSize: 52, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{stat.value}</div>
+                    <div style={{ fontSize: 13, color: '#4A5568', maxWidth: 160, margin: '6px auto 0' }}>{stat.label}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '5px 10px' }}>
+                      {stat.logoPath && <img src={stat.logoPath} alt={stat.source} style={{ height: 16, maxWidth: 80, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                      <span style={{ fontWeight: 700, fontSize: 11, color: '#1A202C' }}>{stat.source}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {s.pullQuote && (
+              <div style={{ marginTop: 12, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
                 {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
               </div>
             )}
@@ -530,25 +556,25 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { label: 'Skilled prompters', sublabel: 'Invested in structured prompting techniques', gain: 122, barW: '100%', color: '#38B2AC', textColor: '#1A6B5F' },
         ];
         return (
-          <div style={{ padding: fs ? '36px 56px' : '20px 28px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, flex: 1 }}>
               {/* Left — body */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                {s.body && <p style={{ fontSize: fs ? 16 : 15, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
+                {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
               </div>
               {/* Right — diverging outcomes chart */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>PRODUCTIVITY GAIN — SAME AI TOOL</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>PRODUCTIVITY GAIN — SAME AI TOOL</div>
                 {outcomes.map((o, i) => (
                   <div key={i} style={{ marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
                       <div>
-                        <span style={{ fontSize: fs ? 12 : 11, fontWeight: 700, color: '#1A202C' }}>{o.label}</span>
-                        <span style={{ fontSize: fs ? 11 : 10, color: '#A0AEC0', marginLeft: 6 }}>{o.sublabel}</span>
+                        <span style={{ fontSize: fs ? 14 : 13, fontWeight: 700, color: '#1A202C' }}>{o.label}</span>
+                        <span style={{ fontSize: fs ? 12 : 11, color: '#A0AEC0', marginLeft: 6 }}>{o.sublabel}</span>
                       </div>
-                      <span style={{ fontSize: fs ? 14 : 13, fontWeight: 800, color: o.textColor }}>+{o.gain}%</span>
+                      <span style={{ fontSize: fs ? 16 : 14, fontWeight: 800, color: o.textColor }}>+{o.gain}%</span>
                     </div>
-                    <div style={{ height: fs ? 20 : 16, background: '#F7FAFC', borderRadius: 4, overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                    <div style={{ height: fs ? 24 : 20, background: '#F7FAFC', borderRadius: 4, overflow: 'hidden', border: '1px solid #E2E8F0' }}>
                       <div style={{ height: '100%', width: o.barW, background: o.color, borderRadius: 4, transition: 'width 0.6s ease' }} />
                     </div>
                   </div>
@@ -559,7 +585,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </div>
             </div>
             {s.pullQuote && (
-              <div style={{ marginTop: 14, padding: '12px 20px', borderLeft: '3px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 13, color: '#4A5568', lineHeight: 1.6 }}>
+              <div style={{ marginTop: 14, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
                 {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
               </div>
             )}
@@ -570,32 +596,35 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Pyramid (Slide 4 — two-column: text + pyramid stack) ── */
       case 'pyramid': {
         const pyramidLayers = [
-          { label: 'Applications', width: '38%', fill: '#E2E8F0', border: '1px solid #CBD5E0', fontWeight: 600, fontSize: 12, color: '#4A5568' },
-          { label: 'Dashboards', width: '50%', fill: '#FBCEB1', border: '1px solid #E8A882', fontWeight: 600, fontSize: 12, color: '#4A5568' },
-          { label: 'Workflows', width: '65%', fill: '#F7E8A4', border: '1px solid #D4C070', fontWeight: 600, fontSize: 12, color: '#4A5568' },
-          { label: 'AI Agents', width: '82%', fill: '#C3D0F5', border: '1px solid #A0B4E8', fontWeight: 600, fontSize: 12, color: '#4A5568' },
-          { label: 'Prompting', width: '100%', fill: '#38B2AC', border: '2px solid #2C9A94', fontWeight: 800, fontSize: 13, color: '#FFFFFF', active: true },
+          { label: 'Applications', width: '38%', fill: '#E2E8F0', border: '1px solid #CBD5E0', fontWeight: 600, fontSize: 13, color: '#4A5568' },
+          { label: 'Dashboards', width: '50%', fill: '#FBCEB1', border: '1px solid #E8A882', fontWeight: 600, fontSize: 13, color: '#4A5568' },
+          { label: 'Workflows', width: '65%', fill: '#F7E8A4', border: '1px solid #D4C070', fontWeight: 600, fontSize: 13, color: '#4A5568' },
+          { label: 'AI Agents', width: '82%', fill: '#C3D0F5', border: '1px solid #A0B4E8', fontWeight: 600, fontSize: 13, color: '#4A5568' },
+          { label: 'Prompting', width: '100%', fill: '#38B2AC', border: '2px solid #2C9A94', fontWeight: 800, fontSize: 15, color: '#FFFFFF', active: true },
         ];
         return (
-          <div style={{ padding: fs ? '36px 56px' : '20px 28px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
               {/* Left */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                {s.body && <p style={{ fontSize: fs ? 16 : 15, color: '#4A5568', lineHeight: 1.75, margin: '0 0 16px' }}>{s.body}</p>}
-                {s.pullQuote && (
-                  <div style={{ borderLeft: '3px solid #38B2AC', paddingLeft: 12, fontSize: 14, color: '#718096', lineHeight: 1.6, fontStyle: 'italic' }}>{s.pullQuote}</div>
-                )}
+                {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
               </div>
               {/* Right — pyramid */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
                 {pyramidLayers.map((layer, i) => (
-                  <div key={i} style={{ width: layer.width, margin: '0 auto', padding: '8px 14px', borderRadius: 6, background: layer.fill, border: layer.border, textAlign: 'center', fontSize: layer.fontSize, fontWeight: layer.fontWeight, color: layer.color, position: 'relative' }}>
+                  <div key={i} style={{ width: layer.width, margin: '0 auto', padding: '10px 16px', borderRadius: 6, background: layer.fill, border: layer.border, textAlign: 'center', fontSize: layer.fontSize, fontWeight: layer.fontWeight, color: layer.color, position: 'relative' }}>
                     {layer.label}
                     {layer.active && <span style={{ position: 'absolute', right: -90, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#2C9A94', fontWeight: 700, whiteSpace: 'nowrap' }}>{'\u25B8'} You are here</span>}
                   </div>
                 ))}
               </div>
             </div>
+            {/* Bottom pull-quote bar — same style as slides 2 & 3 */}
+            {s.pullQuote && (
+              <div style={{ marginTop: 14, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
+                {s.pullQuote}
+              </div>
+            )}
           </div>
         );
       }
@@ -1203,17 +1232,17 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { icon: '📐', label: 'Blueprint',      color: '#38B2AC', light: '#E6FFFA', when: 'Repeatable, high-stakes tasks — invest once, reuse every time' },
         ];
         return (
-          <div style={{ padding: fs ? '20px 32px' : '10px 14px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' as const, gap: 14 }}>
+          <div style={{ padding: fs ? '16px 28px' : '8px 12px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' as const, gap: 12 }}>
 
             {/* Section 1 — Prompt Blueprint (white card) */}
-            <div style={{ background: '#FFFFFF', borderRadius: 14, padding: fs ? '18px 22px' : '14px 18px', border: '1.5px solid #E2E8F0', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: 4 }}>The Prompt Blueprint</div>
-              <div style={{ fontSize: fs ? 14 : 13, color: '#4A5568', marginBottom: 12, lineHeight: 1.4 }}>Six components that give the AI everything it needs — and leave nothing to chance.</div>
+            <div style={{ background: '#FFFFFF', borderRadius: 14, padding: fs ? '16px 20px' : '12px 16px', border: '1.5px solid #E2E8F0', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: fs ? 13 : 12, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: 4 }}>The Prompt Blueprint</div>
+              <div style={{ fontSize: fs ? 15 : 14, color: '#4A5568', marginBottom: 10, lineHeight: 1.4 }}>Six components that give the AI everything it needs — and leave nothing to chance.</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, flex: 1 }}>
                 {BLUEPRINT_COMPONENTS.map((c, i) => (
                   <div key={i} style={{ background: c.light, border: `1.5px solid ${c.color}55`, borderRadius: 10, padding: fs ? '14px 16px' : '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-                    <div style={{ fontSize: fs ? 17 : 15, fontWeight: 900, color: c.color }}>{c.label}</div>
-                    <div style={{ fontSize: fs ? 14 : 12, color: '#4A5568', lineHeight: 1.4 }}>{c.desc}</div>
+                    <div style={{ fontSize: fs ? 19 : 17, fontWeight: 900, color: c.color }}>{c.label}</div>
+                    <div style={{ fontSize: fs ? 15 : 13, color: '#4A5568', lineHeight: 1.4 }}>{c.desc}</div>
                   </div>
                 ))}
               </div>
@@ -1221,15 +1250,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
             {/* Section 2 — The Approaches */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 10 }}>The Three Approaches</div>
+              <div style={{ fontSize: fs ? 13 : 12, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8 }}>The Three Approaches</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, flex: 1 }}>
                 {APPROACH_ITEMS.map((item, i) => (
                   <div key={i} style={{ background: item.light, border: `1.5px solid ${item.color}55`, borderTop: `3px solid ${item.color}`, borderRadius: 12, padding: fs ? '16px 18px' : '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: fs ? 22 : 18 }}>{item.icon}</span>
-                      <span style={{ fontSize: fs ? 17 : 14, fontWeight: 900, color: item.color }}>{item.label}</span>
+                      <span style={{ fontSize: fs ? 26 : 22 }}>{item.icon}</span>
+                      <span style={{ fontSize: fs ? 19 : 16, fontWeight: 900, color: item.color }}>{item.label}</span>
                     </div>
-                    <div style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.6, flex: 1 }}>
+                    <div style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.6, flex: 1 }}>
                       <span style={{ fontWeight: 700, color: item.color }}>Use when: </span>{item.when}
                     </div>
                   </div>
@@ -1269,10 +1298,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Tension Statement (single line, vertically centred) ── */
       case 'tensionStatement':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: '100%', padding: '40px 60px' }}>
-            <h2 style={{ fontSize: fs ? 32 : 26, fontWeight: 800, color: '#1A202C', lineHeight: 1.3, margin: '0 0 14px', maxWidth: 700, whiteSpace: 'nowrap' }}>{s.heading}</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: '100%', padding: '32px 48px' }}>
+            <h2 style={{ fontSize: fs ? 40 : 30, fontWeight: 800, color: '#1A202C', lineHeight: 1.3, margin: '0 0 14px', maxWidth: 700, whiteSpace: 'nowrap' }}>{s.heading}</h2>
             {s.subheading && (
-              <p style={{ fontSize: fs ? 20 : 17, color: '#1A202C', lineHeight: 1.5, maxWidth: 700, margin: '0 0 24px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: fs ? 24 : 20, color: '#1A202C', lineHeight: 1.5, maxWidth: 700, margin: '0 0 24px', fontWeight: 600, whiteSpace: 'nowrap' }}>
                 {s.tealPhrase ? <TealPhrase text={s.subheading} phrase={s.tealPhrase} /> : s.subheading}
               </p>
             )}
@@ -1283,9 +1312,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Gap Diagram (annotated prompt with RCTF underlines + animated insight) ── */
       case 'gapDiagram':
         return (
-          <div style={{ padding: fs ? '28px 48px' : '16px 28px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '20px 36px' : '12px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div>
-              {s.body && <p style={{ fontSize: fs ? 16 : 15, color: '#4A5568', lineHeight: 1.75, margin: '0 0 12px' }}>{s.body}</p>}
+              {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 12px' }}>{s.body}</p>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, minHeight: 0, marginBottom: 10 }}>
               {/* Limited Context */}
@@ -1332,31 +1361,31 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Toolkit Overview (Blueprint + Approaches + Amplifiers) ── */
       case 'toolkitOverview':
         return (
-          <div style={{ padding: fs ? '36px 56px' : '20px 28px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            {s.body && <p style={{ fontSize: fs ? 16 : 15, color: '#4A5568', lineHeight: 1.75, margin: '0 0 16px' }}>{s.body}</p>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+            {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 14px' }}>{s.body}</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
               {s.toolkitItems?.map((item, i) => (
-                <div key={i} style={{ display: 'flex', gap: 14, padding: '16px 18px', borderRadius: 14, border: `1px solid ${item.color}33`, background: `${item.color}06`, animation: `fadeInUp 0.4s ease ${i * 0.15}s both` }}>
-                  <div style={{ fontSize: 32, flexShrink: 0, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${item.color}15`, borderRadius: 12 }}>{item.icon}</div>
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 18px', borderRadius: 14, border: `1px solid ${item.color}33`, background: `${item.color}06`, animation: `fadeInUp 0.4s ease ${i * 0.15}s both` }}>
+                  <div style={{ fontSize: 36, flexShrink: 0, width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${item.color}15`, borderRadius: 12 }}>{item.icon}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', marginBottom: 3 }}>{item.label}</div>
-                    <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.5, marginBottom: 4 }}>{item.desc}</div>
-                    <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.4 }}><span style={{ fontWeight: 600, color: item.color }}>When to use:</span> {item.whenToUse}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', marginBottom: 3 }}>{item.label}</div>
+                    <div style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.5, marginBottom: 4 }}>{item.desc}</div>
+                    <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.4 }}><span style={{ fontWeight: 600, color: item.color }}>When to use:</span> {item.whenToUse}</div>
                     {item.relationship && (
-                      <div style={{ fontSize: 10, color: '#A0AEC0', marginTop: 3, fontStyle: 'italic' }}>{item.relationship}</div>
+                      <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 3, fontStyle: 'italic' }}>{item.relationship}</div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
             {/* Relationship connector */}
-            <div style={{ marginTop: 12, padding: '10px 16px', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0', textAlign: 'center' }}>
-              <span style={{ fontSize: 12, color: '#4A5568' }}>Blueprint = </span>
-              <span style={{ fontSize: 12, color: '#667EEA', fontWeight: 700 }}>what to include</span>
-              <span style={{ fontSize: 12, color: '#4A5568' }}> · Approaches = </span>
-              <span style={{ fontSize: 12, color: '#ED8936', fontWeight: 700 }}>how to deliver</span>
-              <span style={{ fontSize: 12, color: '#4A5568' }}> · Modifiers = </span>
-              <span style={{ fontSize: 12, color: '#9F7AEA', fontWeight: 700 }}>how the AI thinks</span>
+            <div style={{ marginTop: 10, padding: '10px 16px', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0', textAlign: 'center' }}>
+              <span style={{ fontSize: 13, color: '#4A5568' }}>Blueprint = </span>
+              <span style={{ fontSize: 13, color: '#667EEA', fontWeight: 700 }}>what to include</span>
+              <span style={{ fontSize: 13, color: '#4A5568' }}> · Approaches = </span>
+              <span style={{ fontSize: 13, color: '#ED8936', fontWeight: 700 }}>how to deliver</span>
+              <span style={{ fontSize: 13, color: '#4A5568' }}> · Modifiers = </span>
+              <span style={{ fontSize: 13, color: '#9F7AEA', fontWeight: 700 }}>how the AI thinks</span>
             </div>
           </div>
         );
@@ -1484,19 +1513,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'bridge':
         return (
           <div style={{ display: 'flex', gap: 0, height: '100%', overflow: 'hidden' }}>
-            <div style={{ flex: 1, background: '#38B2AC', padding: fs ? '48px 56px' : '28px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h2 style={{ fontSize: fs ? 28 : 22, fontWeight: 800, color: '#FFFFFF', margin: '0 0 10px', lineHeight: 1.2 }}>{s.heading}</h2>
-              <p style={{ fontSize: fs ? 16 : 14, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, margin: '0 0 16px' }}>{s.body}</p>
+            <div style={{ flex: 1, background: '#38B2AC', padding: fs ? '36px 48px' : '22px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <h2 style={{ fontSize: fs ? 34 : 26, fontWeight: 800, color: '#FFFFFF', margin: '0 0 10px', lineHeight: 1.2 }}>{s.heading}</h2>
+              <p style={{ fontSize: fs ? 18 : 16, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, margin: '0 0 16px' }}>{s.body}</p>
               {s.ctaText && s.ctaHref && (
-                <a href={s.ctaHref} style={{ display: 'inline-block', background: '#FFFFFF', color: '#38B2AC', fontWeight: 700, fontSize: 14, padding: '10px 24px', borderRadius: 24, textDecoration: 'none', alignSelf: 'flex-start' }}>{s.ctaText}</a>
+                <a href={s.ctaHref} style={{ display: 'inline-block', background: '#FFFFFF', color: '#38B2AC', fontWeight: 700, fontSize: 15, padding: '10px 24px', borderRadius: 24, textDecoration: 'none', alignSelf: 'flex-start' }}>{s.ctaText}</a>
               )}
             </div>
-            <div style={{ width: '40%', background: '#2C9A94', padding: fs ? '48px 40px' : '28px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              {s.panelHeading && <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', marginBottom: 12, lineHeight: 1.3 }}>{s.panelHeading}</div>}
+            <div style={{ width: '40%', background: '#2C9A94', padding: fs ? '36px 36px' : '22px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {s.panelHeading && <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', marginBottom: 12, lineHeight: 1.3 }}>{s.panelHeading}</div>}
               {s.panelItems && (
                 <ul style={{ margin: 0, padding: '0 0 0 16px', listStyleType: 'disc' }}>
                   {s.panelItems.map((item, i) => (
-                    <li key={i} style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, marginBottom: 6 }}>{item}</li>
+                    <li key={i} style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, marginBottom: 6 }}>{item}</li>
                   ))}
                 </ul>
               )}
@@ -1871,19 +1900,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       default:
         if (s.visualId) {
           return (
-            <div style={{ padding: fs ? '28px 48px' : '18px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: fs ? '20px 36px' : '12px 22px', display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ display: 'flex', gap: 16, flex: 1 }}>
                 {/* Left: text */}
                 <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column' }}>
-                  {s.body && <p style={{ fontSize: fs ? 15 : 14, color: '#4A5568', lineHeight: 1.75, margin: '0 0 12px', whiteSpace: 'pre-line' }}>{s.body}</p>}
+                  {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 12px', whiteSpace: 'pre-line' }}>{s.body}</p>}
                   {s.pullQuote && (
-                    <div style={{ borderLeft: '4px solid #38B2AC', background: '#E6FFFA', padding: '10px 14px', borderRadius: '0 8px 8px 0', fontSize: 13, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontStyle: 'italic', marginTop: 'auto' }}>
+                    <div style={{ borderLeft: '4px solid #38B2AC', background: '#E6FFFA', padding: '12px 16px', borderRadius: '0 8px 8px 0', fontSize: 15, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontStyle: 'italic', marginTop: 'auto' }}>
                       {s.pullQuote}
                     </div>
                   )}
                 </div>
                 {/* Right: visual panel */}
-                <div style={{ flex: '0 0 43%', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ flex: '0 0 43%', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '18px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   {renderConceptVisual(s.visualId, fs)}
                 </div>
               </div>
@@ -1891,10 +1920,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           );
         }
         return (
-          <div style={{ padding: fs ? '48px 80px' : '28px 40px' }}>
-            {s.body && <p style={{ fontSize: fs ? 18 : 16, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
+          <div style={{ padding: fs ? '36px 64px' : '22px 36px' }}>
+            {s.body && <p style={{ fontSize: fs ? 22 : 18, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
             {s.pullQuote && (
-              <div style={{ borderLeft: '4px solid #38B2AC', background: '#E6FFFA', padding: '12px 16px', borderRadius: '0 8px 8px 0', marginTop: 18, fontSize: 15, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontStyle: 'italic' }}>
+              <div style={{ borderLeft: '4px solid #38B2AC', background: '#E6FFFA', padding: '14px 18px', borderRadius: '0 8px 8px 0', marginTop: 18, fontSize: 17, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontStyle: 'italic' }}>
                 {s.pullQuote}
               </div>
             )}
@@ -1983,11 +2012,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const renderTakeaway = () => {
     if (!s.takeaway || s.type === 'courseIntro' || s.type === 'bridge') return null;
     return (
-      <div style={{ flexShrink: 0, padding: fs ? '18px 44px 14px' : '12px 20px 10px', borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+      <div style={{ flexShrink: 0, padding: fs ? '16px 44px 12px' : '10px 20px 8px', borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
         {s.section && (
-          <div style={{ fontSize: 9, fontWeight: 700, color: '#2B4C7E', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 3 }}>{s.section}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#2B4C7E', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 3 }}>{s.section}</div>
         )}
-        <div style={{ fontSize: fs ? 20 : 16, fontWeight: 800, color: '#1A202C', lineHeight: 1.25 }}>{s.takeaway}</div>
+        <div style={{ fontSize: fs ? 22 : 18, fontWeight: 800, color: '#1A202C', lineHeight: 1.25 }}>{s.takeaway}</div>
       </div>
     );
   };
@@ -2097,15 +2126,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         <div style={{ height: 2, background: '#E2E8F0' }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
-        <div style={{ width: '100%', height: 'calc(100vh - 260px)', minHeight: 380, maxHeight: 680, background: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
+        {/* Nav bar and slide content are both inside the fixed-height container so nothing overflows */}
+        <div style={{ width: '100%', height: 'calc(100vh - 260px)', minHeight: 440, maxHeight: 740, background: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
           {renderTakeaway()}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
             {renderSlide()}
           </div>
-        </div>
-        {currentSlide > 1 && (
-          <div style={{ borderTop: '1px solid #E2E8F0', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF' }}>
-            <button onClick={() => goToSlide(currentSlide - 1)} style={{ padding: '7px 18px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: '#1A202C', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {/* Nav bar lives inside the fixed container so it never pushes content offscreen */}
+          <div style={{ flexShrink: 0, borderTop: '1px solid #E2E8F0', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF' }}>
+            <button
+              onClick={() => goToSlide(currentSlide - 1)}
+              disabled={currentSlide === 1}
+              style={{ padding: '7px 18px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 13, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            >
               ← Previous
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -2119,7 +2152,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
