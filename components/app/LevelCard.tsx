@@ -331,7 +331,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
           {/* CTA button — level-coloured */}
           {isAccessible ? (
             <button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(level.levelNumber === 1 ? '/app/level-1' : '/app/level'); }}
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(level.levelNumber === 1 ? '/app/level-1' : `/app/level?level=${level.levelNumber}`); }}
               style={{
                 background: `${accent}30`,
                 color: accentDark,

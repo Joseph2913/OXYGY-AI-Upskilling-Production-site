@@ -1,5 +1,5 @@
 # STRUCTURE PRD: Oxygy E-Learning Module System
-### Version 1.0 — Replication Reference for New Modules
+### Version 1.1 — Replication Reference for New Modules
 
 > This document defines every technical and visual specification needed to build a new e-learning module from scratch. It covers architecture, player mechanics, all slide type layouts, interactive patterns, animations, and state management. Read this alongside CONTENT-PRD.md before building any new module.
 
@@ -211,6 +211,8 @@ Dots are clickable only for slides in the `visitedSlides` set. Clicking jumps to
 
 The Next button is a multi-stage content reveal controller before it becomes a slide navigator. It never simply navigates until all in-slide steps are complete.
 
+**The Next button label is always "Next →" regardless of what it will reveal.** Never change the label to describe the upcoming step (e.g. "See Tab 2 →"). The step counter inside the slide provides position context.
+
 ### Intercept Rules (evaluated in priority order)
 
 | Slide Type | Next Behavior |
@@ -353,7 +355,7 @@ Focus: border-color turns #38B2AC
 
 Navigation:
 - `← Back to slides` — left, plain text, `#A0AEC0`
-- `Continue to Practice →` — right, navy `#1A202C` bg, white text, pill shape. Fires `onCompletePhase()`.
+- `Continue to Practice →` — right, navy `#1A202C` bg, white text, pill shape. Fires `onCompletePhase()` and navigates to the **level-specific practice tool** — never hardcoded to one URL. Mapping: L1 → `/app/toolkit/prompt-playground`, L2 → `/app/toolkit`, L3 → `/app/level-3/workflow-canvas`, L4 → `/app/level-4/app-designer`, L5 → `/app/level-5/app-evaluator`. Derive the level from `courseIntro.levelNumber` in the slide data.
 
 ---
 
@@ -377,12 +379,28 @@ Two columns:
 
 ---
 
+### Evidence Slides (Beat 1 — Situation)
+
+**Every module opens with 2–3 evidence slides before moving to the tension beat.** These slides establish the real-world context that makes the module relevant. They do not need to share the same layout — the goal is to build a compelling case with varied visual rhythm, not to repeat the same template.
+
+All evidence slides must include:
+- **Takeaway header** (§5) — mandatory on every evidence slide
+- **Section label** — always `"THE REALITY"` or a module-specific equivalent
+- **Source citation** (§11) — whenever external data is referenced
+- **Pull-quote bar** (§15) — at least one evidence slide should include one
+
+Evidence slide layouts to draw from (mix and match per module):
+
+---
+
 ### `evidenceHero`
 Two columns (50%/50%):
 
 **Left:** Body text only — 15px, `#4A5568`, `lineHeight: 1.75`
 
-**Right:** Large stat card:
+**Right:** Stat card — **optional**. Use when a single strong statistic reinforces the left body text. Omit when the evidence is better conveyed through body text and pull-quote alone.
+
+When present:
 ```
 borderRadius: 24
 border: 2.5px solid #38B2AC
@@ -390,6 +408,8 @@ background: linear-gradient(to bottom right, #E6FFFA, #EBF8FF, #FFFFFF)
 box-shadow: 0 0 0 8px #38B2AC12
 ```
 Inside: ↑ arrow (32px teal) + stat value (88px fontWeight 900 teal) + label (16px `#2D3748`) + desc (13px `#718096`) + source badge (white pill, `border: 1px solid #E2E8F0`)
+
+When omitted: body text expands to fill the slide, or uses a two-column split with a pull-quote panel instead of a stat card.
 
 **Bottom (full width):** Pull-quote bar (see §15)
 
@@ -533,6 +553,8 @@ Instruction banner swaps when all 3 flipped. Clicking a card flips it. **Next be
 ---
 
 ### `persona` (predictFirst mechanic)
+**Optional per module.** Use when the goal is to show how a real person applies the framework to their specific situation. Not every topic needs persona slides — `situationalJudgment` covers the same judgment-building goal with less scaffolding.
+
 Three-stage engagement on a single slide. No navigation between stages.
 
 **Stage 1 — Predict:**
@@ -556,17 +578,27 @@ Three-stage engagement on a single slide. No navigation between stages.
 ---
 
 ### `situationalJudgment`
-Multi-scenario judgment exercise with persona tabs.
+The primary mechanism for judgment-building. Preferred over `persona` when the goal is response-selection practice rather than technique demonstration. Every module should include at least one `situationalJudgment` slide — persona slides are optional.
+
+**Layout:** Content must fill the full slide frame. No large white space areas. All sections — persona header, scenario card, option buttons, and feedback — must occupy the available height. Use `flex: 1` on expanding regions and ensure cards stretch to fill their allocated space.
 
 **Persona tabs (top):** Pill buttons. Active = navy bg white text. Inactive = `#F7FAFC` gray text.
 
 **Persona header card:** `background: #F7FAFC, border: 1px solid #E2E8F0`, icon + name + role
 
-**Scenario card:** White, `borderRadius: 10, border: 1px solid #E2E8F0`. Animates in with `slideInRight 0.3s ease` on scenario switch.
+**Scenario card:** White, `borderRadius: 10, border: 1px solid #E2E8F0`. Animates in with `slideInRight 0.3s ease` on scenario switch. Font size `18px` fullscreen / `16px` inline, `fontWeight: 700`. **Must always be visually larger than the option buttons** — this hierarchy is non-negotiable.
 
-**Three option buttons:** Side-by-side, `flex: 1`, equal width. No submit — selecting = immediate feedback. Option border/bg updates: strongest → green, selected-but-wrong → orange, unselected → no change.
+**Three option buttons:** Side-by-side, equal width, **fixed height** — option cards must use a fixed pixel height (`height: 90px` fullscreen / `75px` inline). They must never grow or shrink when the feedback panel reveals. No submit — selecting = immediate feedback. Option button font size must always be **smaller** than the scenario card text — use `15px` fullscreen / `13px` inline (`fontWeight: 600`).
 
-**Feedback card:** Quality-coded bg. Eyebrow label: `"STRONGEST CHOICE"` / `"COULD WORK"` / `"NOT THE BEST FIT"`.
+**Option label length rule:** When the judgment being tested is a simple binary decision (e.g. "should I build a workflow?", "keep or remove this step?"), options must be **"Yes"** and **"No"** only — two cards, no third option. Never add a "Maybe" or "It depends" option. The feedback card explains the nuance. Reserve longer option text only for scenarios where the options are meaningfully different techniques or approaches (e.g. choosing between named node types or mapping methods).
+
+Option styling:
+- **All unselected:** Colored background using the option's quality color at low opacity (`{color}08`), matching border (`{color}33`). Never plain white or gray — every option card is colored from the start.
+- **After selection — strongest:** Green fill `#F0FFF4`, border `#68D391`, `#276749` text
+- **After selection — selected-but-not-strongest:** Orange fill `#FFFBEB`, border `#F6AD55`, `#C05621` text
+- **After selection — unselected remaining:** Muted but still colored, reduced opacity
+
+**Feedback card:** Quality-coded bg. Eyebrow label: `"STRONGEST CHOICE"` / `"COULD WORK"` / `"NOT THE BEST FIT"`. Appears below the option cards using a `maxHeight` transition — must never push or resize the option cards above it. Feedback body text must be the **same font size as the option button text** (`15px` fullscreen / `13px` inline) for visual consistency across all response elements.
 
 **Next behavior:** Cycles through all scenarios before advancing. Switching scenario tab resets the selected option.
 
@@ -1018,16 +1050,114 @@ Follows the same player shell as the e-learning player (same dimensions, same na
 
 ## 19. Minimum Slide Set per Module
 
-Every new module must include at minimum these four slide types, mapping to the five-beat narrative arc:
+Every new module must follow this structure, mapping to the five-beat narrative arc:
 
-| Slide Type | Beat | Purpose |
-|-----------|------|---------|
-| `evidenceHero` or `evidenceHero`/`chart` | Beat 1 — Situation | Evidence-led opening |
-| `contextBar` | Beat 3 — Concept | Framework reveal, click-to-explore |
-| `scenarioComparison` | Beat 4 — Contrast | Technique applied vs not applied |
-| `situationalJudgment` | Beat 5 — Bridge | Real-world judgment exercise |
+| Slide Type | Beat | Count | Required? |
+|-----------|------|-------|-----------|
+| `courseIntro` | — | 1 | **Mandatory** — always slide 1 |
+| Evidence slides (`evidenceHero`, `chart`, `rctf`, or any layout) | Beat 1 — Situation | **2–3** | **Mandatory** — layouts may vary; all must include takeaway header and source citation |
+| `tensionStatement` | Beat 2 — Tension | 1 | **Mandatory** |
+| `concept`, `rctf`, or `contextBar` | Beat 3 — Concept | 1–2 | **Mandatory** |
+| `comparison` or `scenarioComparison` | Beat 4 — Contrast | 1 | **Mandatory** |
+| `persona` (predictFirst) | Beat 3–4 support | 0–2 | **Optional** — only when showing a named person's application adds value |
+| `situationalJudgment` | Beat 5 — Bridge | 1 | **Mandatory** — always included |
+| `bridge` or `moduleSummary` | — | 1 | **Mandatory** — always the last slide |
 
-The `courseIntro` slide always comes first (slide 0). The `bridge` or `moduleSummary` always comes last before the Reflection screen.
+**Evidence slides:** Use 2–3 evidence slides to build the Beat 1 case. They must not all use the same layout — vary between `evidenceHero`, `chart`, `concept`, or a custom two-column layout. Each must have a takeaway header, section label (`"THE REALITY"`), and source citation where applicable.
+
+**Persona guidance:** Persona slides are optional. Use `situationalJudgment` as the primary judgment mechanic. Add persona slides only when showing how a specific person applies the technique adds meaningful context that scenarios alone do not provide.
+
+The `courseIntro` slide always comes first. The `bridge` or `moduleSummary` always comes last before the Reflection screen.
+
+---
+
+## 20. Test What You Teach — Content Integrity Rule
+
+**Every concept, term, node type, or decision pattern tested in a `situationalJudgment` or `persona` slide must have been explicitly introduced earlier in the same module.**
+
+This is a non-negotiable content integrity rule. Learners should never encounter a question that requires knowledge the module has not yet provided.
+
+### What counts as "introduced"
+- Named in a `concept`, `rctf`, or `contextBar` slide with a definition or example
+- Shown in a `comparison` or `scenarioComparison` slide as a contrast
+- Explained in a `persona` slide that precedes the judgment slide
+- Stated in the `tensionStatement` as a core claim the module substantiates
+
+### What does NOT count
+- Appearing only in the `courseIntro` objectives list
+- Being referenced in a pull quote without explanation
+- Being assumed as general knowledge
+
+### How to check before publishing
+Before finalising any `situationalJudgment` scenario, answer:
+1. *What concept or skill is this scenario testing?*
+2. *Which earlier slide introduced it?*
+
+If you cannot answer both questions, the scenario must be simplified or a teaching slide must be added first.
+
+### Common violation patterns to avoid
+- Testing node type names (e.g. CONDITION, HANDOFF) before the `rctf` or `concept` slide that defines them
+- Testing a mapping approach (trigger-first, output-first) before the `persona` slides that demonstrate them
+- Using technical vocabulary in options that has not appeared in the module body
+
+---
+
+## 21. Teach → Activity Structure — One Activity per Major Concept
+
+**Every major teaching concept in a module must have an associated activity slide that tests it before the learner moves on.**
+
+This is a non-negotiable learning design rule. A concept that is explained but never tested is a concept that doesn't stick.
+
+### What counts as a "major concept"
+A concept is major if it:
+- Is named in the `courseIntro` learning objectives
+- Is a framework component (e.g. a layer, a node type, an approach) that the module's `situationalJudgment` or `persona` slides depend on
+- Requires learners to make a decision or identification using it later in the module
+
+### Required structure per major concept
+
+```
+Concept slide (concept / rctf / contextBar) → Activity slide (quiz / situationalJudgment)
+```
+
+The activity slide must immediately follow (or be within 1–2 slides of) the concept it tests. Learners should practice while the concept is fresh.
+
+### Activity quality rules
+- The activity must test the specific concept taught — not a variation, not a related concept
+- There must be exactly one clearly correct answer
+- Wrong options must be plausible but distinguishable by someone who understood the teaching slide
+- The explanation must reference the concept by name and reinforce why the correct answer is right
+- Activity questions must use vocabulary that appeared in the teaching slide — no new terms
+
+### Next button behavior on quiz activity slides
+Quiz slides with body teaching content (the `s.body` field is present) auto-reveal the correct answer on Next if the learner skips — they are not hard-blocked. This is intentional: the quiz is a learning tool, not a gate. The learner sees the correct answer and explanation either way.
+
+### Layer concept example (L3 reference implementation)
+For Level 3 Topic 1, each of the three workflow layers (Input, Processing, Output) has:
+1. A concept overview slide (slide 6) showing all three layers together
+2. A dedicated quiz slide per layer (slides 7, 8, 9) with:
+   - Body text: what the layer contains, which node types live there, and an example
+   - An `ACTIVITY` divider (visual separator rendered by the quiz type when `s.body` is present)
+   - A question testing node type identification within that layer
+   - Three options, one correct, with an explanation
+
+This structure ensures every node type is introduced, explained, and tested before it appears in the `situationalJudgment` slide.
+
+### `quiz` slide with body — field reference
+```typescript
+{
+  section: "THE LAYERS",
+  type: "quiz",
+  takeaway: "...",          // shown in the takeaway header bar
+  heading: "The X Layer",   // slide heading
+  quizEyebrow: "X LAYER",  // shown inside the teaching box (all caps)
+  body: "...",              // teaching content — renders above the ACTIVITY divider
+  question: "...",          // the activity question (larger text)
+  quizOptions: ["A", "B", "C"],
+  correct: 1,               // zero-indexed
+  explanation: "...",       // shown after answer is revealed
+}
+```
 
 ---
 

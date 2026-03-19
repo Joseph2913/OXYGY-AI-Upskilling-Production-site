@@ -40,6 +40,7 @@ export interface SlideData {
   /* source logos for evidence slides */
   sourceLogo?: boolean;
   pullQuote?: string;
+  revealOnNext?: boolean;
   stats?: Array<{ value: string; valueColour: string; label: string; source: string; desc?: string; logoPath?: string }>;
   scenarios?: ScenarioData[];
   ctaText?: string;
@@ -72,6 +73,7 @@ export interface SlideData {
   correct?: number;
   explanation?: string;
   quizEyebrow?: string;
+  eyebrow?: string;
   /* Comparison slide fields */
   scenario?: string;
   tabs?: Array<{ label: string; prompt: string; annotation: string }>;
@@ -116,6 +118,8 @@ export interface SlideData {
   /* External source citation (shown as a small link at the bottom of the slide) */
   sourceLink?: string;
   sourceText?: string;
+  /* Approach cards — used by approachIntro (L1) and data-driven moduleSummary (L3+) */
+  approaches?: Array<{ icon: string; label?: string; name?: string; color: string; light: string; when?: string; tagline?: string; how?: string; connection?: string }>;
 }
 
 export interface ScenarioData {
@@ -352,7 +356,7 @@ const L1T1_SLIDES: SlideData[] = [
     },
   },
 
-  /* ── Slide 9 — Marcus the Structured Input Provider ── */
+  /* ── Slide 10 — Marcus the Structured Input Provider ── */
   { section: "THE APPROACHES", type: "persona",
     takeaway: "What would you do in this situation?",
     heading: "Marcus — Delivery Lead",
@@ -666,6 +670,345 @@ const L2T1_VIDEOS: VideoData[] = [
 
 
 /* ══════════════════════════════════════════════════════════════════
+   LEVEL 3, TOPIC 1 — Mapping a Multi-Step AI Workflow
+   ══════════════════════════════════════════════════════════════════ */
+
+const L3T1_SLIDES: SlideData[] = [
+
+  /* ── Slide 1 — Course Intro ── */
+  {
+    section: "WORKFLOW DESIGN", type: "courseIntro",
+    heading: "Mapping a Multi-Step AI Workflow",
+    subheading: "Most professionals use AI one step at a time. This module teaches you to think in processes — mapping triggers, actions, conditions, and handoffs into repeatable workflows.",
+    levelNumber: 3,
+    topicIcon: "🗺️",
+    estimatedTime: "~20 min",
+    objectives: [
+      "🗺️ The three-layer model — inputs, processing, and outputs — and how every workflow is built from them",
+      "🔁 How to translate a familiar professional process into a mapped, node-based workflow",
+      "⚠️ Where handoffs between steps create risk or opportunity — and how to design for both",
+    ],
+  },
+
+  /* ── Slide 2 — The Process Gap Is Real ── */
+  {
+    section: "THE REALITY", type: "evidenceHero",
+    takeaway: "Most AI projects stall at isolated tasks — workflow automation is where the real gains are",
+    heading: "The task-to-workflow gap.",
+    tealWord: "task-to-workflow gap",
+    body: "Professionals are using AI tools — but mostly for isolated, one-off tasks. The organisations seeing 3× to 4× productivity gains aren't using AI more often. They're chaining it across connected, multi-step workflows.",
+    stats: [{ value: "24%", valueColour: "#38B2AC", label: "of organisations have moved beyond individual AI tasks to coordinated workflow automation", source: "McKinsey", desc: "Global Survey on AI, 2024" }],
+    pullQuote: "The frontier isn't a better prompt. It's a process that runs itself.",
+    sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
+    sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
+  },
+
+  /* ── Slide 3 — The Performance Gap ── */
+  {
+    section: "THE REALITY", type: "evidenceHero",
+    takeaway: "Top AI performers are 3.4× more likely to have integrated AI across connected workflows — not just deployed it as a standalone tool",
+    heading: "The gap is widening.",
+    tealWord: "widening",
+    body: "Organisations in the top quartile for AI productivity aren't using better models — they're using AI differently. McKinsey's 2024 global survey found that high performers are 3.4× more likely to have embedded AI across connected, multi-step workflows rather than deploying it as a single-purpose tool. The difference is process design, not model access.",
+    stats: [{ value: "3.4×", valueColour: "#38B2AC", label: "more likely to integrate AI across enterprise-wide workflows vs. using it as a standalone tool", source: "McKinsey", desc: "The State of AI: Global Survey, 2024" }],
+    pullQuote: "The competitive gap isn't between companies using AI and those that aren't. It's between those who chain it and those who silo it.",
+  },
+
+  /* ── Slide 4 — Adoption vs. Integration ── */
+  {
+    section: "THE REALITY", type: "evidenceHero",
+    takeaway: "75% of knowledge workers use AI tools — but most use them as one-off assistants, not as parts of a designed process",
+    heading: "Adoption is high. Integration is rare.",
+    tealWord: "Integration is rare",
+    body: "The 2024 Microsoft Work Trend Index found that 75% of knowledge workers now use AI tools at work. But the vast majority are using AI as a personal assistant — one prompt at a time, with no connection to the next step. Productivity gains stay individual and non-transferable. Workflows are what turn personal AI use into team capability that compounds.",
+    pullQuote: "Personal productivity doesn't scale. Workflow design does.",
+    footnote: "Source: Microsoft Work Trend Index Annual Report (2024) — survey of 31,000 people across 31 countries.",
+  },
+
+  /* ── Slide 5 — You've Learned to Prompt ── */
+  {
+    section: "THE GAP", type: "tensionStatement",
+    takeaway: "A prompt is a request. A workflow is a system. The next skill is building the system.",
+    heading: "You've learned to prompt.",
+    subheading: "But a prompt is a request. A workflow is a system.",
+    tealPhrase: "a prompt is a request. A workflow is a system.",
+    body: "The next skill gap isn't writing better prompts — it's knowing which steps connect, what triggers each one, where a human must review, and what the output feeds into next.",
+    footnote: "Most people who consider themselves 'good at AI' are still thinking one step at a time.",
+  },
+
+  /* ── Slide 6 — When Does a Workflow Make Sense? ── */
+  {
+    section: "THE TECHNIQUE", type: "concept",
+    takeaway: "A workflow adds value when a process is repetitive, structured, and has a defined output",
+    heading: "Not every task needs a workflow.",
+    tealWord: "needs a workflow",
+    eyebrow: "WHEN TO USE ONE",
+    body: "A workflow is the right tool when a process runs repeatedly, follows consistent steps, has a clear trigger, and produces a defined output. If the same task runs weekly, involves structured decisions, and needs to be consistent across a team — it's a strong candidate.\n\nA workflow is not the right tool when the task is a one-off, when every instance requires a different judgment call, when volume is too low to justify the design effort, or when the process itself isn't stable yet. Automating a process you don't fully understand just makes the problem run faster.\n\nThe test: if this ran a hundred times, would the right output look broadly the same each time? If yes — design a workflow. If not — keep it as a prompt.",
+    pullQuote: "Automate the repetitive. Keep the judgment.",
+  },
+
+  /* ── Slide 7 — Workflow or Not? (Activity) ── */
+  {
+    section: "THE TECHNIQUE", type: "situationalJudgment",
+    takeaway: "Apply the workflow decision test to real tasks from three different roles",
+    heading: "Workflow or not?",
+    scenarios: [
+      {
+        personaName: "Lena",
+        personaRole: "HR Manager",
+        scenario: "Every time a new employee joins, Lena manually sends a welcome email, shares an onboarding document pack, creates a system account request, and schedules a Day 1 check-in. The steps are always the same — the only variable is the employee's name and start date. Should Lena build a workflow?",
+        options: ["Yes", "No"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Exactly right. The trigger is clear (new hire confirmed), the steps are fixed, and the output is always the same set of actions. Personalisation — name, start date — is just data the workflow receives. This is a textbook workflow candidate." },
+          { quality: "weak", text: "A workflow doesn't remove the personal touch — it ensures it happens consistently. The steps Lena does manually are identical every time. A workflow handles the repetitive parts and frees Lena's attention for the genuinely personal moments." },
+        ],
+      },
+      {
+        personaName: "Ravi",
+        personaRole: "Senior Strategy Consultant",
+        scenario: "A client has escalated a complaint about a project that went over budget. Ravi needs to review six months of project history, understand the client relationship context, and decide whether to offer a partial refund, a discount on future work, or simply a detailed explanation. Should Ravi build a workflow?",
+        options: ["Yes", "No"],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Consistency matters for routine complaints, but this case requires Ravi to weigh context that changes significantly from client to client. A workflow would force a structured response onto a situation that needs genuine judgment." },
+          { quality: "strong", text: "Correct. The decision depends on relationship history, risk appetite, and strategic context — none of which can be reliably encoded as rules. Ravi should handle this as a one-off, with AI as a thinking tool if helpful, not as an automated step." },
+        ],
+      },
+      {
+        personaName: "Diane",
+        personaRole: "Marketing Manager",
+        scenario: "Diane's team receives inbound press enquiries by email. Each one needs to be categorised (media, analyst, or blogger), checked against a media list, and either forwarded to the PR lead or logged as low priority. The volume is two to three per day and the routing logic is always the same. Should Diane build a workflow?",
+        options: ["Yes", "No"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Right. The trigger is clear (email arrives), the logic is rule-based (media list check + category routing), and the output is always the same type of action. Volume is low but the process is perfectly suited to a workflow." },
+          { quality: "weak", text: "Low volume doesn't disqualify a workflow — even two to three requests a day adds up to 600–900 per year. Consistent categorisation and routing at that scale is worth automating." },
+        ],
+      },
+    ],
+  },
+
+  /* ── Slide 8 — The Anatomy of an AI Workflow ── */
+  {
+    section: "THE TECHNIQUE", type: "concept",
+    takeaway: "Every AI workflow has three layers: Input → Processing → Output",
+    heading: "The Anatomy of an AI Workflow",
+    tealWord: "Anatomy",
+    body: "Every multi-step AI workflow is built from three layers.\n\nThe Input layer captures what triggers the workflow and what data it needs. The Processing layer chains AI actions, transformations, and conditional logic. The Output layer delivers results, routes them to the right place, and surfaces them for human review.\n\nMost people operate only in the middle — missing the connective tissue at either end.",
+    pullQuote: "Without defined triggers and outputs, your AI workflow is just a series of prompts waiting for someone to remember them.",
+    visualId: "l3-workflow-anatomy",
+  },
+
+  /* ── Slide 9 — The Three Layers (reveal) ── */
+  {
+    section: "THE LAYERS", type: "rctf",
+    revealOnNext: true,
+    takeaway: "Every AI workflow has three layers — each with a distinct job",
+    heading: "The Three Layers",
+    tealWord: "Three Layers",
+    subheading: "Click Next to explore each layer.",
+    visualId: "l3-workflow-anatomy",
+    elements: [
+      {
+        key: "INPUT LAYER",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "📥",
+        desc: "Every workflow starts with two things: a starting event and the data it needs. Without a defined trigger, the workflow has no way of knowing when to run.",
+        example: "A form submitted · A file arriving · A scheduled time · A message received",
+        whyItMatters: "Nothing runs until a starting event is defined",
+      },
+      {
+        key: "PROCESSING LAYER",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "⚙️",
+        desc: "This is where the actual work happens. AI steps, conditional logic, and data transformations chain together to turn inputs into something useful.",
+        example: "AI reads brief · Checks budget threshold · Reformats into template",
+        whyItMatters: "This is where input becomes output",
+      },
+      {
+        key: "OUTPUT LAYER",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "📤",
+        desc: "Results are delivered here — to a person for review, or directly to a destination. A well-designed output makes the final step as frictionless as possible.",
+        example: "Document saved · Message sent · Manager review triggered · Record updated",
+        whyItMatters: "Every workflow ends with something delivered",
+      },
+    ],
+  },
+
+  /* ── Slide 10 — The Six Node Types ── */
+  {
+    section: "THE TECHNIQUE", type: "rctf",
+    revealOnNext: true,
+    takeaway: "Six node types cover every step in every workflow — learn to spot them",
+    heading: "The Six Node Types",
+    tealWord: "Six Node Types",
+    subheading: "Every workflow step is one of six types. Learn to recognise them — and you can map any process.",
+    elements: [
+      { key: "TRIGGER",    color: "#667EEA", light: "#EBF4FF", desc: "Starts the workflow. A user action, a schedule, an event.",     example: "Form submitted / Email arrives / Monday 9 am",          whyItMatters: "No trigger = no automation" },
+      { key: "AI ACTION",  color: "#38B2AC", light: "#E6FFFA", desc: "A step where an AI model does the work.",                        example: "Classify intent / Summarise document / Draft reply",      whyItMatters: "The value step — where AI generates output" },
+      { key: "TRANSFORM",  color: "#ED8936", light: "#FFFBEB", desc: "Reformats or restructures data between steps.",                  example: "Extract fields from text / Merge two responses",          whyItMatters: "Connects outputs to the next step's inputs" },
+      { key: "CONDITION",  color: "#48BB78", light: "#F0FFF4", desc: "Routes the workflow based on a rule.",                           example: "Confidence < 80%? → Escalate / Else → Continue",         whyItMatters: "Makes the workflow adaptive, not brittle" },
+      { key: "HANDOFF",    color: "#9F7AEA", light: "#FAF5FF", desc: "Passes work to a human or another system.",                      example: "Manager review / CRM update / Slack notification",        whyItMatters: "Human oversight and cross-system action" },
+      { key: "OUTPUT",     color: "#F6AD55", light: "#FFFAF0", desc: "The final result — a document, a decision, a message.",          example: "Drafted report / Approved response / Updated record",     whyItMatters: "The thing the workflow exists to produce" },
+    ],
+  },
+
+  /* ── Slide 11 — See It in Action: Example Workflow ── */
+  {
+    section: "THE TECHNIQUE", type: "concept",
+    takeaway: "A mapped workflow ties all three layers together into something that runs on its own",
+    heading: "A workflow in action.",
+    tealWord: "in action",
+    body: "Here's a complete example: an expense claim workflow.\n\nWhen a new expense email arrives, the workflow triggers automatically. The Processing Layer extracts the claim data, checks if it exceeds the approval threshold, and formats a summary. The Output Layer routes large claims to a manager for review — and sends everything else straight to the finance system.\n\nThis is the three-layer structure in practice: a trigger starts it, processing handles the logic, and the output delivers the result.",
+    pullQuote: "Every step has a purpose. Nothing runs on memory.",
+    visualId: "l3-example-workflow",
+  },
+
+  /* ── Slide 12 — Handoffs: Where Risk and Opportunity Meet ── */
+  {
+    section: "THE TECHNIQUE", type: "concept",
+    takeaway: "Every handoff is a decision point — design it deliberately or leave it to chance",
+    heading: "Handoffs: where things go right or wrong.",
+    tealWord: "right or wrong",
+    eyebrow: "LEARNING OBJECTIVE 3",
+    body: "A handoff is any point where work passes from one step to the next — between AI nodes, from AI to a human, or from your workflow to another system.\n\nHandoffs create risk when they're implicit. If a step assumes the previous one completed correctly — but there's no check — errors travel silently downstream. By the time someone notices, the damage is already done.\n\nHandoffs create opportunity when they're explicit. A deliberate handoff to a human reviewer catches errors before they matter. A handoff to another system triggers the next part of a larger process. A conditional handoff routes high-stakes cases for approval while letting routine ones through automatically.\n\nThe goal isn't to minimise handoffs — it's to design each one with intent.",
+    pullQuote: "An undesigned handoff is just a gap waiting to cause a problem.",
+  },
+
+  /* ── Slide 13 — Apply It: Situational Judgment ── */
+  {
+    section: "IN PRACTICE", type: "situationalJudgment",
+    takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
+    heading: "Apply It: Workflow Design Decisions",
+    scenarios: [
+      {
+        personaName: "Alex",
+        personaRole: "Marketing Coordinator",
+        scenario: "Alex is mapping a workflow. A client brief arrives by email → the AI extracts key themes → the AI formats the content into a standard template → the final document is emailed to the client. She's unsure where each step sits. Which layer does the formatting step belong to?",
+        options: [
+          "Input Layer — it's working with data that arrived in the email",
+          "Processing Layer — it transforms the extracted content into a new structure",
+          "Output Layer — it produces the final document the client will receive",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "The Input Layer captures the trigger and incoming data — in this case, the email arriving. Formatting happens after that data has already been received and processed. It belongs in the middle layer." },
+          { quality: "strong", text: "Correct. Formatting is a Processing Layer step — it takes extracted content and reshapes it into a new structure. The Processing Layer handles all AI work, logic, and transformation between what arrives and what gets delivered." },
+          { quality: "partial", text: "The Output Layer is where the final document is delivered — the email to the client. But formatting it is the step before that. Transformation belongs in the Processing Layer; delivery belongs in the Output Layer." },
+        ],
+      },
+      {
+        personaName: "Priya",
+        personaRole: "Operations Analyst",
+        scenario: "Priya is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
+        options: [
+          "AI ACTION — the AI reads and interprets the text",
+          "CONDITION — it evaluates a result and routes the workflow based on a rule",
+          "TRANSFORM — it reformats the feedback into a structured record",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Priya is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does." },
+          { quality: "strong", text: "Exactly. A CONDITION node evaluates the outcome of the previous step — here, the sentiment classification — and routes the workflow down different paths based on a rule. It's what makes a workflow adaptive rather than linear." },
+          { quality: "weak", text: "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Priya's step isn't reshaping data; it's making a routing decision. That's a CONDITION." },
+        ],
+      },
+      {
+        personaName: "Tom",
+        personaRole: "HR Coordinator",
+        scenario: "Tom's AI workflow drafts interview invitation emails for incoming job applications. It's been running accurately in testing. He wants to remove the human review step to speed things up. What's the right call?",
+        options: [
+          "Remove it — the AI is accurate and the extra step slows the process down",
+          "Keep a quick human check before sending — candidate emails carry reputational risk",
+          "Replace the human review with a second AI pass to check for errors",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Testing accuracy doesn't guarantee production accuracy. A single wrong name, role, or tone in a candidate email can damage trust and the employer brand. The cost of a 30-second review is far lower than the cost of a mistake." },
+          { quality: "strong", text: "This is good handoff design. A lightweight human review on high-stakes outputs is worth keeping — at least until you have weeks of consistent real-world results. Design the handoff as a feature, not a bottleneck." },
+          { quality: "partial", text: "A second AI pass catches some errors, but AI can't reliably catch its own mistakes — especially issues of tone, context, or candidate-specific details. A human handoff is more reliable for this type of output." },
+        ],
+      },
+    ],
+  },
+
+  /* ── Slide 14 — Module Summary ── */
+  {
+    section: "WRAP UP", type: "moduleSummary",
+    takeaway: "You now have a complete framework for mapping any multi-step AI workflow",
+    heading: "Workflow Design: Your Framework",
+    elements: [
+      { key: "TRIGGER",   color: "#667EEA", light: "#EBF4FF", desc: "What starts the workflow" },
+      { key: "AI ACTION", color: "#38B2AC", light: "#E6FFFA", desc: "Where AI generates value" },
+      { key: "TRANSFORM", color: "#ED8936", light: "#FFFBEB", desc: "Connects outputs to next inputs" },
+      { key: "CONDITION", color: "#48BB78", light: "#F0FFF4", desc: "Routes based on logic" },
+      { key: "HANDOFF",   color: "#9F7AEA", light: "#FAF5FF", desc: "Human oversight + system action" },
+      { key: "OUTPUT",    color: "#F6AD55", light: "#FFFAF0", desc: "The workflow's final result" },
+    ],
+    approaches: [
+      { icon: "🗺️", label: "Three-Layer Model",  color: "#38B2AC", light: "#E6FFFA", when: "Every workflow has an Input layer (trigger + data), a Processing layer (AI work + logic), and an Output layer (delivery + handoff)" },
+      { icon: "🔧", label: "Process → Nodes",     color: "#667EEA", light: "#EBF4FF", when: "Map any process by asking: what triggers this step, what does it do, and what does it hand off to next?" },
+      { icon: "⚠️", label: "Design Handoffs",      color: "#9F7AEA", light: "#FAF5FF", when: "Every handoff is a risk or opportunity — implicit handoffs cause errors; explicit handoffs create quality control points" },
+    ],
+  },
+
+];
+
+const L3T1_ARTICLES: ArticleData[] = [
+  {
+    id: "a1",
+    title: "Why Most AI Productivity Gains Don't Scale — and What Workflow Design Changes",
+    source: "McKinsey Digital",
+    readTime: "~9 min read",
+    desc: "This article examines why most organisations see AI productivity gains at the individual level but struggle to scale them across teams. It explores the gap between ad hoc AI use and repeatable, automated workflows — and what distinguishes organisations that have successfully bridged it.",
+    url: "#",
+    reflection: "Think about one multi-step process in your work that runs at least weekly. How many of those steps involve structured, repeatable decisions — the kind an AI could handle consistently if given the right trigger and instructions?",
+  },
+  {
+    id: "a2",
+    title: "Designing AI Workflows That Survive Human Review",
+    source: "Harvard Business Review",
+    readTime: "~7 min read",
+    desc: "This article explores how to design AI workflows that support rather than bypass human judgment — covering the role of handoff nodes, how to structure outputs for fast review, and the conditions under which it's safe to reduce or remove human checkpoints.",
+    url: "#",
+    reflection: "In a workflow you currently run manually, which steps would you feel confident automating immediately — and which steps do you think need human review, at least to start? What evidence would change your mind about the latter?",
+  },
+];
+
+const L3T1_VIDEOS: VideoData[] = [
+  {
+    id: "v1",
+    title: "From Prompts to Processes: Mapping Your First AI Workflow",
+    channel: "OXYGY Learning",
+    duration: "11 min",
+    desc: "A practical walkthrough of workflow mapping using the six-node framework — covering how to identify triggers, chain AI actions, design condition branches, and define handoff points. Includes a live example of mapping a document review process end-to-end.",
+    url: "#",
+    quiz: [
+      { q: "What is the primary purpose of a CONDITION node in an AI workflow?", options: ["To run the AI model", "To route the workflow based on a rule or threshold", "To format the final output", "To notify users"], correct: 1 },
+      { q: "Why should most workflows start with fewer conditions rather than more?", options: ["Conditions are expensive to run", "Too many conditions create brittle, hard-to-maintain workflows", "Conditions slow down AI response time", "Conditions require special permissions"], correct: 1 },
+    ],
+  },
+  {
+    id: "v2",
+    title: "Handoffs, Conditions, and Human-in-the-Loop Design",
+    channel: "OXYGY Learning",
+    duration: "8 min",
+    desc: "A practical guide to designing the handoff and condition layers of an AI workflow — when to route to a human, how to build conditional branches, and how to decide which steps need oversight versus which can run fully automatically.",
+    url: "#",
+    quiz: [
+      { q: "What is a CONDITION node primarily used for?", options: ["To run an AI model on incoming data", "To route the workflow based on a rule or threshold", "To reformat data between steps", "To notify a user that a task is complete"], correct: 1 },
+      { q: "When should a human HANDOFF node be kept in a workflow?", options: ["Only when the AI is inaccurate", "When the output carries reputational, legal, or quality risk", "Only during the testing phase", "When the process runs infrequently"], correct: 1 },
+    ],
+  },
+];
+
+
+/* ══════════════════════════════════════════════════════════════════
    TOPIC CONTENT REGISTRY
    ══════════════════════════════════════════════════════════════════ */
 
@@ -679,6 +1022,11 @@ export const TOPIC_CONTENT: Record<string, TopicContent> = {
     slides: L2T1_SLIDES,
     articles: L2T1_ARTICLES,
     videos: L2T1_VIDEOS,
+  },
+  "3-1": {
+    slides: L3T1_SLIDES,
+    articles: L3T1_ARTICLES,
+    videos: L3T1_VIDEOS,
   },
 };
 

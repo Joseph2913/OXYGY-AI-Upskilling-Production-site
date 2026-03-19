@@ -143,6 +143,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   onBackToSummary,
 }) => {
   const totalSlides = slides.length;
+  const moduleLevel = slides.find(s => s.type === 'courseIntro')?.levelNumber ?? 1;
+  const PRACTICE_URLS: Record<number, string> = {
+    1: '/app/toolkit/prompt-playground',
+    2: '/app/toolkit',
+    3: '/app/level-3/workflow-canvas',
+    4: '/app/level-4/app-designer',
+    5: '/app/level-5/app-evaluator',
+  };
+  const practiceUrl = PRACTICE_URLS[moduleLevel] ?? '/app/toolkit';
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([currentSlide]));
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFsTooltip, setShowFsTooltip] = useState(true);
@@ -154,6 +163,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
   const [branchingSelected, setBranchingSelected] = useState<number | null>(null);
   const [branchingStep, setBranchingStep] = useState(0);
+  const [personaCaseStudyIdx, setPersonaCaseStudyIdx] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeCompTab, setActiveCompTab] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -172,6 +182,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [predictSelected, setPredictSelected] = useState<number | null>(null);
   const [predictRevealed, setPredictRevealed] = useState(false);
   const [predictChecked, setPredictChecked] = useState(false);
+  // situationalJudgment selected option (lifted so parent can block Next)
+  const [sjSelectedOption, setSjSelectedOption] = useState<number | null>(null);
   // spotTheFlaw slide state
   const [flawSelected, setFlawSelected] = useState<number | null>(null);
   // toast
@@ -238,7 +250,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   /* ════════════════════════════════════════════════════
      CONCEPT VISUAL PANELS (L2)
      ════════════════════════════════════════════════════ */
-  const renderConceptVisual = (visualId: string, _fs: boolean) => {
+  const renderConceptVisual = (visualId: string, _fs: boolean, activeIdx?: number) => {
     switch (visualId) {
       case 'l2-adoption-gap':
         return (
@@ -383,6 +395,104 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           </div>
         );
 
+      case 'l3-workflow-anatomy': {
+        const layers = [
+          { label: 'INPUT LAYER',      icon: '📥', color: '#667EEA', light: '#EBF4FF', items: ['Trigger', 'Data / context'] },
+          { label: 'PROCESSING LAYER', icon: '⚙️', color: '#38B2AC', light: '#E6FFFA', items: ['AI Actions', 'Transforms', 'Conditions'] },
+          { label: 'OUTPUT LAYER',     icon: '📤', color: '#48BB78', light: '#F0FFF4', items: ['Handoffs', 'Final output'] },
+        ];
+        return (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>THREE LAYERS</div>
+            {layers.map((layer, i) => {
+              const isActive  = activeIdx === i;
+              const isRevealed = activeIdx === undefined || i <= activeIdx;
+              return (
+                <div key={i}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+                    background: isRevealed ? layer.light : '#F7FAFC',
+                    border: `${isActive ? 2 : 1.5}px solid ${isRevealed ? layer.color : '#E2E8F0'}${isRevealed ? '' : '55'}`,
+                    marginBottom: 4,
+                    opacity: activeIdx !== undefined && i > activeIdx ? 0.3 : 1,
+                    transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 0.35s ease',
+                    boxShadow: isActive ? `0 2px 12px ${layer.color}33` : 'none',
+                  }}>
+                    <span style={{ fontSize: isActive ? 20 : 17, transition: 'font-size 0.3s ease' }}>{layer.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: isRevealed ? layer.color : '#A0AEC0', letterSpacing: '0.06em', transition: 'color 0.3s ease' }}>{layer.label}</div>
+                      <div style={{ fontSize: 11, color: isRevealed ? '#4A5568' : '#CBD5E0', marginTop: 2, transition: 'color 0.3s ease' }}>{layer.items.join(' · ')}</div>
+                    </div>
+                    {isActive && <div style={{ width: 8, height: 8, borderRadius: '50%', background: layer.color, flexShrink: 0 }} />}
+                  </div>
+                  {i < 2 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+                      <div style={{ width: 2, height: 14, background: activeIdx !== undefined && i < activeIdx ? '#CBD5E0' : '#E2E8F0', borderRadius: 1, transition: 'background 0.3s ease' }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
+      case 'l3-example-workflow': {
+        const layers = [
+          {
+            label: 'INPUT LAYER', color: '#667EEA', light: '#EBF4FF',
+            nodes: [
+              { type: 'TRIGGER', icon: '⚡', desc: 'New expense email arrives' },
+              { type: 'DATA', icon: '📎', desc: 'Email + attachment details' },
+            ],
+          },
+          {
+            label: 'PROCESSING LAYER', color: '#38B2AC', light: '#E6FFFA',
+            nodes: [
+              { type: 'AI ACTION', icon: '🤖', desc: 'Extract amounts, dates, categories' },
+              { type: 'CONDITION', icon: '🔀', desc: 'Total > £500?' },
+              { type: 'TRANSFORM', icon: '⚙️', desc: 'Format into expense report' },
+            ],
+          },
+          {
+            label: 'OUTPUT LAYER', color: '#48BB78', light: '#F0FFF4',
+            nodes: [
+              { type: 'HANDOFF', icon: '🔗', desc: 'Manager approves (if > £500)' },
+              { type: 'OUTPUT', icon: '📤', desc: 'Record created + email sent' },
+            ],
+          },
+        ];
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>EXPENSE CLAIM WORKFLOW</div>
+            {layers.map((layer, li) => (
+              <div key={li}>
+                <div style={{ background: layer.light, border: `1.5px solid ${layer.color}55`, borderRadius: 8, padding: '8px 10px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: layer.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>{layer.label}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {layer.nodes.map((node, ni) => (
+                      <div key={ni} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FFFFFF', borderRadius: 6, padding: '5px 8px', border: `1px solid ${layer.color}33` }}>
+                        <span style={{ fontSize: 13 }}>{node.icon}</span>
+                        <div>
+                          <span style={{ fontSize: 9, fontWeight: 800, color: layer.color, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{node.type}</span>
+                          <span style={{ fontSize: 10, color: '#4A5568', marginLeft: 5 }}>{node.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {li < layers.length - 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '3px 0' }}>
+                    <div style={{ fontSize: 14, color: '#CBD5E0' }}>↓</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -396,6 +506,142 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
       /* ── Course Intro (slide 1) ── */
       case 'courseIntro': {
+        const objIcons = ['🎯', '🏗️', '🛡️', '🤝'];
+
+        /* ── Level 2 intro variant ── */
+        if (s.levelNumber === 2) {
+          const l2Layers = [
+            { label: 'INPUT', desc: 'What the user provides each time — data, format, required fields.', color: '#667EEA', light: '#EBF4FF', icon: '📥' },
+            { label: 'PROCESSING', desc: 'The system prompt — role, task, steps, quality checks, accountability.', color: '#38B2AC', light: '#E6FFFA', icon: '⚙️' },
+            { label: 'OUTPUT', desc: 'Structured format — JSON schema, consistent fields, accountability data.', color: '#48BB78', light: '#F0FFF4', icon: '📤' },
+          ];
+          return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+              {/* Left column */}
+              <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #FEFCE8 0%, #FEF9C3 50%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6A00', background: '#F7E8A4', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
+                  LEVEL 2 · E-LEARNING
+                </span>
+                <h1 style={{ fontSize: fs ? 24 : 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
+                  {s.heading}
+                </h1>
+                {s.subheading && (
+                  <p style={{ fontSize: fs ? 13 : 12, color: '#8A6A00', margin: '0 0 12px', lineHeight: 1.5, fontWeight: 600 }}>
+                    {s.subheading}
+                  </p>
+                )}
+                {s.body && (
+                  <p style={{ fontSize: fs ? 13 : 12, color: '#4A5568', margin: '0 0 18px', lineHeight: 1.65, maxWidth: 380 }}>
+                    {s.body}
+                  </p>
+                )}
+                {s.objectives && (
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 10 }}>YOU'LL WALK AWAY WITH</div>
+                    {s.objectives.map((obj: string, i: number) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 7 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{objIcons[i] ?? '▸'}</span>
+                        <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.55, fontWeight: 500 }}>{obj}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={handleNextClick} style={{ alignSelf: 'flex-start', padding: '10px 26px', borderRadius: 24, border: 'none', background: '#38B2AC', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+                  Start →
+                </button>
+              </div>
+              {/* Right column — Three-layer model preview */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '36px 32px' : '24px 22px', background: '#FAFBFC', gap: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE THREE-LAYER AGENT MODEL</div>
+                <p style={{ fontSize: 11, color: '#718096', lineHeight: 1.55, margin: '0 0 10px' }}>
+                  Every Level 2 agent is built from three layers. You'll design all three.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {l2Layers.map((layer, i) => (
+                    <React.Fragment key={layer.label}>
+                      <div style={{ background: layer.light, border: `1.5px solid ${layer.color}40`, borderLeft: `3px solid ${layer.color}`, borderRadius: '0 10px 10px 0', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 16 }}>{layer.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: layer.color, letterSpacing: '0.06em' }}>{layer.label}</div>
+                          <div style={{ fontSize: 10, color: '#4A5568', lineHeight: 1.4, marginTop: 1 }}>{layer.desc}</div>
+                        </div>
+                      </div>
+                      {i < 2 && <div style={{ textAlign: 'center', color: '#A0AEC0', fontSize: 14 }}>↓</div>}
+                    </React.Fragment>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.5, margin: '8px 0 0', fontStyle: 'italic' }}>
+                  {s.estimatedTime} · Build once, share with your whole team.
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        /* ── Level 3 intro variant ── */
+        if (s.levelNumber === 3) {
+          const l3ObjIcons = ['🗺️', '⚙️', '🔁', '🎯'];
+          const nodePreview = [
+            { label: 'TRIGGER',   color: '#667EEA', light: '#EBF4FF', icon: '▶' },
+            { label: 'AI ACTION', color: '#38B2AC', light: '#E6FFFA', icon: '🤖' },
+            { label: 'TRANSFORM', color: '#ED8936', light: '#FFFBEB', icon: '↔' },
+            { label: 'CONDITION', color: '#48BB78', light: '#F0FFF4', icon: '?' },
+            { label: 'HANDOFF',   color: '#9F7AEA', light: '#FAF5FF', icon: '🤝' },
+            { label: 'OUTPUT',    color: '#F6AD55', light: '#FFFAF0', icon: '📤' },
+          ];
+          return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+              {/* Left column */}
+              <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #FFFBEB 0%, #FEF3C7 50%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6A00', background: '#FBE8A6', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
+                  LEVEL 3 · E-LEARNING
+                </span>
+                <h1 style={{ fontSize: fs ? 24 : 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
+                  {s.heading}
+                </h1>
+                {s.subheading && (
+                  <p style={{ fontSize: fs ? 13 : 12, color: '#8A6A00', margin: '0 0 12px', lineHeight: 1.5, fontWeight: 600 }}>
+                    {s.subheading}
+                  </p>
+                )}
+                {s.objectives && (
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 10 }}>YOU'LL WALK AWAY WITH</div>
+                    {s.objectives.map((obj: string, i: number) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 7 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{l3ObjIcons[i] ?? '▸'}</span>
+                        <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.55, fontWeight: 500 }}>{obj}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={handleNextClick} style={{ alignSelf: 'flex-start', padding: '10px 26px', borderRadius: 24, border: 'none', background: '#C4A934', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+                  Start →
+                </button>
+              </div>
+              {/* Right column — Node type preview */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '36px 32px' : '24px 22px', background: '#FAFBFC', gap: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE SIX NODE TYPES</div>
+                <p style={{ fontSize: 11, color: '#718096', lineHeight: 1.55, margin: '0 0 10px' }}>
+                  Every multi-step AI workflow is built from these six building blocks.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {nodePreview.map((node) => (
+                    <div key={node.label} style={{ background: node.light, border: `1.5px solid ${node.color}30`, borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, minWidth: 20, textAlign: 'center' }}>{node.icon}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: node.color }}>{node.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.5, margin: '8px 0 0', fontStyle: 'italic' }}>
+                  {s.estimatedTime} · Map your first workflow before this module ends.
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        /* ── Level 1 intro (default) ── */
         const blueprintItems = [
           { label: 'Role',    color: '#667EEA', light: '#EBF4FF', icon: '🎭' },
           { label: 'Context', color: '#38B2AC', light: '#E6FFFA', icon: '🌍' },
@@ -404,13 +650,13 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { label: 'Steps',   color: '#9F7AEA', light: '#FAF5FF', icon: '🪜' },
           { label: 'Checks',  color: '#F6AD55', light: '#FFFAF0', icon: '✅' },
         ];
-        const objIcons = ['💡', '🗂️', '🔄', '🎯'];
+        const l1ObjIcons = ['💡', '🗂️', '🔄', '🎯'];
         return (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
             {/* Left column */}
             <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
               {s.levelNumber && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#1A6B5F', background: '#A8F0E0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'inline-block', marginBottom: 14 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#1A6B5F', background: '#A8F0E0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
                   LEVEL {s.levelNumber} · E-LEARNING
                 </span>
               )}
@@ -427,10 +673,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {/* Objectives */}
               {s.objectives && (
                 <div style={{ marginBottom: 22 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>YOU'LL WALK AWAY WITH</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 10 }}>YOU'LL WALK AWAY WITH</div>
                   {s.objectives.map((obj: string, i: number) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 7 }}>
-                      <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{objIcons[i] ?? '▸'}</span>
+                      <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{l1ObjIcons[i] ?? '▸'}</span>
                       <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.55, fontWeight: 500 }}>{obj}</span>
                     </div>
                   ))}
@@ -442,7 +688,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
             {/* Right column — Blueprint preview */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '36px 32px' : '24px 22px', background: '#FAFBFC', gap: 12 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>THE PROMPT BLUEPRINT</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE PROMPT BLUEPRINT</div>
               <p style={{ fontSize: 11, color: '#718096', lineHeight: 1.55, margin: '0 0 10px' }}>
                 Six components. Master these and every prompt you write gets stronger.
               </p>
@@ -503,19 +749,20 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           </div>
         );
 
-      /* ── Evidence Hero (Slide 2 — two-column: text + big stat card) ── */
+      /* ── Evidence Hero (two-column when stat present, full-width when no stat) ── */
       case 'evidenceHero': {
         const stat = s.stats?.[0];
+        const hasStat = !!stat;
         return fs ? (
-          /* Fullscreen: two-column layout */
+          /* Fullscreen */
           <div style={{ padding: '24px 44px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '55% 45%', gap: 20, flex: 1, alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: hasStat ? '55% 45%' : '1fr', gap: 20, flex: 1, alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                {s.body && <p style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.75, maxWidth: 420, margin: 0 }}>{s.body}</p>}
+                {s.body && <p style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.75, maxWidth: hasStat ? 420 : 680, margin: 0 }}>{s.body}</p>}
               </div>
-              {stat && (
+              {hasStat && (
                 <div style={{ padding: '28px 36px', borderRadius: 20, background: 'linear-gradient(135deg, #E6FFFA, #fff)', border: '2px solid #38B2AC', textAlign: 'center', animation: 'fadeInUp 0.4s ease' }}>
-                  <div style={{ fontSize: 28, color: '#38B2AC', marginBottom: 4 }}>{'\u2191'}</div>
+                  <div style={{ fontSize: 28, color: '#38B2AC', marginBottom: 4 }}>↑</div>
                   <div style={{ fontSize: 68, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{stat.value}</div>
                   <div style={{ fontSize: 14, color: '#4A5568', maxWidth: 200, margin: '8px auto 0' }}>{stat.label}</div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '6px 12px' }}>
@@ -527,18 +774,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
             {s.pullQuote && (
               <div style={{ marginTop: 14, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
-                {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
+                {s.pullQuote.split(/(\d+(?:\.\d+)?[×x%])/).map((part, i) => /^\d+(?:\.\d+)?[×x%]$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
               </div>
             )}
           </div>
         ) : (
-          /* Inline: two-column, big stat card */
+          /* Inline */
           <div style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 16, flex: 1, alignItems: 'center', minHeight: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: hasStat ? '50% 50%' : '1fr', gap: 16, flex: 1, alignItems: 'center', minHeight: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {s.body && <p style={{ fontSize: 15, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
               </div>
-              {stat && (
+              {hasStat && (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                   <div style={{
                     padding: '32px 36px', borderRadius: 24,
@@ -561,7 +808,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
             {s.pullQuote && (
               <div style={{ flexShrink: 0, marginTop: 10, padding: '14px 20px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 14, color: '#4A5568', lineHeight: 1.65 }}>
-                {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
+                {s.pullQuote.split(/(\d+(?:\.\d+)?[×x%])/).map((part, i) => /^\d+(?:\.\d+)?[×x%]$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
               </div>
             )}
           </div>
@@ -1276,6 +1523,48 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
       /* ── Module Summary (Wrap Up) ── */
       case 'moduleSummary': {
+        /* Data-driven path for L3+ — renders from s.elements (node types) + s.approaches */
+        if (s.elements && s.elements.length > 0) {
+          const approachItems = (s as any).approaches ?? [];
+          return (
+            <div style={{ padding: fs ? '16px 20px' : '8px 10px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' as const, gap: 12 }}>
+              {/* Section 1 — Node types grid */}
+              <div style={{ background: '#FFFFFF', borderRadius: 14, padding: fs ? '16px 20px' : '12px 16px', border: '1.5px solid #E2E8F0', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: fs ? 13 : 12, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: 4 }}>The Six Node Types</div>
+                <div style={{ fontSize: fs ? 15 : 14, color: '#4A5568', marginBottom: 10, lineHeight: 1.4 }}>Every workflow step is one of these six. Identify them and you can map any process.</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, flex: 1 }}>
+                  {s.elements.map((el, i) => (
+                    <div key={i} style={{ background: el.light || `${el.color}0A`, border: `1.5px solid ${el.color}55`, borderRadius: 10, padding: fs ? '14px 16px' : '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
+                      <div style={{ fontSize: fs ? 15 : 13, fontWeight: 900, color: el.color }}>{el.key}</div>
+                      <div style={{ fontSize: fs ? 13 : 11, color: '#4A5568', lineHeight: 1.4 }}>{el.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Section 2 — Mapping approaches */}
+              {approachItems.length > 0 && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: fs ? 13 : 12, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8 }}>Three Mapping Approaches</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, flex: 1 }}>
+                    {approachItems.map((item: any, i: number) => (
+                      <div key={i} style={{ background: item.light, border: `1.5px solid ${item.color}55`, borderTop: `3px solid ${item.color}`, borderRadius: 12, padding: fs ? '16px 18px' : '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: fs ? 26 : 22 }}>{item.icon}</span>
+                          <span style={{ fontSize: fs ? 18 : 15, fontWeight: 900, color: item.color }}>{item.label}</span>
+                        </div>
+                        <div style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.6, flex: 1 }}>
+                          <span style={{ fontWeight: 700, color: item.color }}>Use when: </span>{item.when}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        /* Legacy hardcoded path for L1T1 */
         const BLUEPRINT_COMPONENTS = [
           { label: 'Role',    color: '#667EEA', light: '#EBF4FF', desc: 'Who the AI is' },
           { label: 'Context', color: '#38B2AC', light: '#E6FFFA', desc: 'What it needs to know' },
@@ -1448,22 +1737,64 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           </div>
         );
 
-      /* ── RCTF 3×2 grid (icons, no dropdowns — all visible) ── */
+      /* ── RCTF — two-column with anatomy when visualId present, else 3×2 grid ── */
       case 'rctf':
+        if (s.visualId) {
+          return (
+            <div style={{ padding: fs ? '20px 24px' : '12px 16px', display: 'flex', gap: 16, height: '100%', boxSizing: 'border-box' as const }}>
+              {/* Left: anatomy diagram, highlights active layer */}
+              <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: fs ? '18px 20px' : '14px 16px' }}>
+                {renderConceptVisual(s.visualId, fs, contextStep >= 0 ? contextStep : undefined)}
+              </div>
+              {/* Right: cards reveal one by one */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center' }}>
+                {s.subheading && contextStep < 0 && <p style={{ fontSize: fs ? 14 : 12, color: '#718096', lineHeight: 1.6, margin: 0 }}>{s.subheading}</p>}
+                {s.elements?.map((el, i) => {
+                  const revealed = !(s as any).revealOnNext || i <= contextStep;
+                  return (
+                    <div key={el.key} style={{
+                      padding: fs ? '14px 18px' : '12px 14px', borderRadius: 12,
+                      border: `1.5px solid ${el.color}${i === contextStep ? '' : '55'}`,
+                      background: i === contextStep ? el.light : `${el.color}08`,
+                      opacity: revealed ? 1 : 0,
+                      transform: revealed ? 'translateX(0)' : 'translateX(12px)',
+                      transition: 'opacity 0.4s ease, transform 0.4s ease',
+                      boxShadow: i === contextStep ? `0 2px 10px ${el.color}22` : 'none',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                        {el.icon && <span style={{ fontSize: fs ? 18 : 16 }}>{el.icon}</span>}
+                        <span style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: el.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{el.key}</span>
+                      </div>
+                      <div style={{ fontSize: fs ? 13 : 12, color: '#2D3748', lineHeight: 1.6, marginBottom: 6 }}>{el.desc}</div>
+                      {el.example && <div style={{ fontSize: fs ? 11 : 10, color: '#718096', fontStyle: 'italic', lineHeight: 1.5, borderTop: `1px solid ${el.color}33`, paddingTop: 6, marginBottom: 5 }}>{el.example}</div>}
+                      {el.whyItMatters && (
+                        <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: el.color, padding: '4px 10px', background: '#FFFFFF', borderRadius: 6, border: `1px solid ${el.color}33`, display: 'inline-block' }}>
+                          {el.whyItMatters}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
         return (
-          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            {s.subheading && <p style={{ fontSize: fs ? 15 : 13, color: '#718096', lineHeight: 1.6, margin: '0 0 10px' }}>{s.subheading}</p>}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, flex: 1, alignContent: 'center' }}>
-              {s.elements?.map((el) => (
-                <div key={el.key} style={{ padding: fs ? '14px 16px' : '12px 14px', borderRadius: 10, border: `1px solid ${el.color}33`, background: el.light || `${el.color}08` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                    {el.icon && <span style={{ fontSize: 18 }}>{el.icon}</span>}
-                    <span style={{ fontSize: 11, fontWeight: 800, color: el.color, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{el.key}</span>
+          <div style={{ padding: fs ? '16px 20px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', gap: 8, boxSizing: 'border-box' as const }}>
+            {s.subheading && <p style={{ fontSize: fs ? 14 : 12, color: '#718096', lineHeight: 1.6, margin: 0, flexShrink: 0 }}>{s.subheading}</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: fs ? 10 : 8, flex: 1, minHeight: 0 }}>
+              {s.elements?.map((el, i) => (
+                <div key={el.key} style={{ padding: fs ? '18px 20px' : '14px 16px', borderRadius: 12, border: `1.5px solid ${el.color}55`, background: el.light || `${el.color}08`, opacity: !(s as any).revealOnNext || i <= contextStep ? 1 : 0, transition: 'opacity 0.35s ease', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                      {el.icon && <span style={{ fontSize: fs ? 22 : 18 }}>{el.icon}</span>}
+                      <span style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: el.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{el.key}</span>
+                    </div>
+                    <div style={{ fontSize: fs ? 13 : 12, color: '#2D3748', lineHeight: 1.6, marginBottom: 8 }}>{el.desc}</div>
+                    {el.example && <div style={{ fontSize: fs ? 12 : 11, color: '#718096', fontStyle: 'italic', lineHeight: 1.5, borderTop: `1px solid ${el.color}33`, paddingTop: 8, marginBottom: 6 }}>e.g. {el.example}</div>}
                   </div>
-                  <div style={{ fontSize: fs ? 12 : 11, color: '#4A5568', lineHeight: 1.5, marginBottom: 5 }}>{el.desc}</div>
-                  {el.example && <div style={{ fontSize: fs ? 11 : 10, color: '#718096', fontStyle: 'italic', lineHeight: 1.4, borderTop: '1px solid #E2E8F0', paddingTop: 5, marginBottom: 4 }}>"{el.example}"</div>}
                   {el.whyItMatters && (
-                    <div style={{ fontSize: fs ? 11 : 10, color: el.color, lineHeight: 1.4, padding: '4px 8px', background: '#FFFFFF', borderRadius: 4, border: `1px solid ${el.color}22` }}>
+                    <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: el.color, lineHeight: 1.4, padding: '5px 10px', background: '#FFFFFF', borderRadius: 6, border: `1px solid ${el.color}33`, marginTop: 'auto' }}>
                       {el.whyItMatters}
                     </div>
                   )}
@@ -1475,7 +1806,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
       /* ── Persona Case Study (sliding cards) ── */
       case 'personaCaseStudy':
-        return <PersonaCaseStudySlide slide={s} fs={fs} />;
+        return <PersonaCaseStudySlide slide={s} fs={fs} activeIdx={personaCaseStudyIdx} onIdxChange={setPersonaCaseStudyIdx} />;
 
       /* ── Approach Matrix ── */
       case 'approachIntro': {
@@ -1563,7 +1894,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
       /* ── Situational Judgment (with persona framing & multi-step) ── */
       case 'situationalJudgment':
-        return <SituationalJudgmentSlide slide={s} fs={fs} activeScenarioIdx={sjScenarioIdx} onScenarioChange={setSjScenarioIdx} />;
+        return <SituationalJudgmentSlide slide={s} fs={fs} activeScenarioIdx={sjScenarioIdx} onScenarioChange={setSjScenarioIdx} selectedOption={sjSelectedOption} onSelectOption={setSjSelectedOption} />;
 
       /* ── Bridge ── */
       case 'bridge':
@@ -1630,9 +1961,24 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Quiz (single MCQ with feedback) ── */
       case 'quiz':
         return (
-          <div style={{ padding: fs ? '36px 40px' : '24px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
-            {s.quizEyebrow && <p style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{s.quizEyebrow}</p>}
-            {s.question && <p style={{ fontSize: fs ? 18 : 16, fontWeight: 700, color: '#1A202C', lineHeight: 1.4, margin: '0 0 20px', maxWidth: 560 }}>{s.question}</p>}
+          <div style={{ padding: fs ? '20px 36px' : '12px 16px', display: 'flex', flexDirection: 'column', justifyContent: s.body ? 'flex-start' : 'center', height: '100%', gap: 10 }}>
+            {/* Teaching section — only rendered when slide has body content */}
+            {s.body && (
+              <div style={{ flexShrink: 0, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: fs ? '14px 20px' : '12px 14px' }}>
+                {s.quizEyebrow && <div style={{ fontSize: 10, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>{s.quizEyebrow}</div>}
+                <p style={{ fontSize: fs ? 13 : 12, color: '#2D3748', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>{s.body}</p>
+              </div>
+            )}
+            {/* Activity divider */}
+            {s.body && (
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>ACTIVITY</span>
+                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+              </div>
+            )}
+            {!s.body && s.quizEyebrow && <p style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{s.quizEyebrow}</p>}
+            {s.question && <p style={{ fontSize: fs ? 16 : 14, fontWeight: 700, color: '#1A202C', lineHeight: 1.4, margin: s.body ? '0' : '0 0 20px', flexShrink: 0 }}>{s.question}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {s.quizOptions?.map((opt, i) => {
                 const isSelected = quizSelected === i;
@@ -1670,56 +2016,73 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           </div>
         );
 
-      /* ── Comparison (3-tab view with expandable prompts) ── */
-      case 'comparison':
+      /* ── Comparison (3-tab, full-height, colored panels) ── */
+      case 'comparison': {
+        const TAB_PALETTE = [
+          { bg: '#FFF5F5', border: '#FC8181', annotBg: '#FED7D755', badgeBg: '#FED7D7', badgeText: '#C53030', tabText: '#C53030' },
+          { bg: '#FFFBEB', border: '#ECC94B', annotBg: '#FEFCBF55', badgeBg: '#FEFCBF', badgeText: '#975A16', tabText: '#975A16' },
+          { bg: '#F0FFF4', border: '#48BB78', annotBg: '#C6F6D555', badgeBg: '#C6F6D5', badgeText: '#22543D', tabText: '#22543D' },
+        ];
+        const tc = TAB_PALETTE[activeCompTab] ?? TAB_PALETTE[0];
         return (
-          <div style={{ padding: fs ? '28px 32px' : '18px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '20px 36px 16px' : '12px 20px 10px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' }}>
+            {/* Scenario banner */}
             {s.scenario && (
-              <div style={{ background: 'linear-gradient(135deg, #E6FFFA 0%, #EBF8FF 100%)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, border: '1.5px solid #38B2AC33' }}>
-                <span style={{ fontSize: 14, color: '#2B4C7E', fontWeight: 600 }}>SCENARIO: </span>
-                <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.5 }}>{s.scenario}</span>
+              <div style={{ flexShrink: 0, background: '#F7FAFC', borderRadius: 10, padding: '10px 16px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: fs ? 13 : 11, fontWeight: 700, color: '#2B4C7E', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>SCENARIO: </span>
+                <span style={{ fontSize: fs ? 13 : 12, color: '#2D3748', lineHeight: 1.5 }}>{s.scenario}</span>
               </div>
             )}
-            {/* Tab bar */}
-            <div style={{ display: 'flex', borderBottom: '2px solid #E2E8F0', marginBottom: 14 }}>
-              {s.tabs?.map((tab, i) => (
-                <button key={i} onClick={() => setActiveCompTab(i)} style={{
-                  padding: '8px 16px', fontSize: 12, fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer',
-                  color: activeCompTab === i ? '#38B2AC' : '#718096',
-                  borderBottom: activeCompTab === i ? '3px solid #38B2AC' : '3px solid transparent',
-                  marginBottom: -2, transition: 'all 0.15s ease',
-                }}>
-                  {tab.label}
-                </button>
-              ))}
+            {/* Tab buttons + step counter */}
+            <div style={{ flexShrink: 0, display: 'flex', gap: 6, alignItems: 'center' }}>
+              {s.tabs?.map((tab, i) => {
+                const isActive = activeCompTab === i;
+                const p = TAB_PALETTE[i] ?? TAB_PALETTE[0];
+                return (
+                  <button key={i} onClick={() => setActiveCompTab(i)} style={{
+                    flex: 1, padding: '9px 10px', fontSize: fs ? 13 : 12, fontWeight: 700,
+                    border: isActive ? `2px solid ${p.border}` : '2px solid #E2E8F0',
+                    borderRadius: 10, background: isActive ? p.bg : '#FAFBFC',
+                    color: isActive ? p.tabText : '#A0AEC0', cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}>
+                    {tab.label}
+                  </button>
+                );
+              })}
+              <span style={{ flexShrink: 0, fontSize: 11, color: '#A0AEC0', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {activeCompTab + 1} / {s.tabs?.length ?? 3}
+              </span>
             </div>
-            {/* Active tab content */}
+            {/* Active tab content — fills remaining height */}
             {s.tabs && s.tabs[activeCompTab] && (
-              <div key={activeCompTab} style={{ flex: 1, animation: 'fadeInUp 0.2s ease' }}>
-                <div style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderLeft: '3px solid #38B2AC', borderRadius: '0 8px 8px 0', padding: '12px 16px', fontSize: 12, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', whiteSpace: 'pre-line', marginBottom: 10 }}>
-                  {(() => {
-                    const prompt = s.tabs![activeCompTab].prompt;
-                    const isLong = prompt.length > 180;
-                    const isExpanded = expandedSections[`comp-${activeCompTab}`];
-                    return (
-                      <>
-                        {isLong && !isExpanded ? prompt.slice(0, 180) + '…' : prompt}
-                        {isLong && (
-                          <button onClick={() => setExpandedSections(prev => ({ ...prev, [`comp-${activeCompTab}`]: !isExpanded }))} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #E2E8F0', background: '#FFFFFF', fontSize: 11, fontWeight: 600, color: '#718096', cursor: 'pointer', marginTop: 6, fontStyle: 'normal' }}>
-                            {isExpanded ? 'Show less ▴' : 'Show full prompt ▾'}
-                          </button>
-                        )}
-                      </>
-                    );
-                  })()}
+              <div key={activeCompTab} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, animation: 'fadeInUp 0.2s ease', minHeight: 0 }}>
+                {/* Prompt block */}
+                <div style={{
+                  flex: 1, background: tc.bg, border: `1.5px solid ${tc.border}`,
+                  borderLeft: `4px solid ${tc.border}`, borderRadius: '0 10px 10px 0',
+                  padding: fs ? '16px 20px' : '12px 16px',
+                  fontSize: fs ? 14 : 13, color: '#2D3748', lineHeight: 1.75,
+                  fontStyle: 'italic', whiteSpace: 'pre-line', overflowY: 'auto', minHeight: 0,
+                }}>
+                  {s.tabs![activeCompTab].prompt}
                 </div>
-                <div style={{ background: '#F7FAFC', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#718096', lineHeight: 1.6 }}>
-                  {s.tabs[activeCompTab].annotation}
+                {/* Annotation block */}
+                <div style={{
+                  flex: 1, background: tc.annotBg, borderRadius: 10,
+                  border: `1px solid ${tc.border}55`,
+                  padding: fs ? '14px 18px' : '10px 14px',
+                  fontSize: fs ? 14 : 13, color: '#4A5568', lineHeight: 1.7,
+                  overflowY: 'auto', minHeight: 0,
+                }}>
+                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, background: tc.badgeBg, color: tc.badgeText, borderRadius: 6, padding: '2px 8px', marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>Analysis</span>
+                  <div>{s.tabs[activeCompTab].annotation}</div>
                 </div>
               </div>
             )}
           </div>
         );
+      }
 
       /* ── Flipcard (two side-by-side flip cards) ── */
       case 'flipcard':
@@ -1960,10 +2323,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           );
         }
         return (
-          <div style={{ padding: fs ? '36px 64px' : '22px 36px' }}>
-            {s.body && <p style={{ fontSize: fs ? 22 : 18, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
+          <div style={{ padding: fs ? '32px 64px' : '20px 36px' }}>
+            {s.eyebrow && (
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: fs ? 14 : 10 }}>
+                {s.eyebrow}
+              </div>
+            )}
+            {s.body && <p style={{ fontSize: fs ? 17 : 15, color: '#4A5568', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-line' }}>{s.body}</p>}
             {s.pullQuote && (
-              <div style={{ borderLeft: '4px solid #38B2AC', background: '#E6FFFA', padding: '14px 18px', borderRadius: '0 8px 8px 0', marginTop: 18, fontSize: 17, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontStyle: 'italic' }}>
+              <div style={{ borderLeft: '4px solid #38B2AC', background: '#E6FFFA', padding: '14px 18px', borderRadius: '0 8px 8px 0', marginTop: 20, fontSize: fs ? 16 : 14, fontWeight: 600, color: '#1A202C', lineHeight: 1.5, fontStyle: 'italic' }}>
                 {s.pullQuote}
               </div>
             )}
@@ -2031,6 +2399,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setPredictRevealed(false);
     setPredictChecked(false);
     setFlawSelected(null);
+    setPersonaCaseStudyIdx(0);
+    setSjSelectedOption(null);
   }, [currentSlide]);
 
   /* ── Next button interception: reveal slides + situationalJudgment cycling ── */
@@ -2039,13 +2409,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  // Slides that require engagement before Next is allowed
+  // Slides that block Next until the user makes a selection
   const needsInteraction =
     (s.type === 'buildAPrompt' && Object.keys(placedComponents).length === 0) ||
-    (s.type === 'spotTheFlaw' && flawSelected === null) ||
-    (s.type === 'quiz' && quizSelected === null) ||
-    (s.type === 'sjExercise' && (sjAnswers[currentSlide] == null)) ||
-    (s.type === 'persona' && !!s.predictFirst && predictSelected === null);
+    (s.type === 'persona' && s.predictFirst && predictSelected === null) ||
+    (s.type === 'situationalJudgment' && sjSelectedOption === null);
 
   const triggerActivityWarning = () => {
     setShowActivityWarning(true);
@@ -2055,9 +2423,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
   const handleNextClick = () => {
     if (needsInteraction) { triggerActivityWarning(); return; }
-    // situationalJudgment: cycle through scenarios
+    // situationalJudgment: cycle through scenarios (only reachable after selection due to needsInteraction block)
     if (s.type === 'situationalJudgment' && s.scenarios && sjScenarioIdx < s.scenarios.length - 1) {
       setSjScenarioIdx((prev) => prev + 1);
+      setSjSelectedOption(null);
       return;
     }
     // scenarioComparison: reveal thorough tab on first Next
@@ -2070,7 +2439,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       setContextStep((prev) => prev + 1);
       return;
     }
-    // comparison: advance through tabs
+    // rctf with revealOnNext: reveal one card at a time (uses contextStep)
+    if (s.type === 'rctf' && (s as any).revealOnNext) {
+      const total = s.elements?.length ?? 0;
+      if (contextStep < total - 1) {
+        setContextStep((prev) => prev + 1);
+        return;
+      }
+    }
+    // comparison: cycle through tabs before advancing to next slide
     if (s.type === 'comparison') {
       const tabCount = (s as any).tabs?.length ?? 3;
       if (activeCompTab < tabCount - 1) {
@@ -2110,6 +2487,37 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         return;
       }
     }
+    // quiz: auto-select correct answer if not yet answered
+    if (s.type === 'quiz' && !quizAnswered) {
+      if (quizSelected === null) setQuizSelected(s.correct ?? 0);
+      setQuizAnswered(true);
+      return;
+    }
+    // spotTheFlaw: auto-reveal correct answer if not yet solved
+    if (s.type === 'spotTheFlaw') {
+      const flawCorrect = s.correct ?? 0;
+      if (flawSelected !== flawCorrect) {
+        setFlawSelected(flawCorrect);
+        return;
+      }
+    }
+    // sjExercise: auto-select correct answer if nothing chosen
+    if (s.type === 'sjExercise' && (s as any).sjData) {
+      const slideKey = currentSlide;
+      if (sjAnswers[slideKey] == null) {
+        setSjAnswers((prev) => ({ ...prev, [slideKey]: (s as any).sjData.correct }));
+        return;
+      }
+    }
+    // persona (predictFirst): Next only reachable after selection (needsInteraction blocks otherwise)
+    // personaCaseStudy: cycle through persona tabs one by one
+    if (s.type === 'personaCaseStudy' && (s as any).personas) {
+      const personas = (s as any).personas;
+      if (personaCaseStudyIdx < personas.length - 1) {
+        setPersonaCaseStudyIdx((prev) => prev + 1);
+        return;
+      }
+    }
     // Default: navigate to next slide
     if (isLastSlide) {
       if (isFullscreen) setIsFullscreen(false);
@@ -2120,7 +2528,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   };
 
   /* ── Dynamic Next button label ── */
-  const nextLabel = isLastSlide ? 'Finish E-Learning \u2192' : 'Next \u2192';
+  const nextLabel = isLastSlide ? 'Finish E-Learning →' : 'Next →';
 
   /* ── Standardised takeaway title (shown at top of every slide that has one) ── */
   const renderTakeaway = () => {
@@ -2230,7 +2638,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               ← Back to slides
             </button>
             <button
-              onClick={() => { onCompletePhase(); window.location.href = '/app/toolkit/prompt-playground'; }}
+              onClick={() => { onCompletePhase(); window.location.href = practiceUrl; }}
               style={{ padding: '10px 28px', borderRadius: 24, border: 'none', background: '#1A202C', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
             >
               Continue to Practice →
@@ -2285,7 +2693,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
               {showActivityWarning && (
                 <div className="activity-warning" style={{ background: '#1A202C', color: '#FFFFFF', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', whiteSpace: 'nowrap', letterSpacing: '0.01em', pointerEvents: 'none' }}>
-                  Try the activity before proceeding
+                  {(s.type === 'persona' && s.predictFirst) || s.type === 'situationalJudgment'
+                    ? '👆 Select an option before continuing'
+                    : 'Try the activity before proceeding'}
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2305,8 +2715,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 /* ══════════════════════════════════════════════════════════════════
    PERSONA CASE STUDY SLIDE (sliding cards L→R)
    ══════════════════════════════════════════════════════════════════ */
-function PersonaCaseStudySlide({ slide, fs }: { slide: SlideData; fs: boolean }) {
-  const [activeIdx, setActiveIdx] = useState(0);
+function PersonaCaseStudySlide({ slide, fs, activeIdx, onIdxChange }: { slide: SlideData; fs: boolean; activeIdx: number; onIdxChange: (idx: number) => void }) {
   const personas = slide.personas || [];
   const active = personas[activeIdx];
   if (!active) return null;
@@ -2321,7 +2730,7 @@ function PersonaCaseStudySlide({ slide, fs }: { slide: SlideData; fs: boolean })
       {/* Persona tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
         {personas.map((p, i) => (
-          <button key={i} onClick={() => setActiveIdx(i)} style={{
+          <button key={i} onClick={() => onIdxChange(i)} style={{
             padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
             background: i === activeIdx ? active.color : '#F7FAFC',
             color: i === activeIdx ? '#FFFFFF' : '#718096',
@@ -2449,27 +2858,32 @@ function ApproachMatrixSlide({ slide, fs }: { slide: SlideData; fs: boolean }) {
 /* ══════════════════════════════════════════════════════════════════
    SITUATIONAL JUDGMENT (persona-framed, multi-step navigation)
    ══════════════════════════════════════════════════════════════════ */
-function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChange }: { slide: SlideData; fs: boolean; activeScenarioIdx: number; onScenarioChange: (idx: number) => void }) {
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChange, selectedOption, onSelectOption }: { slide: SlideData; fs: boolean; activeScenarioIdx: number; onScenarioChange: (idx: number) => void; selectedOption: number | null; onSelectOption: (opt: number) => void }) {
   const scenarios = slide.scenarios || [];
   const scenario = scenarios[activeScenarioIdx];
   if (!scenario) return null;
 
-  // Reset selected option when scenario changes
-  const scenarioRef = React.useRef(activeScenarioIdx);
-  if (scenarioRef.current !== activeScenarioIdx) {
-    scenarioRef.current = activeScenarioIdx;
-    // This will trigger re-render, selectedOption resets below
-  }
+  /* Default colors per option slot (before selection — always colored, never white) */
+  const OPTION_DEFAULT = [
+    { bg: '#EBF8FF', border: '#90CDF4', text: '#2B6CB0' },
+    { bg: '#E6FFFA', border: '#81E6D9', text: '#1A6B5F' },
+    { bg: '#FAF5FF', border: '#D6BCFA', text: '#553C9A' },
+  ];
+
+  const fb = selectedOption !== null ? scenario.feedback[selectedOption] : null;
+  const fbQ = fb?.quality ?? 'partial';
+  const fbBg    = fbQ === 'strong' ? '#F0FFF4' : fbQ === 'partial' ? '#FFFBEB' : '#FFF5F5';
+  const fbBorder = fbQ === 'strong' ? '#68D391' : fbQ === 'partial' ? '#F6AD55' : '#FC8181';
+  const fbColor  = fbQ === 'strong' ? '#276749'  : fbQ === 'partial' ? '#C05621'  : '#9B2C2C';
+  const fbLabel  = fbQ === 'strong' ? 'STRONGEST CHOICE' : fbQ === 'partial' ? 'COULD WORK' : 'NOT THE BEST FIT';
 
   return (
-    <div style={{ padding: fs ? '28px 32px' : '16px 18px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {slide.instruction && <p style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, margin: '0 0 10px' }}>{slide.instruction}</p>}
+    <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 8, boxSizing: 'border-box' as const }}>
 
-      {/* Scenario progress indicators */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+      {/* Scenario tabs */}
+      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
         {scenarios.map((sc, i) => (
-          <button key={i} onClick={() => { onScenarioChange(i); setSelectedOption(null); }} style={{
+          <button key={i} onClick={() => { onScenarioChange(i); }} style={{
             padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
             background: i === activeScenarioIdx ? '#1A202C' : '#F7FAFC',
             color: i === activeScenarioIdx ? '#FFFFFF' : '#718096',
@@ -2481,10 +2895,10 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
         ))}
       </div>
 
-      {/* Persona card header */}
+      {/* Persona header */}
       {scenario.personaName && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '8px 14px', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0' }}>
-          <span style={{ fontSize: 22 }}>{scenario.personaIcon}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0', flexShrink: 0 }}>
+          {scenario.personaIcon && <span style={{ fontSize: 20 }}>{scenario.personaIcon}</span>}
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{scenario.personaName}</div>
             <div style={{ fontSize: 11, color: '#718096' }}>{scenario.personaRole}</div>
@@ -2492,26 +2906,30 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
         </div>
       )}
 
-      {/* Scenario description */}
-      <div key={activeScenarioIdx} style={{ background: '#FFFFFF', borderRadius: 10, padding: '12px 16px', marginBottom: 10, fontSize: 12, color: '#4A5568', lineHeight: 1.6, border: '1px solid #E2E8F0', animation: 'slideInRight 0.3s ease' }}>
+      {/* Scenario description — always larger than option buttons */}
+      <div key={activeScenarioIdx} style={{ background: '#F7FAFC', borderRadius: 10, padding: fs ? '16px 20px' : '12px 16px', fontSize: fs ? 18 : 16, fontWeight: 700, color: '#1A202C', lineHeight: 1.65, border: '1px solid #E2E8F0', animation: 'slideInRight 0.3s ease', flexShrink: 0 }}>
         {scenario.scenario}
       </div>
 
-      {/* Option buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      {/* Option cards — fixed height, text always smaller than scenario */}
+      <div style={{ display: 'flex', gap: 8, height: fs ? 90 : 75, flexShrink: 0 }}>
         {scenario.options.map((opt, i) => {
           const isSelected = selectedOption === i;
           const isStrongest = i === scenario.strongestChoice;
           const showResult = selectedOption !== null;
-          let borderColor = '#E2E8F0';
-          let bg = '#FFFFFF';
-          if (showResult && isStrongest) { borderColor = '#48BB78'; bg = '#F0FFF4'; }
-          else if (showResult && isSelected && !isStrongest) { borderColor = '#ED8936'; bg = '#FFFBEB'; }
-          else if (isSelected) { borderColor = '#38B2AC'; bg = '#E6FFFA'; }
+          let bg = OPTION_DEFAULT[i]?.bg ?? '#F7FAFC';
+          let border = `2px solid ${OPTION_DEFAULT[i]?.border ?? '#CBD5E0'}`;
+          let textColor = OPTION_DEFAULT[i]?.text ?? '#2D3748';
+          if (showResult && isStrongest) { bg = '#F0FFF4'; border = '2px solid #68D391'; textColor = '#276749'; }
+          else if (showResult && isSelected && !isStrongest) { bg = '#FFFBEB'; border = '2px solid #F6AD55'; textColor = '#C05621'; }
           return (
-            <button key={i} onClick={() => setSelectedOption(i)} style={{
-              flex: 1, padding: '10px 12px', borderRadius: 10, border: `2px solid ${borderColor}`, background: bg,
-              cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#1A202C', transition: 'all 0.15s',
+            <button key={i} onClick={() => onSelectOption(i)} style={{
+              flex: 1, height: '100%', padding: '10px 12px', borderRadius: 12, border,
+              background: bg, cursor: 'pointer',
+              fontSize: fs ? 15 : 13, fontWeight: 600, color: textColor,
+              lineHeight: 1.5, textAlign: 'center' as const,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s ease, border 0.15s ease, color 0.15s ease',
             }}>
               {opt}
             </button>
@@ -2519,29 +2937,25 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
         })}
       </div>
 
-      {/* Feedback */}
-      {selectedOption !== null && scenario.feedback[selectedOption] && (
-        <div style={{
-          borderRadius: 10, padding: '10px 14px', flex: 1,
-          background: scenario.feedback[selectedOption].quality === 'strong' ? '#F0FFF4' : scenario.feedback[selectedOption].quality === 'partial' ? '#FFFBEB' : '#FFF5F5',
-          border: `1px solid ${scenario.feedback[selectedOption].quality === 'strong' ? '#48BB7844' : scenario.feedback[selectedOption].quality === 'partial' ? '#ED893644' : '#FC818144'}`,
-        }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3,
-            color: scenario.feedback[selectedOption].quality === 'strong' ? '#48BB78' : scenario.feedback[selectedOption].quality === 'partial' ? '#ED8936' : '#FC8181',
-          }}>
-            {scenario.feedback[selectedOption].quality === 'strong' ? 'STRONGEST CHOICE' : scenario.feedback[selectedOption].quality === 'partial' ? 'COULD WORK' : 'NOT THE BEST FIT'}
-          </div>
-          <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}>{scenario.feedback[selectedOption].text}</div>
-        </div>
-      )}
-
-      {/* Scenario navigation hint */}
-      <div style={{ marginTop: 'auto', paddingTop: 8, textAlign: 'center' }}>
-        <span style={{ fontSize: 11, color: '#A0AEC0' }}>
-          Scenario {activeScenarioIdx + 1} of {scenarios.length}
-          {activeScenarioIdx < scenarios.length - 1 && ' — Click Next to continue to the next scenario'}
-        </span>
+      {/* Feedback — maxHeight transition so option cards never move */}
+      <div style={{
+        maxHeight: selectedOption !== null ? (fs ? 140 : 120) : 0,
+        overflow: 'hidden',
+        borderRadius: 10,
+        padding: selectedOption !== null ? '10px 14px' : '0 14px',
+        background: fbBg, border: `1.5px solid ${selectedOption !== null ? fbBorder : 'transparent'}`,
+        opacity: selectedOption !== null ? 1 : 0,
+        transition: 'opacity 0.25s ease, max-height 0.25s ease, padding 0.2s ease',
+        flexShrink: 0,
+      }}>
+        {fb && (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 5, color: fbColor }}>{fbLabel}</div>
+            <div style={{ fontSize: fs ? 15 : 13, color: '#4A5568', lineHeight: 1.65 }}>{fb.text}</div>
+          </>
+        )}
       </div>
+
     </div>
   );
 }

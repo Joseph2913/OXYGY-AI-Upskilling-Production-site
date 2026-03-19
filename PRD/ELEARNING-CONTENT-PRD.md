@@ -1,7 +1,161 @@
 # CONTENT PRD: Oxygy E-Learning Module Authoring Guide
-### Version 1.0 — Learning Design & Authoring Standards for New Modules
+### Version 1.1 — Learning Design & Authoring Standards for New Modules
 
 > This document defines what goes inside the slides — the learning design principles, narrative structure, content authoring rules, and quality standards for any new e-learning module. Read this alongside STRUCTURE-PRD.md before authoring content for any new topic.
+
+---
+
+## 0. Course Outline: Mandatory Topics by Level
+
+This section defines the mandatory topics, titles, and learning objectives for each level of the Oxygy AI Upskilling programme. Every module built must correspond to a topic listed here. Objectives must be reflected in the `courseIntro` slide and the platform journey view.
+
+---
+
+### Level 1 — Prompt Engineering
+
+**Topic 1 — Prompt Engineering Essentials**
+*From vague requests to structured, repeatable prompts*
+
+**Learning objectives:**
+- Apply a structured prompting framework to common business tasks — drafting, summarising, and structuring communications
+- Choose the right prompting approach for the situation — brain dump, conversational, or Blueprint
+
+**Topic 2 — Context Engineering**
+*Giving the AI what it needs to get it right*
+
+**Learning objectives:**
+- Understand why the same prompt produces different results depending on the context provided
+- Learn what context the AI needs to produce accurate, relevant, and appropriately toned output
+- Diagnose a weak AI output and identify which missing context caused it
+
+**Topic 3 — AI Literacy & Responsible Use**
+*What to trust, what to verify, and what never to share*
+
+**Learning objectives:**
+- Know what to trust, what to verify, and what never to share with an AI tool
+- Understand the key limitations of large language models — hallucination, recency, and confidentiality
+- Apply a simple decision framework for responsible AI use in your day-to-day work
+
+---
+
+### Level 2 — Agent Builder
+
+**Topic 1 — Designing Your First AI Agent**
+
+**Learning objectives:**
+- Understand what separates a repeatable agent from a one-off prompt
+- Identify which tasks in your work are agent-ready
+- Recognise the core components that make an agent reliable and reusable
+
+**Topic 2 — Writing an Effective System Prompt**
+
+**Learning objectives:**
+- Learn the four components of a system prompt: role, constraints, output format, and escalation rules
+- Understand what changes in AI behaviour when each component is missing
+- Practice writing a system prompt for a universal professional task
+
+**Topic 3 — When to Automate vs. Keep a Human in the Loop**
+
+**Learning objectives:**
+- Apply a readiness framework to assess any task for automation suitability
+- Identify the accountability and quality risks of full automation
+- Make a reasoned judgment on where human review adds the most value
+
+---
+
+### Level 3 — Workflow Designer
+
+**Topic 1 — Mapping a Multi-Step AI Workflow**
+
+**Learning objectives:**
+- Understand the three-layer model: inputs, processing, and outputs
+- Translate a familiar professional process into a node-based workflow
+- Identify where handoffs between steps create risk or opportunity
+
+**Topic 2 — Choosing the Right Nodes for Your Process**
+
+**Learning objectives:**
+- Learn the core node types: triggers, AI actions, transforms, conditions, and outputs
+- Match node types to the specific requirements of a given task
+- Avoid common design mistakes when selecting and sequencing nodes
+
+**Topic 3 — Designing for Failure: What Happens When a Workflow Breaks**
+
+**Learning objectives:**
+- Understand the most common points of failure in AI workflows
+- Build error-handling logic into workflow design from the start
+- Know when a failure should trigger a human escalation vs. an automated retry
+
+**Topic 4 — Human Checkpoints in Automated Workflows**
+
+**Learning objectives:**
+- Identify the moments in a workflow where human judgment is non-negotiable
+- Design review and approval steps without creating bottlenecks
+- Balance automation efficiency with appropriate human oversight
+
+---
+
+### Level 4 — Dashboard Designer
+
+**Topic 1 — Scoping an AI-Powered Tool**
+
+**Learning objectives:**
+- Distinguish between a well-scoped tool concept and an under-defined idea
+- Define the purpose, audience, and success criteria for an AI-powered tool
+- Identify scope risks before moving into design or build
+
+**Topic 2 — Structuring Your Product Brief**
+
+**Learning objectives:**
+- Learn the components of a complete product brief: purpose, users, features, and data sources
+- Translate a workplace need into a structured, actionable brief
+- Assess a brief for readiness using a scoring framework
+
+**Topic 3 — Mapping Data Sources to Features**
+
+**Learning objectives:**
+- Understand how the availability and quality of data constrains feature design
+- Map each planned feature to its required data input
+- Identify gaps between what the tool needs and what data currently exists
+
+**Topic 4 — Designing for Your User, Not Your Data**
+
+**Learning objectives:**
+- Distinguish between data-led and user-led design decisions
+- Prioritise features based on user need rather than data availability
+- Apply basic user-centred design principles to an AI tool brief
+
+---
+
+### Level 5 — App Builder
+
+**Topic 1 — Evaluating an AI Product Concept**
+
+**Learning objectives:**
+- Assess a product idea against five feasibility criteria: user clarity, data architecture, personalisation, technical feasibility, and scalability
+- Identify the strongest and weakest dimensions of a product concept
+- Use evaluation findings to sharpen the brief before committing to build
+
+**Topic 2 — Architecting for Scale: Choosing Your Stack**
+
+**Learning objectives:**
+- Understand the core components of an AI product architecture: frontend, AI engine, data layer, and integrations
+- Match architectural choices to the complexity and scale of the product being built
+- Identify the level connections between stack components and skills learned in earlier levels
+
+**Topic 3 — Reading the Complexity vs. Impact Matrix**
+
+**Learning objectives:**
+- Understand how to position a product concept on a two-axis matrix: technical complexity and business impact
+- Use quadrant placement to inform build priority and resourcing decisions
+- Recognise when a product idea should be rethought rather than built
+
+**Topic 4 — From Brief to Build Plan: Sequencing Your First Sprint**
+
+**Learning objectives:**
+- Translate an evaluated product brief into a phased implementation plan
+- Prioritise essential architecture components over recommended and optional ones
+- Identify dependencies and risks before the first sprint begins
 
 ---
 
@@ -34,7 +188,7 @@ Every module follows this mandatory story structure. The beats create narrative 
 
 **Tone:** The tension is a knowledge gap, not a performance failure. Most people haven't been shown this yet — they haven't been doing it wrong.
 
-**Language to use:** *"Here's what most people haven't been shown…"*  
+**Language to use:** *"Here's what most people haven't been shown…"*
 **Language to avoid:** *"Here's what's broken"*, *"Here's what you've been doing wrong"*
 
 **Slide types:** `tensionStatement`, `gapDiagram`, `concept`
@@ -221,7 +375,7 @@ Each of the 6 (or N) framework component cards must contain:
 ### Impact Badge Writing
 The impact must describe a real, observable consequence — not a vague statement like *"the response won't be as good."*
 
-Good: `"Without this → the AI defaults to a generic tone that doesn't match your document's audience"`  
+Good: `"Without this → the AI defaults to a generic tone that doesn't match your document's audience"`
 Bad: `"Without this → the output quality drops"`
 
 ---
@@ -331,7 +485,7 @@ The practice task must:
 ### Example Prompt Pills
 3–4 pills giving starting points — not complete answers. A pill should give the learner enough to begin writing without doing the work for them.
 
-Good pill: *"Draft a meeting agenda for…"*  
+Good pill: *"Draft a meeting agenda for…"*
 Bad pill: *"Write a Role: Senior Manager who needs to…"* (too leading)
 
 ### Scoring Rubric (per component)
@@ -372,7 +526,7 @@ The rubric must be written for this specific module's framework — not a generi
 ### Teal Underline Word
 Each heading has one key word underlined in teal — the word that carries the most meaning. Not the verb. Not a filler word. The concept word.
 
-Good: *"Prompts that __generate__ results"* → underline `generate`  
+Good: *"Prompts that __generate__ results"* → underline `generate`
 Bad: *"Why context __matters__ for AI"* → underline `context` not `matters`
 
 ---
