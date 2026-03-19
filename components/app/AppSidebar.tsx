@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Map, FolderKanban, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
+import { useAppContext } from '../../context/AppContext';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: Home, path: '/app/dashboard' },
@@ -25,6 +26,8 @@ const HIDE_SCROLLBAR_CSS = `
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { isAdmin } = useOrg();
+  const { userProfile } = useAppContext();
+  const level = userProfile?.current_level ?? 1;
   const [expanded, setExpanded] = useState(false);
 
   const isActive = (path: string) => {
