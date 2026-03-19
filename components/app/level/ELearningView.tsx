@@ -741,21 +741,12 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         return (
           <div style={{ padding: fs ? '16px 36px' : '10px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
 
-            {/* Instruction banner */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: accentColor + '15', border: `1.5px solid ${accentColor}55`, borderRadius: 12, padding: fs ? '10px 20px' : '8px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: fs ? 22 : 18 }}>👆</span>
-                <span style={{ fontSize: fs ? 15 : 13, fontWeight: 700, color: '#1A202C' }}>Click each card to reveal what it does</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: fs ? 13 : 11, fontWeight: 700, color: contextStep === 6 ? '#276749' : '#718096' }}>
-                  {levelLabels[contextStep]}
-                </span>
-                <div style={{ width: 100, height: 8, background: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', background: accentColor, width: `${(contextStep / 6) * 100}%`, transition: 'width 400ms ease', borderRadius: 4 }} />
-                </div>
-                <span style={{ fontSize: fs ? 13 : 11, fontWeight: 700, color: '#718096' }}>{contextStep}/6</span>
-              </div>
+            {/* Instruction banner — swaps to completion message when all revealed */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, background: allRevealed ? '#F0FFF4' : accentColor + '15', border: `1.5px solid ${allRevealed ? '#9AE6B4' : accentColor + '55'}`, borderRadius: 12, padding: fs ? '10px 20px' : '8px 16px', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
+              <span style={{ fontSize: fs ? 20 : 16 }}>{allRevealed ? '✓' : '👆'}</span>
+              <span style={{ fontSize: fs ? 15 : 13, fontWeight: 700, color: allRevealed ? '#276749' : '#1A202C' }}>
+                {allRevealed ? 'All six elements revealed. Each one removes a specific assumption the AI would otherwise have to make.' : 'Click each card to reveal what it does'}
+              </span>
             </div>
 
             {/* 3×2 grid */}
@@ -792,13 +783,6 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               })}
             </div>
 
-            {/* Completion insight */}
-            {allRevealed && (
-              <div style={{ flexShrink: 0, padding: fs ? '12px 18px' : '8px 14px', background: '#F0FFF4', borderRadius: 10, border: '1.5px solid #9AE6B4', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: fs ? 18 : 16 }}>✓</span>
-                <div style={{ fontSize: fs ? 14 : 12, fontWeight: 600, color: '#276749', lineHeight: 1.5 }}>All six elements revealed. Each one removes a specific assumption the AI would otherwise have to make.</div>
-              </div>
-            )}
           </div>
         );
       }
