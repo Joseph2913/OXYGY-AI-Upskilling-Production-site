@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, FileText, Video, PenTool, FolderOpen, KeyRound, Mail, Users } from 'lucide-react';
+import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, PenTool, FolderOpen, KeyRound, Mail, Users } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardData, LeaderboardMember } from '../../hooks/useDashboardData';
@@ -340,7 +340,7 @@ const AppDashboard: React.FC = () => {
   const accentDark = LEVEL_ACCENT_DARK_COLORS[level];
   const levelFull = LEVEL_FULL_NAMES[level];
   const activeTopic = topics[data.activeTopicIndex];
-  const phaseNames: Record<number, string> = { 1: 'E-Learning', 2: 'Read', 3: 'Watch', 4: 'Practice' };
+  const phaseNames: Record<number, string> = { 1: 'E-Learning', 2: 'Practise' };
 
 
   const currentUserRank = data.leaderboard.findIndex(m => m.isCurrentUser) + 1;
@@ -451,9 +451,7 @@ const AppDashboard: React.FC = () => {
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 {[
                   { phase: 1, label: 'E-Learn', icon: <Play size={11} /> },
-                  { phase: 2, label: 'Read', icon: <FileText size={11} /> },
-                  { phase: 3, label: 'Watch', icon: <Video size={11} /> },
-                  { phase: 4, label: 'Practise', icon: <PenTool size={11} /> },
+                  { phase: 2, label: 'Practise', icon: <PenTool size={11} /> },
                 ].map((p, idx) => {
                   const isCurrent = p.phase === data.currentPhase;
                   const isDone = p.phase < data.currentPhase;
@@ -516,7 +514,7 @@ const AppDashboard: React.FC = () => {
             >
               <ProgressRing completed={data.currentSlide} total={data.totalSlides} accentColor={accent} size={110} strokeWidth={8} />
               <button
-                onClick={() => navigate('/app/level')}
+                onClick={() => navigate('/app/level?phase=1')}
                 style={{
                   background: '#1A202C',
                   color: '#FFFFFF',
@@ -636,7 +634,7 @@ const AppDashboard: React.FC = () => {
                 const isCompletedLevel = lvl < level;
                 const isLocked = false; // All levels accessible
                 const progress = data.levelProgress[lvl];
-                const phases = progress?.phasesCompleted || [false, false, false, false];
+                const phases = progress?.phasesCompleted || [false, false];
                 const usage = data.toolUsage[primaryTool.id];
                 const artefactsCreated = usage?.artefactsCreated || 0;
 
@@ -710,14 +708,14 @@ const AppDashboard: React.FC = () => {
                               style={{
                                 display: 'flex', alignItems: 'center', gap: 4,
                                 padding: '2px 8px', borderRadius: 8,
-                                background: phasesCompleted === 4 ? lvlAccent + '25' : '#F7FAFC',
-                                border: `1px solid ${phasesCompleted === 4 ? lvlAccent + '55' : '#E2E8F0'}`,
+                                background: phasesCompleted === 2 ? lvlAccent + '25' : '#F7FAFC',
+                                border: `1px solid ${phasesCompleted === 2 ? lvlAccent + '55' : '#E2E8F0'}`,
                                 fontSize: 10, fontWeight: 600,
-                                color: phasesCompleted === 4 ? lvlAccentDark : '#4A5568',
+                                color: phasesCompleted === 2 ? lvlAccentDark : '#4A5568',
                               }}
                             >
-                              {phasesCompleted === 4 ? <Check size={9} strokeWidth={3} /> : <Play size={9} />}
-                              {phasesCompleted} of 4 phases
+                              {phasesCompleted === 2 ? <Check size={9} strokeWidth={3} /> : <Play size={9} />}
+                              {phasesCompleted} of 2 phases
                             </div>
                           );
                         })()}
@@ -815,7 +813,7 @@ const AppDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ─── RIGHT COLUMN: Cohort Leaderboard ─── */}
+        {/* ─── RIGHT COLUMN: Cohort Leaderboard. ─── */}
         <div
           style={{
             background: '#FFFFFF',
@@ -835,7 +833,7 @@ const AppDashboard: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Trophy size={16} color="#F6AD55" />
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard.</span>
                 </div>
                 <button
                   onClick={() => navigate('/app/cohort')}
@@ -881,27 +879,13 @@ const AppDashboard: React.FC = () => {
                 ))}
               </div>
 
-              {/* Score explainer */}
-              <div
-                style={{
-                  marginTop: 14,
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  background: '#F7FAFC',
-                  fontSize: 11,
-                  color: '#718096',
-                  lineHeight: 1.5,
-                }}
-              >
-                <span style={{ fontWeight: 600, color: '#4A5568' }}>Score</span> = Phases (&times;4) + Artefacts (&times;25) + Insights (&times;30) + Streak (&times;5) + Activity (&times;2)
-              </div>
             </>
           ) : (
             /* No-org state — invite code entry */
             <div style={{ padding: '20px 22px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <Trophy size={16} color="#F6AD55" />
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Cohort Leaderboard.</span>
               </div>
 
               <div style={{ textAlign: 'center', marginBottom: 18 }}>
