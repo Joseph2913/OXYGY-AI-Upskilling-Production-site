@@ -265,6 +265,14 @@ const AppJourney: React.FC = () => {
     } catch { return null; }
   });
 
+  // Mark survey as active in sessionStorage whenever onboarding is shown,
+  // so the sync useEffect below won't dismiss it while the completion card is visible.
+  useEffect(() => {
+    if (showOnboarding && !demoMode && !simulateNewUser) {
+      sessionStorage.setItem('oxygy_survey_active', 'true');
+    }
+  }, [showOnboarding, demoMode, simulateNewUser]);
+
   // Sync showOnboarding with hasLearningPlan on mount / context change
   useEffect(() => {
     // In demo mode, only force onboarding if the plan hasn't been generated yet
@@ -280,7 +288,7 @@ const AppJourney: React.FC = () => {
     if (!hasLearningPlan) {
       setShowOnboarding(true);
     } else {
-      // Plan exists — dismiss onboarding unless the user is mid-survey
+      // Plan exists — dismiss onboarding unless the user is mid-survey/completion card
       if (sessionStorage.getItem('oxygy_survey_active') !== 'true') {
         setShowOnboarding(false);
       }
