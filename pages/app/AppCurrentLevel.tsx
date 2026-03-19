@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { LEVEL_TOPICS, LEVEL_META } from '../../data/levelTopics';
 import { getTopicContent } from '../../data/topicContent';
 import { useLevelData, TOTAL_PHASES } from '../../hooks/useLevelData';
@@ -97,7 +98,7 @@ function PhaseProgressStrip({
 }
 
 const AppCurrentLevel: React.FC = () => {
-  const { userProfile, setCurrentLevel } = useAppContext();
+  const { userProfile, setCurrentLevel, hasLearningPlan, learningPlanLoading } = useAppContext();
   const [searchParams] = useSearchParams();
 
   // Use ?level= query param if present (e.g. from Review button), else fall back to profile
@@ -216,6 +217,9 @@ const AppCurrentLevel: React.FC = () => {
     setViewingPhase(null);
     setIsReviewMode(false);
   }, [currentLevel, setCurrentLevel]);
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="Current Level" />;
 
   // Loading state
   if (loading || !levelData || selectedTopicId === null) {

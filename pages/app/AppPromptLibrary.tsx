@@ -1,9 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Library } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
+import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 
 const AppPromptLibrary: React.FC = () => {
   const navigate = useNavigate();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="this tool" />;
 
   return (
     <div style={{

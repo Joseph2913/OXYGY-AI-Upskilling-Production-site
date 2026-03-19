@@ -31,7 +31,7 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
   ],
   2: [
     {
-      id: 1, title: "From Prompts to Reusable Tools", subtitle: "Building AI agents that standardise quality, save time, and scale across your team",
+      id: 1, title: "From Prompts to Reusable Tools", subtitle: "From one-off prompts to reusable AI agents",
       description: "Learn when and how to turn a prompt into a permanent, shareable tool — an AI agent with defined inputs, defined behaviour, and structured outputs that runs the same way every time, for anyone on your team.",
       estimatedMinutes: 50, icon: "🤖",
 

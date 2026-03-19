@@ -13,6 +13,7 @@ const ROUTE_LABELS: Record<string, string> = {
 };
 
 function getPageLabel(pathname: string): string {
+  if (pathname === '/app/toolkit/learning-coach') return 'Learning Coach';
   if (pathname.startsWith('/app/toolkit')) return 'My Toolkit';
   return ROUTE_LABELS[pathname] || 'Dashboard';
 }
@@ -29,6 +30,15 @@ export const AppTopBar: React.FC = () => {
   const fullName = user?.user_metadata?.full_name || userProfile?.fullName || 'User';
   const email = user?.email || '';
   const initial = (fullName?.[0] || 'U').toUpperCase();
+  const level = userProfile?.currentLevel ?? 1;
+  const LEVEL_SHORT_NAMES: Record<number, string> = {
+    1: 'Fundamentals',
+    2: 'Applied',
+    3: 'Systemic',
+    4: 'Dashboards',
+    5: 'Applications',
+  };
+  const levelName = LEVEL_SHORT_NAMES[level] || 'Fundamentals';
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -133,7 +143,22 @@ export const AppTopBar: React.FC = () => {
                   {email}
                 </div>
               )}
-              <div style={{ height: 1, background: '#E2E8F0', margin: '8px 0' }} />
+              <div style={{ height: 1, background: '#E2E8F0', margin: '10px 0' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#38B2AC',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ fontSize: 12, color: '#4A5568', fontWeight: 500 }}>
+                  Level {level} &middot; {levelName}
+                </span>
+              </div>
+              <div style={{ height: 1, background: '#E2E8F0', margin: '10px 0' }} />
               <button
                 onClick={() => {
                   setDropdownOpen(false);

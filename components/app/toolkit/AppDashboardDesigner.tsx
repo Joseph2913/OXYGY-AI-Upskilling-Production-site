@@ -16,6 +16,8 @@ import {
 } from '../../../hooks/useDashboardDesignApi';
 import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
+import { useAppContext } from '../../../context/AppContext';
+import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -451,6 +453,7 @@ function getBuildPlanRefinementQuestions(platformLabel: string): string[] {
 
 const AppDashboardDesigner: React.FC = () => {
   const { user } = useAuth();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
 
   // ─── Brief state ───
   const [brief, setBrief] = useState<DashboardBrief>({ ...INITIAL_BRIEF });
@@ -938,6 +941,9 @@ const AppDashboardDesigner: React.FC = () => {
   /* ════════════════════════════════════════
      RENDER
      ════════════════════════════════════════ */
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="this tool" />;
+
   return (
     <div style={{ padding: '28px 36px', background: '#F7FAFC', minHeight: '100%', fontFamily: FONT }}>
       <style>{`

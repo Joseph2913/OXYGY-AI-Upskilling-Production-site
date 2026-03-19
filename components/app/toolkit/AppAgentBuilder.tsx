@@ -12,6 +12,8 @@ import {
 import { useAgentDesignApi } from '../../../hooks/useAgentDesignApi';
 import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck, AgentSetupGuide } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
+import { useAppContext } from '../../../context/AppContext';
+import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -344,6 +346,7 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
 
 const AppAgentBuilder: React.FC = () => {
   const { user } = useAuth();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
 
   // Input state
   const [taskDescription, setTaskDescription] = useState('');
@@ -842,6 +845,9 @@ const AppAgentBuilder: React.FC = () => {
   const step2Done = step1Done && step2Approved;
   const step3Done = step2Done && selectedPlatform !== null && (setupGuide !== null || setupLoading);
   const step4Done = setupGuide !== null;
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="this tool" />;
 
   return (
     <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT }}>

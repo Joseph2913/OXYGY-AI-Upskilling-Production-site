@@ -12,6 +12,7 @@ import { AgentBuilder } from './components/AgentBuilder';
 // Lazy-load app pages
 const AppDashboard = React.lazy(() => import('./pages/app/AppDashboard'));
 const AppJourney = React.lazy(() => import('./pages/app/AppJourney'));
+const AppProjects = React.lazy(() => import('./pages/app/AppProjects'));
 const AppProjectProof = React.lazy(() => import('./pages/app/AppProjectProof'));
 const AppCurrentLevel = React.lazy(() => import('./pages/app/AppCurrentLevel'));
 const AppToolkit = React.lazy(() => import('./pages/app/AppToolkit'));
@@ -23,6 +24,7 @@ const AppAgentBuilder = React.lazy(() => import('./components/app/toolkit/AppAge
 const AppWorkflowCanvas = React.lazy(() => import('./components/app/toolkit/AppWorkflowCanvas'));
 const AppDashboardDesigner = React.lazy(() => import('./components/app/toolkit/AppDashboardDesigner'));
 const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppAppEvaluator'));
+const AppLearningCoach = React.lazy(() => import('./components/app/toolkit/AppLearningCoach'));
 const BuildGuideView = React.lazy(() => import('./pages/app/BuildGuideView'));
 const AppOnboarding = React.lazy(() => import('./pages/app/AppOnboarding'));
 const AppAdmin = React.lazy(() => import('./pages/app/AppAdmin'));
@@ -161,6 +163,7 @@ function App() {
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<AppSuspense><AppDashboard /></AppSuspense>} />
           <Route path="journey" element={<AppSuspense><AppJourney /></AppSuspense>} />
+          <Route path="projects" element={<AppSuspense><AppProjects /></AppSuspense>} />
           <Route path="journey/project/:level" element={<AppSuspense><AppProjectProof /></AppSuspense>} />
           <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
           <Route path="toolkit" element={<AppSuspense><AppToolkit /></AppSuspense>} />
@@ -171,6 +174,7 @@ function App() {
           <Route path="toolkit/dashboard-designer" element={<AppSuspense><AppDashboardDesigner /></AppSuspense>} />
           <Route path="toolkit/app-builder" element={<AppSuspense><AppAppEvaluator /></AppSuspense>} />
           <Route path="toolkit/ai-app-evaluator" element={<AppSuspense><AppAppEvaluator /></AppSuspense>} />
+          <Route path="toolkit/learning-coach" element={<AppSuspense><AppLearningCoach /></AppSuspense>} />
           {/* Legacy routes — redirect to new paths */}
           <Route path="toolkit/workflow-designer" element={<Navigate to="/app/toolkit/workflow-canvas" replace />} />
           <Route path="toolkit/dashboard-design" element={<Navigate to="/app/toolkit/dashboard-designer" replace />} />

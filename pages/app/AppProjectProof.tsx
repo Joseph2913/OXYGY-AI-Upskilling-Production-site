@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, FileText, Lightbulb } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -70,6 +70,8 @@ const LEVEL_DESCRIPTIONS: Record<number, string> = {
 const AppProjectProof: React.FC = () => {
   const { level: levelParam } = useParams<{ level: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromProjects = searchParams.get('from') === 'projects';
   const { hasLearningPlan, userProfile } = useAppContext();
   const { user } = useAuth();
   const levelNum = parseInt(levelParam || '', 10);
@@ -340,7 +342,7 @@ const AppProjectProof: React.FC = () => {
   if (!projectBrief) {
     return (
       <div style={{ padding: '28px 36px', fontFamily: FONT }}>
-        <span onClick={() => navigate('/app/journey')} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><ArrowLeft size={14} /> Back to My Journey</span>
+        <span onClick={() => navigate(fromProjects ? '/app/projects' : '/app/journey')} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><ArrowLeft size={14} /> {fromProjects ? 'Back to My Projects' : 'Back to My Journey'}</span>
         <div style={{ textAlign: 'center', paddingTop: 60 }}>
           <div style={{ fontSize: 16, color: '#718096' }}>No project has been assigned for this level.</div>
         </div>
@@ -352,7 +354,7 @@ const AppProjectProof: React.FC = () => {
   if (validLevel > currentLevel + 1) {
     return (
       <div style={{ padding: '28px 36px', fontFamily: FONT }}>
-        <span onClick={() => navigate('/app/journey')} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><ArrowLeft size={14} /> Back to My Journey</span>
+        <span onClick={() => navigate(fromProjects ? '/app/projects' : '/app/journey')} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><ArrowLeft size={14} /> {fromProjects ? 'Back to My Projects' : 'Back to My Journey'}</span>
         <div style={{ textAlign: 'center', paddingTop: 60 }}>
           <div style={{ fontSize: 16, color: '#718096' }}>Complete Level {validLevel - 1} to unlock this project.</div>
         </div>
@@ -390,10 +392,10 @@ const AppProjectProof: React.FC = () => {
 
       {/* Back Link */}
       <div style={{ marginBottom: 16, animation: 'ppFadeIn 0.3s ease 0ms both' }}>
-        <span onClick={() => { triggerSave(); navigate('/app/journey'); }} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        <span onClick={() => { triggerSave(); navigate(fromProjects ? '/app/projects' : '/app/journey'); }} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#4A5568'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#718096'; }}
-        ><ArrowLeft size={14} /> Back to My Journey</span>
+        ><ArrowLeft size={14} /> {fromProjects ? 'Back to My Projects' : 'Back to My Journey'}</span>
       </div>
 
       {/* Page Title */}

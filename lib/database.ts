@@ -395,11 +395,62 @@ export async function upsertUiPreferences(
   } catch (err) { console.error('upsertUiPreferences error:', err); return false; }
 }
 
+// ─── LEARNER COACH PROFILES ───
+
+export interface LearnerCoachProfile {
+  id: string;
+  userId: string;
+  preferences: string[];
+  platforms: string[];
+  additionalContext: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getLearnerCoachProfile(userId: string): Promise<LearnerCoachProfile | null> {
+  try {
+    const { data, error } = await supabase
+      .from('learner_coach_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      id: data.id,
+      userId: data.user_id,
+      preferences: data.preferences || [],
+      platforms: data.platforms || [],
+      additionalContext: data.additional_context || '',
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  } catch (err) { console.error('getLearnerCoachProfile error:', err); return null; }
+}
+
+export async function upsertLearnerCoachProfile(
+  userId: string,
+  profile: { preferences: string[]; platforms: string[]; additionalContext: string }
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('learner_coach_profiles')
+      .upsert({
+        user_id: userId,
+        preferences: profile.preferences,
+        platforms: profile.platforms,
+        additional_context: profile.additionalContext,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    if (error) { console.error('upsertLearnerCoachProfile error:', error); return false; }
+    return true;
+  } catch (err) { console.error('upsertLearnerCoachProfile error:', err); return false; }
+}
+
 // ─── ARTEFACTS ───
 
 export type ArtefactType =
   | 'prompt' | 'agent' | 'workflow' | 'dashboard' | 'app_spec'
-  | 'build_guide' | 'prd';
+  | 'build_guide' | 'prd' | 'pathway';
 
 export interface Artefact {
   id: string;

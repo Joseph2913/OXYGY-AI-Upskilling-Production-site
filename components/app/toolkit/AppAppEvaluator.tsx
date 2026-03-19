@@ -17,6 +17,8 @@ import type {
   ArchitectureComponent, RiskItem, AppBuildPlanResult, BuildPlanPhase,
 } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
+import { useAppContext } from '../../../context/AppContext';
+import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -651,6 +653,7 @@ const CodeBlockWithCopy: React.FC<{ code: string }> = ({ code }) => {
 
 const AppAppEvaluator: React.FC = () => {
   const { user } = useAuth();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
 
   // Input state
   const [appDescription, setAppDescription] = useState('');
@@ -1186,6 +1189,9 @@ const AppAppEvaluator: React.FC = () => {
       return next;
     });
   };
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="this tool" />;
 
   return (
     <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT, background: '#F7FAFC' }}>

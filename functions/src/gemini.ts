@@ -114,7 +114,19 @@ export async function callOpenRouter(opts: {
   const data = await response.json();
   const text = data?.choices?.[0]?.message?.content || "";
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-  const parsed = JSON.parse(cleaned);
+
+  if (!cleaned) {
+    console.error(`OpenRouter returned empty content (${opts.label})`);
+    return { ok: false, status: 502, message: "AI service returned an empty response. Please try again.", retryable: true };
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (parseErr) {
+    console.error(`JSON parse error (${opts.label}):`, parseErr, "Raw:", cleaned.slice(0, 500));
+    return { ok: false, status: 502, message: "AI service returned an invalid response. Please try again.", retryable: true };
+  }
 
   return { ok: true, data: parsed };
 }

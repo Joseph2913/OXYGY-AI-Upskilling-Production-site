@@ -1,22 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
+import { Home, Map, FolderKanban, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
-
-const LEVEL_SHORT_NAMES: Record<number, string> = {
-  1: 'Fundamentals',
-  2: 'Applied',
-  3: 'Systemic',
-  4: 'Dashboards',
-  5: 'Applications',
-};
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: Home, path: '/app/dashboard' },
   { label: 'My Journey', icon: Map, path: '/app/journey' },
+  { label: 'My Projects', icon: FolderKanban, path: '/app/projects' },
   { label: 'Current Level', icon: BookOpen, path: '/app/level' }, // path overridden dynamically below
   { label: 'My Toolkit', icon: Wrench, path: '/app/toolkit' },
+  { label: 'Learning Coach', icon: GraduationCap, path: '/app/toolkit/learning-coach' },
   { label: 'My Artefacts', icon: Folder, path: '/app/artefacts' },
   { label: 'My Cohort', icon: Users, path: '/app/cohort' },
 ];
@@ -24,23 +17,28 @@ const NAV_ITEMS = [
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
 export const SIDEBAR_EXPANDED_WIDTH = 240;
 
+const HIDE_SCROLLBAR_CSS = `
+.sidebar-nav-scroll::-webkit-scrollbar { display: none; }
+.sidebar-nav-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+`;
+
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
-  const { userProfile } = useAppContext();
   const { isAdmin } = useOrg();
   const [expanded, setExpanded] = useState(false);
 
-  const firstName = userProfile?.fullName?.split(' ')[0] || 'User';
-  const initial = firstName[0]?.toUpperCase() || 'U';
-  const level = userProfile?.currentLevel ?? 1;
-  const levelName = LEVEL_SHORT_NAMES[level] || 'Fundamentals';
-
   const isActive = (path: string) => {
+    if (path === '/app/toolkit/learning-coach') {
+      return location.pathname === '/app/toolkit/learning-coach';
+    }
     if (path === '/app/toolkit') {
-      return location.pathname.startsWith('/app/toolkit');
+      return location.pathname.startsWith('/app/toolkit') && location.pathname !== '/app/toolkit/learning-coach';
     }
     if (path === '/app/journey') {
       return location.pathname.startsWith('/app/journey');
+    }
+    if (path === '/app/projects') {
+      return location.pathname === '/app/projects';
     }
     return location.pathname === path;
   };
@@ -48,6 +46,8 @@ export const AppSidebar: React.FC = () => {
   const width = expanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH;
 
   return (
+    <>
+    <style>{HIDE_SCROLLBAR_CSS}</style>
     <div
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
@@ -129,69 +129,11 @@ export const AppSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Section 2 — User identity */}
+      {/* Section 2 — Primary nav */}
       <div
-        style={{
-          padding: '12px 0 12px 14px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          flexShrink: 0,
-        }}
+        className="sidebar-nav-scroll"
+        style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: '#38B2AC',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#1A202C',
-              fontWeight: 700,
-              fontSize: 13,
-              flexShrink: 0,
-            }}
-          >
-            {initial}
-          </div>
-          <div
-            style={{
-              opacity: expanded ? 1 : 0,
-              transition: 'opacity 0.15s ease',
-            }}
-          >
-            <div
-              style={{
-                color: '#FFFFFF',
-                fontWeight: 600,
-                fontSize: 14,
-                lineHeight: 1.3,
-              }}
-            >
-              {firstName}
-            </div>
-            <div
-              style={{
-                display: 'inline-block',
-                background: 'rgba(247, 232, 164, 0.13)',
-                border: '1px solid rgba(247, 232, 164, 0.27)',
-                borderRadius: 20,
-                padding: '2px 8px',
-                fontSize: 10,
-                fontWeight: 600,
-                color: '#F7E8A4',
-                marginTop: 2,
-              }}
-            >
-              Level {level} · {levelName}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section 3 — Primary nav */}
-      <div style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
         {NAV_ITEMS.map((item) => {
           const resolvedPath = item.label === 'Current Level' ? `/app/level-${level}` : item.path;
           const active = isActive(resolvedPath) || (item.label === 'Current Level' && isActive(item.path));
@@ -333,5 +275,6 @@ export const AppSidebar: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };

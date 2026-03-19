@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useJourneyData } from '../../hooks/useJourneyData';
+import type { JourneyData } from '../../hooks/useJourneyData';
 import { getProfile, getLatestLearningPlan } from '../../lib/database';
 import { LevelCard } from '../../components/app/LevelCard';
 import { LEVEL_META } from '../../data/levelTopics';
@@ -38,6 +39,181 @@ const Skeleton: React.FC<{ height: number }> = ({ height }) => (
   }} />
 );
 
+/* ═══════════════════════════════════════════════════════
+   LEARNING PLAN OVERVIEW — shows AI-generated plan summary
+   with all 5 levels and personalized projects at a glance
+   ═══════════════════════════════════════════════════════ */
+const LearningPlanOverview: React.FC<{
+  planData: PathwayApiResponse;
+  onLevelClick: (levelNum: number) => void;
+}> = ({ planData, onLevelClick }) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const levelKeys = ['L1', 'L2', 'L3', 'L4', 'L5'];
+
+  return (
+    <div style={{
+      background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+      overflow: 'hidden', marginBottom: 20,
+      animation: 'journeyFadeSlideUp 0.3s ease 0ms both',
+    }}>
+      {/* Header */}
+      <div
+        onClick={() => setCollapsed(!collapsed)}
+        style={{
+          padding: '18px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, #F0FFFC 0%, #F7FAFC 100%)',
+          borderBottom: collapsed ? 'none' : '1px solid #E2E8F0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Sparkles size={16} color="#38B2AC" />
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>
+            Your Learning Plan
+          </span>
+          {planData.totalEstimatedWeeks > 0 && (
+            <span style={{
+              fontSize: 11, fontWeight: 600, color: '#718096',
+              background: '#F7FAFC', borderRadius: 8, padding: '2px 8px',
+              border: '1px solid #E2E8F0',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              <Clock size={10} />
+              ~{planData.totalEstimatedWeeks} weeks
+            </span>
+          )}
+        </div>
+        <ChevronDown size={16} color="#718096" style={{
+          transition: 'transform 0.25s ease',
+          transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+        }} />
+      </div>
+
+      {/* Body */}
+      <div style={{
+        maxHeight: collapsed ? 0 : 800,
+        overflow: 'hidden',
+        transition: 'max-height 0.35s ease',
+      }}>
+        {/* Pathway summary */}
+        {planData.pathwaySummary && (
+          <div style={{
+            padding: '16px 24px 0',
+            fontSize: 13, color: '#4A5568', lineHeight: 1.65,
+            fontStyle: 'italic',
+          }}>
+            {planData.pathwaySummary}
+          </div>
+        )}
+
+        {/* Level rows */}
+        <div style={{ padding: '16px 24px 20px' }}>
+          {levelKeys.map((key, idx) => {
+            const levelNum = idx + 1;
+            const levelResult = planData.levels[key];
+            const meta = LEVEL_META.find(m => m.number === levelNum);
+            if (!meta) return null;
+            const accent = meta.accentColor;
+            const accentDark = meta.accentDark;
+
+            return (
+              <div
+                key={key}
+                onDoubleClick={() => onLevelClick(levelNum)}
+                style={{
+                  display: 'flex', alignItems: 'stretch', gap: 0,
+                  borderRadius: 10, overflow: 'hidden',
+                  border: '1px solid #EDF2F7',
+                  marginBottom: idx < 4 ? 8 : 0,
+                  cursor: 'pointer',
+                  transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = accent;
+                  e.currentTarget.style.boxShadow = `0 2px 8px ${accent}22`;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = '#EDF2F7';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onClick={() => onLevelClick(levelNum)}
+              >
+                {/* Level accent bar */}
+                <div style={{
+                  width: 4, background: accent, flexShrink: 0,
+                }} />
+
+                {/* Level number badge */}
+                <div style={{
+                  width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, background: `${accent}15`,
+                }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: 800, color: accentDark,
+                  }}>
+                    {levelNum}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div style={{
+                  flex: 1, minWidth: 0, padding: '12px 16px',
+                  display: 'flex', alignItems: 'center', gap: 16,
+                }}>
+                  {/* Level name + project */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <span style={{
+                        fontSize: 12, fontWeight: 700, color: '#1A202C',
+                      }}>
+                        {meta.name}
+                      </span>
+                      {levelResult?.depth && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700,
+                          color: levelResult.depth === 'full' ? accentDark : '#718096',
+                          background: levelResult.depth === 'full' ? `${accent}30` : '#F7FAFC',
+                          border: `1px solid ${levelResult.depth === 'full' ? accent + '66' : '#E2E8F0'}`,
+                          borderRadius: 6, padding: '1px 7px',
+                          textTransform: 'uppercase' as const,
+                          letterSpacing: '0.04em',
+                        }}>
+                          {levelResult.depth === 'full' ? 'Full Program' : 'Fast-track'}
+                        </span>
+                      )}
+                    </div>
+                    {levelResult?.projectTitle ? (
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <Zap size={10} color={accentDark} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <span style={{
+                          fontSize: 12, color: '#4A5568', lineHeight: 1.45,
+                        }}>
+                          <strong style={{ color: '#1A202C', fontWeight: 600 }}>{levelResult.projectTitle}</strong>
+                          {levelResult.deliverable && (
+                            <span style={{ color: '#718096' }}> — {levelResult.deliverable}</span>
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>
+                        Skipped
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Arrow hint */}
+                  <ArrowRight size={13} color="#CBD5E0" style={{ flexShrink: 0 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AppJourney: React.FC = () => {
   const { hasLearningPlan, learningPlanLoading } = useAppContext();
   const { user } = useAuth();
@@ -47,26 +223,49 @@ const AppJourney: React.FC = () => {
   const levelRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // ─── DEMO MODE: ?demo=true — no Supabase, local plan data only ───
+  const demoMode = searchParams.get('demo') === 'true';
+  const demoPlanCompleted = useRef(false);
+
+  // Track which level was clicked from overview to auto-expand its card
+  // (must be declared here, before any conditional returns, per Rules of Hooks)
+  const [expandedFromOverview, setExpandedFromOverview] = useState<number | null>(null);
+
   // Fetch learning plan for project titles on level cards
+  // Re-fetch when hasLearningPlan flips to true (e.g. after survey completion)
   const [planData, setPlanData] = useState<PathwayApiResponse | null>(null);
   useEffect(() => {
+    if (demoMode) return; // Demo mode uses local state only
     if (user) {
       getLatestLearningPlan(user.id).then(d => {
         if (d?.plan) setPlanData(d.plan);
       });
     }
-  }, [user]);
+  }, [user, hasLearningPlan, demoMode]);
 
   // DEV: ?simulate=new-user forces State A for testing the onboarding flow
   const simulateNewUser = searchParams.get('simulate') === 'new-user';
 
-  // State A/B transition
-  const [showOnboarding, setShowOnboarding] = useState(!hasLearningPlan || simulateNewUser);
+  // State A/B transition — restore from sessionStorage if user navigated away mid-survey
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (!hasLearningPlan || simulateNewUser || demoMode) return true;
+    return sessionStorage.getItem('oxygy_survey_active') === 'true';
+  });
   const [transitioning, setTransitioning] = useState(false);
-  const [prefillData, setPrefillData] = useState<Partial<PathwayFormData> | null>(null);
+  const [prefillData, setPrefillData] = useState<Partial<PathwayFormData> | null>(() => {
+    try {
+      const stored = sessionStorage.getItem('oxygy_survey_prefill');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
 
   // Sync showOnboarding with hasLearningPlan on mount / context change
   useEffect(() => {
+    // In demo mode, only force onboarding if the plan hasn't been generated yet
+    if (demoMode) {
+      if (!demoPlanCompleted.current) setShowOnboarding(true);
+      return;
+    }
     if (simulateNewUser) {
       setShowOnboarding(true);
       return;
@@ -74,36 +273,56 @@ const AppJourney: React.FC = () => {
     if (!learningPlanLoading && !hasLearningPlan) {
       setShowOnboarding(true);
     }
-  }, [hasLearningPlan, learningPlanLoading, simulateNewUser]);
+  }, [hasLearningPlan, learningPlanLoading, simulateNewUser, demoMode]);
 
   // Load prefill data for regeneration
   const handleRegenerate = useCallback(async () => {
-    if (user) {
+    if (!demoMode && user) {
       const profile = await getProfile(user.id);
       if (profile) {
-        setPrefillData(profile as Partial<PathwayFormData>);
+        const prefill = profile as Partial<PathwayFormData>;
+        setPrefillData(prefill);
+        try { sessionStorage.setItem('oxygy_survey_prefill', JSON.stringify(prefill)); } catch {}
       }
     }
+    demoPlanCompleted.current = false;
+    sessionStorage.setItem('oxygy_survey_active', 'true');
     setShowOnboarding(true);
-  }, [user]);
+  }, [user, demoMode]);
 
-  const handlePlanGenerated = useCallback(() => {
+  const handlePlanGenerated = useCallback((result?: PathwayApiResponse) => {
+    // Clear persisted survey state
+    sessionStorage.removeItem('oxygy_survey_active');
+    sessionStorage.removeItem('oxygy_survey_prefill');
+    sessionStorage.removeItem('oxygy_survey_step');
+    sessionStorage.removeItem('oxygy_survey_form');
+
+    // In demo mode, store the AI-generated plan in local state and skip transition
+    if (result) {
+      setPlanData(result);
+      demoPlanCompleted.current = true;
+      // Skip fade animation — go straight to results
+      setShowOnboarding(false);
+      setTransitioning(false);
+      setPrefillData(null);
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    // Normal mode: fade out State A, then show State B
     setTransitioning(true);
-    // Fade out State A, then show State B
     setTimeout(() => {
       setShowOnboarding(false);
       setTransitioning(false);
       setPrefillData(null);
-      // Scroll to top
       if (contentRef.current) {
         contentRef.current.scrollTop = 0;
       }
       window.scrollTo({ top: 0 });
-    }, 500); // fade-out (300ms) + pause (200ms)
+    }, 500);
   }, []);
 
-  // Show loading skeleton while learning plan status is loading
-  if (learningPlanLoading) {
+  // Show loading skeleton while learning plan status is loading (skip in demo mode)
+  if (!demoMode && learningPlanLoading) {
     return (
       <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
         <style>{pulseStyle}</style>
@@ -134,6 +353,7 @@ const AppJourney: React.FC = () => {
         <OnboardingSurvey
           prefillData={prefillData}
           onPlanGenerated={handlePlanGenerated}
+          demoMode={demoMode}
         />
       </div>
     );
@@ -141,7 +361,158 @@ const AppJourney: React.FC = () => {
 
   // ─── STATE B: Full Journey View ───
 
-  if (loading || !data) {
+  // In demo mode with plan data but no journey data yet, show plan-only view
+  if (demoMode && planData && !data) {
+    return (
+      <div ref={contentRef} style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
+        <style>{pulseStyle}</style>
+
+        {/* Demo mode banner */}
+        <div style={{
+          background: '#FEFCE8', border: '1px solid #FDE68A', borderRadius: 10,
+          padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontSize: 13, color: '#92400E',
+        }}>
+          <span><strong>Demo Mode</strong> — No data saved to your account. AI-generated plan stored locally only.</span>
+          <button
+            onClick={handleRegenerate}
+            style={{
+              background: '#F59E0B', color: '#FFFFFF', border: 'none',
+              borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            Re-run Survey
+          </button>
+        </div>
+
+        {/* Page Header */}
+        <div style={{ marginBottom: 28, animation: 'journeyFadeSlideUp 0.3s ease 0ms both' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', letterSpacing: '-0.4px', margin: 0, marginBottom: 6 }}>
+            My Journey
+          </h1>
+          <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.6, margin: 0, marginBottom: 20 }}>
+            Your personalized path through the five levels of AI capability.
+          </p>
+        </div>
+
+        {/* Learning Plan Overview */}
+        <LearningPlanOverview planData={planData} onLevelClick={() => {}} />
+
+        {/* Simple level cards — no journey data needed */}
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+          {[1, 2, 3, 4, 5].map(n => {
+            const meta = LEVEL_META.find(m => m.number === n);
+            if (!meta) return null;
+            const levelResult = planData.levels[`L${n}`];
+            return (
+              <div key={n} style={{
+                borderRadius: 14, border: '1px solid #E2E8F0', borderLeft: `4px solid ${meta.accentColor}`,
+                background: '#FFFFFF', padding: '20px 24px',
+                animation: `journeyFadeSlideUp 0.3s ease ${60 + n * 60}ms both`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+                    background: `${meta.accentColor}33`, border: `1px solid ${meta.accentColor}88`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 16, fontWeight: 800, color: meta.accentDark,
+                  }}>
+                    {n}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: meta.accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+                        Level {n}
+                      </span>
+                      {levelResult?.depth && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700,
+                          color: levelResult.depth === 'full' ? meta.accentDark : '#718096',
+                          background: levelResult.depth === 'full' ? `${meta.accentColor}30` : '#F7FAFC',
+                          border: `1px solid ${levelResult.depth === 'full' ? meta.accentColor + '66' : '#E2E8F0'}`,
+                          borderRadius: 6, padding: '1px 7px', textTransform: 'uppercase' as const,
+                        }}>
+                          {levelResult.depth === 'full' ? 'Full Program' : 'Fast-track'}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', letterSpacing: '-0.2px', marginBottom: 3 }}>
+                      {meta.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#718096', fontStyle: 'italic' }}>{meta.tagline}</div>
+                  </div>
+                </div>
+                {/* Project brief */}
+                {levelResult?.projectTitle && (
+                  <div style={{
+                    background: `${meta.accentColor}10`, borderRadius: 10,
+                    padding: '14px 18px', marginTop: 14, marginLeft: 56,
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: meta.accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>
+                      YOUR PROJECT
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', marginBottom: 4 }}>
+                      {levelResult.projectTitle}
+                    </div>
+                    {levelResult.projectDescription && (
+                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, marginBottom: 6 }}>
+                        {levelResult.projectDescription}
+                      </div>
+                    )}
+                    {levelResult.deliverable && (
+                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.5 }}>
+                        <strong>Deliverable:</strong> {levelResult.deliverable}
+                      </div>
+                    )}
+                    {levelResult.challengeConnection && (
+                      <div style={{
+                        marginTop: 10, padding: '10px 14px', borderRadius: 8,
+                        background: `${meta.accentColor}15`, border: `1px solid ${meta.accentColor}33`,
+                      }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: meta.accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>
+                          How this connects to your challenge
+                        </div>
+                        <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, fontStyle: 'italic' }}>
+                          {levelResult.challengeConnection}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Demo mode fallback: create empty journey data when Supabase data isn't available
+  const DEMO_JOURNEY_DATA: JourneyData = {
+    levels: [1, 2, 3, 4, 5].map(n => ({
+      levelNumber: n,
+      status: 'not-started' as const,
+      completedTopics: 0,
+      totalTopics: (LEVEL_TOPICS[n] || []).length,
+      completedAt: null,
+      artefactsCreated: 0,
+      toolsUnlocked: 0,
+      activeTopicIndex: 0,
+      currentSlide: 0,
+      currentPhase: 1,
+      toolUsed: false,
+      workshopAttended: false,
+      projectCompleted: false,
+      projectSubmission: null,
+    })),
+    completedLevelsCount: 0,
+  };
+
+  const journeyData = demoMode ? (data || DEMO_JOURNEY_DATA) : data;
+
+  if (!demoMode && (loading || !data)) {
     return (
       <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
         <style>{pulseStyle}</style>
@@ -156,7 +527,7 @@ const AppJourney: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (!demoMode && error) {
     return (
       <div style={{
         padding: '28px 36px', fontFamily: "'DM Sans', sans-serif",
@@ -179,7 +550,21 @@ const AppJourney: React.FC = () => {
     );
   }
 
-  const { levels, completedLevelsCount } = data;
+  // Safety: if somehow journeyData is still null, show skeleton
+  if (!journeyData) {
+    return (
+      <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
+        <style>{pulseStyle}</style>
+        <Skeleton height={100} />
+        <div style={{ height: 16 }} />
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ marginBottom: 16 }}><Skeleton height={200} /></div>
+        ))}
+      </div>
+    );
+  }
+
+  const { levels, completedLevelsCount } = journeyData;
   const overallPct = Math.round((completedLevelsCount / 5) * 100);
 
   // Find the current active level, or the next not-started if all completed
@@ -196,15 +581,41 @@ const AppJourney: React.FC = () => {
     : currentLevel.status === 'completed' ? 'All complete' : 'Not started';
 
   const scrollToLevel = (levelNum: number) => {
-    const el = levelRefs.current[levelNum];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    setExpandedFromOverview(levelNum);
+    // Small delay to let the expand animation start, then scroll
+    setTimeout(() => {
+      const el = levelRefs.current[levelNum];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
   return (
     <div ref={contentRef} style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
       <style>{pulseStyle}</style>
+
+      {/* Demo mode banner */}
+      {demoMode && (
+        <div style={{
+          background: '#FEFCE8', border: '1px solid #FDE68A', borderRadius: 10,
+          padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontSize: 13, color: '#92400E',
+        }}>
+          <span><strong>Demo Mode</strong> — No data saved to your account. AI-generated plan stored locally only.</span>
+          <button
+            onClick={handleRegenerate}
+            style={{
+              background: '#F59E0B', color: '#FFFFFF', border: 'none',
+              borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            Re-run Survey
+          </button>
+        </div>
+      )}
 
       {/* Page Header */}
       <div style={{
@@ -385,6 +796,9 @@ const AppJourney: React.FC = () => {
                 animDelay={60 + idx * 60}
                 projectTitle={planLevel?.projectTitle || null}
                 deliverable={planLevel?.deliverable || null}
+                planDepth={planLevel?.depth || null}
+                planTime={planLevel?.sessionFormat || null}
+                forceExpand={expandedFromOverview === level.levelNumber}
               />
             </div>
           );

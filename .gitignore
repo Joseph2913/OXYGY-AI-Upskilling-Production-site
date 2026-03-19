@@ -27,7 +27,16 @@ dist-ssr
 .env
 .env.local
 
+# MCP config (contains access tokens)
+.mcp.json
+
 # Firebase
 .firebase/
 functions/lib/
 functions/node_modules/
+
+# Video curation pipeline data (raw scrapes, scoring passes, scored results)
+# The curated selections are in Supabase; these are working files only
+data/channel-catalogue-*.json
+data/pass1-*.json
+data/scores-*.json

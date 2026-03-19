@@ -6,8 +6,10 @@ export function usePathwayApi() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastCallRef = useRef(0);
+  const lastErrorRef = useRef<string | null>(null);
 
-  const clearError = () => setError(null);
+  const clearError = () => { setError(null); lastErrorRef.current = null; };
+  const setErrorSync = (msg: string) => { setError(msg); lastErrorRef.current = msg; };
 
   const generatePathway = async (
     formData: PathwayFormData,
@@ -15,7 +17,7 @@ export function usePathwayApi() {
   ): Promise<PathwayApiResponse | null> => {
     const now = Date.now();
     if (now - lastCallRef.current < 8000) {
-      setError('Please wait a few seconds before trying again.');
+      setErrorSync('Please wait a few seconds before trying again.');
       return null;
     }
 
@@ -37,14 +39,14 @@ export function usePathwayApi() {
       clearTimeout(timeout);
 
       if (!res.ok) {
-        setError(getErrorMessage(res.status, 'pathway'));
+        setErrorSync(getErrorMessage(res.status, 'pathway'));
         return null;
       }
 
       const data = await res.json();
 
       if (!data.pathwaySummary || !data.levels) {
-        setError('Received an unexpected response format. Please try again.');
+        setErrorSync('Received an unexpected response format. Please try again.');
         return null;
       }
 
@@ -52,9 +54,9 @@ export function usePathwayApi() {
     } catch (err: unknown) {
       clearTimeout(timeout);
       if (err instanceof Error && err.name === 'AbortError') {
-        setError('This is taking longer than expected. The AI service may be under heavy load — please try again in a moment.');
+        setErrorSync('This is taking longer than expected. The AI service may be under heavy load — please try again in a moment.');
       } else {
-        setError('Unable to reach the pathway service. Please check your connection and try again.');
+        setErrorSync('Unable to reach the pathway service. Please check your connection and try again.');
       }
       return null;
     } finally {
@@ -62,5 +64,5 @@ export function usePathwayApi() {
     }
   };
 
-  return { generatePathway, isLoading, error, clearError };
+  return { generatePathway, isLoading, error, clearError, lastErrorRef };
 }

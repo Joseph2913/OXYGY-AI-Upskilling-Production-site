@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAppContext } from '../../context/AppContext';
+import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { useArtefactsData } from '../../hooks/useArtefactsData';
 import type { ArtefactType, ArtefactContent } from '../../hooks/useArtefactsData';
 import SearchFilterBar from '../../components/app/artefacts/SearchFilterBar';
@@ -12,6 +14,7 @@ import { timeAgo } from '../../utils/timeAgo';
 const AppArtefacts: React.FC = () => {
   const { artefactId } = useParams<{ artefactId?: string }>();
   const navigate = useNavigate();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
 
   const {
     artefacts, loading, loadContent,
@@ -153,6 +156,9 @@ const AppArtefacts: React.FC = () => {
     : null;
 
   const selectedArtefact = selectedId ? artefacts.find((a) => a.id === selectedId) || null : null;
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="My Artefacts" />;
 
   if (loading) {
     return (

@@ -2577,6 +2577,533 @@ function playgroundProxyPlugin(apiKey: string): Plugin {
   };
 }
 
+function learningCoachProxyPlugin(apiKey: string, model: string): Plugin {
+  const LEARNING_COACH_SYSTEM = `You are the Learning Coach for OXYGY's AI Centre of Excellence. You generate personalised, sequenced learning pathways that help professionals learn specific AI skills using the AI tools they have access to.
+
+You are NOT a generic chatbot. You are a learning designer. Your output is a choreographed learning sequence — a mini curriculum that moves the learner across tools in a deliberate order. Each step builds on the previous one.
+
+## YOUR OUTPUT RULES
+- Generate 3-6 steps total (never more than 6)
+- Each step must use a specific FEATURE of a specific PLATFORM from the learner's selected platforms
+- Prompts must incorporate the learner's specific gap description — never generic "teach me about X" prompts
+- Activity descriptions must explain WHY this step matters in the sequence, not just WHAT to do
+- Instructions must be platform-specific and feature-specific: exact button names, exact menu locations
+- Time estimates must be realistic: 10-20 minutes per step
+- The gap reflection must demonstrate you understood the learner's specific situation
+- The approach summary must explain the pedagogical reasoning behind the sequence
+- Generate 3-5 refinement questions that are specific to the learner's gap (not generic)
+- If the learner selected YouTube, recommend TYPES of content and channel archetypes, not specific video URLs
+- Be tool-agnostic in your teaching language (don't favour one platform over another)
+- Never reference "OXYGY" or the "Learning Coach" in the pathway content
+
+## PLATFORM FEATURE REGISTRY
+
+## PLATFORM: NotebookLM (id: notebooklm)
+### Feature: Audio Overview — Generates a conversational podcast-style discussion about uploaded sources. Preferences: listen
+### Feature: Source Guide — Creates a structured study guide from uploaded sources. Preferences: read
+### Feature: Briefing Doc — Generates a concise executive summary. Preferences: read
+### Feature: Chat — Interactive Q&A grounded in uploaded sources with inline citations. Preferences: talk, build
+### Feature: FAQ Generation — Auto-generates FAQs with answers from uploaded sources. Preferences: read, build
+
+## PLATFORM: Claude (id: claude)
+### Feature: Projects — Persistent workspace with project instructions and uploaded reference documents. Preferences: talk, build
+### Feature: Visualiser — Generates inline diagrams, flowcharts, concept maps. Preferences: watch, read
+### Feature: Artifacts — Creates standalone documents, interactive tools, quizzes. Preferences: build, read
+### Feature: Deep Research — Comprehensive web research with synthesis and citations. Preferences: read
+### Feature: Conversation — Back-and-forth tutoring mode. Preferences: talk
+
+## PLATFORM: ChatGPT (id: chatgpt)
+### Feature: Custom GPTs — Build a persistent AI agent with custom instructions. Preferences: build, talk
+### Feature: Canvas — Side-by-side collaborative workspace. Preferences: build
+### Feature: Image Generation (DALL·E) — Generates images from text. Preferences: watch
+### Feature: Browsing — Real-time web search. Preferences: read
+### Feature: Conversation — Standard chat interface for tutoring. Preferences: talk
+
+## PLATFORM: Perplexity (id: perplexity)
+### Feature: Search & Cited Answers — Answers with inline citations. Preferences: read
+### Feature: Focus Modes — Narrow search scope (Academic, YouTube, Reddit, etc). Preferences: read, listen, watch
+### Feature: Spaces — Persistent research collection. Preferences: read, build
+### Feature: Pages — AI-generated shareable write-ups. Preferences: read
+
+## PLATFORM: Gemini / Google AI Studio (id: gemini)
+### Feature: Gemini Chat — Conversational AI with very large context window. Preferences: talk, read
+### Feature: Gems (Custom Agents) — Create persistent agents. Preferences: build, talk
+### Feature: Google Workspace Integration — Works inside Docs, Sheets, Slides. Preferences: read, build
+### Feature: Google AI Studio (Advanced) — Developer interface for testing prompts. Level 2+ only. Preferences: build
+
+## PLATFORM: YouTube (id: youtube)
+### Feature: Conceptual Explainers — Channels breaking down complex concepts visually. Preferences: listen, watch
+### Feature: Practical Tutorials — Step-by-step screen-share walkthroughs. Preferences: watch
+### Feature: Industry Commentary — AI news, trends, strategic implications. Preferences: listen
+### Feature: Short-Form Primers — Under 10 min focused introductions. Preferences: listen, watch
+
+## LEARNING DESIGN RULES
+1. Start with the learner's PRIMARY preference to build immediate engagement
+2. Sequence from passive to active: absorption → understanding → testing → application
+3. Alternate between platforms to prevent fatigue
+4. Always end with an APPLICATION step
+5. Include 3-6 steps total
+6. Each step should build on the previous one
+7. Time estimates: 10-20 minutes per step, 45-90 minutes total
+8. Blend multiple preferences in the sequence
+9. Generate prompts incorporating the learner's specific gap — never generic
+10. YouTube steps: recommend content TYPES, not specific video URLs
+
+## OUTPUT FORMAT
+Respond ONLY with valid JSON, no backticks or markdown:
+{
+  "gapReflection": "string",
+  "approachSummary": "string",
+  "steps": [{ "stepNumber": 1, "platform": "platform_id", "platformName": "Display Name", "feature": "Feature Name", "timeEstimate": "~15 min", "activity": "string", "prompt": "string or null", "instructions": ["string"] }],
+  "goDeeper": [{ "platform": "platform_id", "title": "string", "description": "string", "url": "string or null" }],
+  "refinementQuestions": ["string", "string", "string"]
+}`;
+
+  return {
+    name: 'learning-coach-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-learning-pathway', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { level, objective, gap, platforms, preferences, refinement } = JSON.parse(body);
+
+            if (!level || !objective || !platforms?.length || !preferences?.length) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing required fields' }));
+              return;
+            }
+
+            const preferenceLabels: Record<string, string> = {
+              listen: 'Listen & absorb — I learn best hearing concepts explained conversationally',
+              read: 'Read & reflect — I prefer written depth, articles, guides, detailed walkthroughs',
+              watch: "Watch & follow — Show me someone doing it and I'll follow along",
+              build: 'Build & experiment — Give me a sandbox and a challenge',
+              talk: 'Talk it through — I learn by asking questions in a back-and-forth',
+            };
+
+            let userMessage = `Generate a personalised learning pathway.
+
+## LEARNER INPUT
+- Level: ${level}
+- Learning Objective: ${objective}${gap ? `\n- Gap Description: "${gap}"` : ''}
+- Available Platforms: ${platforms.join(', ')}
+- Learning Preferences: ${preferences.map((p: string) => preferenceLabels[p] || p).join('; ')}`;
+
+            if (refinement) {
+              userMessage += `
+
+## REFINEMENT CONTEXT
+This is a refinement of a previous pathway.
+
+Previous pathway:
+${refinement.previousPathway}
+
+Answered questions:
+${Object.entries(refinement.answers || {})
+  .filter(([, v]) => (v as string).trim())
+  .map(([q, a]) => `Q: ${q}\nA: ${a}`)
+  .join('\n\n')}
+${refinement.additionalContext ? `\nAdditional context: ${refinement.additionalContext}` : ''}
+
+Generate a significantly improved pathway. Generate new, deeper refinement questions.`;
+            }
+
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: LEARNING_COACH_SYSTEM },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'learning-coach');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (learning-coach):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (learning-coach):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+function learningCoachChatProxyPlugin(apiKey: string, model: string): Plugin {
+  return {
+    name: 'learning-coach-chat-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/learning-coach-chat', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { messages, learnerProfile, userProfile } = JSON.parse(body);
+            if (!messages || !Array.isArray(messages)) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing messages array' }));
+              return;
+            }
+
+            // Build system prompt with learner context
+            let systemPrompt = `You are the Learning Coach for OXYGY's AI Centre of Excellence. You help professionals learn AI skills through personalised, conversational guidance.
+
+## YOUR PERSONALITY
+- Warm, direct, and practical — like a knowledgeable colleague, not a tutor
+- You ask clarifying questions before jumping to recommendations
+- You reference the learner's actual situation naturally
+- You keep messages concise — 2-4 paragraphs max, longer only for step-by-step instructions
+- You use the learner's name occasionally but not excessively
+
+## YOUR CONVERSATION FLOW
+Follow this arc naturally (don't announce the phases):
+1. TOPIC DISCOVERY: Understand what they want to learn. Ask a clarifying question.
+2. METHOD SUGGESTION: Based on preferences, suggest an approach. Offer buttons.
+3. TOOL RECOMMENDATION: Recommend a specific platform + feature. Explain WHY.
+4. STEP-BY-STEP DELIVERY: Generate structured instructions using content blocks.
+5. OPEN FOLLOW-UP: Answer follow-up questions or start a new topic.
+
+## BUTTON RULES
+- 2-3 buttons max at decision points
+- Never include buttons during Phase 1
+- Always include buttons after Phase 2 and Phase 3
+
+## CONTENT RULES
+- Prompts must incorporate the learner's specific situation — NEVER generic
+- Use exact feature names and menu locations for platform instructions
+- Only recommend platforms the learner has access to
+- Time estimates: 10-20 minutes per activity
+
+## OUTPUT FORMAT
+Respond ONLY with valid JSON, no backticks or markdown:
+{
+  "content": [
+    { "type": "text", "content": "Your message here" },
+    { "type": "section_header", "content": "STEP 1 · Platform · Feature · ~15 min" },
+    { "type": "prompt", "content": "Copy-paste prompt...", "platform": "id", "feature": "Name" },
+    { "type": "instructions", "content": "1. Step one...\\n2. Step two..." }
+  ],
+  "buttons": [
+    { "label": "Button text", "value": "Button text" }
+  ]
+}
+The "buttons" field is optional.`;
+
+            if (learnerProfile) {
+              systemPrompt += `\n\n## LEARNER PROFILE\n- Learning preferences: ${(learnerProfile.preferences || []).join(', ')}\n- Available platforms: ${(learnerProfile.platforms || []).join(', ')}${learnerProfile.additionalContext ? `\n- Additional context: "${learnerProfile.additionalContext}"` : ''}`;
+            }
+            if (userProfile) {
+              systemPrompt += `\n\n## PROFESSIONAL PROFILE\n- Name: ${userProfile.fullName || 'Learner'}\n- Role: ${userProfile.role || 'Not specified'}\n- Current Level: ${userProfile.currentLevel || 1}\n- Challenge: "${userProfile.challenge || 'Not specified'}"`;
+            }
+
+            let trimmedMessages = messages;
+            if (messages.length > 20) {
+              trimmedMessages = [...messages.slice(0, 2), ...messages.slice(-16)];
+            }
+
+            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  ...trimmedMessages.map((m: { role: string; content: string }) => ({
+                    role: m.role,
+                    content: m.content,
+                  })),
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'learning-coach-chat');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (learning-coach-chat):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+            try {
+              const parsed = JSON.parse(cleaned);
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(parsed));
+            } catch {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ content: [{ type: 'text', content: text }] }));
+            }
+          } catch (err) {
+            console.error('Proxy error (learning-coach-chat):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+function notebookGuideProxyPlugin(apiKey: string, model: string): Plugin {
+  const NOTEBOOK_GUIDE_SYSTEM = `You are a learning guide generator for the OXYGY AI Upskilling platform. The user has selected NotebookLM as their learning tool. Your job is to generate two things:
+
+1. A "deepResearchPrompt" — a prompt for NotebookLM's Deep Research feature. This must: frame the gap as an investigative question (e.g. "Research the practical differences between X and Y for a professional trying to understand Z"); ask Deep Research to structure the report pedagogically — foundational concepts first, then practical application, then advanced nuance; reference the user's specific topic and gap description directly; not be a generic "explain me" request.
+
+2. A "studioConfig" object — this tells the user exactly which Studio feature to use after Deep Research, and what settings to apply. The Studio feature is chosen based on the user's selected learning approach using this exact mapping:
+
+— "listen" → Audio Overview. Settings: format = "In-depth". tone = "Professional but conversational". Steering prompt = "Focus on [their gap topic]. Explain concepts progressively, starting with the basics before building to advanced nuance. Use concrete examples throughout."
+
+— "watch" → Video Overview. Settings: format = "Explainer" (not Brief, not Cinematic). visualStyle = "Whiteboard" (best for conceptual/instructional content). Steering prompt = "Create an explainer focused on [their gap topic] for a professional learner who is new to this concept. Prioritise clarity over comprehensiveness. Use diagrams and quotes from the sources."
+
+— "read" → Slide Deck. Settings: deckType = "Detailed" (not Presenter — they are reading alone, not presenting). Steering prompt = "Summarise [their gap topic] as a structured reference deck. Start with core definitions, then practical examples, then common mistakes to avoid. Target audience: professional with no prior knowledge of this topic."
+
+— "research" → Reports - Study Guide. Settings: reportSubType = "Study Guide". No additional customisation needed — instruct the user to select "Study Guide" from within the Reports tile. The Study Guide generates a short-answer quiz and glossary of key terms grounded in the sources.
+
+— "build" → Reports - FAQ. Settings: reportSubType = "FAQ". Instruct the user to select "FAQ" from within the Reports tile. This generates a set of questions and answers grounded in their sources — the user should then test themselves by answering each question before revealing the answer.
+
+— "talk" → Flashcards. Settings: difficulty = "Beginner" (if Level 1) or "Intermediate" (if Level 2+). cardCount = 10. Steering prompt = their specific gap description. After generating, instruct the user to use the Chat panel alongside the flashcards to ask follow-up questions on any card they get wrong.
+
+If the user has multiple learning preferences, use the FIRST one in the list to determine the studio feature.
+
+Return ONLY a JSON object with this shape:
+{
+  "deepResearchPrompt": "...",
+  "studioConfig": {
+    "feature": "Audio Overview | Video Overview | Slide Deck | Reports - Study Guide | Reports - FAQ | Flashcards",
+    "settings": {
+      "format": "...",
+      "visualStyle": "...",
+      "deckType": "...",
+      "reportSubType": "...",
+      "tone": "...",
+      "difficulty": "...",
+      "cardCount": 10
+    },
+    "steeringPrompt": "...",
+    "featureInstructions": "1. ...\\n2. ...\\n3. ..."
+  }
+}
+
+Only include the settings fields that are relevant to the chosen feature. Omit the rest.
+
+The "featureInstructions" must be 3–5 numbered steps referencing exact UI element names (e.g. "the pencil/customise icon next to the tile", "the Steering Prompt field", "the Reports tile → select Study Guide from the dropdown"). Separate steps with newlines.`;
+
+  return {
+    name: 'notebook-guide-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-notebook-guide', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API key not configured' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { level, objective, gap, preferences } = JSON.parse(body);
+
+            if (!level || !objective || !preferences?.length) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing required fields' }));
+              return;
+            }
+
+            const preferenceLabels: Record<string, string> = {
+              listen: 'Listen & absorb',
+              read: 'Read & reflect',
+              watch: 'Watch & follow',
+              build: 'Build & experiment',
+              talk: 'Talk it through',
+            };
+
+            const userMessage = `Generate a NotebookLM Deep Research prompt and Studio configuration for this learner.
+
+## LEARNER INPUT
+- Level: ${level}
+- Learning Topic: ${objective}${gap ? `\n- Specific gap: "${gap}"` : ''}
+- Learning Preferences (in priority order): ${preferences.map((p: string) => preferenceLabels[p] || p).join('; ')}`;
+
+            const openRouterModel = model.includes('/') ? model : `google/${model}`;
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: openRouterModel,
+                messages: [
+                  { role: 'system', content: NOTEBOOK_GUIDE_SYSTEM },
+                  { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'notebook-guide');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (notebook-guide):', errText);
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (notebook-guide):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
+// ─── Curated Videos proxy (simple Supabase passthrough, no AI) ───
+
+function curatedVideosProxyPlugin(supabaseUrl: string, supabaseKey: string): Plugin {
+  return {
+    name: 'curated-videos-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/curated-videos', async (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        try {
+          const url = new URL(req.url || '/', `http://${req.headers.host}`);
+          const topicId = url.searchParams.get('topicId');
+          const level = url.searchParams.get('level');
+          const includeBackup = url.searchParams.get('includeBackup') === 'true';
+
+          if (!topicId && !level) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Provide topicId or level query parameter' }));
+            return;
+          }
+
+          let endpoint = `${supabaseUrl}/rest/v1/curated_videos?select=*`;
+
+          if (topicId) {
+            endpoint += `&topic_id=eq.${encodeURIComponent(topicId)}`;
+            if (!includeBackup) {
+              endpoint += '&is_primary=eq.true';
+            }
+          } else if (level) {
+            endpoint += `&level=eq.${encodeURIComponent(level)}`;
+            endpoint += '&is_primary=eq.true';
+          }
+
+          endpoint += '&order=is_primary.desc,rank.asc.nullslast,relevance_score.desc';
+
+          const response = await fetch(endpoint, {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+          });
+
+          if (!response.ok) {
+            const text = await response.text();
+            console.error('Supabase curated-videos error:', text);
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Failed to fetch curated videos' }));
+            return;
+          }
+
+          const videos = await response.json();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ videos }));
+        } catch (err) {
+          console.error('Proxy error (curated-videos):', err);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Internal server error' }));
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
@@ -2605,6 +3132,10 @@ export default defineConfig(({ mode }) => {
       buildGuideProxyPlugin(env.OpenRouter_API),
       disputeResolutionProxyPlugin(env.OpenRouter_API),
       playgroundProxyPlugin(env.OpenRouter_API),
+      learningCoachProxyPlugin(env.OpenRouter_API, geminiModel),
+      learningCoachChatProxyPlugin(env.OpenRouter_API, geminiModel),
+      notebookGuideProxyPlugin(env.OpenRouter_API, geminiModel),
+      curatedVideosProxyPlugin(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
     ],
     resolve: {
       alias: {

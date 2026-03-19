@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, PenTool, FolderOpen, KeyRound, Mail, Users } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardData, LeaderboardMember } from '../../hooks/useDashboardData';
 import { validateAndAcceptInvite } from '../../lib/database';
@@ -262,8 +263,9 @@ function JourneySteps({ currentLevel, levelsCompleted }: { currentLevel: number;
 const AppDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { userProfile } = useAppContext();
+  const { userProfile, hasLearningPlan, learningPlanLoading } = useAppContext();
   const { data, loading } = useDashboardData();
+
   const firstName = userProfile?.fullName?.split(' ')[0] || 'User';
 
   // Org invite code state (for no-org users)
@@ -272,6 +274,7 @@ const AppDashboard: React.FC = () => {
   const [joinError, setJoinError] = useState('');
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [hoveredCell, setHoveredCell] = useState<{ key: string; rect: DOMRect; dateLabel: string; isActive: boolean; details: { level: number; tool: string; phases: number; artefacts: number }[] } | null>(null);
 
   const handleJoinOrg = async () => {
     if (!user || !inviteCode.trim()) return;
@@ -345,6 +348,9 @@ const AppDashboard: React.FC = () => {
 
   const currentUserRank = data.leaderboard.findIndex(m => m.isCurrentUser) + 1;
   const currentUserData = data.leaderboard.find(m => m.isCurrentUser);
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="Dashboard" />;
 
   return (
     <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
@@ -486,46 +492,192 @@ const AppDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Card: Streak + Stats row */}
+          {/* Card: Engagement + Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {/* Streak */}
+            {/* ── YOUR ENGAGEMENT (dark, split: activity | streak) ── */}
             <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 8 }}>
-                THIS WEEK
+              {/* Subtitles row */}
+              <div style={{ display: 'flex', marginBottom: 14 }}>
+                <div style={{ flex: 1, fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>Activity · Last 4 weeks</div>
+                <div style={{ flex: 1, fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em', paddingLeft: 18 }}>Streak · This week</div>
               </div>
-              {data.streakDays > 0 ? (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 11 }}>
-                    <span style={{ fontSize: 34, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.streakDays}</span>
-                    <span style={{ fontSize: 13, color: '#718096', marginLeft: 4 }}>day streak</span>
+              {/* Content row */}
+              <div style={{ display: 'flex', gap: 0 }}>
+                {/* LEFT — Activity: stats left, grid right (fills space) */}
+                <div style={{ flex: 1, paddingRight: 18, display: 'flex', gap: 12, alignItems: 'center' }}>
+                  {/* Stats — centre-aligned with grid */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.activeDaysThisWeek.filter(Boolean).length}</div>
+                      <div style={{ fontSize: 9, color: '#A0AEC0', marginTop: 2 }}>active days</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{Object.values(data.toolUsage).reduce((s, t) => s + t.artefactsCreated, 0)}</div>
+                      <div style={{ fontSize: 9, color: '#A0AEC0', marginTop: 2 }}>artefacts</div>
+                    </div>
                   </div>
-                  <DayDots activeDays={data.activeDaysThisWeek} streakDays={data.streakDays} />
-                </>
-              ) : (
-                <>
-                  <div style={{ fontSize: 13, color: '#718096', marginBottom: 11 }}>Start your streak today.</div>
-                  <DayDots activeDays={data.activeDaysThisWeek} streakDays={0} />
-                </>
-              )}
+                  {/* Grid — fills all remaining space with hover tooltips */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                        <div key={`h${i}`} style={{ fontSize: 7, color: '#A0AEC0', textAlign: 'center', lineHeight: '9px', marginBottom: 2 }}>{d}</div>
+                      ))}
+                      {(() => {
+                        const now = new Date();
+                        const dow = now.getDay();
+                        const monBased = dow === 0 ? 6 : dow - 1;
+                        const cells: React.ReactNode[] = [];
+                        const levelToolNames: Record<number, string> = { 1: 'Prompt Playground', 2: 'Agent Builder', 3: 'Workflow Canvas', 4: 'Dashboard Designer', 5: 'App Evaluator' };
+                        for (let w = 0; w < 4; w++) {
+                          for (let d = 0; d < 7; d++) {
+                            let bg = '#EDF2F7';
+                            let isActiveCell = false;
+                            const cellDate = new Date(now);
+                            const daysBack = (3 - w) * 7 + (monBased - d);
+                            cellDate.setDate(now.getDate() - daysBack);
+                            if (w === 3) {
+                              const isActive = data.activeDaysThisWeek[d];
+                              const isPast = d < monBased;
+                              const isToday = d === monBased;
+                              if (isPast && isActive) { bg = '#38B2AC'; isActiveCell = true; }
+                              else if (isPast) bg = '#E2E8F0';
+                              else if (isToday && isActive) { bg = '#4FD1C5'; isActiveCell = true; }
+                              else if (isToday) bg = '#B2DFDB';
+                              else bg = '#F7FAFC';
+                            }
+                            const dateLabel = cellDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                            const cellKey = `${w}-${d}`;
+                            const cellDetails: { level: number; tool: string; phases: number; artefacts: number }[] = [];
+                            if (isActiveCell) {
+                              Object.entries(data.levelProgress).forEach(([lvl, lp]) => {
+                                const lvlNum = Number(lvl);
+                                const tKey = Object.keys(data.toolUsage).find(k => {
+                                  const mp: Record<string, number> = { 'prompt-playground': 1, 'agent-builder': 2, 'workflow-canvas': 3, 'dashboard-designer': 4, 'ai-app-evaluator': 5 };
+                                  return mp[k] === lvlNum;
+                                });
+                                const ac = tKey ? data.toolUsage[tKey]?.artefactsCreated || 0 : 0;
+                                const pd = lp.phasesCompleted.filter(Boolean).length;
+                                if (pd > 0 || ac > 0) cellDetails.push({ level: lvlNum, tool: levelToolNames[lvlNum], phases: pd, artefacts: ac });
+                              });
+                            }
+                            cells.push(
+                              <div
+                                key={cellKey}
+                                style={{ aspectRatio: '1', borderRadius: 2, background: bg, cursor: 'pointer', transition: 'transform 0.1s, box-shadow 0.1s' }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.transform = 'scale(1.15)';
+                                  e.currentTarget.style.boxShadow = '0 0 6px rgba(56,178,172,0.4)';
+                                  setHoveredCell({ key: cellKey, rect: e.currentTarget.getBoundingClientRect(), dateLabel, isActive: isActiveCell, details: cellDetails });
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                  setHoveredCell(null);
+                                }}
+                              />
+                            );
+                          }
+                        }
+                        return cells;
+                      })()}
+                    </div>
+                  </div>
+                  {/* Tooltip rendered via portal — see bottom of return */}
+                </div>
+
+                {/* Divider */}
+                <div style={{ width: 1, background: '#E2E8F0', flexShrink: 0 }} />
+
+                {/* RIGHT — Streak: ring + label top, days bottom-aligned with grid */}
+                <div style={{ flex: 1, paddingLeft: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
+                  {/* Ring + labels stacked */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
+                    {(() => {
+                      const ringSize = 72;
+                      const strokeW = 4.5;
+                      const radius = (ringSize - strokeW * 2) / 2;
+                      const circ = 2 * Math.PI * radius;
+                      const pct = Math.min(data.streakDays / 7, 1);
+                      const offset = circ * (1 - pct);
+                      return (
+                        <div style={{ position: 'relative', width: ringSize, height: ringSize }}>
+                          <svg width={ringSize} height={ringSize} style={{ transform: 'rotate(-90deg)' }}>
+                            <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="#F7FAFC" strokeWidth={strokeW} />
+                            <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="#F6AD55" strokeWidth={strokeW} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
+                          </svg>
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <Flame size={13} color="#F6AD55" style={{ marginBottom: 2 }} />
+                            <span style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.streakDays}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div style={{ fontSize: 11, color: '#4A5568', textAlign: 'center' }}>
+                      <span style={{ fontWeight: 700, color: '#F6AD55' }}>Current Streak</span>
+                      <span style={{ color: '#A0AEC0', marginLeft: 6 }}>
+                        {(() => {
+                          const now = new Date();
+                          const startDate = new Date(now);
+                          startDate.setDate(startDate.getDate() - (data.streakDays - 1));
+                          const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+                          return data.streakDays > 0 ? `${fmt(startDate)} – ${fmt(now)}` : 'Start today';
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Day circles — bottom-aligned to match grid's last row */}
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {(() => {
+                      const now = new Date();
+                      const dow = now.getDay();
+                      const monBased = dow === 0 ? 6 : dow - 1;
+                      return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => {
+                        const isActive = data.activeDaysThisWeek[i];
+                        const isPast = i < monBased;
+                        const isToday = i === monBased;
+                        let bg = '#EDF2F7';
+                        if ((isPast || isToday) && isActive) bg = '#38B2AC';
+                        else if (isToday) bg = '#B2DFDB';
+                        else if (isPast) bg = '#E2E8F0';
+                        return (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {isActive && (isPast || isToday) ? <Check size={11} color="#FFF" strokeWidth={3} /> : null}
+                            </div>
+                            <span style={{ fontSize: 9, color: isToday ? '#38B2AC' : '#A0AEC0', fontWeight: isToday ? 600 : 400 }}>{label}</span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Quick stats */}
+            {/* ── YOUR STATS ── */}
             <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
               <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>
                 YOUR STATS
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {[
-                  { icon: <Target size={13} color="#38B2AC" />, label: 'Use Cases', value: currentUserData?.useCasesIdentified || 0 },
-                  { icon: <BookOpen size={13} color="#8B5CF6" />, label: 'Assessment Avg', value: `${currentUserData?.assessmentAvg || 0}%` },
-                  { icon: <Trophy size={13} color="#F6AD55" />, label: 'Completion', value: `${currentUserData?.completionPct || 0}%` },
-                ].map((stat, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 7, background: '#F7FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {stat.icon}
+                  { icon: <Target size={14} color="#38B2AC" />, bg: '#F0FFF4', label: 'Topics Completed', value: `${data.overallCompletedTopics} / ${data.overallTotalTopics}`, barPct: data.overallTotalTopics > 0 ? (data.overallCompletedTopics / data.overallTotalTopics) * 100 : 0, barColor: '#38B2AC' },
+                  { icon: <BookOpen size={14} color="#8B5CF6" />, bg: '#F5F3FF', label: 'Assessment Avg', value: `${currentUserData?.assessmentAvg || 0}%`, barPct: currentUserData?.assessmentAvg || 0, barColor: '#8B5CF6' },
+                  { icon: <Trophy size={14} color="#F6AD55" />, bg: '#FFFBEB', label: 'Completion', value: `${currentUserData?.completionPct || 0}%`, barPct: currentUserData?.completionPct || 0, barColor: '#F6AD55' },
+                ].map((stat, i, arr) => (
+                  <div key={i} style={{ padding: '9px 0', borderBottom: i < arr.length - 1 ? '1px solid #F7FAFC' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 7, background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {stat.icon}
+                      </div>
+                      <span style={{ flex: 1, fontSize: 13, color: '#4A5568', fontWeight: 500 }}>{stat.label}</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>{stat.value}</span>
                     </div>
-                    <span style={{ flex: 1, fontSize: 12, color: '#718096' }}>{stat.label}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{stat.value}</span>
+                    {stat.barPct !== null && (
+                      <div style={{ marginLeft: 38, marginTop: 5, height: 4, background: '#F1F5F9', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(stat.barPct, 100)}%`, height: '100%', background: stat.barColor, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -809,7 +961,7 @@ const AppDashboard: React.FC = () => {
                 </div>
                 <div style={{ width: 1, background: '#E2E8F0' }} />
                 <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.sameLevelColleaguesCount}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: LEVEL_ACCENT_DARK_COLORS[level] || '#1A202C', lineHeight: 1 }}>{level}</div>
                   <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>Your Level</div>
                 </div>
                 <div style={{ width: 1, background: '#E2E8F0' }} />
@@ -942,6 +1094,44 @@ const AppDashboard: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Activity grid tooltip — fixed position, rendered at top level */}
+      {hoveredCell && (
+        <div
+          style={{
+            position: 'fixed',
+            left: hoveredCell.rect.left + hoveredCell.rect.width / 2,
+            top: hoveredCell.rect.top - 10,
+            transform: 'translate(-50%, -100%)',
+            background: '#1A202C',
+            color: '#FFFFFF',
+            borderRadius: 10,
+            padding: '10px 14px',
+            minWidth: 180,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+            zIndex: 1000,
+            fontFamily: "'DM Sans', sans-serif",
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%) rotate(45deg)', width: 10, height: 10, background: '#1A202C', borderRadius: 2 }} />
+          <div style={{ fontSize: 11, fontWeight: 700, marginBottom: hoveredCell.isActive ? 6 : 0 }}>{hoveredCell.dateLabel}</div>
+          {hoveredCell.isActive ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {hoveredCell.details.map((d, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: LEVEL_ACCENT_COLORS[d.level] || '#38B2AC', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: '#E2E8F0' }}>L{d.level} {d.tool}</div>
+                    <div style={{ fontSize: 9, color: '#A0AEC0' }}>{d.phases} phase{d.phases !== 1 ? 's' : ''} · {d.artefacts} artefact{d.artefacts !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 10, color: '#718096' }}>No activity</div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

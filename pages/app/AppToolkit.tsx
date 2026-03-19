@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, ArrowRight, Lock, ChevronDown, FolderOpen, Star, Zap } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { Tool, getPrimaryTool } from '../../data/toolkitData';
 import { LEVEL_META } from '../../data/levelTopics';
 import { useToolkitData } from '../../hooks/useToolkitData';
@@ -116,7 +117,7 @@ const SectionLabel: React.FC<{ children: React.ReactNode; locked?: boolean }> = 
 const AppToolkit: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { userProfile } = useAppContext();
+  const { userProfile, hasLearningPlan, learningPlanLoading } = useAppContext();
   const currentLevel = userProfile?.currentLevel ?? 1;
   const { data: tkData, loading } = useToolkitData();
 
@@ -170,6 +171,9 @@ const AppToolkit: React.FC = () => {
   const bannerTool = unlockedLevel ? getPrimaryTool(unlockedLevel) : null;
   const bannerAccent = bannerMeta?.accentColor ?? '#38B2AC';
   const bannerDark = bannerMeta?.accentDark ?? '#1A7A76';
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="My Toolkit" />;
 
   if (loading || !tkData) {
     return (

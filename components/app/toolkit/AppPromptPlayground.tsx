@@ -9,6 +9,8 @@ import {
   STRATEGY_DEFINITIONS, PLAYGROUND_EXAMPLE_CHIPS,
 } from '../../../data/playground-content';
 import { useAuth } from '../../../context/AuthContext';
+import { useAppContext } from '../../../context/AppContext';
+import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -50,6 +52,7 @@ const STEP_DELAYS = [800, 1500, 3000, 4000, 4500, 5000, -1];
 
 const AppPromptPlayground: React.FC = () => {
   const { user } = useAuth();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
   const { generate, isLoading, error, clearError } = usePlaygroundApi();
 
   /* ── State ── */
@@ -469,6 +472,9 @@ const AppPromptPlayground: React.FC = () => {
       return next;
     });
   };
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="this tool" />;
 
   return (
     <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: FONT }}>

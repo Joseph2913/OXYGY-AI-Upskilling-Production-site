@@ -15,6 +15,8 @@ import {
 } from '../../../data/workflow-designer-content';
 import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
 import { useAuth } from '../../../context/AuthContext';
+import { useAppContext } from '../../../context/AppContext';
+import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
 import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
@@ -608,6 +610,7 @@ const CanvasSkeleton: React.FC<{ nodesPerRow: number }> = ({ nodesPerRow }) => {
 
 const AppWorkflowCanvas: React.FC = () => {
   const { user } = useAuth();
+  const { hasLearningPlan, learningPlanLoading } = useAppContext();
 
   /* ── Step 1 State ── */
   const [taskDescription, setTaskDescription] = useState('');
@@ -1101,6 +1104,9 @@ const AppWorkflowCanvas: React.FC = () => {
   /* ═══════════════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════════════ */
+
+  if (learningPlanLoading) return null;
+  if (!hasLearningPlan) return <LearningPlanBlocker pageName="this tool" />;
 
   return (
     <div style={{ padding: '28px 36px', fontFamily: FONT }}>

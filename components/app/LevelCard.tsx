@@ -6,15 +6,16 @@ import { LEVEL_TOPICS } from '../../data/levelTopics';
 import { getPrimaryTool } from '../../data/toolkitData';
 import { LEVELS } from '../../data/content';
 import { LevelProgress } from '../../hooks/useJourneyData';
-import { TOPIC_SVGS } from './TopicSvgs';
 import { ActivityTracker } from './journey/ActivityTracker';
-import { ProjectBriefSection } from './journey/ProjectBriefSection';
 
 interface LevelCardProps {
   level: LevelProgress;
   animDelay: number;
   projectTitle?: string | null;
   deliverable?: string | null;
+  planDepth?: string | null;
+  planTime?: string | null;
+  forceExpand?: boolean;
 }
 
 /* ── Phase step data with tooltips ── */
@@ -153,16 +154,25 @@ const TagChip: React.FC<{ label: string; accent?: string; accentDark?: string }>
   </span>
 );
 
-/* ── Fixed dimensions for topic mini-cards ── */
-const TOPIC_CARD_WIDTH = 280;
-const TOPIC_CARD_ICON_SIZE = 48;
+/* ── Status badge styles for project submission ── */
+const STATUS_BADGE_STYLES: Record<string, { bg: string; color: string; border: string; label: string }> = {
+  draft: { bg: '#F7FAFC', color: '#718096', border: '1px solid #E2E8F0', label: 'Draft saved' },
+  submitted: { bg: '#FEFCE8', color: '#92400E', border: '1px solid #FDE68A', label: 'Under review' },
+  passed: { bg: '#F0FFF4', color: '#276749', border: '1px solid #C6F6D5', label: 'Passed \u2713' },
+  needs_revision: { bg: '#FFF5F5', color: '#C53030', border: '1px solid #FEB2B2', label: 'Needs revision' },
+};
 
 /* ════════════════════════════════════════════════
    MAIN LEVEL CARD
    ════════════════════════════════════════════════ */
-export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable }) => {
+export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable, planDepth, planTime, forceExpand }) => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
+
+  // Auto-expand when forceExpand prop changes to true
+  React.useEffect(() => {
+    if (forceExpand) setExpanded(true);
+  }, [forceExpand]);
   const meta = LEVEL_META.find(m => m.number === level.levelNumber)!;
   const marketingData = LEVELS.find(l => l.id === level.levelNumber);
   const accent = meta.accentColor;
@@ -170,12 +180,10 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   const topics = LEVEL_TOPICS[level.levelNumber] || [];
   const topic = topics[0];
   const primaryTool = getPrimaryTool(level.levelNumber);
-  const SvgIllustration = topic ? TOPIC_SVGS[`${level.levelNumber}-${topic.id}`] : null;
 
   const isCompleted = level.status === 'completed';
   const isActive = level.status === 'active';
   const isProjectPending = level.status === 'project-pending';
-  const isLocked = level.status === 'not-started' && level.completedTopics === 0 && level.levelNumber > 1;
   const isAccessible = true; // All levels accessible
 
   const completionDate = level.completedAt
@@ -184,6 +192,10 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
 
   const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
+
+  // Project submission status badge
+  const subStatus = level.projectSubmission?.status;
+  const statusBadge = subStatus ? STATUS_BADGE_STYLES[subStatus] : null;
 
   return (
     <div
@@ -200,9 +212,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
       <style>{tooltipStyle}</style>
 
       {/* ════════════════════════════════════════════════
-          COLLAPSED VIEW — always visible
-          Left: tick + title + tagline + description
-          Right: topic card (fixed size) + CTA
+          ROW 1 — HEADER (always visible, click to expand)
          ════════════════════════════════════════════════ */}
       <div
         style={{
@@ -304,66 +314,46 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
           </div>
         </div>
 
-        {/* Right — Topic card (fixed size) + CTA + chevron */}
+        {/* Right — Depth/time + CTA + chevron */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          {/* Topic card — fixed dimensions */}
-          {topic && (
-            <div style={{
-              width: TOPIC_CARD_WIDTH,
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: '#FAFBFC', border: '1px solid #E2E8F0',
-              borderRadius: 10, padding: '10px 16px',
-            }}>
-              {/* SVG illustration */}
-              <div style={{
-                width: TOPIC_CARD_ICON_SIZE, height: TOPIC_CARD_ICON_SIZE,
-                borderRadius: 8, flexShrink: 0, overflow: 'hidden',
-                background: `linear-gradient(135deg, ${accent}25 0%, ${accent}08 100%)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+          {/* Depth + time metadata */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            {planDepth && (
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                color: accentDark,
+                background: `${accent}20`,
+                borderRadius: 6, padding: '2px 8px',
+                textTransform: 'uppercase' as const, letterSpacing: '0.04em',
               }}>
-                {SvgIllustration ? (
-                  <SvgIllustration accent={accent} accentDark={accentDark} active={false} />
-                ) : (
-                  <span style={{ fontSize: 22 }}>{topic.icon}</span>
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13, fontWeight: 700, color: '#1A202C', lineHeight: 1.3,
-                  marginBottom: 2,
-                }}>
-                  {topic.title}
-                </div>
-                <div style={{ fontSize: 10.5, color: '#718096', lineHeight: 1.4 }}>
-                  {topic.subtitle}
-                </div>
-                <div style={{ fontSize: 10, color: '#A0AEC0', marginTop: 3 }}>
-                  {topic.estimatedMinutes} min
-                </div>
-              </div>
-            </div>
-          )}
+                {planDepth === 'full' ? 'Full Program' : 'Fast-track'}
+              </span>
+            )}
+            {planTime && (
+              <span style={{ fontSize: 10, color: '#A0AEC0' }}>
+                {planTime}
+              </span>
+            )}
+          </div>
 
-          {/* CTA button */}
+          {/* CTA button — level-coloured */}
           {isAccessible ? (
             <button
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/level'); }}
               style={{
-                background: isActive ? '#1A202C' : 'transparent',
-                color: isActive ? '#FFFFFF' : '#1A202C',
-                border: isActive ? 'none' : '1.5px solid #E2E8F0',
+                background: `${accent}30`,
+                color: accentDark,
+                border: `1.5px solid ${accent}88`,
                 borderRadius: 24, padding: '10px 22px', fontSize: 13, fontWeight: 700,
                 cursor: 'pointer', transition: 'all 0.15s',
                 display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
                 flexShrink: 0, fontFamily: 'inherit',
               }}
               onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                if (isActive) e.currentTarget.style.background = '#2D3748';
-                else { e.currentTarget.style.background = '#F7FAFC'; e.currentTarget.style.borderColor = '#CBD5E0'; }
+                e.currentTarget.style.background = `${accent}50`;
               }}
               onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                if (isActive) e.currentTarget.style.background = '#1A202C';
-                else { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#E2E8F0'; }
+                e.currentTarget.style.background = `${accent}30`;
               }}
             >
               {ctaLabel} <ArrowRight size={13} />
@@ -395,24 +385,89 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
       </div>
 
       {/* ════════════════════════════════════════════════
-          PROJECT BRIEF SECTION
+          ROW 2 — COURSE TOPICS (always visible)
          ════════════════════════════════════════════════ */}
-      <div style={{ padding: '0 24px 16px' }}>
-        <ProjectBriefSection
-          level={level.levelNumber}
-          isLocked={isLocked}
-          projectTitle={projectTitle || null}
-          deliverable={deliverable || null}
-          projectSubmission={level.projectSubmission}
-          accentColor={accent}
-          accentDark={accentDark}
-        />
+      {marketingData?.topics && marketingData.topics.length > 0 && (
+        <div
+          onClick={() => setExpanded(!expanded)}
+          style={{
+            borderTop: '1px solid #F7FAFC',
+            padding: '10px 24px',
+            cursor: 'pointer',
+          }}
+        >
+          <SectionLabel>Course Topics</SectionLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {marketingData.topics.map(t => (
+              <TagChip key={t} label={t} accent={accent} accentDark={accentDark} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════
+          ROW 3 — PROJECT (always visible, replaces ProjectBriefSection)
+         ════════════════════════════════════════════════ */}
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          borderTop: '1px solid #F7FAFC',
+          padding: '12px 24px 20px',
+          background: `${accent}08`,
+          cursor: 'pointer',
+        }}
+      >
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16,
+        }}>
+          {/* Left — Project info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: accentDark,
+              letterSpacing: '0.08em', textTransform: 'uppercase' as const, marginBottom: 4,
+            }}>
+              Your Project
+            </div>
+            {projectTitle ? (
+              <>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', marginBottom: 4 }}>
+                  {projectTitle}
+                </div>
+                {deliverable && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                    <FileText size={12} color={accentDark} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <div style={{ fontSize: 12, color: '#4A5568' }}>
+                      <strong style={{ color: '#1A202C' }}>Deliverable: </strong>
+                      {deliverable}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic' }}>
+                Project brief will appear once you generate a learning plan
+              </div>
+            )}
+          </div>
+
+          {/* Right — Status badge only (project CTA is in expanded view) */}
+          {statusBadge && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '1px 8px',
+              borderRadius: 10, background: statusBadge.bg,
+              border: statusBadge.border, color: statusBadge.color,
+              flexShrink: 0,
+            }}>
+              {statusBadge.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════
           EXPANDED VIEW
-          Left: Core Topics, Target Audience, Key Tools
-          Right: Learning Phases (with tooltips), Toolkit
+          Left: Target Audience, Key Tools
+          Right: Learning Phases (with tooltips), Toolkit, Project
          ════════════════════════════════════════════════ */}
       <div style={{
         maxHeight: expanded ? 500 : 0,
@@ -434,18 +489,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
             borderRight: '1px solid #F0F0F0',
             gap: 14,
           }}>
-            {/* Core Topics */}
-            {marketingData?.topics && marketingData.topics.length > 0 && (
-              <div>
-                <SectionLabel>Core Topics</SectionLabel>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {marketingData.topics.map(t => (
-                    <TagChip key={t} label={t} accent={accent} accentDark={accentDark} />
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Target Audience */}
             {marketingData?.targetAudience && marketingData.targetAudience.length > 0 && (
               <div>
@@ -539,6 +582,45 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                       Open <ArrowRight size={11} />
                     </button>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Project — navigate to project proof page */}
+            {projectTitle && (
+              <div>
+                <SectionLabel>Project</SectionLabel>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 16px', borderRadius: 10,
+                  background: `${accent}12`,
+                  border: `1.5px solid ${accent}55`,
+                }}>
+                  <FileText size={20} color={accentDark} style={{ flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>
+                      {projectTitle}
+                    </div>
+                    {statusBadge && (
+                      <div style={{ fontSize: 10.5, color: statusBadge.color, lineHeight: 1.4, marginTop: 1 }}>
+                        {statusBadge.label}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/journey/project/' + level.levelNumber); }}
+                    style={{
+                      background: accentDark, color: '#FFFFFF', border: 'none',
+                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
+                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      transition: 'opacity 0.15s', whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.opacity = '0.85'; }}
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.opacity = '1'; }}
+                  >
+                    Open <ArrowRight size={11} />
+                  </button>
                 </div>
               </div>
             )}
