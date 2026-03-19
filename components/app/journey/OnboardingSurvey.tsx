@@ -481,8 +481,8 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
 
       if (demoMode) {
         // Demo mode: skip Supabase writes, show completion card
-        setCompletedPlan(result);
         setGenerating(false);
+        setCompletedPlan(result);
       } else {
         const [planSaved, profileSaved] = await Promise.all([
           saveLearningPlan(user!.id, result, depths),
@@ -500,15 +500,19 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
           setGenerating(false);
           return;
         }
-        await refreshLearningPlan();
-        await refreshProfile();
-        setCompletedPlan(result);
+        // Show completion card FIRST, then refresh context in background
+        // (refreshing context triggers parent re-renders, so we set UI state before)
         setGenerating(false);
+        setCompletedPlan(result);
+        // Refresh context in background — non-blocking
+        refreshLearningPlan().catch(() => {});
+        refreshProfile().catch(() => {});
       }
-    } catch {
+    } catch (err) {
+      console.error('Onboarding generate error:', err);
       setGenError('Something went wrong. Please try again.');
+      setGenerating(false);
     }
-    setGenerating(false);
   };
 
   const rightPanelRef = useRef<HTMLDivElement>(null);
