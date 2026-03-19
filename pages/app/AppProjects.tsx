@@ -164,17 +164,27 @@ const AppProjects: React.FC = () => {
                         {p.depth === 'full' ? 'Full Program' : 'Fast-track'}
                       </span>
                     )}
-                    <button
-                      onClick={() => navigate(`/app/journey/project/${p.level}?from=projects`)}
-                      style={{
-                        background: p.accentDark, color: '#FFFFFF', border: 'none',
-                        borderRadius: 24, padding: '8px 18px', fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', fontFamily: FONT,
-                        display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Continue to project <ArrowRight size={12} />
-                    </button>
+                    {p.projectTitle ? (
+                      <button
+                        onClick={() => navigate(`/app/journey/project/${p.level}?from=projects`)}
+                        style={{
+                          background: p.accentDark, color: '#FFFFFF', border: 'none',
+                          borderRadius: 24, padding: '8px 18px', fontSize: 12, fontWeight: 600,
+                          cursor: 'pointer', fontFamily: FONT,
+                          display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Continue to project <ArrowRight size={12} />
+                      </button>
+                    ) : hasAnyProject ? (
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, color: '#A0AEC0',
+                        background: '#F7FAFC', border: '1px solid #E2E8F0',
+                        borderRadius: 6, padding: '2px 8px',
+                      }}>
+                        N/A
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
@@ -200,15 +210,25 @@ const AppProjects: React.FC = () => {
                     </>
                   ) : (
                     <div style={{ marginTop: 14 }}>
-                      <div style={{ fontSize: 13, color: '#A0AEC0', fontStyle: 'italic', marginBottom: 8 }}>
-                        Your personalised project brief will appear here once your learning plan is generated.
-                      </div>
-                      <span
-                        onClick={() => navigate('/app/journey')}
-                        style={{ fontSize: 12, fontWeight: 600, color: '#38B2AC', cursor: 'pointer' }}
-                      >
-                        Go to My Journey →
-                      </span>
+                      {hasAnyProject ? (
+                        /* Learning plan exists but this level was not assigned */
+                        <div style={{ fontSize: 13, color: '#A0AEC0', fontStyle: 'italic' }}>
+                          Not included in your programme
+                        </div>
+                      ) : (
+                        /* No learning plan at all */
+                        <>
+                          <div style={{ fontSize: 13, color: '#A0AEC0', fontStyle: 'italic', marginBottom: 8 }}>
+                            Your personalised project brief will appear here once your learning plan is generated.
+                          </div>
+                          <span
+                            onClick={() => navigate('/app/journey')}
+                            style={{ fontSize: 12, fontWeight: 600, color: '#38B2AC', cursor: 'pointer' }}
+                          >
+                            Go to My Journey →
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

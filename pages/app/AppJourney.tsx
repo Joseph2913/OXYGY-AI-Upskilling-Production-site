@@ -197,7 +197,7 @@ const LearningPlanOverview: React.FC<{
                       </div>
                     ) : (
                       <span style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>
-                        Skipped
+                        Not included in your programme
                       </span>
                     )}
                   </div>
@@ -230,6 +230,7 @@ const AppJourney: React.FC = () => {
   // Track which level was clicked from overview to auto-expand its card
   // (must be declared here, before any conditional returns, per Rules of Hooks)
   const [expandedFromOverview, setExpandedFromOverview] = useState<number | null>(null);
+
 
   // Fetch learning plan for project titles on level cards
   // Re-fetch when hasLearningPlan flips to true (e.g. after survey completion)
@@ -297,18 +298,13 @@ const AppJourney: React.FC = () => {
     sessionStorage.removeItem('oxygy_survey_step');
     sessionStorage.removeItem('oxygy_survey_form');
 
-    // In demo mode, store the AI-generated plan in local state and skip transition
+    // In demo mode, store the AI-generated plan in local state
     if (result) {
       setPlanData(result);
       demoPlanCompleted.current = true;
-      // Skip fade animation — go straight to results
-      setShowOnboarding(false);
-      setTransitioning(false);
-      setPrefillData(null);
-      window.scrollTo({ top: 0 });
-      return;
     }
-    // Normal mode: fade out State A, then show State B
+
+    // Transition to journey view
     setTransitioning(true);
     setTimeout(() => {
       setShowOnboarding(false);
@@ -361,133 +357,8 @@ const AppJourney: React.FC = () => {
 
   // ─── STATE B: Full Journey View ───
 
-  // In demo mode with plan data but no journey data yet, show plan-only view
-  if (demoMode && planData && !data) {
-    return (
-      <div ref={contentRef} style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
-        <style>{pulseStyle}</style>
-
-        {/* Demo mode banner */}
-        <div style={{
-          background: '#FEFCE8', border: '1px solid #FDE68A', borderRadius: 10,
-          padding: '10px 16px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: 13, color: '#92400E',
-        }}>
-          <span><strong>Demo Mode</strong> — No data saved to your account. AI-generated plan stored locally only.</span>
-          <button
-            onClick={handleRegenerate}
-            style={{
-              background: '#F59E0B', color: '#FFFFFF', border: 'none',
-              borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 600,
-              cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
-          >
-            Re-run Survey
-          </button>
-        </div>
-
-        {/* Page Header */}
-        <div style={{ marginBottom: 28, animation: 'journeyFadeSlideUp 0.3s ease 0ms both' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', letterSpacing: '-0.4px', margin: 0, marginBottom: 6 }}>
-            My Journey
-          </h1>
-          <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.6, margin: 0, marginBottom: 20 }}>
-            Your personalized path through the five levels of AI capability.
-          </p>
-        </div>
-
-        {/* Learning Plan Overview */}
-        <LearningPlanOverview planData={planData} onLevelClick={() => {}} />
-
-        {/* Simple level cards — no journey data needed */}
-        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
-          {[1, 2, 3, 4, 5].map(n => {
-            const meta = LEVEL_META.find(m => m.number === n);
-            if (!meta) return null;
-            const levelResult = planData.levels[`L${n}`];
-            return (
-              <div key={n} style={{
-                borderRadius: 14, border: '1px solid #E2E8F0', borderLeft: `4px solid ${meta.accentColor}`,
-                background: '#FFFFFF', padding: '20px 24px',
-                animation: `journeyFadeSlideUp 0.3s ease ${60 + n * 60}ms both`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{
-                    width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
-                    background: `${meta.accentColor}33`, border: `1px solid ${meta.accentColor}88`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, fontWeight: 800, color: meta.accentDark,
-                  }}>
-                    {n}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: meta.accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
-                        Level {n}
-                      </span>
-                      {levelResult?.depth && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 700,
-                          color: levelResult.depth === 'full' ? meta.accentDark : '#718096',
-                          background: levelResult.depth === 'full' ? `${meta.accentColor}30` : '#F7FAFC',
-                          border: `1px solid ${levelResult.depth === 'full' ? meta.accentColor + '66' : '#E2E8F0'}`,
-                          borderRadius: 6, padding: '1px 7px', textTransform: 'uppercase' as const,
-                        }}>
-                          {levelResult.depth === 'full' ? 'Full Program' : 'Fast-track'}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', letterSpacing: '-0.2px', marginBottom: 3 }}>
-                      {meta.name}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#718096', fontStyle: 'italic' }}>{meta.tagline}</div>
-                  </div>
-                </div>
-                {/* Project brief */}
-                {levelResult?.projectTitle && (
-                  <div style={{
-                    background: `${meta.accentColor}10`, borderRadius: 10,
-                    padding: '14px 18px', marginTop: 14, marginLeft: 56,
-                  }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: meta.accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>
-                      YOUR PROJECT
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', marginBottom: 4 }}>
-                      {levelResult.projectTitle}
-                    </div>
-                    {levelResult.projectDescription && (
-                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, marginBottom: 6 }}>
-                        {levelResult.projectDescription}
-                      </div>
-                    )}
-                    {levelResult.deliverable && (
-                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.5 }}>
-                        <strong>Deliverable:</strong> {levelResult.deliverable}
-                      </div>
-                    )}
-                    {levelResult.challengeConnection && (
-                      <div style={{
-                        marginTop: 10, padding: '10px 14px', borderRadius: 8,
-                        background: `${meta.accentColor}15`, border: `1px solid ${meta.accentColor}33`,
-                      }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: meta.accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>
-                          How this connects to your challenge
-                        </div>
-                        <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, fontStyle: 'italic' }}>
-                          {levelResult.challengeConnection}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
+  // Demo mode now falls through to the main journey view below,
+  // using DEMO_JOURNEY_DATA when Supabase data isn't available.
 
   // Demo mode fallback: create empty journey data when Supabase data isn't available
   const DEMO_JOURNEY_DATA: JourneyData = {
@@ -799,6 +670,7 @@ const AppJourney: React.FC = () => {
                 planDepth={planLevel?.depth || null}
                 planTime={planLevel?.sessionFormat || null}
                 forceExpand={expandedFromOverview === level.levelNumber}
+                hasLearningPlan={!!planData}
               />
             </div>
           );

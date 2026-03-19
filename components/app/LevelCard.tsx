@@ -16,6 +16,7 @@ interface LevelCardProps {
   planDepth?: string | null;
   planTime?: string | null;
   forceExpand?: boolean;
+  hasLearningPlan?: boolean;
 }
 
 /* ── Phase step data with tooltips ── */
@@ -163,7 +164,7 @@ const STATUS_BADGE_STYLES: Record<string, { bg: string; color: string; border: s
 /* ════════════════════════════════════════════════
    MAIN LEVEL CARD
    ════════════════════════════════════════════════ */
-export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable, planDepth, planTime, forceExpand }) => {
+export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable, planDepth, planTime, forceExpand, hasLearningPlan }) => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
 
@@ -443,7 +444,9 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               </>
             ) : (
               <div style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic' }}>
-                Project brief will appear once you generate a learning plan
+                {hasLearningPlan
+                  ? 'Not included in your programme'
+                  : 'Project brief will appear once you generate a learning plan'}
               </div>
             )}
           </div>

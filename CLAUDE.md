@@ -57,6 +57,7 @@ Interactive multi-section website for Oxygy's AI Centre of Excellence. Showcases
 - No heavy gradients
 - No center-aligned body text
 - No oversized buttons
+- **No Unicode escape sequences in JSX text.** Never use `\u2013`, `\uXXXX`, or similar escape sequences inside JSX content — they render as literal text (e.g. `15\u201320` instead of `15–20`). Always use the actual character directly (–, —, ', ", etc.) or HTML entities (`&ndash;`, `&mdash;`) in JSX.
 
 ## Git Workflow
 
@@ -189,6 +190,16 @@ System prompts, AI logic, and all API behaviour live in Cloud Functions (`functi
 **Do NOT rely on `npx firebase-tools deploy` (no flags)** — it may deploy functions successfully while serving a stale hosting build. Always use the explicit `--only hosting,functions` flag after a fresh `npx vite build`.
 
 After deploying, verify the release timestamp in Firebase Console → Hosting → Dashboard, and remind the user to **hard-refresh** (Cmd+Shift+R / Ctrl+Shift+R) to bypass browser cache.
+
+### Caching Strategy
+
+`firebase.json` uses a three-tier header strategy so team members never see stale app versions after a deploy:
+
+1. **Catch-all `**`** → `no-cache, no-store, must-revalidate` — covers all SPA routes (`/app/dashboard`, etc.) which serve `index.html` via the rewrite. Firebase header `source` patterns match the **request URL**, not the rewrite destination, so a rule targeting only `index.html` misses SPA routes.
+2. **`**/*.@(js|css)`** → `immutable, max-age=1yr` — safe because Vite hashes filenames; a new deploy = new filename = cache miss.
+3. **`**/*.@(png|jpg|jpeg|gif|svg|ico|webp)`** → `max-age=1day` — moderate cache for images.
+
+Firebase applies the **last matching** header for conflicts, so rules 2 & 3 override rule 1 for static assets. **Never remove the catch-all rule or revert to targeting only `index.html`.**
 
 ### Adding a new API endpoint
 

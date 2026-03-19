@@ -205,8 +205,8 @@ export default function AppOnboarding() {
 
       if (completeErr) throw completeErr;
 
-      // 5. Navigate to dashboard
-      navigate('/app/dashboard', { replace: true });
+      // 5. Navigate to journey (where plan summary is shown)
+      navigate('/app/journey', { replace: true });
     } catch (err: unknown) {
       console.error('Onboarding error:', err);
       setError('Something went wrong. Please try again.');

@@ -39,7 +39,7 @@ const SurveyProcessing: React.FC<SurveyProcessingProps> = ({ error, onRetry }) =
         Generating your learning plan...
       </div>
       <div style={{ fontSize: 13, color: '#A0AEC0', marginTop: 4, marginBottom: 20 }}>
-        This usually takes 15\u201320 seconds
+        This usually takes 15–20 seconds
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', maxWidth: 320, margin: '0 auto' }}>
         {STEPS.map((step, idx) => {

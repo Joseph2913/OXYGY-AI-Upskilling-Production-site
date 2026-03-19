@@ -11,6 +11,7 @@ import { useAppContext } from '../../../context/AppContext';
 import { saveLearningPlan, upsertProfile } from '../../../lib/database';
 import type { PathwayFormData, PathwayApiResponse, LevelDepth } from '../../../types';
 import SurveyProcessing from './SurveyProcessing';
+import { LEVEL_META } from '../../../data/levelTopics';
 
 // ---- Demo Sample Profiles ----
 const DEMO_PROFILES: { label: string; emoji: string; data: PathwayFormData }[] = [
@@ -427,6 +428,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
   const [showOptional, setShowOptional] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [completedPlan, setCompletedPlan] = useState<PathwayApiResponse | null>(null);
 
   // Persist step + form data to sessionStorage on every change
   useEffect(() => {
@@ -478,8 +480,9 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
       }
 
       if (demoMode) {
-        // Demo mode: skip Supabase writes, pass plan data back via callback
-        onPlanGenerated(result);
+        // Demo mode: skip Supabase writes, show completion card
+        setCompletedPlan(result);
+        setGenerating(false);
       } else {
         const [planSaved, profileSaved] = await Promise.all([
           saveLearningPlan(user!.id, result, depths),
@@ -499,7 +502,8 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
         }
         await refreshLearningPlan();
         await refreshProfile();
-        onPlanGenerated();
+        setCompletedPlan(result);
+        setGenerating(false);
       }
     } catch {
       setGenError('Something went wrong. Please try again.');
@@ -521,6 +525,141 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
   const goBack = () => setStep(s => Math.max(s - 1, step === 1 ? 0 : 1));
 
   const canProceed = step === 1 ? isStep1Complete : step === 2 ? isStep2Complete : isStep3Complete;
+
+  // ═══════════════ COMPLETION CARD ═══════════════
+  if (completedPlan) {
+    const assignedLevels = [1, 2, 3, 4, 5].filter(n => !!completedPlan.levels[`L${n}`]);
+    return (
+      <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <style>{ANIM}</style>
+        <div style={{
+          width: 640, maxWidth: '92vw', borderRadius: 20, overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06)',
+          animation: 'onbCardIn 0.4s ease both',
+          background: '#FFFFFF',
+        }}>
+          {/* Header band */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1A202C 0%, #1C2E38 100%)',
+            padding: '36px 40px 32px', textAlign: 'center',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute', top: -30, right: -30, width: 120, height: 120,
+              borderRadius: '50%', background: 'rgba(56, 178, 172, 0.08)',
+            }} />
+            <div style={{
+              position: 'absolute', bottom: -20, left: -20, width: 80, height: 80,
+              borderRadius: '50%', background: 'rgba(168, 240, 224, 0.06)',
+            }} />
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', margin: '0 auto 14px',
+              background: 'rgba(56, 178, 172, 0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative', zIndex: 1,
+            }}>
+              <Check size={24} color="#38B2AC" />
+            </div>
+            <h1 style={{
+              fontSize: 24, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px',
+              position: 'relative', zIndex: 1,
+            }}>
+              Your Learning Plan is Ready
+            </h1>
+            <p style={{
+              fontSize: 14, color: 'rgba(255,255,255,0.65)', margin: '8px 0 0', lineHeight: 1.5,
+              position: 'relative', zIndex: 1,
+            }}>
+              Here's what we've put together for you.
+            </p>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: '28px 40px 36px' }}>
+            <div style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.7, marginBottom: 20 }}>
+              You have been assigned to <strong>{assignedLevels.length} level{assignedLevels.length !== 1 ? 's' : ''}</strong> based
+              on your experience and goals. Head to your Journey page to explore the topics, toolkit, and projects
+              waiting for you at each level.
+            </div>
+
+            {/* Assigned level chips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {assignedLevels.map(n => {
+                const meta = LEVEL_META.find(m => m.number === n)!;
+                const planLevel = completedPlan.levels[`L${n}`];
+                return (
+                  <div key={n} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 16px', borderRadius: 12,
+                    background: `${meta.accentColor}12`,
+                    border: `1px solid ${meta.accentColor}44`,
+                  }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      background: `${meta.accentColor}33`,
+                      border: `1.5px solid ${meta.accentColor}88`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 800, color: meta.accentDark,
+                    }}>
+                      {n}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>
+                        {meta.name}
+                      </div>
+                      {planLevel?.projectTitle && (
+                        <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>
+                          Project: {planLevel.projectTitle}
+                        </div>
+                      )}
+                    </div>
+                    {planLevel?.depth && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, flexShrink: 0,
+                        color: planLevel.depth === 'full' ? meta.accentDark : '#718096',
+                        background: planLevel.depth === 'full' ? `${meta.accentColor}25` : '#F7FAFC',
+                        border: `1px solid ${planLevel.depth === 'full' ? meta.accentColor + '66' : '#E2E8F0'}`,
+                        borderRadius: 6, padding: '2px 8px',
+                        textTransform: 'uppercase' as const,
+                      }}>
+                        {planLevel.depth === 'full' ? 'Full' : 'Fast-track'}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{
+              fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 24,
+              fontStyle: 'italic',
+            }}>
+              Good luck with your learning experience – we're excited to see what you build.
+            </div>
+
+            {/* CTA button */}
+            <button
+              onClick={() => onPlanGenerated(demoMode ? completedPlan : undefined)}
+              style={{
+                width: '100%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'linear-gradient(135deg, #38B2AC, #2D9E99)',
+                color: '#FFFFFF', border: 'none', borderRadius: 12,
+                padding: '14px 28px', fontSize: 15, fontWeight: 700,
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                boxShadow: '0 4px 14px rgba(56, 178, 172, 0.25)',
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              Go to My Journey <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ═══════════════ WELCOME SCREEN ═══════════════
   if (step === 0) {

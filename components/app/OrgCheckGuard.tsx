@@ -40,9 +40,8 @@ export const OrgCheckGuard: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }
 
-  // No org membership → code entry page
-  if (orgMemberships.length === 0) return <Navigate to="/app/join" replace />;
-
+  // Allow users through even without org membership — access code entry
+  // is now optional and available within the app (cohort section)
   return <>{children}</>;
 };
 
