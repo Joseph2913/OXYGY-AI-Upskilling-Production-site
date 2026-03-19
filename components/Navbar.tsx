@@ -37,8 +37,10 @@ export const Navbar: React.FC = () => {
   const courseResourcesRef = useRef<HTMLDivElement>(null);
 
 
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const isSignedIn = !!user;
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef<HTMLDivElement>(null);
 
   const [currentHash, setCurrentHash] = useState(() => window.location.hash);
 
@@ -59,6 +61,18 @@ export const Navbar: React.FC = () => {
     window.addEventListener('hashchange', close);
     return () => window.removeEventListener('hashchange', close);
   }, []);
+
+  // Close avatar menu on outside click
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [avatarMenuOpen]);
 
   const isHome = !currentHash || currentHash === '#';
   const isOnAiTool = AI_TOOLS.some((t) => t.href === currentHash);
@@ -576,26 +590,99 @@ export const Navbar: React.FC = () => {
                 My Dashboard →
               </a>
 
-              {/* User avatar with real initials */}
-              <a
-                href="/app/dashboard"
-                className={cn(
-                  'hidden sm:flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0',
+              {/* User avatar with dropdown menu */}
+              <div ref={avatarMenuRef} style={{ position: 'relative' }} className="hidden sm:block flex-shrink-0">
+                <button
+                  onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
+                  className="flex items-center justify-center rounded-full transition-all duration-200"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    background: '#38B2AC',
+                    color: '#FFFFFF',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    borderRadius: '50%',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  title={user?.user_metadata?.full_name || 'Account'}
+                >
+                  {(user?.user_metadata?.full_name?.[0] || 'U').toUpperCase()}
+                </button>
+                {avatarMenuOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 48,
+                    right: 0,
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 12,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    minWidth: 180,
+                    padding: '6px 0',
+                    zIndex: 100,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}>
+                    {/* User info */}
+                    <div style={{
+                      padding: '10px 16px 8px',
+                      borderBottom: '1px solid #F7FAFC',
+                    }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>
+                        {user?.user_metadata?.full_name || 'User'}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 1 }}>
+                        {user?.email || ''}
+                      </div>
+                    </div>
+                    {/* My Dashboard */}
+                    <a
+                      href="/app/dashboard"
+                      onClick={() => setAvatarMenuOpen(false)}
+                      style={{
+                        display: 'block',
+                        padding: '10px 16px',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: '#1A202C',
+                        textDecoration: 'none',
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#F7FAFC')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      My Dashboard
+                    </a>
+                    {/* Sign Out */}
+                    <button
+                      onClick={async () => {
+                        setAvatarMenuOpen(false);
+                        await signOut();
+                        window.location.href = '/';
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 16px',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: '#E53E3E',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif",
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#FFF5F5')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Sign Out
+                    </button>
+                  </div>
                 )}
-                style={{
-                  width: 40,
-                  height: 40,
-                  textDecoration: 'none',
-                  background: '#38B2AC',
-                  color: '#FFFFFF',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  borderRadius: '50%',
-                }}
-                title="My Dashboard"
-              >
-                {(user?.user_metadata?.full_name?.[0] || 'U').toUpperCase()}
-              </a>
+              </div>
             </>
           ) : (
             <a
@@ -829,20 +916,39 @@ export const Navbar: React.FC = () => {
 
             {/* Dashboard / Sign In — auth-aware */}
             {isSignedIn ? (
-              <a
-                href="/app/dashboard"
-                className={cn(
-                  'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
-                  isOnDashboard
-                    ? 'bg-[#E6FFFA] text-[#2C9A94]'
-                    : 'hover:bg-[#F7FAFC] text-[#2D3748]',
-                )}
-                style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
-                onClick={() => setMobileOpen(false)}
-              >
-                <User size={16} />
-                <span>My Dashboard</span>
-              </a>
+              <>
+                <a
+                  href="/app/dashboard"
+                  className={cn(
+                    'flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors',
+                    isOnDashboard
+                      ? 'bg-[#E6FFFA] text-[#2C9A94]'
+                      : 'hover:bg-[#F7FAFC] text-[#2D3748]',
+                  )}
+                  style={{ fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <User size={16} />
+                  <span>My Dashboard</span>
+                </a>
+                <button
+                  onClick={async () => {
+                    setMobileOpen(false);
+                    await signOut();
+                    window.location.href = '/';
+                  }}
+                  className="flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors hover:bg-[#FFF5F5]"
+                  style={{
+                    fontSize: '14px', fontWeight: 500, color: '#E53E3E',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    width: '100%', textAlign: 'left',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <User size={16} />
+                  <span>Sign Out</span>
+                </button>
+              </>
             ) : (
               <a
                 href="/login"
