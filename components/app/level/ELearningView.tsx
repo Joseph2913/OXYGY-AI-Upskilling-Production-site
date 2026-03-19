@@ -764,26 +764,33 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     key={bp.key}
                     onClick={() => setContextStep(revealed ? i : i + 1)}
                     style={{
-                      padding: fs ? '18px 20px' : '14px 16px', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
+                      padding: fs ? '16px 20px' : '12px 14px', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
                       border: `2px solid ${revealed ? bp.color : '#E2E8F0'}`,
                       background: revealed ? bp.light : '#F7FAFC',
-                      transition: 'all 0.25s ease',
-                      display: 'flex', flexDirection: 'column', gap: revealed ? 10 : 6, justifyContent: revealed ? 'space-between' : 'center',
-                      height: '100%', boxSizing: 'border-box' as const,
+                      transition: 'border-color 0.25s ease, background 0.25s ease',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                      height: '100%', boxSizing: 'border-box' as const, overflow: 'hidden',
                     }}
                   >
                     {/* Key name */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: fs ? 17 : 14, fontWeight: 900, color: revealed ? bp.color : '#CBD5E0', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{bp.key}</span>
-                      {!revealed && <span style={{ fontSize: fs ? 16 : 13, color: '#CBD5E0' }}>▸</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                      <span style={{ fontSize: fs ? 16 : 13, fontWeight: 900, color: revealed ? bp.color : '#CBD5E0', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{bp.key}</span>
+                      {!revealed && <span style={{ fontSize: 12, color: '#CBD5E0' }}>▸</span>}
                     </div>
-                    {/* Question */}
-                    <div style={{ fontSize: fs ? 16 : 13, fontWeight: 700, color: revealed ? '#1A202C' : '#A0AEC0', lineHeight: 1.35 }}>{bp.label}</div>
+                    {/* Question — bigger + vertically centred when unrevealed */}
+                    <div style={{
+                      fontSize: fs ? (revealed ? 14 : 19) : (revealed ? 12 : 17),
+                      fontWeight: 700,
+                      color: revealed ? '#1A202C' : '#718096',
+                      lineHeight: 1.3,
+                      flex: revealed ? 0 : 1,
+                      display: 'flex', alignItems: 'center',
+                    }}>{bp.label}</div>
                     {/* Revealed content */}
                     {revealed && (
                       <>
-                        <div style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.6, flex: 1 }}>{bp.detail}</div>
-                        <div style={{ fontSize: fs ? 13 : 11, fontWeight: 700, color: bp.color, background: '#FFFFFF', border: `1px solid ${bp.color}44`, borderRadius: 8, padding: fs ? '6px 10px' : '5px 8px', marginTop: 4 }}>{bp.impact}</div>
+                        <div style={{ fontSize: fs ? 13 : 11, color: '#2D3748', lineHeight: 1.5, flex: 1, overflow: 'hidden' }}>{bp.detail}</div>
+                        <div style={{ fontSize: fs ? 15 : 13, fontWeight: 700, color: bp.color, background: '#FFFFFF', border: `1px solid ${bp.color}44`, borderRadius: 8, padding: fs ? '8px 12px' : '6px 10px', flexShrink: 0 }}>{bp.impact}</div>
                       </>
                     )}
                   </button>
