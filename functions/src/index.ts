@@ -1492,7 +1492,7 @@ Not sure yet:
 
 export const appbuildguide = onRequest({ secrets: [openRouterApiKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { apiKey } = getEnv();
+  const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
@@ -1567,7 +1567,7 @@ ${previousJson.slice(0, 2000)}...`;
 
 export const generaten8nworkflow = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 60 }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { apiKey } = getEnv();
+  const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
@@ -2129,7 +2129,7 @@ function getPlatformAddendum(platform: string): string {
 
 export const generatebuildguide = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 60 }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { apiKey } = getEnv();
+  const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
@@ -2363,7 +2363,7 @@ export const generateplaygroundprompt = onRequest({ secrets: [openRouterApiKey],
   if (req.method === "OPTIONS") { res.status(204).send(""); return; }
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
 
-  const apiKey = openRouterApiKey.value();
+  const { apiKey, model } = getEnv();
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
@@ -3425,7 +3425,7 @@ export const reviewproject = onRequest(
     if (req.method === "OPTIONS") { res.status(204).send(""); return; }
     if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
 
-    const apiKey = openRouterApiKey.value();
+    const { apiKey, model } = getEnv();
     if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
     try {
