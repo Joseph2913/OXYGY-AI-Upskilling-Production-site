@@ -107,6 +107,9 @@ export interface SlideData {
   predictFeedback?: string[];
   /* Standardised slide takeaway (shown as header on every slide) */
   takeaway?: string;
+  /* External source citation (shown as a small link at the bottom of the slide) */
+  sourceLink?: string;
+  sourceText?: string;
 }
 
 export interface ScenarioData {
@@ -172,8 +175,10 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Adoption has surged.",
     tealWord: "surged",
     body: "AI tools are no longer experimental. They're embedded in the daily workflows of most knowledge workers — across every function, every level, every industry.",
-    stats: [{ value: "75%", valueColour: "#38B2AC", label: "of knowledge workers now use generative AI as part of their regular workflow", source: "McKinsey & Company", desc: "2024", logoPath: "/logos/McKinsey___Company_idXaAYJuer_0.svg" }],
+    stats: [{ value: "75%", valueColour: "#38B2AC", label: "of knowledge workers now use AI at work", source: "Microsoft & LinkedIn", desc: "2024 Work Trend Index" }],
     pullQuote: "75% of your colleagues, clients, and competitors. The tools are already in the room.",
+    sourceLink: "https://www.microsoft.com/en-us/worklab/work-trend-index/ai-at-work-is-here-now-comes-the-hard-part",
+    sourceText: "Microsoft & LinkedIn: 2024 Work Trend Index — survey of 31,000 people across 31 countries (May 2024)",
   },
 
   /* ── Slide 3 — Same Tools, Very Different Results ── */
@@ -181,8 +186,10 @@ const L1T1_SLIDES: SlideData[] = [
     takeaway: "Access to the tool is equal — skill with it is not",
     heading: "Same tools. Very different results.",
     tealWord: "Very different",
-    body: "Even with access to the same tools, how professionals use them varies enormously. Usage is rising. But so are expectations — and the gap between casual users and skilled ones is growing.",
+    body: "Same tool. Same AI. Up to 9× more output — just from knowing how to use it.\n\nThe difference between +14% and +126% isn't the technology. It's the skill of the person using it.",
     pullQuote: "The bar keeps moving. Being an AI user isn't enough — being a skilled one is what creates the gap.",
+    sourceLink: "https://www.nngroup.com/articles/ai-tools-productivity-gains/",
+    sourceText: "NN/G meta-analysis (2023) of: Brynjolfsson, Li & Raymond (NBER/Stanford/MIT, 2023); Noy & Zhang (MIT, 2023); GitHub Copilot Research (GitHub, 2022)",
   },
 
   /* ── Slide 4 — Prompting Is the Foundation ── */
@@ -252,7 +259,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Spot the missing element.",
     tealWord: "missing element",
     body: "Read the prompt below. One Blueprint component is completely absent. Can you identify which one?",
-    buildTask: "Here's the prompt to analyse:\n\n\"Write a report on our customer churn data from last quarter. Include the main drivers, which segments are most affected, and what we should do about it.\"",
+    buildTask: "You are a senior strategy analyst — our B2B SaaS churn rose from 9% to 14% last quarter among 6–12 month accounts — identify the top three churn drivers, break them down by company size, and suggest two retention initiatives ranked by impact for a report our Head of Customer Success will present at next week's leadership review, flagging any conclusions where the data is too thin to be confident.",
     quizOptions: ["Role", "Context", "Task", "Format", "Steps", "Checks"],
     correct: 3,
     explanation: "The prompt has a clear task and some context — but it gives the AI zero guidance on how the output should be structured. Should it be a slide deck, a memo, a table, a bulleted list? The AI will guess. Adding a Format instruction (e.g. 'Two-page memo, section headers, executive tone') removes that ambiguity entirely.",

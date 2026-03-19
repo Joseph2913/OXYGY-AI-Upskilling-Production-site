@@ -149,17 +149,29 @@ export default function AppOnboarding() {
       if (profileErr) throw profileErr;
 
       // 2. Call generate-pathway API
+      // Compute level depths from experience level (L1 & L2 are always mandatory)
+      const LEVEL_DEPTHS: Record<string, Record<string, string>> = {
+        'beginner':         { L1: 'full',       L2: 'full',       L3: 'awareness', L4: 'skip',       L5: 'skip' },
+        'comfortable-user': { L1: 'fast-track',  L2: 'full',       L3: 'full',      L4: 'awareness',  L5: 'skip' },
+        'builder':          { L1: 'fast-track',  L2: 'fast-track', L3: 'full',      L4: 'full',       L5: 'awareness' },
+        'integrator':       { L1: 'fast-track',  L2: 'fast-track', L3: 'fast-track',L4: 'full',       L5: 'full' },
+      };
+      const levelDepths = LEVEL_DEPTHS[form.aiExperience] || LEVEL_DEPTHS['beginner'];
+
       const apiPayload = {
-        role: form.role,
-        function: form.function === 'Other' ? form.functionOther : form.function,
-        functionOther: form.functionOther,
-        seniority: form.seniority,
-        aiExperience: form.aiExperience,
-        ambition: form.ambition,
-        challenge: form.challenge,
-        availability: form.availability,
-        experienceDescription: form.experienceDescription,
-        goalDescription: form.goalDescription,
+        formData: {
+          role: form.role,
+          function: form.function === 'Other' ? form.functionOther : form.function,
+          functionOther: form.functionOther,
+          seniority: form.seniority,
+          aiExperience: form.aiExperience,
+          ambition: form.ambition,
+          challenge: form.challenge,
+          availability: form.availability,
+          experienceDescription: form.experienceDescription,
+          goalDescription: form.goalDescription,
+        },
+        levelDepths,
       };
 
       const res = await fetch('/api/generate-pathway', {

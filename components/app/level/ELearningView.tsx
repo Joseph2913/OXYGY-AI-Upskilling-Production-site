@@ -27,6 +27,13 @@ function injectGlowStyle() {
       from { opacity: 0; transform: translateY(12px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    @keyframes warningPop {
+      0% { opacity: 0; transform: translateY(6px) scale(0.95); }
+      15% { opacity: 1; transform: translateY(0) scale(1); }
+      75% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    }
+    .activity-warning { animation: warningPop 2.5s ease forwards; }
     .flip-card-inner { transition: transform 0.5s ease; transform-style: preserve-3d; }
     .flip-card-inner.flipped { transform: rotateY(180deg); }
     .flip-card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
@@ -169,6 +176,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [flawSelected, setFlawSelected] = useState<number | null>(null);
   // toast
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // activity warning popup
+  const [showActivityWarning, setShowActivityWarning] = useState(false);
+  const activityWarningTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // reflection screen state
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionA, setReflectionA] = useState('');
@@ -455,7 +465,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Evidence (stat cards with real logos & descriptions) ── */
       case 'evidence':
         return (
-          <div style={{ padding: fs ? '28px 48px' : '16px 24px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '28px 32px' : '16px 18px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 14px' }}>{s.body}</p>}
             {s.stats && (
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${s.stats.length}, 1fr)`, gap: 12, flex: 1 }}>
@@ -522,29 +532,35 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             )}
           </div>
         ) : (
-          /* Inline: two-column, stat card centred within its column */
-          <div style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '55% 45%', gap: 16, flex: 1, alignItems: 'center' }}>
+          /* Inline: two-column, big stat card */
+          <div style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 16, flex: 1, alignItems: 'center', minHeight: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {s.body && <p style={{ fontSize: 15, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
               </div>
-              {/* Right column: flex centres the card so it doesn't hug the edge */}
               {stat && (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <div style={{ padding: '20px 28px', borderRadius: 20, background: 'linear-gradient(135deg, #E6FFFA, #fff)', border: '2px solid #38B2AC', textAlign: 'center', animation: 'fadeInUp 0.4s ease', maxWidth: 220, width: '100%' }}>
-                    <div style={{ fontSize: 22, color: '#38B2AC', marginBottom: 4 }}>{'\u2191'}</div>
-                    <div style={{ fontSize: 52, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{stat.value}</div>
-                    <div style={{ fontSize: 13, color: '#4A5568', maxWidth: 160, margin: '6px auto 0' }}>{stat.label}</div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '5px 10px' }}>
-                      {stat.logoPath && <img src={stat.logoPath} alt={stat.source} style={{ height: 16, maxWidth: 80, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                      <span style={{ fontWeight: 700, fontSize: 11, color: '#1A202C' }}>{stat.source}</span>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <div style={{
+                    padding: '32px 36px', borderRadius: 24,
+                    background: 'linear-gradient(145deg, #E6FFFA 0%, #EBF8FF 50%, #FFFFFF 100%)',
+                    border: '2.5px solid #38B2AC',
+                    textAlign: 'center', animation: 'fadeInUp 0.4s ease',
+                    width: '100%', boxSizing: 'border-box' as const,
+                    boxShadow: '0 0 0 8px #38B2AC12',
+                  }}>
+                    <div style={{ fontSize: 32, color: '#38B2AC', marginBottom: 8, lineHeight: 1 }}>↑</div>
+                    <div style={{ fontSize: 88, fontWeight: 900, color: '#38B2AC', lineHeight: 1, letterSpacing: '-0.03em' }}>{stat.value}</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#2D3748', maxWidth: 220, margin: '12px auto 0', lineHeight: 1.4 }}>{stat.label}</div>
+                    <div style={{ marginTop: 6, fontSize: 13, color: '#718096' }}>{stat.desc}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '6px 14px' }}>
+                      <span style={{ fontWeight: 700, fontSize: 12, color: '#1A202C' }}>{stat.source}</span>
                     </div>
                   </div>
                 </div>
               )}
             </div>
             {s.pullQuote && (
-              <div style={{ marginTop: 12, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
+              <div style={{ flexShrink: 0, marginTop: 10, padding: '14px 20px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 14, color: '#4A5568', lineHeight: 1.65 }}>
                 {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
               </div>
             )}
@@ -555,41 +571,43 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Chart (Slide 3 — two-column: text + diverging outcomes research visual) ── */
       case 'chart': {
         const outcomes = [
-          { label: 'Customer support agents', sublabel: 'AI assistance for ticket resolution', gain: 14, barW: '11%', color: '#A0AEC0', textColor: '#718096' },
-          { label: 'Business professionals', sublabel: 'AI-assisted writing & analysis tasks', gain: 59, barW: '47%', color: '#4FD1C5', textColor: '#2C9A94' },
-          { label: 'Software developers', sublabel: 'GitHub Copilot for coding tasks', gain: 126, barW: '100%', color: '#38B2AC', textColor: '#1A6B5F' },
+          { label: 'Customer support agents', sublabel: 'AI assistance for ticket resolution', gain: 14, barW: '6%', color: '#A0AEC0', textColor: '#718096' },
+          { label: 'Business professionals', sublabel: 'AI-assisted writing & analysis tasks', gain: 59, barW: '22%', color: '#4FD1C5', textColor: '#2C9A94' },
+          { label: 'Software developers', sublabel: 'GitHub Copilot for coding tasks', gain: 126, barW: '45%', color: '#38B2AC', textColor: '#1A6B5F' },
         ];
         return (
-          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, flex: 1 }}>
+          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, flex: 1, minHeight: 0 }}>
               {/* Left — body */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
               </div>
-              {/* Right — diverging outcomes chart */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>PRODUCTIVITY GAIN — SAME AI TOOL</div>
-                {outcomes.map((o, i) => (
-                  <div key={i} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <div>
-                        <span style={{ fontSize: fs ? 14 : 13, fontWeight: 700, color: '#1A202C' }}>{o.label}</span>
-                        <span style={{ fontSize: fs ? 12 : 11, color: '#A0AEC0', marginLeft: 6 }}>{o.sublabel}</span>
+              {/* Right — chart pinned to left of its column */}
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ width: fs ? 360 : 290 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>PRODUCTIVITY GAIN — SAME AI TOOL</div>
+                  {outcomes.map((o, i) => (
+                    <div key={i} style={{ marginBottom: 22 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                        <div>
+                          <div style={{ fontSize: fs ? 15 : 14, fontWeight: 700, color: '#1A202C' }}>{o.label}</div>
+                          <div style={{ fontSize: fs ? 12 : 11, color: '#A0AEC0' }}>{o.sublabel}</div>
+                        </div>
+                        <span style={{ fontSize: fs ? 18 : 16, fontWeight: 800, color: o.textColor, flexShrink: 0 }}>+{o.gain}%</span>
                       </div>
-                      <span style={{ fontSize: fs ? 16 : 14, fontWeight: 800, color: o.textColor }}>+{o.gain}%</span>
+                      <div style={{ height: 32, background: '#F7FAFC', borderRadius: 6, overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                        <div style={{ height: '100%', width: o.barW, background: o.color, borderRadius: 6, transition: 'width 0.6s ease' }} />
+                      </div>
                     </div>
-                    <div style={{ height: fs ? 24 : 20, background: '#F7FAFC', borderRadius: 4, overflow: 'hidden', border: '1px solid #E2E8F0' }}>
-                      <div style={{ height: '100%', width: o.barW, background: o.color, borderRadius: 4, transition: 'width 0.6s ease' }} />
-                    </div>
+                  ))}
+                  <div style={{ marginTop: 4, fontSize: 10, color: '#A0AEC0', fontStyle: 'italic', borderTop: '1px solid #E2E8F0', paddingTop: 8 }}>
+                    Sources: Brynjolfsson, Li & Raymond (MIT/Stanford/NBER, 2023); Noy & Zhang (MIT, 2023); GitHub Copilot Research (GitHub, 2022).
                   </div>
-                ))}
-                <div style={{ marginTop: 4, fontSize: 9, color: '#A0AEC0', fontStyle: 'italic', borderTop: '1px solid #E2E8F0', paddingTop: 6 }}>
-                  Sources: Brynjolfsson, Li & Raymond (MIT/Stanford/NBER, 2023); Noy & Zhang (MIT, 2023); GitHub Copilot Research (GitHub, 2022). Gains relative to control groups without AI assistance.
                 </div>
               </div>
             </div>
             {s.pullQuote && (
-              <div style={{ marginTop: 14, padding: '20px 28px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: 16, color: '#4A5568', lineHeight: 1.75 }}>
+              <div style={{ flexShrink: 0, marginTop: 10, padding: '14px 20px', borderLeft: '4px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0', fontSize: fs ? 15 : 14, color: '#4A5568', lineHeight: 1.65 }}>
                 {s.pullQuote.split(/(\d+%)/).map((part, i) => /^\d+%$/.test(part) ? <span key={i} style={{ color: '#38B2AC', fontWeight: 800 }}>{part}</span> : <span key={i}>{part}</span>)}
               </div>
             )}
@@ -607,18 +625,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { label: 'Prompting', width: '100%', fill: '#38B2AC', border: '2px solid #2C9A94', fontWeight: 800, fontSize: 15, color: '#FFFFFF', active: true },
         ];
         return (
-          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
               {/* Left */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
               </div>
               {/* Right — pyramid */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, overflow: 'hidden', maxWidth: '100%' }}>
                 {pyramidLayers.map((layer, i) => (
-                  <div key={i} style={{ width: layer.width, margin: '0 auto', padding: '10px 16px', borderRadius: 6, background: layer.fill, border: layer.border, textAlign: 'center', fontSize: layer.fontSize, fontWeight: layer.fontWeight, color: layer.color, position: 'relative' }}>
+                  <div key={i} style={{ width: layer.width, margin: '0 auto', padding: '8px 12px', borderRadius: 6, background: layer.fill, border: layer.border, textAlign: 'center', fontSize: layer.fontSize, fontWeight: layer.fontWeight, color: layer.color, position: 'relative', boxSizing: 'border-box' as const }}>
                     {layer.label}
-                    {layer.active && <span style={{ position: 'absolute', right: -90, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#2C9A94', fontWeight: 700, whiteSpace: 'nowrap' }}>{'\u25B8'} You are here</span>}
+                    {layer.active && <span style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 700, marginLeft: 8, whiteSpace: 'nowrap' as const }}>{'\u25B8'} You are here</span>}
                   </div>
                 ))}
               </div>
@@ -646,7 +664,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const score = (t?.checks || []).filter(Boolean).length;
         const isOpen = !!expandedSections[`sc-check-${id}`];
         return (
-          <div style={{ padding: fs ? '22px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14 }}>
+          <div style={{ padding: fs ? '22px 26px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14 }}>
 
             {/* Toggle — prominent, labelled */}
             <div style={{ flexShrink: 0 }}>
@@ -739,7 +757,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const levelLabels = ['Empty', 'Minimal', 'Basic', 'Good', 'Rich', 'Strong', 'Complete'];
         const allRevealed = contextStep >= 6;
         return (
-          <div style={{ padding: fs ? '16px 36px' : '10px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '16px 20px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
 
             {/* Instruction banner — swaps to completion message when all revealed */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, background: allRevealed ? '#F0FFF4' : accentColor + '15', border: `1.5px solid ${allRevealed ? '#9AE6B4' : accentColor + '55'}`, borderRadius: 12, padding: fs ? '10px 20px' : '8px 16px', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
@@ -807,7 +825,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         ).filter((c: any) => !placedChipKeys.includes(c.key));
 
         return (
-          <div style={{ padding: fs ? '14px 28px' : '10px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '14px 16px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
             {/* Instruction banner */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               {buildComplete ? (
@@ -880,8 +898,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 )}
               </div>
 
-              {/* Right — drop zones */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
+              {/* Right — drop zones + check button */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, paddingRight: fs ? 16 : 10 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', minHeight: 0 }}>
                 {comps.map((c: any) => {
                   const placedChipKey = placedComponents[c.key];
                   const placedComp = placedChipKey ? comps.find((comp: any) => comp.key === placedChipKey) : null;
@@ -893,39 +912,58 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       key={c.key}
                       onDragOver={e => e.preventDefault()}
                       onDrop={() => handleDrop(c.key)}
-                      onClick={() => { if (isTouch && draggedChip) handleDrop(c.key); }}
+                      onClick={() => {
+                        if (isTouch && draggedChip) handleDrop(c.key);
+                        else if (isTouch && !draggedChip && isPlaced && !buildComplete) {
+                          setDraggedChip(placedChipKey);
+                          setPlacedComponents(prev => { const n = { ...prev }; delete n[c.key]; return n; });
+                          setBuildChecked(false);
+                        }
+                      }}
                       style={{ border: isPlaced ? `1.5px solid ${c.color}` : `1.5px dashed ${isDragTarget ? c.color : c.color + '55'}`, background: isPlaced ? c.light : isDragTarget ? c.color + '0A' : '#FAFAFA', borderRadius: 8, padding: '8px 12px', minHeight: 40, display: 'flex', alignItems: 'center', gap: 8, transition: 'all 150ms ease' }}
                     >
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', background: c.color, padding: '2px 8px', borderRadius: 10, flexShrink: 0 }}>{c.key}</span>
-                      <span style={{ fontSize: 12, color: isPlaced ? '#2D3748' : '#A0AEC0', fontStyle: isPlaced ? 'normal' : 'italic', lineHeight: 1.5, flex: 1 }}>
-                        {placedComp ? (placedComp.chipText || (placedComp.filledText.length > 50 ? placedComp.filledText.slice(0, 50) + '…' : placedComp.filledText)) : c.dropHint}
-                      </span>
+                      {isPlaced && placedComp ? (
+                        <span
+                          draggable={!buildComplete}
+                          onDragStart={(e) => {
+                            if (buildComplete) { e.preventDefault(); return; }
+                            setDraggedChip(placedChipKey);
+                            setPlacedComponents(prev => { const n = { ...prev }; delete n[c.key]; return n; });
+                            setBuildChecked(false);
+                          }}
+                          style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.5, flex: 1, cursor: !buildComplete ? 'grab' : 'default' }}
+                        >
+                          {placedComp.chipText || (placedComp.filledText.length > 50 ? placedComp.filledText.slice(0, 50) + '…' : placedComp.filledText)}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic', lineHeight: 1.5, flex: 1 }}>{c.dropHint}</span>
+                      )}
                       {buildChecked && isPlaced && (
                         <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? '#48BB78' : '#FC8181', flexShrink: 0 }}>{isCorrect ? '✓' : '✗'}</span>
                       )}
                     </div>
                   );
                 })}
+                </div>
+                {!buildComplete && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 2 }}>
+                    <button
+                      onClick={() => {
+                        setBuildChecked(true);
+                        if (comps.every((comp: any) => placedComponents[comp.key] === comp.key)) {
+                          setTimeout(() => setBuildComplete(true), 600);
+                        }
+                      }}
+                      disabled={!allPlaced}
+                      style={{ padding: '8px 20px', borderRadius: 24, fontSize: 13, fontWeight: 700, border: 'none', cursor: allPlaced ? 'pointer' : 'default', background: allPlaced ? '#1A202C' : '#E2E8F0', color: allPlaced ? '#FFFFFF' : '#A0AEC0', transition: 'all 0.15s ease' }}
+                    >
+                      Check Answers
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Check Answers button */}
-            {!buildComplete && (
-              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    setBuildChecked(true);
-                    if (comps.every((comp: any) => placedComponents[comp.key] === comp.key)) {
-                      setTimeout(() => setBuildComplete(true), 600);
-                    }
-                  }}
-                  disabled={!allPlaced}
-                  style={{ padding: '8px 20px', borderRadius: 24, fontSize: 13, fontWeight: 700, border: 'none', cursor: allPlaced ? 'pointer' : 'default', background: allPlaced ? '#1A202C' : '#E2E8F0', color: allPlaced ? '#FFFFFF' : '#A0AEC0', transition: 'all 0.15s ease' }}
-                >
-                  Check Answers
-                </button>
-              </div>
-            )}
           </div>
         );
       }
@@ -940,7 +978,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           const opts = s.predictOptions || ['Brain Dump', 'Conversational', 'Blueprint'];
           const isCorrect = predictSelected === s.predictCorrect;
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: fs ? '20px 32px' : '12px 18px', overflowY: 'auto', boxSizing: 'border-box' as const, gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: fs ? '20px 24px' : '12px 14px', overflowY: 'auto', boxSizing: 'border-box' as const, gap: 12 }}>
 
               {/* ── Persona hero card ── */}
               <div style={{ borderRadius: 14, overflow: 'hidden', border: `2px solid ${p.color}33`, flexShrink: 0 }}>
@@ -972,7 +1010,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#1A202C', marginBottom: 6 }}>
                   Which approach fits {p.name}'s situation?
                 </div>
-                {!predictChecked && (
+                {predictSelected === null && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EBF8FF', border: '1px solid #BEE3F8', borderRadius: 8, padding: '5px 12px', marginBottom: 10 }}>
                     <span style={{ fontSize: 13 }}>👇</span>
                     <span style={{ fontSize: 12, color: '#2B6CB0', fontWeight: 600 }}>Pick one to see the answer</span>
@@ -981,17 +1019,16 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 10 }}>
                   {opts.map((opt, i) => {
                     const isSelected = predictSelected === i;
-                    const showResult = predictChecked;
-                    const isBest = i === s.predictCorrect;
+                    const hasSelected = predictSelected !== null;
                     return (
-                      <div key={i} onClick={() => { if (!predictChecked) { setPredictSelected(i); setPredictChecked(true); } }} style={{
-                        flex: '1 1 120px', padding: '12px 16px', borderRadius: 12, textAlign: 'center' as const, fontSize: 14, fontWeight: 700, cursor: predictChecked ? 'default' : 'pointer', transition: 'all 150ms ease',
-                        border: showResult ? (isBest ? '2px solid #38A169' : isSelected ? '2px solid #E53E3E' : '1px solid #E2E8F0') : (isSelected ? `2px solid ${p.color}` : '1.5px solid #E2E8F0'),
-                        background: showResult ? (isBest ? '#F0FFF4' : isSelected && !isBest ? '#FFF5F5' : '#F7FAFC') : (isSelected ? `${p.color}18` : '#FAFAFA'),
-                        color: showResult ? (isBest ? '#276749' : isSelected && !isBest ? '#9B2C2C' : '#718096') : (isSelected ? p.color : '#4A5568'),
-                        boxShadow: isSelected && !showResult ? `0 2px 8px ${p.color}33` : 'none',
+                      <div key={i} onClick={() => { if (!isCorrect) setPredictSelected(i); }} style={{
+                        flex: '1 1 120px', padding: '12px 16px', borderRadius: 12, textAlign: 'center' as const, fontSize: 14, fontWeight: 700, cursor: isCorrect ? 'default' : 'pointer', transition: 'all 150ms ease',
+                        border: (isCorrect && isSelected) ? '2px solid #38A169' : (hasSelected && isSelected && !isCorrect) ? '2px solid #E53E3E' : '1.5px solid #E2E8F0',
+                        background: (isCorrect && isSelected) ? '#F0FFF4' : (hasSelected && isSelected && !isCorrect) ? '#FFF5F5' : '#FAFAFA',
+                        color: (isCorrect && isSelected) ? '#276749' : (hasSelected && isSelected && !isCorrect) ? '#9B2C2C' : '#4A5568',
+                        boxShadow: isSelected && !isCorrect ? `0 2px 8px ${p.color}33` : 'none',
                       }}>
-                        {showResult && isBest ? '★ ' : ''}{opt}
+                        {isSelected && isCorrect ? '★ ' : ''}{opt}
                       </div>
                     );
                   })}
@@ -999,17 +1036,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </div>
 
               {/* ── Feedback ── */}
-              {predictChecked && predictSelected !== null && (
-                <div style={{ animation: 'fadeInUp 0.25s ease', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {predictSelected !== null && (
+                <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ background: isCorrect ? '#F0FFF4' : '#FFF5F5', border: `2px solid ${isCorrect ? '#68D391' : '#FC8181'}`, borderRadius: 12, padding: '14px 18px' }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 5 }}>{isCorrect ? '✅ That\'s the best fit!' : '❌ Not quite — here\'s why'}</div>
                     <p style={{ fontSize: 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.65, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
                   </div>
-                  <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: '14px 18px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
-                    <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.65, marginBottom: 8, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
-                    <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}><span style={{ color: p.color, fontWeight: 700 }}>Why: </span>{p.why}</div>
-                  </div>
+                  {isCorrect && (
+                    <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: '14px 18px' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
+                      <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.65, marginBottom: 8, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
+                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}><span style={{ color: p.color, fontWeight: 700 }}>Why: </span>{p.why}</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1018,7 +1057,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
         const toggleExpand = (id: string) => setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
         return (
-          <div style={{ padding: fs ? '24px 40px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
               {/* Left — context panel */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1096,36 +1135,65 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           ['skip',  'works', 'works'],
           ['skip',  'best',  'works'],
         ];
+        const APPROACH_ICONS = ['🧠', '💬', '📋'];
+        const APPROACH_TAGLINES = [
+          'Start messy, let AI find the shape',
+          'Think out loud with AI as your partner',
+          'Structured input for consistent output',
+        ];
         return (
-          <div style={{ padding: fs ? '20px 32px' : '12px 16px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', gap: 8, boxSizing: 'border-box' as const }}>
-            {SITUATIONS.map((sit, rowIdx) => (
-              <div key={rowIdx} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                {/* Left: text */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', lineHeight: 1.4, marginBottom: 3 }}>{sit.label}</div>
-                  <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.5 }}>{sit.example}</div>
+          <div style={{ padding: fs ? '16px 18px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', gap: 14, boxSizing: 'border-box' as const }}>
+            {/* Column headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              {APPROACHES.map((ap, colIdx) => (
+                <div key={colIdx} style={{
+                  background: `linear-gradient(135deg, ${ap.color}18 0%, ${ap.color}08 100%)`,
+                  border: `2px solid ${ap.color}`,
+                  borderRadius: 14, padding: '14px 16px', textAlign: 'center' as const,
+                }}>
+                  <div style={{ fontSize: fs ? 36 : 28, lineHeight: 1, marginBottom: 6 }}>{APPROACH_ICONS[colIdx]}</div>
+                  <div style={{ fontSize: fs ? 16 : 14, fontWeight: 800, color: ap.color, marginBottom: 4 }}>{ap.label}</div>
+                  <div style={{ fontSize: fs ? 12 : 11, color: '#718096', lineHeight: 1.4 }}>{APPROACH_TAGLINES[colIdx]}</div>
                 </div>
-                {/* Right: approach chips */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0, alignItems: 'flex-end' }}>
-                  {APPROACHES.map((ap, colIdx) => {
-                    const rating = RATINGS[rowIdx][colIdx];
-                    if (rating === 'skip') return null;
-                    const isBest = rating === 'best';
-                    return (
-                      <span key={colIdx} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' as const,
-                        background: isBest ? ap.color : ap.light,
-                        color: isBest ? '#FFFFFF' : ap.color,
-                        border: isBest ? 'none' : `1.5px solid ${ap.color}70`,
-                      }}>
-                        {isBest ? '★' : '◐'} {ap.label}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            {/* ★ Best when row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              {APPROACHES.map((ap, colIdx) => {
+                const bestSituations = SITUATIONS.filter((_, i) => RATINGS[i][colIdx] === 'best');
+                return (
+                  <div key={colIdx}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: ap.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>★ Best when</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {bestSituations.map((sit, i) => (
+                        <div key={i} style={{ background: ap.light, border: `1.5px solid ${ap.color}50`, borderRadius: 10, padding: '10px 12px' }}>
+                          <div style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#1A202C', lineHeight: 1.4, marginBottom: 4 }}>{sit.label}</div>
+                          <div style={{ fontSize: fs ? 11 : 10, color: '#718096', lineHeight: 1.5, fontStyle: 'italic' as const }}>{sit.example}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* ◐ Also works row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              {APPROACHES.map((ap, colIdx) => {
+                const worksSituations = SITUATIONS.filter((_, i) => RATINGS[i][colIdx] === 'works');
+                return (
+                  <div key={colIdx}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>◐ Also works</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {worksSituations.map((sit, i) => (
+                        <div key={i} style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 10px' }}>
+                          <div style={{ fontSize: fs ? 12 : 11, fontWeight: 600, color: '#4A5568', lineHeight: 1.4 }}>{sit.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       }
@@ -1139,7 +1207,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const revealed = selectedOpt !== null;
         const isCorrect = revealed && selectedOpt === sj.correct;
         return (
-          <div style={{ padding: fs ? '20px 36px' : '12px 18px', display: 'flex', flexDirection: 'column', height: '100%', gap: 12, overflowY: 'auto', boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 12, overflowY: 'auto', boxSizing: 'border-box' as const }}>
 
             {/* ── Purpose banner ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #2B4C7E 0%, #38B2AC 100%)', borderRadius: 10, padding: '10px 16px' }}>
@@ -1166,7 +1234,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
             {/* ── Pick an approach ── */}
             <div style={{ flexShrink: 0 }}>
-              {!revealed && (
+              {selectedOpt === null && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EBF8FF', border: '1px solid #BEE3F8', borderRadius: 8, padding: '5px 12px', marginBottom: 10 }}>
                   <span style={{ fontSize: 13 }}>👇</span>
                   <span style={{ fontSize: 12, color: '#2B6CB0', fontWeight: 600 }}>Tap an approach to see if you're right</span>
@@ -1175,23 +1243,20 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {sj.options.map((opt, i) => {
                   const isSelected = selectedOpt === i;
-                  const isBest = i === sj.correct;
-                  const isWrong = revealed && isSelected && !isBest;
                   return (
-                    <button key={i} onClick={() => { if (!revealed) setSjAnswers(prev => ({ ...prev, [slideKey]: i })); }} style={{
+                    <button key={i} onClick={() => { if (!isCorrect) setSjAnswers(prev => ({ ...prev, [slideKey]: i })); }} style={{
                       width: '100%', textAlign: 'left' as const, padding: '13px 16px', borderRadius: 10,
-                      cursor: revealed ? 'default' : 'pointer',
-                      border: revealed ? (isBest ? '2px solid #38A169' : isWrong ? '2px solid #E53E3E' : '1px solid #E2E8F0') : '1.5px solid #E2E8F0',
-                      background: revealed ? (isBest ? '#F0FFF4' : isWrong ? '#FFF5F5' : '#FAFAFA') : '#FFFFFF',
+                      cursor: isCorrect ? 'default' : 'pointer',
+                      border: (isCorrect && isSelected) ? '2px solid #38A169' : (isSelected && !isCorrect) ? '2px solid #E53E3E' : '1.5px solid #E2E8F0',
+                      background: (isCorrect && isSelected) ? '#F0FFF4' : (isSelected && !isCorrect) ? '#FFF5F5' : '#FFFFFF',
                       fontSize: 13, fontWeight: 700,
-                      color: revealed ? (isBest ? '#276749' : isWrong ? '#9B2C2C' : '#A0AEC0') : '#1A202C',
+                      color: (isCorrect && isSelected) ? '#276749' : (isSelected && !isCorrect) ? '#9B2C2C' : '#1A202C',
                       transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 10,
-                      boxShadow: !revealed ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                      boxShadow: !isCorrect ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                     }}>
                       <span style={{ fontSize: 15 }}>{['🧠', '💬', '📐'][i]}</span>
                       {opt}
-                      {revealed && isBest && <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#38A169', background: '#C6F6D5', padding: '2px 10px', borderRadius: 20 }}>✓ Best fit</span>}
-                      {isWrong && <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#9B2C2C', background: '#FED7D7', padding: '2px 10px', borderRadius: 20 }}>Not quite</span>}
+                      {isCorrect && isSelected && <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#38A169', background: '#C6F6D5', padding: '2px 10px', borderRadius: 20 }}>✓ Best fit</span>}
                     </button>
                   );
                 })}
@@ -1199,8 +1264,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
 
             {/* ── Feedback ── */}
-            {revealed && selectedOpt !== null && (
-              <div style={{ animation: 'fadeInUp 0.25s ease', borderRadius: 12, padding: '14px 16px', background: isCorrect ? '#F0FFF4' : '#FFFBEB', border: `2px solid ${isCorrect ? '#68D391' : '#F6AD55'}` }}>
+            {selectedOpt !== null && (
+              <div key={selectedOpt} style={{ animation: 'fadeInUp 0.25s ease', borderRadius: 12, padding: '14px 16px', background: isCorrect ? '#F0FFF4' : '#FFFBEB', border: `2px solid ${isCorrect ? '#68D391' : '#F6AD55'}` }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: isCorrect ? '#276749' : '#C05621', marginBottom: 4 }}>{isCorrect ? '✅ Spot on!' : '💡 Here\'s why that\'s not the best fit'}</div>
                 <div style={{ fontSize: 12, color: isCorrect ? '#276749' : '#744210', lineHeight: 1.65 }}>{sj.feedback[selectedOpt]}</div>
               </div>
@@ -1225,7 +1290,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { icon: '📐', label: 'Blueprint',      color: '#38B2AC', light: '#E6FFFA', when: 'Repeatable, high-stakes tasks — invest once, reuse every time' },
         ];
         return (
-          <div style={{ padding: fs ? '16px 28px' : '8px 12px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' as const, gap: 12 }}>
+          <div style={{ padding: fs ? '16px 20px' : '8px 10px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' as const, gap: 12 }}>
 
             {/* Section 1 — Prompt Blueprint (white card) */}
             <div style={{ background: '#FFFFFF', borderRadius: 14, padding: fs ? '16px 20px' : '12px 16px', border: '1.5px solid #E2E8F0', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -1305,7 +1370,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Gap Diagram (annotated prompt with RCTF underlines + animated insight) ── */
       case 'gapDiagram':
         return (
-          <div style={{ padding: fs ? '20px 36px' : '12px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div>
               {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 12px' }}>{s.body}</p>}
             </div>
@@ -1354,7 +1419,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Toolkit Overview (Blueprint + Approaches + Amplifiers) ── */
       case 'toolkitOverview':
         return (
-          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 14px' }}>{s.body}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
               {s.toolkitItems?.map((item, i) => (
@@ -1386,7 +1451,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── RCTF 3×2 grid (icons, no dropdowns — all visible) ── */
       case 'rctf':
         return (
-          <div style={{ padding: fs ? '24px 40px' : '14px 24px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             {s.subheading && <p style={{ fontSize: fs ? 15 : 13, color: '#718096', lineHeight: 1.6, margin: '0 0 10px' }}>{s.subheading}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, flex: 1, alignContent: 'center' }}>
               {s.elements?.map((el) => (
@@ -1417,17 +1482,21 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const approaches = (s as any).approaches ?? [];
         const allFlipped = approaches.every((_: any, i: number) => !!flippedCards[i]);
         return (
-          <div style={{ padding: fs ? '18px 40px' : '12px 20px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14, boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '18px 22px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14, boxSizing: 'border-box' as const }}>
 
-            {/* Instruction */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#38B2AC15', border: '1.5px solid #38B2AC55', borderRadius: 10, padding: '7px 14px' }}>
-                <span style={{ fontSize: 16 }}>👆</span>
-                <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#1A6B5F' }}>Click each card or use Next to explore</span>
-              </div>
-              <div style={{ fontSize: fs ? 12 : 11, color: '#A0AEC0', fontWeight: 500 }}>
-                {approaches.filter((_: any, i: number) => !!flippedCards[i]).length}/{approaches.length} explored
-              </div>
+            {/* Instruction / completion banner — same slot, swaps on allFlipped */}
+            <div style={{ flexShrink: 0 }}>
+              {allFlipped ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F0FFF4', border: '1.5px solid #38A16955', borderRadius: 10, padding: '7px 14px' }}>
+                  <span style={{ fontSize: 16 }}>✓</span>
+                  <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#276749' }}>All three explored — next you'll see each one in action</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#38B2AC15', border: '1.5px solid #38B2AC55', borderRadius: 10, padding: '7px 14px' }}>
+                  <span style={{ fontSize: 16 }}>👆</span>
+                  <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#1A6B5F' }}>Click each card or use Next to explore</span>
+                </div>
+              )}
             </div>
 
             {/* 3-column flip cards */}
@@ -1485,12 +1554,6 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               })}
             </div>
 
-            {/* Completion nudge */}
-            {allFlipped && (
-              <div style={{ flexShrink: 0, textAlign: 'center' as const, fontSize: fs ? 13 : 11, color: '#276749', fontWeight: 600 }}>
-                ✓ All three explored — next you'll see each one in action
-              </div>
-            )}
           </div>
         );
       }
@@ -1529,7 +1592,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Spectrum (3-position slider) ── */
       case 'spectrum':
         return (
-          <div style={{ padding: fs ? '32px 48px' : '20px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '32px 36px' : '20px 22px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.body && <p style={{ fontSize: fs ? 15 : 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 16px' }}>{s.body}</p>}
             {/* Spectrum track */}
             <div style={{ position: 'relative', height: 8, background: 'linear-gradient(90deg, #A8F0E0, #38B2AC)', borderRadius: 4, margin: '8px 0 16px' }}>
@@ -1567,7 +1630,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Quiz (single MCQ with feedback) ── */
       case 'quiz':
         return (
-          <div style={{ padding: fs ? '36px 60px' : '24px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+          <div style={{ padding: fs ? '36px 40px' : '24px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
             {s.quizEyebrow && <p style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{s.quizEyebrow}</p>}
             {s.question && <p style={{ fontSize: fs ? 18 : 16, fontWeight: 700, color: '#1A202C', lineHeight: 1.4, margin: '0 0 20px', maxWidth: 560 }}>{s.question}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
@@ -1610,7 +1673,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Comparison (3-tab view with expandable prompts) ── */
       case 'comparison':
         return (
-          <div style={{ padding: fs ? '28px 48px' : '18px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '28px 32px' : '18px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.scenario && (
               <div style={{ background: 'linear-gradient(135deg, #E6FFFA 0%, #EBF8FF 100%)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, border: '1.5px solid #38B2AC33' }}>
                 <span style={{ fontSize: 14, color: '#2B4C7E', fontWeight: 600 }}>SCENARIO: </span>
@@ -1661,7 +1724,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Flipcard (two side-by-side flip cards) ── */
       case 'flipcard':
         return (
-          <div style={{ padding: fs ? '28px 48px' : '18px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '28px 32px' : '18px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.instruction && <p style={{ fontSize: fs ? 14 : 12, color: '#718096', lineHeight: 1.5, margin: '0 0 14px' }}>{s.instruction}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, alignItems: 'stretch' }}>
               {s.cards?.map((card, i) => {
@@ -1709,7 +1772,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Branching (scenario with 3 option cards) ── */
       case 'branching':
         return (
-          <div style={{ padding: fs ? '24px 44px' : '16px 24px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '24px 28px' : '16px 18px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.scenario && (
               <div style={{ background: 'linear-gradient(135deg, #EBF4FF 0%, #E6FFFA 100%)', borderRadius: 10, padding: '10px 16px', marginBottom: 12, border: '1.5px solid #2B4C7E22' }}>
                 <span style={{ fontSize: 14, color: '#2D3748', lineHeight: 1.5 }}>{s.scenario}</span>
@@ -1767,7 +1830,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Templates (copyable prompt templates) ── */
       case 'templates':
         return (
-          <div style={{ padding: fs ? '28px 48px' : '18px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '28px 32px' : '18px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.body && <p style={{ fontSize: fs ? 14 : 12, color: '#718096', lineHeight: 1.5, margin: '0 0 14px' }}>{s.body}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1, overflowY: 'auto', alignContent: 'start' }}>
               {s.templateItems?.map((tmpl) => (
@@ -1792,7 +1855,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       case 'summaryCard': {
         const els = s.elements ?? [];
         return (
-          <div style={{ padding: fs ? '28px 48px' : '18px 28px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+          <div style={{ padding: fs ? '28px 32px' : '18px 20px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
             {s.body && <p style={{ fontSize: fs ? 14 : 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 18px' }}>{s.body}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, flex: 1 }}>
               {els.map((el) => (
@@ -1819,11 +1882,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const OPTION_COLORS = ['#667EEA', '#38B2AC', '#ED8936', '#48BB78', '#9F7AEA', '#F6AD55'];
         const OPTION_LIGHTS = ['#EBF4FF', '#E6FFFA', '#FFFBEB', '#F0FFF4', '#FAF5FF', '#FFFAF0'];
         return (
-          <div style={{ padding: fs ? '20px 40px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14, boxSizing: 'border-box' as const }}>
-            {/* Prompt box */}
-            <div style={{ background: '#EDF2F7', border: '2px solid #CBD5E0', borderLeft: '4px solid #38B2AC', borderRadius: 14, padding: fs ? '18px 24px' : '14px 18px', flexShrink: 0 }}>
-              <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>The Prompt</div>
-              <div style={{ fontSize: fs ? 17 : 15, color: '#2D3748', lineHeight: 1.75, whiteSpace: 'pre-line', fontStyle: 'italic' }}>
+          <div style={{ padding: fs ? '20px 24px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14, boxSizing: 'border-box' as const }}>
+            {/* Prompt box — fixed height, not flex-1 */}
+            <div style={{ background: '#EDF2F7', border: '2px solid #CBD5E0', borderLeft: '4px solid #38B2AC', borderRadius: 12, padding: fs ? '14px 20px' : '12px 16px', flexShrink: 0, overflowY: 'auto', maxHeight: fs ? 220 : 180 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>The Prompt</div>
+              <div style={{ fontSize: fs ? 18 : 16, color: '#2D3748', lineHeight: 1.7, whiteSpace: 'pre-line', fontStyle: 'italic' }}>
                 {s.buildTask?.replace(/^Here's the prompt to analyse:\n\n/, '')}
               </div>
             </div>
@@ -1836,7 +1899,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
 
             {/* Option buttons — 3×2 grid, fills remaining space */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr', gap: fs ? 12 : 10, flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr', gap: fs ? 10 : 8, flex: 1, minHeight: 0 }}>
               {flawOptions.map((opt, i) => {
                 const isCorrect = i === flawCorrect;
                 const isSelected = flawSelected === i;
@@ -1846,8 +1909,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 else if (wasWrong) { bg = '#FED7D7'; border = '#E53E3E'; color = '#C53030'; }
                 return (
                   <button key={opt} onClick={() => !flawSolved && setFlawSelected(i)} style={{
-                    padding: fs ? '18px 14px' : '14px 10px', borderRadius: 14,
-                    fontSize: fs ? 18 : 15, fontWeight: 700,
+                    padding: '6px 8px', borderRadius: 10,
+                    fontSize: fs ? 15 : 13, fontWeight: 700,
                     background: bg, border: `2px solid ${border}`, color,
                     cursor: flawSolved ? 'default' : 'pointer',
                     transition: 'all 0.15s', fontFamily: 'inherit',
@@ -1861,25 +1924,13 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               })}
             </div>
 
-            {/* Feedback / hint strip — fixed at bottom */}
-            <div style={{ flexShrink: 0 }}>
-              {flawSolved && s.explanation && (
-                <div style={{ background: '#F0FFF4', border: '2px solid #68D391', borderRadius: 12, padding: fs ? '16px 20px' : '12px 16px', animation: 'fadeInUp 0.25s ease' }}>
-                  <span style={{ fontWeight: 800, fontSize: fs ? 22 : 18, color: '#276749', display: 'block', marginBottom: 6 }}>✓ Correct!</span>
-                  <span style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.7 }}>{s.explanation}</span>
-                </div>
-              )}
-              {flawChosen && !flawSolved && (
-                <div style={{ textAlign: 'center' as const, fontSize: fs ? 14 : 12, color: '#C53030', fontWeight: 600, padding: '8px 0' }}>
-                  Not quite — try another
-                </div>
-              )}
-              {!flawChosen && (
-                <div style={{ textAlign: 'center' as const, fontSize: fs ? 13 : 11, color: '#A0AEC0', fontWeight: 500, padding: '6px 0' }}>
-                  Select an answer above
-                </div>
-              )}
-            </div>
+            {/* Feedback — only shown on correct, no placeholder text so grid stays stable */}
+            {flawSolved && s.explanation && (
+              <div style={{ flexShrink: 0, background: '#F0FFF4', border: '2px solid #68D391', borderRadius: 12, padding: fs ? '16px 20px' : '12px 16px', animation: 'fadeInUp 0.25s ease' }}>
+                <span style={{ fontWeight: 800, fontSize: fs ? 22 : 18, color: '#276749', display: 'block', marginBottom: 6 }}>✓ Correct!</span>
+                <span style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.7 }}>{s.explanation}</span>
+              </div>
+            )}
           </div>
         );
       }
@@ -1889,7 +1940,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       default:
         if (s.visualId) {
           return (
-            <div style={{ padding: fs ? '20px 36px' : '12px 22px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ display: 'flex', gap: 16, flex: 1 }}>
                 {/* Left: text */}
                 <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column' }}>
@@ -1988,15 +2039,22 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+  // Slides that require engagement before Next is allowed
+  const needsInteraction =
+    (s.type === 'buildAPrompt' && Object.keys(placedComponents).length === 0) ||
+    (s.type === 'spotTheFlaw' && flawSelected === null) ||
+    (s.type === 'quiz' && quizSelected === null) ||
+    (s.type === 'sjExercise' && (sjAnswers[currentSlide] == null)) ||
+    (s.type === 'persona' && !!s.predictFirst && predictSelected === null);
+
+  const triggerActivityWarning = () => {
+    setShowActivityWarning(true);
+    if (activityWarningTimer.current) clearTimeout(activityWarningTimer.current);
+    activityWarningTimer.current = setTimeout(() => setShowActivityWarning(false), 2500);
+  };
+
   const handleNextClick = () => {
-    // buildAPrompt: require at least one placement attempt before proceeding
-    if (s.type === 'buildAPrompt') {
-      const attempted = Object.keys(placedComponents).length > 0;
-      if (!attempted) {
-        showToast('Try the activity before proceeding');
-        return;
-      }
-    }
+    if (needsInteraction) { triggerActivityWarning(); return; }
     // situationalJudgment: cycle through scenarios
     if (s.type === 'situationalJudgment' && s.scenarios && sjScenarioIdx < s.scenarios.length - 1) {
       setSjScenarioIdx((prev) => prev + 1);
@@ -2224,11 +2282,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {renderDots('sm')}
               <span style={{ fontSize: 11, color: '#A0AEC0' }}>{currentSlide} / {totalSlides}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {renderFsButton()}
-              <button onClick={handleNextClick} style={{ padding: '7px 18px', borderRadius: 24, minHeight: 36, border: 'none', background: isLastSlide ? accentColor : '#38B2AC', color: isLastSlide ? accentDark : '#FFFFFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                {nextLabel}
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              {showActivityWarning && (
+                <div className="activity-warning" style={{ background: '#1A202C', color: '#FFFFFF', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', whiteSpace: 'nowrap', letterSpacing: '0.01em', pointerEvents: 'none' }}>
+                  Try the activity before proceeding
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {renderFsButton()}
+                <button onClick={handleNextClick} style={{ padding: '7px 18px', borderRadius: 24, minHeight: 36, border: 'none', background: isLastSlide ? accentColor : '#38B2AC', color: isLastSlide ? accentDark : '#FFFFFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {nextLabel}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2247,7 +2312,7 @@ function PersonaCaseStudySlide({ slide, fs }: { slide: SlideData; fs: boolean })
   if (!active) return null;
 
   return (
-    <div style={{ padding: fs ? '28px 48px' : '16px 24px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+    <div style={{ padding: fs ? '28px 32px' : '16px 18px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
       {slide.body && <p style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.5, margin: '0 0 8px' }}>{slide.body}</p>}
       {slide.pullQuote && (
         <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', fontStyle: 'italic', margin: '0 0 10px', padding: '6px 12px', borderLeft: '3px solid #38B2AC', background: '#F7FAFC', borderRadius: '0 8px 8px 0' }}>{slide.pullQuote}</div>
@@ -2315,7 +2380,7 @@ function ApproachMatrixSlide({ slide, fs }: { slide: SlideData; fs: boolean }) {
   const ratingLabels = { best: '★', ok: '◐', weak: '○' };
 
   return (
-    <div style={{ padding: fs ? '24px 36px' : '12px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ padding: fs ? '24px 28px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%' }}>
       {slide.body && <p style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5, margin: '0 0 8px' }}>{slide.body}</p>}
 
       {/* Legend */}
@@ -2398,7 +2463,7 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
   }
 
   return (
-    <div style={{ padding: fs ? '28px 48px' : '16px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ padding: fs ? '28px 32px' : '16px 18px', display: 'flex', flexDirection: 'column', height: '100%' }}>
       {slide.instruction && <p style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, margin: '0 0 10px' }}>{slide.instruction}</p>}
 
       {/* Scenario progress indicators */}

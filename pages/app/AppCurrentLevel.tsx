@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { LEVEL_TOPICS, LEVEL_META } from '../../data/levelTopics';
@@ -8,98 +7,15 @@ import { getTopicContent } from '../../data/topicContent';
 import { useLevelData, TOTAL_PHASES } from '../../hooks/useLevelData';
 import TopicHeader from '../../components/app/level/TopicHeader';
 import ELearningView from '../../components/app/level/ELearningView';
-import ReadView from '../../components/app/level/ReadView';
-import WatchView from '../../components/app/level/WatchView';
-import PractiseView from '../../components/app/level/PractiseView';
 import CompletedTopicView from '../../components/app/level/CompletedTopicView';
 import TopicCompletionOverlay from '../../components/app/level/TopicCompletionOverlay';
 import LevelCompletionView from '../../components/app/level/LevelCompletionView';
 
-/* ── Phase progress strip (thin segmented bar) ── */
-const PHASE_LABELS = ['E-Learning', 'Read', 'Watch', 'Practise'];
-
-function PhaseProgressStrip({
-  currentPhase,
-  completedPhases,
-  accentColor,
-  accentDark,
-  onPhaseClick,
-}: {
-  currentPhase: number;
-  completedPhases: number;
-  accentColor: string;
-  accentDark: string;
-  onPhaseClick: (phase: number) => void;
-}) {
-  return (
-    <div style={{ marginTop: 14 }}>
-      {/* Segmented bar */}
-      <div style={{ display: 'flex', gap: 3, marginBottom: 6 }}>
-        {PHASE_LABELS.map((_, i) => {
-          const phaseNum = i + 1;
-          const isDone = phaseNum <= completedPhases;
-          const isActive = phaseNum === currentPhase;
-          return (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height: 4,
-                borderRadius: 2,
-                background: isDone ? '#1A202C' : isActive ? accentColor : '#E2E8F0',
-                transition: 'background 0.3s ease',
-              }}
-            />
-          );
-        })}
-      </div>
-      {/* Labels */}
-      <div style={{ display: 'flex', gap: 3 }}>
-        {PHASE_LABELS.map((label, i) => {
-          const phaseNum = i + 1;
-          const isDone = phaseNum <= completedPhases;
-          const isActive = phaseNum === currentPhase;
-          const isClickable = isDone || isActive;
-          return (
-            <div
-              key={i}
-              onClick={() => isClickable && onPhaseClick(phaseNum)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                cursor: isClickable ? 'pointer' : 'default',
-                padding: '4px 0',
-              }}
-            >
-              {isDone && (
-                <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#1A202C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Check size={8} color="#FFFFFF" strokeWidth={3} />
-                </div>
-              )}
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: isActive ? 700 : isDone ? 600 : 500,
-                  color: isActive ? accentDark : isDone ? '#4A5568' : '#A0AEC0',
-                  textDecoration: isDone ? 'line-through' : 'none',
-                }}
-              >
-                {label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 const AppCurrentLevel: React.FC = () => {
   const { userProfile, setCurrentLevel, hasLearningPlan, learningPlanLoading } = useAppContext();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Use ?level= query param if present (e.g. from Review button), else fall back to profile
   const levelParam = searchParams.get('level');
@@ -129,10 +45,16 @@ const AppCurrentLevel: React.FC = () => {
       const paramId = parseInt(topicParam, 10);
       if (topics.find((t) => t.id === paramId)) {
         setSelectedTopicId(paramId);
-        return;
       }
+    } else {
+      setSelectedTopicId(levelData.activeTopicId);
     }
-    setSelectedTopicId(levelData.activeTopicId);
+    // If ?phase=1 is present, jump straight into e-learning review
+    const phaseParam = searchParams.get('phase');
+    if (phaseParam === '1') {
+      setViewingPhase(1);
+      setIsReviewMode(true);
+    }
   }, [levelData, searchParams, topics]);
 
   const scrollToTop = useCallback(() => {
@@ -165,8 +87,7 @@ const AppCurrentLevel: React.FC = () => {
   const handleCompletePhase = useCallback(
     (topicId: number) => {
       completePhase(topicId);
-      setViewingPhase(null);
-      setIsReviewMode(false);
+      setViewingPhase(2); // explicitly show practice section
       scrollToTop();
     },
     [completePhase, scrollToTop],
@@ -310,30 +231,34 @@ const AppCurrentLevel: React.FC = () => {
           />
         )}
 
-        {displayPhase === 2 && topicContent && (
-          <ReadView
-            articles={topicContent.articles}
-            accentColor={accentColor}
-            accentDark={accentDark}
-            onCompletePhase={() => handleCompletePhase(selectedTopicId)}
-          />
-        )}
-
-        {displayPhase === 3 && topicContent && (
-          <WatchView
-            videos={topicContent.videos}
-            accentColor={accentColor}
-            accentDark={accentDark}
-            onCompletePhase={() => handleCompletePhase(selectedTopicId)}
-          />
-        )}
-
-        {displayPhase === 4 && (
-          <PractiseView
-            accentColor={accentColor}
-            accentDark={accentDark}
-            onCompleteTopic={() => handleCompleteTopic(selectedTopicId)}
-          />
+        {displayPhase === 2 && (
+          <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 24 }}>
+            {/* Practice card */}
+            <div style={{ maxWidth: 520, width: '100%', background: '#FFFFFF', border: `1.5px solid ${accentColor}44`, borderRadius: 16, padding: '32px 28px', textAlign: 'center' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${accentColor}18`, border: `2px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 16px' }}>✍️</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>PRACTISE</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', marginBottom: 10 }}>Apply it on a real task</div>
+              <div style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, marginBottom: 24 }}>
+                Open the Prompt Playground and use what you've learned — pick a real task from your work, choose the right approach, and build your prompt.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <a
+                  href="/app/toolkit/prompt-playground"
+                  style={{ display: 'block', background: accentColor, color: '#FFFFFF', fontSize: 14, fontWeight: 700, padding: '13px 28px', borderRadius: 24, textDecoration: 'none', transition: 'opacity 0.15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                >
+                  Open Prompt Playground →
+                </a>
+                <button
+                  onClick={() => handleCompleteTopic(selectedTopicId)}
+                  style={{ background: 'none', border: `1px solid #E2E8F0`, borderRadius: 24, padding: '11px 28px', fontSize: 13, fontWeight: 600, color: '#718096', cursor: 'pointer' }}
+                >
+                  Mark as complete
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </>
     );
@@ -357,7 +282,25 @@ const AppCurrentLevel: React.FC = () => {
           transition: 'opacity 0.15s ease',
         }}
       >
-        {/* Topic hero card */}
+        {/* Back to roadmap breadcrumb — Level 1 only */}
+        {currentLevel === 1 && !showLevelCompletion && (
+          <button
+            onClick={() => navigate('/app/level-1')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontSize: 13, color: '#718096', fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 500, padding: 0, marginBottom: 16,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Level 1 Roadmap
+          </button>
+        )}
+
+        {/* Topic hero + phase tabs — single compact bar */}
         {!showLevelCompletion && (
           <TopicHeader
             levelNumber={currentLevel}
@@ -369,23 +312,13 @@ const AppCurrentLevel: React.FC = () => {
             completedPhases={completedPhases}
             accentColor={accentColor}
             accentDark={accentDark}
+            showPhaseTabs={showPhaseStrip}
             onPhaseClick={handlePhaseClick}
           />
         )}
 
         {/* Phase content */}
         {renderContent()}
-
-        {/* Phase progress strip — below content */}
-        {showPhaseStrip && (
-          <PhaseProgressStrip
-            currentPhase={isReviewMode ? displayPhase : selectedProgress.phase}
-            completedPhases={completedPhases}
-            accentColor={accentColor}
-            accentDark={accentDark}
-            onPhaseClick={handlePhaseClick}
-          />
-        )}
       </div>
 
       {/* Topic completion overlay */}
