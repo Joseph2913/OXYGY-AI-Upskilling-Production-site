@@ -33,7 +33,7 @@ const AdminSidebar: React.FC = () => {
 
   const roleBadge = platformRole === 'super_admin'
     ? { bg: 'rgba(229, 62, 62, 0.13)', border: '1px solid rgba(229, 62, 62, 0.27)', color: '#FC8181', label: 'Super Admin' }
-    : { bg: 'rgba(56, 178, 172, 0.13)', border: '1px solid rgba(56, 178, 172, 0.27)', color: '#4FD1C5', label: 'Oxygy Admin' };
+    : { bg: 'rgba(56, 178, 172, 0.13)', border: '1px solid rgba(56, 178, 172, 0.27)', color: '#4FD1C5', label: 'OXYGY Admin' };
 
   return (
     <div

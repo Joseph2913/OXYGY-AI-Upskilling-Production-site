@@ -1,10 +1,14 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export const AppAuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+
+  // Local dev bypass — skip auth when Supabase is not configured
+  if (!isSupabaseConfigured) return <>{children}</>;
 
   if (loading) {
     return (

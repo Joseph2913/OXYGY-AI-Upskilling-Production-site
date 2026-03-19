@@ -379,7 +379,7 @@ export const N8N_NODE_TEMPLATES: Record<string, N8nNodeMeta> = {
       parameters: {
         model: 'claude-sonnet-4-20250514',
         options: {
-          systemPrompt: "YOUR_SYSTEM_PROMPT_HERE — describe the AI's role, what it should do, and the format of its output. Use the Oxygy Prompt Playground (Level 1) or Agent Builder (Level 2) to craft this.",
+          systemPrompt: "YOUR_SYSTEM_PROMPT_HERE — describe the AI's role, what it should do, and the format of its output. Use the OXYGY Prompt Playground (Level 1) or Agent Builder (Level 2) to craft this.",
         },
       },
       credentials: {

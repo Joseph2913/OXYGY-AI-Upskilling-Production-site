@@ -248,7 +248,7 @@ export const AuthModal: React.FC = () => {
             lineHeight: 1.5,
           }}
         >
-          By signing in, you agree to Oxygy's Terms of Service and Privacy Policy
+          By signing in, you agree to OXYGY's Terms of Service and Privacy Policy
         </p>
       </div>
 

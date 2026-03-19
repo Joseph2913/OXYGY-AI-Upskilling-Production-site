@@ -23,8 +23,6 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "13-slide interactive module covering the Prompt Blueprint, RCTF framework, context layers, and the prompting spectrum." },
-        { icon: "◎", label: "Read", detail: "Curated articles on structured prompting and context engineering with guided reflection." },
-        { icon: "▷", label: "Watch", detail: "Videos demonstrating prompt and context engineering in practice." },
         { icon: "◈", label: "Practice", detail: "Build, test, and refine prompts using the Prompt Playground." },
       ],
     },
@@ -37,8 +35,6 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "14-slide interactive module covering the Level 2 shift, three-layer agent model, accountability by design, and team deployment." },
-        { icon: "◎", label: "Read", detail: "2 articles on scaling AI tools and designing trustworthy outputs, with guided reflection." },
-        { icon: "▷", label: "Watch", detail: "2 videos on building reusable agents and accountability in AI workflows." },
         { icon: "◈", label: "Practice", detail: "Design your first Level 2 agent using the Agent Builder." },
       ],
     },
@@ -51,8 +47,6 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "Interactive module on workflow decomposition, trigger design, agent chaining, and governance checkpoints." },
-        { icon: "◎", label: "Read", detail: "Articles on workflow mapping and human-in-the-loop design with reflection." },
-        { icon: "▷", label: "Watch", detail: "Videos showing real workflow transformations from manual to automated." },
         { icon: "◈", label: "Practice", detail: "Map and build a multi-step workflow using the Workflow Designer." },
       ],
     },
@@ -65,8 +59,6 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "Interactive module on user-centred AI design, data transformation, and dashboard architecture." },
-        { icon: "◎", label: "Read", detail: "Articles on UX-first thinking for data products and connecting AI to visual interfaces." },
-        { icon: "▷", label: "Watch", detail: "Videos on designing AI interfaces that users actually want to use." },
         { icon: "◈", label: "Practice", detail: "Design and build a web application using the App Designer." },
       ],
     },
@@ -74,13 +66,11 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
   5: [
     {
       id: 1, title: "Building Full-Stack AI Applications", subtitle: "The complete picture, end to end",
-      description: "How workflows, front-ends, individual accounts, and personalised experiences combine into a complete AI application. A worked example using the Oxygy platform as a Level 5 case study.",
+      description: "How workflows, front-ends, individual accounts, and personalised experiences combine into a complete AI application. A worked example using the OXYGY platform as a Level 5 case study.",
       estimatedMinutes: 55, icon: "🏗️",
 
       phases: [
-        { icon: "▶", label: "E-Learning", detail: "Interactive module deconstructing the Oxygy platform: personalisation, roles, memory, and full-stack architecture." },
-        { icon: "◎", label: "Read", detail: "Architecture deep-dive articles on building personalised AI products." },
-        { icon: "▷", label: "Watch", detail: "Videos walking through the complete build from workflows to shipped product." },
+        { icon: "▶", label: "E-Learning", detail: "Interactive module deconstructing the OXYGY platform: personalisation, roles, memory, and full-stack architecture." },
         { icon: "◈", label: "Practice", detail: "Assemble a complete application using the Product Architecture Sprint." },
       ],
     },

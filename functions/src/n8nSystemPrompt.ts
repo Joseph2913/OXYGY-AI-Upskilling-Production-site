@@ -24,7 +24,7 @@ Every n8n workflow JSON must have this top-level structure:
   },
   "meta": {
     "templateCredsSetupCompleted": false,
-    "generatedBy": "Oxygy AI Upskilling Platform"
+    "generatedBy": "OXYGY AI Upskilling Platform"
   }
 }
 

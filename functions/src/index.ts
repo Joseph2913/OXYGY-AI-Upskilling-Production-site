@@ -1506,7 +1506,7 @@ export const appbuildguide = onRequest({ secrets: [openRouterApiKey] }, async (r
 
     const result = await callOpenRouterRaw({
       apiKey,
-      model: "anthropic/claude-sonnet-4",
+      model,
       systemPrompt: APP_BUILD_GUIDE_SYSTEM,
       userMessage,
       label: "app-build-guide",
@@ -1581,7 +1581,7 @@ export const generaten8nworkflow = onRequest({ secrets: [openRouterApiKey], time
 
     const result = await callOpenRouterRaw({
       apiKey,
-      model: "anthropic/claude-sonnet-4",
+      model,
       systemPrompt: N8N_SYSTEM_PROMPT,
       userMessage,
       label: "generate-n8n-workflow",
@@ -2196,7 +2196,7 @@ ${JSON.stringify(intermediate, null, 2)}${contextBlock}`;
 
     const result = await callOpenRouterRaw({
       apiKey,
-      model: "anthropic/claude-sonnet-4",
+      model,
       systemPrompt: fullSystemPrompt,
       userMessage,
       label: "generate-build-guide",
@@ -2264,7 +2264,7 @@ Workflow context: ${JSON.stringify(nodeContext || {})}`;
 // PROMPT PLAYGROUND V2
 // ═══════════════════════════════════════════════════════════════
 
-const PLAYGROUND_V2_SYSTEM = `You are the Oxygy Prompt Engineering Coach — an expert practitioner in AI prompting who helps professionals build better prompts for their real work tasks.
+const PLAYGROUND_V2_SYSTEM = `You are the OXYGY Prompt Engineering Coach — an expert practitioner in AI prompting who helps professionals build better prompts for their real work tasks.
 
 Your job is to:
 1. Read the user's task description
@@ -2374,7 +2374,7 @@ export const generateplaygroundprompt = onRequest({ secrets: [openRouterApiKey],
 
     const result = await callGemini({
       apiKey,
-      model: "anthropic/claude-sonnet-4",
+      model,
       systemPrompt: PLAYGROUND_V2_SYSTEM,
       userMessage: userInput,
       label: "playground-v2",
@@ -2480,9 +2480,9 @@ export const sendinviteemail = onRequest(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Oxygy AI Upskilling <onboarding@resend.dev>",
+          from: "OXYGY AI Upskilling <onboarding@resend.dev>",
           to: [email],
-          subject: `Your Oxygy Cohort Code: ${inviteCode}`,
+          subject: `Your OXYGY Cohort Code: ${inviteCode}`,
           html: `
 <!DOCTYPE html>
 <html>
@@ -2491,7 +2491,7 @@ export const sendinviteemail = onRequest(
   <div style="max-width:520px;margin:32px auto;background:#FFFFFF;border-radius:16px;border:1px solid #E2E8F0;overflow:hidden;">
     <!-- Header -->
     <div style="background:#1A202C;padding:28px 32px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#FFFFFF;letter-spacing:-0.3px;">Oxygy AI Upskilling</div>
+      <div style="font-size:22px;font-weight:800;color:#FFFFFF;letter-spacing:-0.3px;">OXYGY AI Upskilling</div>
       <div style="font-size:13px;color:#A0AEC0;margin-top:4px;">Your Cohort Invite Code</div>
     </div>
 
@@ -2501,7 +2501,7 @@ export const sendinviteemail = onRequest(
         Hi ${firstName},
       </div>
       <div style="font-size:14px;color:#4A5568;line-height:1.65;margin-bottom:24px;">
-        You're part of the <strong>${org.name}</strong> cohort on Oxygy. Enter the code below in the app to join your team's leaderboard and track progress together.
+        You're part of the <strong>${org.name}</strong> cohort on OXYGY. Enter the code below in the app to join your team's leaderboard and track progress together.
       </div>
 
       <!-- Code box -->
@@ -2516,14 +2516,14 @@ export const sendinviteemail = onRequest(
 
       <div style="font-size:13px;color:#718096;line-height:1.6;margin-bottom:24px;">
         <strong>How to use it:</strong><br>
-        1. Open the Oxygy app and go to your Dashboard<br>
+        1. Open the OXYGY app and go to your Dashboard<br>
         2. Find the "Join your cohort" card on the right<br>
         3. Enter the code above and click "Join"
       </div>
 
       <div style="text-align:center;">
         <a href="https://oxygy-ai-upskilling-site.web.app/app/dashboard" style="display:inline-block;background:#38B2AC;color:#FFFFFF;text-decoration:none;padding:12px 28px;border-radius:24px;font-size:14px;font-weight:700;">
-          Open Oxygy Dashboard →
+          Open OXYGY Dashboard →
         </a>
       </div>
     </div>
@@ -2531,7 +2531,7 @@ export const sendinviteemail = onRequest(
     <!-- Footer -->
     <div style="border-top:1px solid #E2E8F0;padding:20px 32px;text-align:center;">
       <div style="font-size:11px;color:#A0AEC0;">
-        This email was sent by the Oxygy AI Upskilling platform.<br>
+        This email was sent by the OXYGY AI Upskilling platform.<br>
         If you didn't request this, you can safely ignore it.
       </div>
     </div>
@@ -3463,7 +3463,7 @@ export const reviewproject = onRequest(
             "Authorization": `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: "anthropic/claude-sonnet-4",
+            model,
             messages,
             temperature: 0.4,
             max_tokens: 2000,

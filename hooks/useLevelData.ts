@@ -11,10 +11,10 @@ import {
 
 export interface TopicProgress {
   topicId: number;
-  phase: number; // 1–4 (E-Learn, Read, Watch, Practise)
+  phase: number; // 1–2 (E-Learn, Practise)
   slide: number;
   completedAt: Date | null;
-  phaseCompletions: [boolean, boolean, boolean, boolean]; // [elearn, read, watch, practise]
+  phaseCompletions: [boolean, boolean]; // [elearn, practise]
   visitedSlides: Set<number>;
 }
 
@@ -31,9 +31,9 @@ export interface UseLevelDataReturn {
   completeTopic: (topicId: number) => void;
 }
 
-export const TOTAL_PHASES = 4;
-export const PHASE_LABELS = ['E-Learn', 'Read', 'Watch', 'Practise'];
-export const PHASE_ICONS = ['📖', '📄', '🎬', '🛠️'];
+export const TOTAL_PHASES = 2;
+export const PHASE_LABELS = ['E-Learn', 'Practise'];
+export const PHASE_ICONS = ['📖', '🛠️'];
 
 export function useLevelData(currentLevel: number): UseLevelDataReturn {
   const { user } = useAuth();
@@ -44,10 +44,24 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
 
   // ── Fetch on mount / level change ──
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    setLoading(true);
-
     const topics = LEVEL_TOPICS[currentLevel] || [];
+
+    // No user — build fallback data so the page renders without auth
+    if (!user) {
+      const topicProgress: TopicProgress[] = topics.map(topic => ({
+        topicId: topic.id,
+        phase: 1,
+        slide: 1,
+        completedAt: null,
+        phaseCompletions: [false, false],
+        visitedSlides: new Set<number>(),
+      }));
+      setLevelData({ topicProgress, activeTopicId: topics[0]?.id ?? 1 });
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
 
     (async () => {
       const rows = await getTopicProgress(user.id, currentLevel);
@@ -61,12 +75,10 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         return {
           topicId: topic.id,
           phase: row?.current_phase ?? 1,
-          slide: row?.current_slide ?? 0,
+          slide: Math.max(1, row?.current_slide ?? 1),
           completedAt: row?.completed_at ? new Date(row.completed_at) : null,
           phaseCompletions: [
             !!row?.elearn_completed_at,
-            !!row?.read_completed_at,
-            !!row?.watch_completed_at,
             !!row?.practise_completed_at,
           ],
           visitedSlides: visited,
@@ -132,7 +144,7 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         topicProgress: prev.topicProgress.map(tp => {
           if (tp.topicId !== topicId) return tp;
           const newPhase = Math.min(tp.phase + 1, TOTAL_PHASES);
-          const newCompletions = [...tp.phaseCompletions] as [boolean, boolean, boolean, boolean];
+          const newCompletions = [...tp.phaseCompletions] as [boolean, boolean];
           newCompletions[tp.phase - 1] = true;
           return {
             ...tp,

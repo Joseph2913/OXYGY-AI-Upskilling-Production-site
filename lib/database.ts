@@ -651,6 +651,7 @@ export interface TopicProgressRow {
   practise_completed_at: string | null;
   completed_at: string | null;
   visited_slides: number[];
+  practise_score: number | null;
 }
 
 export async function getTopicProgress(
@@ -759,6 +760,17 @@ export async function completeTopicDb(
     completed_at: now,
     practise_completed_at: now,
   });
+}
+
+export async function savePractiseScore(
+  userId: string,
+  level: number,
+  topicId: number,
+  score: number,
+): Promise<boolean> {
+  return upsertTopicProgress(userId, level, topicId, {
+    practise_score: score,
+  } as any);
 }
 
 // ─── ACTIVITY LOG ───

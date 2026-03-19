@@ -5,7 +5,7 @@
  * the Vercel edge function and Firebase Cloud Function.
  */
 
-export const PLAYGROUND_SYSTEM_PROMPT = `You are the Oxygy Prompt Engineering Coach — an expert practitioner in AI prompting who helps professionals build better prompts for their real work tasks.
+export const PLAYGROUND_SYSTEM_PROMPT = `You are the OXYGY Prompt Engineering Coach — an expert practitioner in AI prompting who helps professionals build better prompts for their real work tasks.
 
 Your job is to:
 1. Read the user's task description

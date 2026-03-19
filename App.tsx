@@ -27,6 +27,7 @@ const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppApp
 const AppLearningCoach = React.lazy(() => import('./components/app/toolkit/AppLearningCoach'));
 const BuildGuideView = React.lazy(() => import('./pages/app/BuildGuideView'));
 const AppOnboarding = React.lazy(() => import('./pages/app/AppOnboarding'));
+const AppLevel1Roadmap = React.lazy(() => import('./pages/app/AppLevel1Roadmap'));
 const AppAdmin = React.lazy(() => import('./pages/app/AppAdmin'));
 const JoinPage = React.lazy(() => import('./pages/app/JoinPage'));
 const AppJoinCode = React.lazy(() => import('./pages/app/AppJoinCode'));
@@ -166,6 +167,7 @@ function App() {
           <Route path="projects" element={<AppSuspense><AppProjects /></AppSuspense>} />
           <Route path="journey/project/:level" element={<AppSuspense><AppProjectProof /></AppSuspense>} />
           <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
+          <Route path="level-1" element={<AppSuspense><AppLevel1Roadmap /></AppSuspense>} />
           <Route path="toolkit" element={<AppSuspense><AppToolkit /></AppSuspense>} />
           <Route path="toolkit/prompt-playground" element={<AppSuspense><AppPromptPlayground /></AppSuspense>} />
           <Route path="toolkit/prompt-library" element={<AppSuspense><PromptLibraryPage /></AppSuspense>} />

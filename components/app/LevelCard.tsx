@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, ArrowRight, Lock, Play, FileText, Video, PenTool } from 'lucide-react';
+import { Check, ChevronDown, ArrowRight, Lock, Play, PenTool } from 'lucide-react';
 import { LEVEL_META } from '../../data/levelTopics';
 import { LEVEL_TOPICS } from '../../data/levelTopics';
 import { getPrimaryTool } from '../../data/toolkitData';
@@ -21,8 +21,6 @@ interface LevelCardProps {
 /* ── Phase step data with tooltips ── */
 const PHASE_STEPS = [
   { label: 'E-Learning', shortLabel: 'E-Learn', icon: <Play size={11} /> },
-  { label: 'Read', shortLabel: 'Read', icon: <FileText size={11} /> },
-  { label: 'Watch', shortLabel: 'Watch', icon: <Video size={11} /> },
   { label: 'Practise', shortLabel: 'Practise', icon: <PenTool size={11} /> },
 ];
 
@@ -339,7 +337,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
           {/* CTA button — level-coloured */}
           {isAccessible ? (
             <button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/level'); }}
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(level.levelNumber === 1 ? '/app/level-1' : '/app/level'); }}
               style={{
                 background: `${accent}30`,
                 color: accentDark,

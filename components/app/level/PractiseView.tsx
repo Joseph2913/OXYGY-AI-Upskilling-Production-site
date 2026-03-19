@@ -1,270 +1,207 @@
-import React, { useState } from 'react';
-import { CheckCircle, XCircle, Wrench, MessageSquare } from 'lucide-react';
-
-const KNOWLEDGE_CHECK = {
-  question:
-    'Which of the following best describes the purpose of a system prompt in an LLM interaction?',
-  options: [
-    'It controls the temperature and randomness of the model output',
-    'It sets persistent instructions and behavioural context for the AI assistant',
-    'It encrypts the conversation to protect user privacy',
-    'It determines which language model version is used',
-  ],
-  correctIndex: 1,
-  correctExplanation:
-    "A system prompt provides persistent instructions that shape the assistant's behaviour, role, and constraints throughout the conversation.",
-  incorrectExplanation:
-    "The system prompt sets persistent instructions and behavioural context — it defines the assistant's role, constraints, and personality for the conversation.",
-};
+import React, { useState, useEffect } from 'react';
+import { PenTool } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
+import { savePractiseScore, logActivity } from '../../../lib/database';
 
 interface PractiseViewProps {
   accentColor: string;
   accentDark: string;
+  level: number;
+  topicId: number;
   onCompleteTopic: () => void;
 }
 
-const PractiseView: React.FC<PractiseViewProps> = ({ accentColor, accentDark, onCompleteTopic }) => {
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+const CRITIQUE_CONTENT = {
+  task: "Write a summary of last quarter's employee engagement survey results for the leadership team. They want to know the top three themes, what's improved since last year, and one recommendation.",
+  weakPrompt: "Summarise our performance reviews from last quarter for leadership.",
+  weaknesses: [
+    { label: "No role", desc: "The AI doesn't know who it's acting as" },
+    { label: "No context", desc: "No audience detail, no data reference, no constraints" },
+    { label: "No format", desc: "No structure, length, or tone specified" },
+    { label: "No checks", desc: "Nothing to prevent speculation or errors" },
+  ],
+  blueprintReminder: [
+    { key: "Role",    color: "#667EEA" },
+    { key: "Context", color: "#38B2AC" },
+    { key: "Task",    color: "#ED8936" },
+    { key: "Format",  color: "#48BB78" },
+    { key: "Steps",   color: "#9F7AEA" },
+    { key: "Checks",  color: "#F6AD55" },
+  ],
+};
 
-  const isCorrect = submitted && selectedAnswer === KNOWLEDGE_CHECK.correctIndex;
+const PractiseView: React.FC<PractiseViewProps> = ({ accentColor, accentDark, level, topicId, onCompleteTopic }) => {
+  const { user } = useAuth();
+  const [rewrite, setRewrite] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ score: number; improved: string; missing: string; suggestion: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (document.getElementById('practise-anim')) return;
+    const s = document.createElement('style');
+    s.id = 'practise-anim';
+    s.textContent = `
+      @keyframes insightPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(56,178,172,0.2); } 50% { box-shadow: 0 0 16px 4px rgba(56,178,172,0.35); } }
+      .insight-pulse { animation: insightPulse 3s ease-in-out infinite; }
+      @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      .fade-in-up { animation: fadeInUp 0.3s ease forwards; }
+      @keyframes practise-spin { to { transform: rotate(360deg); } }
+    `;
+    document.head.appendChild(s);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!user || rewrite.trim().length < 50 || isLoading) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/validate-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originalTask: CRITIQUE_CONTENT.task, weakPrompt: CRITIQUE_CONTENT.weakPrompt, learnerRewrite: rewrite.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Feedback unavailable. Please try again.');
+      }
+      const data = await res.json();
+      setFeedback(data);
+      setSubmitted(true);
+      await savePractiseScore(user.id, level, topicId, data.score);
+      logActivity(user.id, 'quiz_answered', level, topicId, { type: 'prompt_critique', score: data.score });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const scoreColor = feedback ? (feedback.score >= 80 ? '#48BB78' : feedback.score >= 60 ? '#ED8936' : '#FC8181') : '#38B2AC';
+  const scoreBand = feedback ? (feedback.score >= 80 ? 'Strong — all key components present' : feedback.score >= 60 ? 'Good — most components covered' : feedback.score >= 40 ? 'Developing — key components missing' : 'Needs work — revisit the Blueprint') : '';
+
+  const eyebrow = (text: string, color = '#A0AEC0') => (
+    <div style={{ fontSize: 12, fontWeight: 700, color, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 10 }}>{text}</div>
+  );
 
   return (
-    <div>
-      {/* Hero section */}
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: 16,
-          border: '1px solid #E2E8F0',
-          overflow: 'hidden',
-          marginBottom: 24,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-        }}
-      >
-        {/* Header strip */}
-        <div
-          style={{
-            background: `linear-gradient(135deg, ${accentDark}, ${accentDark}dd)`,
-            padding: '20px 32px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <Wrench size={20} color={accentColor} />
+    <div style={{ padding: '0 0 48px', fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', marginBottom: 24 }}>
+        {/* Header */}
+        <div style={{ background: `linear-gradient(135deg, ${accentDark}, ${accentDark}dd)`, padding: '20px 32px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <PenTool size={20} color={accentColor} />
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', marginBottom: 2 }}>
-              Practise
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-              Apply what you've learned with exercises and knowledge checks
-            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', marginBottom: 2 }}>Validate Your Knowledge</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Apply the Blueprint framework to improve a real prompt</div>
           </div>
         </div>
 
-        {/* Exercise prompt */}
         <div style={{ padding: 32 }}>
-          <div
-            style={{
-              background: `${accentColor}10`,
-              borderRadius: 14,
-              border: `1px solid ${accentColor}33`,
-              padding: '28px 32px',
-              marginBottom: 28,
-              display: 'flex',
-              gap: 16,
-              alignItems: 'flex-start',
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: `${accentColor}33`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <MessageSquare size={20} color={accentDark} />
+          {/* Step 1 — Task */}
+          <div style={{ background: `${accentColor}10`, border: `1px solid ${accentColor}33`, borderRadius: 12, padding: '20px 24px', marginBottom: 20 }}>
+            {eyebrow('THE TASK', accentDark)}
+            <div style={{ fontSize: 15, color: '#1A202C', lineHeight: 1.7, fontWeight: 500 }}>{CRITIQUE_CONTENT.task}</div>
+          </div>
+
+          {/* Step 2 — Weak prompt */}
+          <div style={{ marginBottom: 20 }}>
+            {eyebrow('WHAT WAS WRITTEN')}
+            <div style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: '12px 16px', fontSize: 13, fontStyle: 'italic', color: '#2D3748', marginBottom: 12 }}>
+              {CRITIQUE_CONTENT.weakPrompt}
             </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: accentDark,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  marginBottom: 6,
-                }}
-              >
-                Exercise Prompt
-              </div>
-              <div style={{ fontSize: 15, color: '#1A202C', lineHeight: 1.7, fontWeight: 500 }}>
-                Take a task you do regularly in your current role and write a prompt to help an AI
-                assistant complete it. Use the RCTF framework (Role, Context, Task, Format) to
-                structure your prompt, then test it mentally — would it produce a useful response?
-              </div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: '#718096',
-                  marginTop: 8,
-                  lineHeight: 1.6,
-                }}
-              >
-                This exercise is self-assessed. Complete the knowledge check below to finish.
-              </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {CRITIQUE_CONTENT.weaknesses.map((w, i) => (
+                <span key={i} style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 600, color: '#9B2C2C' }}>{w.label} — {w.desc}</span>
+              ))}
             </div>
           </div>
 
-          {/* Knowledge check */}
-          <div
-            style={{
-              background: '#F8FAFC',
-              borderRadius: 14,
-              border: '1px solid #E2E8F0',
-              padding: '28px 32px',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#718096',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                marginBottom: 14,
-              }}
-            >
-              Knowledge Check
+          {/* Step 3 — Blueprint reminder */}
+          <div style={{ marginBottom: 20 }}>
+            {eyebrow('BLUEPRINT REMINDER')}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {CRITIQUE_CONTENT.blueprintReminder.map((b, i) => (
+                <span key={i} style={{ background: `${b.color}15`, border: `1px solid ${b.color}40`, borderRadius: 20, padding: '5px 12px', fontSize: 11, fontWeight: 700, color: b.color }}>{b.key}</span>
+              ))}
             </div>
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: '#1A202C',
-                marginBottom: 18,
-                lineHeight: 1.5,
-              }}
-            >
-              {KNOWLEDGE_CHECK.question}
-            </div>
+          </div>
 
-            {/* Answer options */}
-            {KNOWLEDGE_CHECK.options.map((option, idx) => {
-              const isSelected = selectedAnswer === idx;
-              const showCorrect = submitted && idx === KNOWLEDGE_CHECK.correctIndex;
-              const showIncorrect = submitted && isSelected && idx !== KNOWLEDGE_CHECK.correctIndex;
-
-              let bg = '#FFFFFF';
-              let border = '1px solid #E2E8F0';
-              if (!submitted && isSelected) {
-                bg = `${accentColor}18`;
-                border = `1px solid ${accentColor}`;
-              } else if (showCorrect) {
-                bg = '#C6F6D5';
-                border = '1px solid #48BB78';
-              } else if (showIncorrect) {
-                bg = '#FED7D7';
-                border = '1px solid #FC8181';
-              }
-
-              return (
-                <div
-                  key={idx}
-                  onClick={() => !submitted && setSelectedAnswer(idx)}
-                  onMouseEnter={(e) => {
-                    if (!submitted && !isSelected) {
-                      (e.currentTarget as HTMLElement).style.background = '#F7FAFC';
-                      (e.currentTarget as HTMLElement).style.borderColor = '#CBD5E0';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!submitted && !isSelected) {
-                      (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
-                      (e.currentTarget as HTMLElement).style.borderColor = '#E2E8F0';
-                    }
-                  }}
-                  style={{
-                    padding: '12px 16px',
-                    borderRadius: 10,
-                    border,
-                    background: bg,
-                    marginBottom: 8,
-                    cursor: submitted ? 'default' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    transition: 'border-color 0.15s, background 0.15s',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      border: isSelected ? 'none' : '2px solid #CBD5E0',
-                      background: isSelected ? accentDark : 'transparent',
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {isSelected && !submitted && (
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFFFFF' }} />
-                    )}
-                  </div>
-                  <span style={{ fontSize: 14, color: '#4A5568', flex: 1 }}>{option}</span>
-                  {showCorrect && <CheckCircle size={18} color="#48BB78" />}
-                  {showIncorrect && <XCircle size={18} color="#FC8181" />}
-                </div>
-              );
-            })}
-
-            {selectedAnswer !== null && !submitted && (
+          {/* Step 4 — Rewrite */}
+          <div style={{ marginBottom: 16 }}>
+            {eyebrow('YOUR REWRITE')}
+            <textarea
+              value={rewrite}
+              onChange={e => setRewrite(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              disabled={submitted}
+              placeholder="Rewrite the prompt using the Blueprint framework (Role, Context, Task, Format, Steps, Checks)..."
+              style={{ width: '100%', minHeight: 140, border: `1px solid ${focused ? accentColor : '#E2E8F0'}`, borderRadius: 10, padding: '14px 16px', fontSize: 14, lineHeight: 1.7, color: '#1A202C', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.15s' }}
+            />
+            <div style={{ textAlign: 'right', fontSize: 11, color: '#A0AEC0', marginBottom: 12 }}>{rewrite.length} characters</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <button
-                onClick={() => setSubmitted(true)}
-                style={{
-                  background: '#1A202C',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: 20,
-                  padding: '10px 22px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginTop: 12,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
+                onClick={handleSubmit}
+                disabled={isLoading || rewrite.trim().length < 50 || submitted}
+                style={{ background: isLoading || rewrite.trim().length < 50 || submitted ? '#E2E8F0' : '#38B2AC', color: isLoading || rewrite.trim().length < 50 || submitted ? '#A0AEC0' : '#FFFFFF', border: 'none', borderRadius: 24, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: isLoading || rewrite.trim().length < 50 || submitted ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
               >
-                Check answer
+                {isLoading ? (
+                  <>
+                    <div style={{ width: 16, height: 16, border: '2px solid #38B2AC', borderTopColor: 'transparent', borderRadius: '50%', animation: 'practise-spin 0.8s linear infinite' }} />
+                    Getting feedback…
+                  </>
+                ) : 'Get Feedback →'}
               </button>
-            )}
-
-            {submitted && (
-              <div
-                style={{
-                  fontSize: 14,
-                  marginTop: 12,
-                  padding: '12px 16px',
-                  borderRadius: 10,
-                  background: isCorrect ? '#F0FFF4' : '#FFF5F5',
-                  color: isCorrect ? '#276749' : '#9B2C2C',
-                  lineHeight: 1.6,
-                }}
-              >
-                {isCorrect
-                  ? `Correct! ${KNOWLEDGE_CHECK.correctExplanation}`
-                  : `Not quite. ${KNOWLEDGE_CHECK.incorrectExplanation}`}
-              </div>
+              {rewrite.trim().length < 50 && rewrite.length > 0 && (
+                <span style={{ fontSize: 12, color: '#A0AEC0' }}>{50 - rewrite.trim().length} more characters needed</span>
+              )}
+            </div>
+            {error && (
+              <div style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 10, padding: '12px 16px', marginTop: 12, fontSize: 13, color: '#9B2C2C' }}>{error}</div>
             )}
           </div>
+
+          {/* Feedback panel */}
+          {submitted && feedback && (
+            <div className="fade-in-up">
+              {/* Score row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '16px 0', borderTop: '1px solid #E2E8F0' }}>
+                <svg width="64" height="64" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke={`${scoreColor}33`} strokeWidth="5" />
+                  <circle cx="32" cy="32" r="28" fill="none" stroke={scoreColor} strokeWidth="5" strokeDasharray={`${(feedback.score / 100) * 175.9} 175.9`} strokeLinecap="round" transform="rotate(-90 32 32)" />
+                  <text x="32" y="34" textAnchor="middle" fontSize="16" fontWeight="800" fill={scoreColor}>{feedback.score}</text>
+                  <text x="32" y="46" textAnchor="middle" fontSize="9" fill="#718096">/ 100</text>
+                </svg>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>Your prompt score</div>
+                  <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{scoreBand}</div>
+                </div>
+              </div>
+
+              {/* What you improved */}
+              <div style={{ background: '#F0FFF4', border: '1px solid #9AE6B4', borderLeft: '3px solid #48BB78', borderRadius: '0 10px 10px 0', padding: '14px 18px', marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#276749', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>WHAT YOU IMPROVED</div>
+                <p style={{ fontSize: 13, color: '#276749', lineHeight: 1.6, margin: 0 }}>{feedback.improved}</p>
+              </div>
+
+              {/* Still missing */}
+              <div style={{ background: '#FFFBEB', border: '1px solid #F6AD55', borderLeft: '3px solid #ED8936', borderRadius: '0 10px 10px 0', padding: '14px 18px', marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>STILL MISSING</div>
+                <p style={{ fontSize: 13, color: '#92400E', lineHeight: 1.6, margin: 0 }}>{feedback.missing}</p>
+              </div>
+
+              {/* One suggestion */}
+              <div style={{ background: '#EBF8FF', border: '1px solid #38B2AC33', borderRadius: 10, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>💡</span>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#38B2AC', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>ONE SUGGESTION</div>
+                  <p style={{ fontSize: 13, color: '#1A202C', lineHeight: 1.6, margin: 0 }}>{feedback.suggestion}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -273,29 +210,7 @@ const PractiseView: React.FC<PractiseViewProps> = ({ accentColor, accentDark, on
         <button
           onClick={onCompleteTopic}
           disabled={!submitted}
-          onMouseEnter={(e) => {
-            if (submitted) {
-              (e.currentTarget as HTMLElement).style.background = accentDark;
-              (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (submitted) {
-              (e.currentTarget as HTMLElement).style.background = accentColor;
-              (e.currentTarget as HTMLElement).style.color = accentDark;
-            }
-          }}
-          style={{
-            background: submitted ? accentColor : '#E2E8F0',
-            color: submitted ? accentDark : '#A0AEC0',
-            border: 'none',
-            borderRadius: 24,
-            padding: '12px 32px',
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: submitted ? 'pointer' : 'default',
-            fontFamily: "'DM Sans', sans-serif",
-          }}
+          style={{ background: submitted ? accentColor : '#E2E8F0', color: submitted ? accentDark : '#A0AEC0', border: 'none', borderRadius: 24, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: submitted ? 'pointer' : 'default', fontFamily: "'DM Sans', sans-serif" }}
         >
           Complete Topic →
         </button>

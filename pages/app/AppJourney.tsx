@@ -575,7 +575,7 @@ const AppJourney: React.FC = () => {
   const currentTopic = currentTopics[0];
 
   // Calculate phase progress for the active level
-  const phaseLabels = ['E-Learn', 'Read', 'Watch', 'Practise'];
+  const phaseLabels = ['E-Learn', 'Practise'];
   const currentPhaseLabel = currentLevel.status === 'active' && currentLevel.currentPhase > 0
     ? phaseLabels[currentLevel.currentPhase - 1] || phaseLabels[0]
     : currentLevel.status === 'completed' ? 'All complete' : 'Not started';
@@ -745,7 +745,7 @@ const AppJourney: React.FC = () => {
             <button
               onClick={() => {
                 if (currentLevel.status === 'active' || currentLevel.status === 'completed') {
-                  navigate('/app/level');
+                  navigate(currentLevel.levelNumber === 1 ? '/app/level-1' : '/app/level');
                 } else {
                   scrollToLevel(currentLevel.levelNumber);
                 }
@@ -815,7 +815,7 @@ const AppJourney: React.FC = () => {
           <div style={{ fontSize: 40, marginBottom: 12 }}>🎓</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Programme Complete</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 6, marginBottom: 20 }}>
-            You've completed all five levels of the Oxygy AI Upskilling Programme.
+            You've completed all five levels of the OXYGY AI Upskilling Programme.
           </div>
           <button
             onClick={() => alert('Certificate feature coming soon.')}

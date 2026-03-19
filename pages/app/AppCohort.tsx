@@ -493,7 +493,7 @@ const AppCohort: React.FC = () => {
               const email = user?.email || '';
               const subject = encodeURIComponent('Request: Organisation Invite Code');
               const body = encodeURIComponent(
-                `Hi,\n\nI'm using the Oxygy AI Upskilling platform and would like to join my organisation's cohort.\n\nCould you please send me the invite code?\n\nMy account email: ${email}\n\nThanks!`
+                `Hi,\n\nI'm using the OXYGY AI Upskilling platform and would like to join my organisation's cohort.\n\nCould you please send me the invite code?\n\nMy account email: ${email}\n\nThanks!`
               );
               window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
             }}

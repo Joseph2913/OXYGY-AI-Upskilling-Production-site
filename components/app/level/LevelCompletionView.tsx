@@ -63,7 +63,7 @@ const LevelCompletionView: React.FC<LevelCompletionViewProps> = ({
         }}
       >
         {isFinalLevel
-          ? "You've completed the entire Oxygy AI Upskilling Programme. Exceptional work."
+          ? "You've completed the entire OXYGY AI Upskilling Programme. Exceptional work."
           : `You've completed all ${topicCount} topics in ${levelName}. Level ${levelNumber + 1} is now unlocked.`}
       </div>
 
