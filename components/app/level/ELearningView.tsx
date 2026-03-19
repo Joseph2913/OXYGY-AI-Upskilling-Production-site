@@ -166,6 +166,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [predictChecked, setPredictChecked] = useState(false);
   // spotTheFlaw slide state
   const [flawSelected, setFlawSelected] = useState<number | null>(null);
+  // toast
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
   // reflection screen state
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionA, setReflectionA] = useState('');
@@ -1992,7 +1994,20 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   }, [currentSlide]);
 
   /* ── Next button interception: reveal slides + situationalJudgment cycling ── */
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
   const handleNextClick = () => {
+    // buildAPrompt: require at least one placement attempt before proceeding
+    if (s.type === 'buildAPrompt') {
+      const attempted = Object.keys(placedComponents).length > 0;
+      if (!attempted) {
+        showToast('Try the activity before proceeding');
+        return;
+      }
+    }
     // situationalJudgment: cycle through scenarios
     if (s.type === 'situationalJudgment' && s.scenarios && sjScenarioIdx < s.scenarios.length - 1) {
       setSjScenarioIdx((prev) => prev + 1);
@@ -2181,7 +2196,13 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
   /* ── Inline (compact) player ── */
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* Toast notification */}
+      {toastMsg && (
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1A202C', color: '#FFFFFF', padding: '12px 24px', borderRadius: 24, fontSize: 14, fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 16px rgba(0,0,0,0.25)', whiteSpace: 'nowrap', animation: 'fadeInUp 0.2s ease' }}>
+          {toastMsg}
+        </div>
+      )}
       <div style={{ background: '#FFFFFF', border: '1.5px solid #CBD5E0', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
         <div style={{ height: 2, background: '#E2E8F0' }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
