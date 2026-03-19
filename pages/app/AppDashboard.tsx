@@ -430,11 +430,6 @@ const AppDashboard: React.FC = () => {
                 <span style={{ fontSize: 12, color: '#718096' }}>
                   Topic {data.activeTopicIndex + 1} of {totalTopics}
                 </span>
-                {data.lastActivityAt && (
-                  <span style={{ fontSize: 11, color: '#A0AEC0', marginLeft: 'auto' }}>
-                    {timeAgo(data.lastActivityAt)}
-                  </span>
-                )}
               </div>
 
               {/* Title + description */}
@@ -447,55 +442,7 @@ const AppDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Phase strip with icons */}
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                {[
-                  { phase: 1, label: 'E-Learn', icon: <Play size={11} /> },
-                  { phase: 2, label: 'Practise', icon: <PenTool size={11} /> },
-                ].map((p, idx) => {
-                  const isCurrent = p.phase === data.currentPhase;
-                  const isDone = p.phase < data.currentPhase;
-                  return (
-                    <React.Fragment key={p.phase}>
-                      {idx > 0 && (
-                        <div style={{ width: 16, height: 2, background: isDone || isCurrent ? '#1A202C' : '#E2E8F0', flexShrink: 0 }} />
-                      )}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          padding: '5px 10px',
-                          borderRadius: 20,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          flexShrink: 0,
-                          background: isCurrent ? accent + '44' : isDone ? '#1A202C' : '#F1F5F9',
-                          color: isCurrent ? accentDark : isDone ? '#FFFFFF' : '#A0AEC0',
-                        }}
-                      >
-                        {isDone ? <Check size={10} strokeWidth={3} /> : p.icon}
-                        {p.label}
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
 
-              {/* Slide progress bar */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontSize: 12, color: '#718096', fontWeight: 500 }}>
-                    Slide {data.currentSlide} of {data.totalSlides}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#718096' }}>
-                    {phaseNames[data.currentPhase] || 'E-Learning'}
-                  </span>
-                </div>
-                <div style={{ height: 5, background: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${(data.currentSlide / data.totalSlides) * 100}%`, height: '100%', background: '#1A202C', borderRadius: 4 }} />
-                </div>
-              </div>
             </div>
 
             {/* Right CTA area */}
@@ -512,7 +459,7 @@ const AppDashboard: React.FC = () => {
                 alignSelf: 'stretch',
               }}
             >
-              <ProgressRing completed={data.currentSlide} total={data.totalSlides} accentColor={accent} size={110} strokeWidth={8} />
+              <ProgressRing completed={data.completedTopics} total={data.totalTopics} accentColor={accent} size={110} strokeWidth={8} />
               <button
                 onClick={() => navigate('/app/level?phase=1')}
                 style={{
