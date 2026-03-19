@@ -1005,12 +1005,6 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     <div style={{ fontSize: 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 5 }}>{isCorrect ? '✅ That\'s the best fit!' : '❌ Not quite — here\'s why'}</div>
                     <p style={{ fontSize: 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.65, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
                   </div>
-                  {!isCorrect && (
-                    <div style={{ background: '#F0FFF4', border: '2px solid #68D391', borderRadius: 12, padding: '14px 18px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#276749', marginBottom: 5 }}>✅ Best fit: {opts[s.predictCorrect ?? 0]}</div>
-                      <p style={{ fontSize: 13, color: '#276749', lineHeight: 1.65, margin: 0 }}>{s.predictFeedback?.[s.predictCorrect ?? 0]}</p>
-                    </div>
-                  )}
                   <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: '14px 18px' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
                     <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.65, marginBottom: 8, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
@@ -1209,11 +1203,6 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div style={{ animation: 'fadeInUp 0.25s ease', borderRadius: 12, padding: '14px 16px', background: isCorrect ? '#F0FFF4' : '#FFFBEB', border: `2px solid ${isCorrect ? '#68D391' : '#F6AD55'}` }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: isCorrect ? '#276749' : '#C05621', marginBottom: 4 }}>{isCorrect ? '✅ Spot on!' : '💡 Here\'s why that\'s not the best fit'}</div>
                 <div style={{ fontSize: 12, color: isCorrect ? '#276749' : '#744210', lineHeight: 1.65 }}>{sj.feedback[selectedOpt]}</div>
-                {!isCorrect && (
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #F6AD5533', fontSize: 12, color: '#276749', fontWeight: 600 }}>
-                    The best fit: <span style={{ fontWeight: 700 }}>{sj.options[sj.correct]}</span> — {sj.feedback[sj.correct]}
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -1456,7 +1445,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       borderRadius: 14, padding: fs ? '22px 22px' : '16px 16px',
                       cursor: 'pointer', textAlign: 'left' as const,
                       display: 'flex', flexDirection: 'column',
-                      gap: flipped ? 14 : 0, justifyContent: flipped ? 'flex-start' : 'center', alignItems: flipped ? 'flex-start' : 'center',
+                      gap: fs ? 14 : 12, justifyContent: flipped ? 'flex-start' : 'space-evenly', alignItems: flipped ? 'flex-start' : 'center',
                       transition: 'all 0.2s ease', height: '100%', boxSizing: 'border-box' as const,
                     }}
                   >
@@ -1464,31 +1453,31 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       <>
                         {/* Flipped: full detail */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontSize: fs ? 24 : 20 }}>{a.icon}</span>
-                          <div style={{ fontSize: fs ? 18 : 15, fontWeight: 900, color: a.color }}>{a.name}</div>
+                          <span style={{ fontSize: fs ? 26 : 22 }}>{a.icon}</span>
+                          <div style={{ fontSize: fs ? 20 : 17, fontWeight: 900, color: a.color }}>{a.name}</div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>When to use</div>
-                          <div style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.6 }}>{a.when}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <div style={{ fontSize: fs ? 11 : 10, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>When to use</div>
+                          <div style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.6 }}>{a.when}</div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>How it works</div>
-                          <div style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.6 }}>{a.how}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <div style={{ fontSize: fs ? 11 : 10, fontWeight: 800, color: a.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>How it works</div>
+                          <div style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.6 }}>{a.how}</div>
                         </div>
 
-                        <div style={{ marginTop: 'auto', background: '#FFFFFF', border: `1px solid ${a.color}44`, borderRadius: 8, padding: fs ? '8px 12px' : '6px 10px', width: '100%', boxSizing: 'border-box' as const }}>
-                          <div style={{ fontSize: fs ? 12 : 10, fontWeight: 700, color: a.color }}>{a.connection}</div>
+                        <div style={{ marginTop: 'auto', background: '#FFFFFF', border: `1px solid ${a.color}44`, borderRadius: 8, padding: fs ? '10px 14px' : '8px 12px', width: '100%', boxSizing: 'border-box' as const }}>
+                          <div style={{ fontSize: fs ? 14 : 12, fontWeight: 700, color: a.color }}>{a.connection}</div>
                         </div>
                       </>
                     ) : (
                       <>
-                        {/* Default: just icon + name + prompt */}
-                        <span style={{ fontSize: fs ? 36 : 28, marginBottom: 10 }}>{a.icon}</span>
-                        <div style={{ fontSize: fs ? 18 : 15, fontWeight: 900, color: '#4A5568', marginBottom: 6 }}>{a.name}</div>
-                        <div style={{ fontSize: fs ? 13 : 11, color: '#A0AEC0', fontWeight: 500, textAlign: 'center' as const }}>{a.tagline}</div>
-                        <div style={{ marginTop: 16, fontSize: fs ? 11 : 10, color: '#CBD5E0', fontWeight: 600 }}>tap to explore ▸</div>
+                        {/* Default: just icon + name + tagline */}
+                        <span style={{ fontSize: fs ? 40 : 32 }}>{a.icon}</span>
+                        <div style={{ fontSize: fs ? 20 : 17, fontWeight: 900, color: '#4A5568' }}>{a.name}</div>
+                        <div style={{ fontSize: fs ? 15 : 13, color: '#718096', fontWeight: 500, textAlign: 'center' as const, lineHeight: 1.5 }}>{a.tagline}</div>
+                        <div style={{ fontSize: fs ? 13 : 11, color: '#CBD5E0', fontWeight: 600 }}>tap to explore ▸</div>
                       </>
                     )}
                   </button>
@@ -1558,16 +1547,16 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               {s.positions?.map((p, i) => (
                 <div key={i} onClick={() => setSpectrumPos(i)} style={{ cursor: 'pointer', textAlign: i === 0 ? 'left' : i === 2 ? 'right' : 'center', flex: 1, padding: '0 4px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: spectrumPos === i ? '#38B2AC' : '#718096', transition: 'color 0.2s' }}>{p.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: spectrumPos === i ? '#38B2AC' : '#718096', transition: 'color 0.2s' }}>{p.label}</div>
                 </div>
               ))}
             </div>
             {/* Active position panel */}
             {s.positions && s.positions[spectrumPos] && (
               <div key={spectrumPos} style={{ flex: 1, background: '#F7FAFC', borderLeft: '3px solid #38B2AC', borderRadius: '0 12px 12px 0', padding: '16px 20px', animation: 'fadeInUp 0.3s ease' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', marginBottom: 6 }}>{s.positions[spectrumPos].label}</div>
-                <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 10px' }}>{s.positions[spectrumPos].desc}</p>
-                <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic' }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', marginBottom: 6 }}>{s.positions[spectrumPos].label}</div>
+                <p style={{ fontSize: 15, color: '#4A5568', lineHeight: 1.6, margin: '0 0 10px' }}>{s.positions[spectrumPos].desc}</p>
+                <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic' }}>
                   {s.positions[spectrumPos].example}
                 </div>
               </div>
@@ -1624,7 +1613,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ padding: fs ? '28px 48px' : '18px 28px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.scenario && (
               <div style={{ background: 'linear-gradient(135deg, #E6FFFA 0%, #EBF8FF 100%)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, border: '1.5px solid #38B2AC33' }}>
-                <span style={{ fontSize: 12, color: '#2B4C7E', fontWeight: 600 }}>SCENARIO: </span>
+                <span style={{ fontSize: 14, color: '#2B4C7E', fontWeight: 600 }}>SCENARIO: </span>
                 <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.5 }}>{s.scenario}</span>
               </div>
             )}
@@ -1682,18 +1671,18 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     <div className={`flip-card-inner${isFlipped ? ' flipped' : ''}`} style={{ position: 'relative', width: '100%', height: '100%' }}>
                       {/* Front */}
                       <div className="flip-card-face" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #FEB2B2', background: '#FFF5F5', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: '#FC8181', background: '#FED7D7', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.frontBadge}</span>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.frontLabel}</div>
-                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: 11, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', flex: 1 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#FC8181', background: '#FED7D7', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.frontBadge}</span>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.frontLabel}</div>
+                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: 13, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', flex: 1 }}>
                           {card.frontPrompt}
                         </div>
-                        <div style={{ fontSize: 10, color: '#A0AEC0', textAlign: 'center', marginTop: 8 }}>Click to flip ↺</div>
+                        <div style={{ fontSize: 12, color: '#A0AEC0', textAlign: 'center', marginTop: 8 }}>Click to flip ↺</div>
                       </div>
                       {/* Back */}
                       <div className="flip-card-face flip-card-back" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #9AE6B4', background: '#F0FFF4', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: '#48BB78', background: '#C6F6D5', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.backBadge}</span>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.backLabel}</div>
-                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #48BB78', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: 11, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', flex: 1, overflowY: 'auto' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#48BB78', background: '#C6F6D5', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.backBadge}</span>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.backLabel}</div>
+                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #48BB78', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: 13, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', flex: 1, overflowY: 'auto' }}>
                           {(() => {
                             const isLong = card.backPrompt.length > 160;
                             const isExpanded = expandedSections[`flip-${i}`];
@@ -1705,7 +1694,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                             </button>
                           )}
                         </div>
-                        <div style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5, marginTop: 8, padding: '8px 10px', background: '#E6FFFA', borderRadius: 6 }}>
+                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.5, marginTop: 8, padding: '8px 10px', background: '#E6FFFA', borderRadius: 6 }}>
                           {card.backResponse}
                         </div>
                       </div>
@@ -1723,7 +1712,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ padding: fs ? '24px 44px' : '16px 24px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.scenario && (
               <div style={{ background: 'linear-gradient(135deg, #EBF4FF 0%, #E6FFFA 100%)', borderRadius: 10, padding: '10px 16px', marginBottom: 12, border: '1.5px solid #2B4C7E22' }}>
-                <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.5 }}>{s.scenario}</span>
+                <span style={{ fontSize: 14, color: '#2D3748', lineHeight: 1.5 }}>{s.scenario}</span>
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, overflowY: 'auto' }}>
@@ -1742,8 +1731,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       border: isSelected ? `2px solid ${qc.border}` : '1px solid #E2E8F0',
                       background: isSelected ? qc.bg : '#FFFFFF', transition: 'all 0.15s ease',
                     }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', marginBottom: 4 }}>{opt.label}</div>
-                      <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#1A202C', marginBottom: 4 }}>{opt.label}</div>
+                      <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
                         {(() => {
                           const isLong = opt.prompt.length > 120;
                           const isExpanded = expandedSections[`branch-${i}`];
