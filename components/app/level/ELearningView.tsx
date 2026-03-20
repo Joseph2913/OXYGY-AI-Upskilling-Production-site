@@ -130,11 +130,17 @@ function ExpandableText({ text, maxLen = 180, id, expanded, onToggle }: { text: 
 
 /* ── Audio Bar (voiceover narration) ── */
 function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean }) {
-  const { isLoading, isPlaying, isMuted, speed, volume, progress } = voiceover;
+  const { isLoading, isPlaying, isMuted, speed, volume, progress, duration } = voiceover;
   const speeds: Array<0.75 | 1 | 1.25 | 1.5 | 1.75 | 2> = [0.75, 1, 1.25, 1.5, 1.75, 2];
   const barPx = isFullscreen ? 28 : 16;
   const waveDelays = [0, 0.1, 0.2, 0.1, 0];
   const pct = Math.min(progress * 100, 100);
+
+  // Time display
+  const elapsed = duration > 0 ? Math.floor(progress * duration) : 0;
+  const total = Math.ceil(duration);
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const timeStr = duration > 0 ? `${fmt(elapsed)} / ${fmt(total)}` : '';
 
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
@@ -206,6 +212,7 @@ function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; 
 
         {/* Label */}
         <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>Narration</span>
+        {timeStr && <span style={{ fontSize: 10, fontWeight: 500, color: '#A0AEC0', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{timeStr}</span>}
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />

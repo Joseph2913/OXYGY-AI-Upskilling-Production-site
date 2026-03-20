@@ -142,18 +142,39 @@ export function useVoiceover(): UseVoiceoverReturn {
     audio.preload = 'auto';
     audioRef.current = audio;
 
+    // Re-apply playbackRate after play — some browsers reset it
+    const ensureSpeed = () => {
+      if (audio.playbackRate !== speedRef.current) {
+        audio.playbackRate = speedRef.current;
+      }
+    };
+
     audio.addEventListener('canplaythrough', () => {
       if (isStale()) return;
       setHasAudio(true);
       setIsLoading(false);
       if (isFinite(audio.duration)) setDuration(audio.duration);
-      audio.play().catch(() => { /* autoplay blocked — user can click play */ });
+      audio.play().then(() => { ensureSpeed(); }).catch(() => { /* autoplay blocked */ });
     }, { once: true });
 
-    audio.addEventListener('play', () => { if (!isStale()) { setIsPlaying(true); startProgressLoop(); } });
+    audio.addEventListener('play', () => {
+      if (isStale()) return;
+      ensureSpeed();
+      setIsPlaying(true);
+      startProgressLoop();
+    });
     audio.addEventListener('pause', () => { if (!isStale() && !audio.ended) { setIsPlaying(false); stopProgressLoop(); } });
     audio.addEventListener('ended', () => { if (!isStale()) { setIsPlaying(false); stopProgressLoop(); setProgress(1); } });
-    audio.addEventListener('loadedmetadata', () => { if (!isStale() && isFinite(audio.duration)) setDuration(audio.duration); });
+    audio.addEventListener('loadedmetadata', () => {
+      if (isStale()) return;
+      if (isFinite(audio.duration)) setDuration(audio.duration);
+      // If canplaythrough already fired (cached file), the audio may already be ready
+      if (audio.readyState >= 4) {
+        setHasAudio(true);
+        setIsLoading(false);
+        audio.play().then(() => { ensureSpeed(); }).catch(() => {});
+      }
+    });
     audio.addEventListener('error', () => {
       if (!isStale()) { setIsLoading(false); setHasAudio(false); }
     });
