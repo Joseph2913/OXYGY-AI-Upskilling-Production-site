@@ -41,7 +41,7 @@ export interface SlideData {
   sourceLogo?: boolean;
   pullQuote?: string;
   revealOnNext?: boolean;
-  stats?: Array<{ value: string; valueColour: string; label: string; source: string; desc?: string; logoPath?: string }>;
+  stats?: Array<{ value: string; valueColour: string; label: string; source: string; desc?: string; logoPath?: string; visualType?: 'dotGrid' | 'barComparison' | 'adoptionGap' | 'weekBlocks' | 'performanceGap' }>;
   scenarios?: ScenarioData[];
   ctaText?: string;
   ctaHref?: string;
@@ -113,6 +113,10 @@ export interface SlideData {
   predictOptions?: string[];
   predictCorrect?: number;
   predictFeedback?: string[];
+  /* dragSort slide fields */
+  dragContext?: string;
+  dragZones?: Array<{ id: string; label: string; color: string; light: string; icon: string }>;
+  dragItems?: Array<{ id: string; label: string; correctZone: string }>;
   /* Standardised slide takeaway (shown as header on every slide) */
   takeaway?: string;
   /* External source citation (shown as a small link at the bottom of the slide) */
@@ -530,174 +534,267 @@ const L1T1_VIDEOS: VideoData[] = [
    ══════════════════════════════════════════════════════════════════ */
 
 const L2T1_SLIDES: SlideData[] = [
-  { section: "THE LEVEL 2 SHIFT", type: "courseIntro",
-    heading: "From Prompts to Reusable Tools",
-    subheading: "Building AI agents that standardise quality, save time, and scale across your team",
-    body: "Level 1 taught you how to write effective prompts. This module shows you when and how to turn a prompt into a permanent, shareable tool — an AI agent that runs the same way every time, for anyone on your team.",
+
+  /* ── Slide 1 — Course Intro ── */
+  {
+    section: "DESIGNING YOUR FIRST AI AGENT", type: "courseIntro",
+    heading: "Designing Your First AI Agent",
+    subheading: "Turn your best prompts into permanent tools that run the same way for everyone",
     levelNumber: 2,
     topicIcon: "🤖",
     estimatedTime: "~20 minutes",
     objectives: [
-      "Recognise when a task should be an agent vs. an ad-hoc prompt",
-      "Architect agents using the three-layer model (input, processing, output)",
-      "Build accountability features into agent design",
-      "Document and share agents for team deployment",
+      "Recognise when a task should be an agent, not just a prompt",
+      "Design an agent using the three-layer model (Input, Processing, Output)",
+      "Build in accountability so your outputs can be trusted and verified",
     ],
   },
-  { section: "THE LEVEL 2 SHIFT", type: "concept",
-    heading: "The gap between using AI and scaling AI",
-    tealWord: "scaling",
-    body: "Research consistently shows that professionals who use AI regularly report productivity gains of 20–40%. But only a fraction of those gains extend beyond the individual — most AI usage stays ad-hoc, unrepeatable, and invisible to the rest of the team.\n\nThe difference between personal productivity and organisational capability isn\u2019t how well you prompt. It\u2019s whether you\u2019ve turned your best prompts into tools others can use.",
-    pullQuote: "The organisations seeing the largest returns from AI aren\u2019t prompting better. They\u2019re building reusable tools from their best prompts.",
-    visualId: "l2-adoption-gap",
+
+  /* ── Slide 2 — Evidence: The rework problem ── */
+  {
+    section: "THE STANDARDISATION GAP", type: "evidenceHero",
+    takeaway: "When everyone uses AI differently, the team pays for it in rework and inconsistency",
+    heading: "Everyone's using AI differently.",
+    tealWord: "differently",
+    body: "Teams across every function are using AI — but almost always individually and ad hoc. Each person runs their own version of the same task, producing outputs that look different, feel different, and can't be compared or built on.\n\nThe result? Rework. Inconsistency. Knowledge that lives with one person and disappears when they're out of office.",
+    stats: [{
+      value: "19%",
+      valueColour: "#38B2AC",
+      label: "of the average knowledge worker's week is spent recreating information that already exists somewhere in their organisation",
+      source: "McKinsey Global Institute",
+      desc: "Global knowledge worker productivity study",
+      visualType: "weekBlocks",
+    }],
+    pullQuote: "The gap isn't between teams using AI and those that aren't. It's between teams where AI produces the same result and teams where it doesn't.",
+    sourceLink: "https://www.mckinsey.com/industries/technology-media-and-telecommunications/our-insights/the-social-economy",
+    sourceText: "McKinsey Global Institute — The Social Economy: Unlocking Value and Productivity Through Social Technologies",
   },
-  { section: "THE LEVEL 2 SHIFT", type: "concept",
-    heading: "What most people haven\u2019t been shown",
-    tealWord: "shown",
-    body: "When you write a prompt that works well, you move on. Next week, you write something similar — but slightly different. A colleague writes their own version for the same task. The outputs vary in structure and detail.\n\nThere\u2019s no shared standard, no way to replicate good results consistently. This isn\u2019t a failure — it\u2019s simply what happens when the step from prompt to tool hasn\u2019t been taken yet.",
-    pullQuote: "Level 1 is for the individual moment. Level 2 is for the repeated pattern.",
-    visualId: "l2-diverging-paths",
+
+  /* ── Slide 3 — Evidence: One agent. Compounding returns. ── */
+  {
+    section: "THE STANDARDISATION GAP", type: "evidenceHero",
+    takeaway: "A single well-built agent delivers compounding returns — every run, for every person who uses it",
+    heading: "One agent. Compounding returns.",
+    tealWord: "Compounding",
+    body: "A prompt runs once. A well-designed agent runs every time — for anyone. The effort of building one good agent pays back on every subsequent run, multiplied across everyone on your team who does the same task.\n\nThis is why standardisation changes the economics. You're not saving time once. You're saving it hundreds of times.",
+    stats: [{
+      value: "2.4×",
+      valueColour: "#38B2AC",
+      label: "more value created when AI tools are standardised and shared across a team vs. used individually",
+      source: "McKinsey Global Survey 2024",
+      desc: "Survey of 1,363 participants across industries",
+      visualType: "barComparison",
+    }],
+    pullQuote: "A prompt runs once. An agent runs every time — for anyone.",
+    sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
+    sourceText: "McKinsey Global Survey on AI, 2024",
   },
-  { section: "BUILDING REUSABLE TOOLS", type: "concept",
-    heading: "From one-off prompts to standardised agents",
-    tealWord: "standardised",
-    body: "The shift from Level 1 to Level 2 isn\u2019t about complexity — it\u2019s about repeatability. At Level 1, you prompt individually, get an answer, and move on. At Level 2, you\u2019ve identified a repeated task and you standardise three things: what goes in (the input format), how the AI behaves (the system prompt), and what comes out (the structured output).\n\nThe result runs the same way every time, for anyone.",
-    pullQuote: "A Level 2 agent is a prompt that\u2019s been promoted to a permanent tool — with defined inputs, defined behaviour, and defined outputs.",
-    visualId: "l2-level-comparison",
+
+  /* ── Slide 4 — Tension Statement ── */
+  {
+    section: "THE LEVEL 2 SHIFT", type: "tensionStatement",
+    heading: "You've built something great.",
+    subheading: "But it only works when you're there.",
+    tealPhrase: "only works when you're there",
+    footnote: "Level 2 turns your best work into tools that run without you — consistently, for everyone on your team.",
   },
-  { section: "BUILDING REUSABLE TOOLS", type: "spectrum",
-    heading: "When to build an agent vs. when to just prompt",
-    tealWord: "prompt",
-    body: "Not every task needs a reusable agent. The skill is recognising when a task\u2019s characteristics make it worth the investment. Use this spectrum to calibrate — and remember, the right approach depends on the situation.",
-    positions: [
-      { label: "Stay at Level 1", desc: "Low frequency, unique each time, no one else needs it. An ad-hoc prompt is the right tool for this.", example: "Drafting a one-time message about a unique situation — different every time, no repeatable pattern." },
-      { label: "Consider Level 2", desc: "Moderate frequency, some consistency benefits, could be useful for one or two others. Worth evaluating further.", example: "Summarising meeting notes into action items — happens regularly, but the format isn\u2019t critical to standardise yet." },
-      { label: "Build a Level 2 Agent", desc: "High frequency, output must be consistent, multiple people do the same task, inconsistency causes problems downstream.", example: "Preparing a structured weekly status update from multiple inputs — happens every week, the team needs a standard format, and inconsistent outputs cause confusion." },
+
+  /* ── Slide 5 — What is an AI agent? ── */
+  {
+    section: "WHAT IS AN AGENT", type: "concept",
+    takeaway: "An agent is a configured AI tool that runs consistently for anyone — not a one-time conversation",
+    heading: "What is an AI agent?",
+    tealWord: "AI agent",
+    eyebrow: "THE DEFINITION",
+    body: "A prompt is a one-time request — you write it, run it, and it disappears. An agent is a configured AI tool — you design it once, and it runs the same way every time, for anyone on your team.\n\nThe key difference isn't intelligence. It's permanence. An agent remembers its purpose, its rules, and its output format — so you don't have to explain it again every session.",
+    pullQuote: "A prompt is a conversation. An agent is a colleague.",
+    visualId: "l2-agent-vs-prompt",
+  },
+
+  /* ── Slide 6 — When does a prompt become an agent? ── */
+  {
+    section: "KNOW THE DIFFERENCE", type: "concept",
+    takeaway: "Three conditions determine whether a task is worth building as an agent",
+    heading: "When does a prompt become an agent?",
+    tealWord: "become an agent",
+    eyebrow: "KNOW THE DIFFERENCE",
+    body: "Not every prompt should become an agent. The investment makes sense when three conditions are true: the task repeats on a regular pattern, the output needs to look the same every time, and more than one person on your team needs to run it.\n\nWhen all three apply, a well-crafted prompt has earned its promotion.",
+    pullQuote: "An agent is a prompt that earned a permanent address.",
+    visualId: "l2-agent-decision",
+  },
+
+  /* ── Slide 6 — Situational Judgment: Agent or prompt? ── */
+  {
+    section: "WHEN TO BUILD ONE", type: "situationalJudgment",
+    takeaway: "Apply the agent decision test to real tasks from three different roles",
+    heading: "Agent or prompt?",
+    scenarios: [
+      {
+        personaName: "Maya",
+        personaRole: "Operations Manager",
+        scenario: "Maya starts every morning by reading 20+ internal emails and manually summarising the key actions for her team. She does this every single day, and her colleague does the same — but their summaries look completely different.",
+        options: ["Build a reusable agent", "Just write a good prompt"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Correct. Daily frequency, consistency gap across two people, and a structured output that matters downstream — all three agent conditions are met. This is exactly the kind of task worth standardising." },
+          { quality: "weak", text: "A prompt would work, but it disappears after each session. With daily frequency and two people producing inconsistent outputs, an agent would standardise the result once and run the same way every time." },
+        ],
+      },
+      {
+        personaName: "James",
+        personaRole: "Senior Strategy Consultant",
+        scenario: "James's manager has asked for a one-time competitor landscape report ahead of a client pitch next week. Different competitors, different client framing — the context changes completely each time this type of analysis comes up.",
+        options: ["Build a reusable agent", "Just write a good prompt"],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Building an agent adds complexity without value here. The analysis is one-time and highly context-dependent — the effort of standardising inputs and outputs won't pay off for a single use." },
+          { quality: "strong", text: "Right. One-time, context-dependent tasks are prompt territory. A well-crafted Level 1 prompt is the right tool. Save the agent investment for tasks that repeat." },
+        ],
+      },
+      {
+        personaName: "Priya",
+        personaRole: "Risk & Compliance Lead",
+        scenario: "Priya's team produces a risk summary for six stakeholder groups every quarter. Each uses the same structure and the same source data — just different audience framing. Three people on her team produce these independently, with inconsistent results.",
+        options: ["Build a reusable agent", "Just write a good prompt"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Strong agent case. Quarterly cadence, same structure across six outputs, and three people producing inconsistent results — standardising this as an agent delivers consistent quality every quarter with no extra effort." },
+          { quality: "weak", text: "A prompt alone won't solve the inconsistency across three people. This task repeats on a schedule and follows a fixed structure — the conditions for an agent are all there." },
+        ],
+      },
     ],
   },
-  { section: "BUILDING REUSABLE TOOLS", type: "quiz",
-    heading: "Quick check",
-    quizEyebrow: "PRACTICE — QUESTION 1 OF 3",
-    question: "A colleague uses AI every morning to proofread their own emails before sending. The output doesn\u2019t need a specific format, and no one else on the team uses the same prompt. Which level is this?",
-    quizOptions: [
-      "Level 1 — ad-hoc prompting is the right fit",
-      "Level 2 — this should be built as a reusable agent",
-      "It depends on how complex the emails are",
-      "It depends on how many emails they send",
-    ],
-    correct: 0,
-    explanation: "This is Level 1 territory. The task is personal, the format doesn\u2019t need to be standardised, and there\u2019s no team-wide benefit to packaging it as a shared tool. Frequency alone doesn\u2019t make something a Level 2 candidate — consistency needs and shareability matter just as much.",
-  },
-  { section: "THE THREE LAYERS", type: "concept",
-    heading: "Input, processing, output — the anatomy of a Level 2 agent",
-    tealWord: "output",
-    body: "Every Level 2 agent is built from three layers.\n\nLayer 1 — Input Definition: what data does the user provide each time, and in what format?\n\nLayer 2 — Processing / Behaviour: the system prompt — role definition, task instructions, reasoning steps, quality checks. This is the agent\u2019s permanent operating manual.\n\nLayer 3 — Output Definition: what structure does the output take? What fields, what format? This is where structured output — including JSON — ensures consistency across every run.",
-    pullQuote: "The system prompt is the Prompt Blueprint from Level 1 — promoted. What was a one-off prompt becomes permanent instructions.",
+
+  /* ── Slide 7 — The Three-Layer Model (concept with visual) ── */
+  {
+    section: "THE THREE-LAYER MODEL", type: "concept",
+    takeaway: "Every agent is built from three layers: Input, Processing, Output",
+    heading: "Every agent is built from three layers.",
+    tealWord: "three layers",
+    eyebrow: "THE ANATOMY",
+    body: "A Level 2 agent isn't just a better prompt. It's a structured system with three distinct layers:\n\n— What goes in (Input)\n— How the AI behaves (Processing)\n— What comes out (Output)\n\nDesigning all three makes the agent reusable, consistent, and shareable.",
+    pullQuote: "The system prompt is the Prompt Blueprint from Level 1 — promoted to permanent instructions.",
     visualId: "l2-three-layers",
   },
-  { section: "THE THREE LAYERS", type: "comparison",
-    heading: "The same task, three approaches",
-    scenario: "You need to produce a structured weekly status update from meeting notes, email threads, and project tracker entries.",
+
+  /* ── Slide 8 — Three Layers Deep Dive (rctf, revealOnNext) ── */
+  {
+    section: "THE THREE-LAYER MODEL", type: "rctf",
+    takeaway: "Each layer has a specific job — get all three right and the agent runs consistently every time",
+    heading: "Inside the three layers.",
+    tealWord: "three layers",
+    subheading: "Each layer has a specific job. Get all three right and the agent runs consistently every time.",
+    revealOnNext: true,
+    elements: [
+      {
+        key: "INPUT",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "📥",
+        desc: "What the user provides each time. Define the data format, required fields, and how to supply them.",
+        example: "Meeting notes, email threads, project tracker entries — pasted into a standard template",
+        whyItMatters: "Consistent input = consistent output",
+      },
+      {
+        key: "PROCESSING",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "⚙️",
+        desc: "The system prompt — the agent's permanent operating manual. Role definition, task instructions, reasoning steps, accountability rules.",
+        example: "You are a project status analyst. For each project: assess status, summarise updates, cite sources, score confidence.",
+        whyItMatters: "The system prompt never changes run to run",
+      },
+      {
+        key: "OUTPUT",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "📤",
+        desc: "The structure of what comes out. A defined format — JSON schema, structured template — that stays consistent across every run.",
+        example: "{ project_name, status, key_updates[], next_actions[], confidence_score, evidence_sources[] }",
+        whyItMatters: "Structured output = comparable, shareable results",
+      },
+    ],
+  },
+
+  /* ── Slide 9 — Sort the Layers (drag-and-drop activity) ── */
+  {
+    section: "TEST YOUR UNDERSTANDING", type: "dragSort",
+    takeaway: "Apply the three-layer model by classifying each element of a real agent design",
+    heading: "Sort these into the three layers.",
+    tealWord: "three layers",
+    dragContext: "Scenario: a weekly status update agent for a project team. Drag each design element to the layer it belongs in.",
+    dragZones: [
+      { id: "input",      label: "INPUT",      color: "#667EEA", light: "#EBF4FF", icon: "📥" },
+      { id: "processing", label: "PROCESSING", color: "#38B2AC", light: "#E6FFFA", icon: "⚙️" },
+      { id: "output",     label: "OUTPUT",     color: "#48BB78", light: "#F0FFF4", icon: "📤" },
+    ],
+    dragItems: [
+      { id: "d1", label: "Meeting notes pasted by the user",       correctZone: "input" },
+      { id: "d2", label: "Email thread provided as context",        correctZone: "input" },
+      { id: "d3", label: "Standard input template for each run",   correctZone: "input" },
+      { id: "d4", label: "You are a project status analyst",       correctZone: "processing" },
+      { id: "d5", label: "Cite every conclusion to a source",       correctZone: "processing" },
+      { id: "d6", label: "Flag anything below 0.7 confidence",     correctZone: "processing" },
+      { id: "d7", label: "JSON schema with fixed output fields",    correctZone: "output" },
+      { id: "d8", label: "Status: on track / at risk / blocked",   correctZone: "output" },
+    ],
+  },
+
+  /* ── Slide 10 — Custom GPTs: Real-world implementation ── */
+  {
+    section: "IN THE REAL WORLD", type: "concept",
+    takeaway: "Custom GPTs are a no-code way to deploy the three-layer model inside ChatGPT — shareable with your team immediately",
+    heading: "Custom GPTs are agents you can build today.",
+    tealWord: "agents you can build today",
+    eyebrow: "PLATFORM EXAMPLE",
+    body: "OpenAI's Custom GPTs are a no-code implementation of the three-layer agent model — available inside ChatGPT without any coding. Each field in the builder maps directly to one of the three layers you just learned.\n\nThe Instructions field is your system prompt (Processing layer). The Knowledge section is where you upload context files the agent draws from (Input enrichment). Conversation starters define how your team begins each interaction — building the input interface on your behalf.\n\nOnce built, a Custom GPT can be shared with your team via a link — making it one of the fastest routes from concept to deployed agent.",
+    pullQuote: "Every field in the Custom GPT builder is one of the three layers.",
+    visualId: "l2-custom-gpt",
+  },
+
+  /* ── Slide 10 — Comparison: Same task, three approaches ── */
+  {
+    section: "IN PRACTICE", type: "comparison",
+    takeaway: "The difference between a prompt and an agent is structure at every layer",
+    heading: "The same task, three approaches.",
+    tealWord: "three approaches",
+    scenario: "Your team needs a structured weekly status update from meeting notes, email threads, and project tracker entries.",
     tabs: [
-      { label: "Ad-hoc prompt", prompt: "Summarise these notes into a status update for my team.", annotation: "No defined input format. No behaviour instructions. No output structure. Works once — but the result is different every time and from every person." },
-      { label: "With input + processing", prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify current status (on track / at risk / blocked), summarise key updates in 2–3 sentences, and list next actions with owners.", annotation: "The role and task are now defined. The AI knows what to do and how to reason about it — but the output is still free-form text. Format varies run to run." },
-      { label: "Full three-layer agent", prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify current status, summarise key updates, and list next actions with owners. Output as JSON with fields: project_name (string), status (enum: on_track / at_risk / blocked), summary (string), key_updates (array of strings), next_actions (array of {action, owner, deadline}), confidence_score (float 0–1), evidence_sources (array of strings).", annotation: "Now the output is structured, consistent, and machine-readable. Every run produces the same format — comparable week over week, shareable across the team, and ready for dashboards at Level 3." },
-    ],
-  },
-  { section: "ACCOUNTABILITY BY DESIGN", type: "concept",
-    heading: "Designing agents that make verification easy",
-    tealWord: "verification",
-    body: "Human-in-the-loop isn\u2019t \u2018review the output before you act on it\u2019 — that\u2019s expected regardless. The real skill is designing the agent so that verification is fast, targeted, and built into the output itself.\n\nThis means writing specific instructions into the system prompt — Layer 2 — that require the AI to show its working, cite its sources, and flag its uncertainties.",
-    pullQuote: "A well-designed agent doesn\u2019t just give you answers. It gives you the evidence to check them in minutes, not hours.",
-    visualId: "l2-hitl-output",
-  },
-  { section: "ACCOUNTABILITY BY DESIGN", type: "flipcard",
-    heading: "What accountability looks like in the output",
-    instruction: "Click each card to see how built-in accountability features change the agent\u2019s output.",
-    cards: [
       {
-        frontLabel: "Status update — standard output",
-        frontBadge: "WITHOUT ACCOUNTABILITY FEATURES",
-        frontPrompt: "Project Alpha: On track. Key updates: stakeholder meeting confirmed, timeline approved. Next actions: finalise budget, schedule review.",
-        backLabel: "Status update — with accountability features",
-        backBadge: "WITH ACCOUNTABILITY FEATURES",
-        backPrompt: "Project Alpha: On track (confidence: 0.85). Key updates: stakeholder meeting confirmed [source: email from J. Lee, 7 Mar], timeline approved [source: meeting notes, 5 Mar]. Next actions: finalise budget (owner: finance lead, deadline: 14 Mar), schedule review (owner: PM, deadline: 12 Mar). Note: no tracker update found for Project Alpha since 28 Feb — recommend verifying current status directly.",
-        backResponse: "The second version adds source citations, a confidence score, ownership and deadlines on actions, and an anomaly flag — all from system prompt instructions, not from the user doing extra work.",
+        label: "Ad-hoc prompt",
+        prompt: "Summarise these notes into a status update for my team.",
+        annotation: "No defined input. No behaviour instructions. No output structure. Works once — but the result looks different every time and from every person.",
       },
       {
-        frontLabel: "Research summary — standard output",
-        frontBadge: "WITHOUT ACCOUNTABILITY FEATURES",
-        frontPrompt: "The three most common themes across the documents are: digital transformation readiness, resource allocation concerns, and stakeholder alignment challenges.",
-        backLabel: "Research summary — with accountability features",
-        backBadge: "WITH ACCOUNTABILITY FEATURES",
-        backPrompt: "Theme 1: Digital transformation readiness (confidence: 0.91, cited in docs 1, 3, 4 — paragraphs 2, 7, 12). Theme 2: Resource allocation concerns (confidence: 0.78, cited in docs 2, 4 — paragraphs 4, 9). Theme 3: Stakeholder alignment (confidence: 0.64, cited in doc 3 only — paragraph 11. Low confidence: only one source document supports this theme. Suggested verification: review doc 3, paragraph 11 directly).",
-        backResponse: "Source locations, confidence scoring, and a low-confidence flag with a specific verification suggestion — the human reviewer knows exactly where to look and what to check.",
+        label: "Layer 2 added",
+        prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify current status (on track / at risk / blocked), summarise key updates in 2–3 sentences, and list next actions with owners.",
+        annotation: "The role and task are now defined. The AI knows what to do and how to reason — but the output is still free-form text. Format varies run to run.",
+      },
+      {
+        label: "Full three-layer agent",
+        prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify status, summarise updates, list next actions with owners. Cite each conclusion to a specific source. Score confidence 0–1, flag anything below 0.7. Output as JSON: { project_name, status, summary, key_updates[], next_actions[], confidence_score, evidence_sources[] }.",
+        annotation: "Structured, consistent, verifiable. Every run produces the same format — comparable week over week, shareable across the team, with accountability built in by design.",
       },
     ],
   },
-  { section: "ACCOUNTABILITY BY DESIGN", type: "quiz",
-    heading: "Quick check",
-    quizEyebrow: "PRACTICE — QUESTION 2 OF 3",
-    question: "Where are human-in-the-loop accountability features implemented in a Level 2 agent?",
-    quizOptions: [
-      "In a separate review checklist given to the person using the output",
-      "In the system prompt (Layer 2) — as instructions the agent follows every time",
-      "In the output template (Layer 3) — as required JSON fields",
-      "In both the system prompt and the output template working together",
+
+  /* ── Slide 10 — Module Summary ── */
+  {
+    section: "WHAT YOU'VE LEARNED", type: "moduleSummary",
+    takeaway: "You now have a framework for building agents that run consistently for anyone on your team",
+    heading: "What you've learned",
+    panelHeading: "The Three-Layer Agent Model",
+    body: "Three layers that define what goes in, how the AI behaves, and what comes out.",
+    subheading: "When to build an agent",
+    elements: [
+      { key: "INPUT",      color: "#667EEA", light: "#EBF4FF", desc: "Define what goes in — data source, format, required fields" },
+      { key: "PROCESSING", color: "#38B2AC", light: "#E6FFFA", desc: "The system prompt — role, task, steps, and accountability rules" },
+      { key: "OUTPUT",     color: "#48BB78", light: "#F0FFF4", desc: "Structured format — consistent fields, JSON schema, verifiable" },
     ],
-    correct: 3,
-    explanation: "The accountability features are written as instructions in the system prompt (Layer 2) — telling the AI to cite sources, score confidence, show reasoning, and flag anomalies. But they also need corresponding fields in the output template (Layer 3) so there\u2019s a consistent place for this information in every output. Both layers work together.",
-  },
-  { section: "FROM TOOL TO TEAM ASSET", type: "concept",
-    heading: "The value multiplier: sharing what you\u2019ve built",
-    tealWord: "sharing",
-    body: "A Level 2 agent that only you use is a personal shortcut. The same agent, documented and shared, becomes team infrastructure. The sharing step is where the real return on investment happens — one person\u2019s design effort multiplied across everyone who does the same task.\n\nThis requires three things: an Agent Card that documents scope and limitations, a standardised input template so anyone can provide the right data, and a cold test — having someone unfamiliar run the agent using only the documentation.",
-    pullQuote: "The principle is simple: build once, share always. The agent captures your expertise in a form anyone can use.",
-    visualId: "l2-hub-spoke",
-  },
-  { section: "TECHNIQUE IN ACTION", type: "branching",
-    heading: "Your team needs a standardised weekly status tool",
-    scenario: "Your team lead has asked you to create a reusable tool for producing the weekly status update. Multiple team members will use it. The output goes directly to leadership. How would you approach this?",
-    branchingOptions: [
-      {
-        label: "Share a well-crafted prompt",
-        prompt: "Write a detailed prompt for the weekly status update task and share it with the team via email or a shared document, so colleagues can copy-paste it when they need it.",
-        responseQuality: "partial",
-        response: "The prompt works well — for you. But each team member tweaks the wording slightly. Outputs vary in structure and detail. When a colleague forgets a section, leadership gets an incomplete update. There\u2019s no way to trace where any particular insight came from. A new joiner asks \u2018how do I use this?\u2019 and you have to walk them through it in person.",
-        reflection: "A shared prompt is a good start — it\u2019s better than everyone writing their own from scratch. But without standardised inputs, defined processing behaviour, and structured outputs, consistency breaks down as soon as multiple people use it.",
-      },
-      {
-        label: "Build a three-layer agent (without accountability)",
-        prompt: "Define an input format (what to paste), write a system prompt with role and task instructions, and create a JSON output template so every run produces the same structured result. Skip the accountability features — trust the team to review the output manually.",
-        responseQuality: "partial",
-        response: "Consistent format across the team — every status update looks the same. But when leadership asks \u2018which meeting did this insight come from?\u2019 nobody can trace it back without manually searching the source notes. A low-confidence conclusion slips through because the output didn\u2019t flag its uncertainty. The tool is reliable but not verifiable.",
-        reflection: "The structure is right — three layers are in place, and the team gets consistent outputs. But without accountability features (source citations, confidence scoring, anomaly flagging), the output is consistent but not verifiable. Adding those features completes the design.",
-      },
-      {
-        label: "Build a full Level 2 agent with accountability",
-        prompt: "Define an input template, write a system prompt with role, task, steps, quality checks, and accountability features (cite sources, score confidence, flag anomalies). Create a JSON output schema with fields for all of these. Write an Agent Card documenting the tool\u2019s scope, limitations, and verification checkpoints. Share via the team\u2019s platform.",
-        responseQuality: "strong",
-        response: "Every team member gets the same structured output. Each insight is cited back to specific meeting notes or emails. Low-confidence conclusions are flagged with a verification suggestion. A new team member picks it up in five minutes using the Agent Card. Leadership trusts the updates because every claim can be traced to its source.",
-        reflection: "This is the complete Level 2 approach: three layers plus accountability features plus documentation for sharing. The investment is in the upfront design — the return compounds with every run and every person who uses it.",
-      },
-    ],
-  },
-  { section: "YOUR NEXT STEP", type: "templates",
-    heading: "Templates to take with you",
-    body: "Ready to build? The Agent Builder walks you through all three layers step by step.",
-    templateItems: [
-      { id: "t1", name: "Agent Suitability Check", tag: "Decision Aid", tagColor: "#38B2AC",
-        template: "AGENT SUITABILITY CHECK\n\nAnswer these four questions about your task:\n\n1. FREQUENCY: Does this task happen at least weekly?\n   [ ] Yes  [ ] No\n\n2. CONSISTENCY: Does the output need to follow the same structure every time?\n   [ ] Yes  [ ] No\n\n3. SHAREABILITY: Would others on the team benefit from the exact same tool?\n   [ ] Yes  [ ] No\n\n4. STANDARDISATION RISK: Would inconsistent outputs cause confusion or problems downstream?\n   [ ] Yes  [ ] No\n\nVERDICT:\n→ 0–1 \u2018Yes\u2019 answers: Stay at Level 1. Ad-hoc prompting is the right approach.\n→ 2–3 \u2018Yes\u2019 answers: Consider Level 2. Evaluate whether the investment is worth it.\n→ 4 \u2018Yes\u2019 answers: Build a Level 2 agent.",
-      },
-      { id: "t2", name: "Three-Layer Agent Design Starter", tag: "Agent Design", tagColor: "#667EEA",
-        template: "THREE-LAYER AGENT DESIGN\n\n--- LAYER 1: INPUT DEFINITION ---\nData source: [What does the user provide?]\nRequired fields: [What must be included every time?]\nInput format: [Paste text? Upload file? Fill a template?]\nValidation: [What happens if something is missing?]\n\n--- LAYER 2: PROCESSING / SYSTEM PROMPT ---\n[ROLE]: You are a [role description].\n[CONTEXT]: [Background information the agent needs]\n[TASK]: [Specific instructions for what to do]\n[STEPS]: [Ordered reasoning steps]\n[QUALITY CHECKS]: [Constraints, edge cases]\n[OUTPUT FORMAT]: [See Layer 3]\n\n--- LAYER 3: OUTPUT DEFINITION ---\nFormat: [JSON / structured text / other]\nKey fields: [\n  field_name (type): description\n]\nAccountability fields: [\n  confidence_score (float 0–1)\n  evidence_sources (array of strings)\n  reasoning (string)\n  anomalies_flagged (array of strings)\n]",
-      },
-      { id: "t3", name: "HITL Prompt Additions", tag: "Accountability", tagColor: "#A8F0E0",
-        template: "HUMAN-IN-THE-LOOP PROMPT ADDITIONS\n\nAdd these to your system prompt (Layer 2):\n\n1. SOURCE CITATION:\n   \u2018For each conclusion, cite the specific input data that informed it.\u2019\n\n2. CONFIDENCE SCORING:\n   \u2018Rate confidence in each conclusion 0–1. Flag anything below 0.7.\u2019\n\n3. REASONING TRAIL:\n   \u2018For each major conclusion, provide a one-sentence explanation.\u2019\n\n4. EXCEPTION FLAGGING:\n   \u2018Call out: inputs you could not process, contradictions between sources, missing data, and assumptions.\u2019\n\n5. VERIFICATION PROMPTS:\n   \u2018Suggest 1–2 specific things the reviewer should check.\u2019",
-      },
-      { id: "t4", name: "Agent Card Template", tag: "Sharing", tagColor: "#F5B8A0",
-        template: "AGENT CARD\n\nAGENT NAME: [Name]\nPURPOSE: [One sentence — what does this agent do?]\n\nINPUT REQUIRED:\n- Data source: [What the user provides]\n- Format: [How to provide it]\n- Required fields: [What must be included]\n\nOUTPUT FORMAT:\n- Type: [JSON / structured text / other]\n- Key fields: [List the main output fields]\n- Accountability features: [Citations, confidence, reasoning, flags]\n\nLIMITATIONS:\n- [What this agent does NOT do]\n- [Known edge cases or failure modes]\n\nHITL CHECKPOINTS:\n- [What should the reviewer always verify?]\n- [Which outputs are most likely to need correction?]\n\nOWNER: [Who to contact]\nLAST UPDATED: [Date]",
-      },
+    approaches: [
+      { icon: "🔁", label: "Repeat pattern", color: "#667EEA", light: "#EBF4FF", when: "Same task runs repeatedly — the standardisation investment pays off" },
+      { icon: "✅", label: "Consistent output", color: "#38B2AC", light: "#E6FFFA", when: "Output must follow the same structure every time — for you or your team" },
+      { icon: "🛡️", label: "Accountability built in", color: "#48BB78", light: "#F0FFF4", when: "Stakes require sources, confidence scores, and anomaly flagging by design" },
     ],
   },
 ];
@@ -755,7 +852,7 @@ const L3T1_SLIDES: SlideData[] = [
     heading: "The task-to-workflow gap.",
     tealWord: "task-to-workflow gap",
     body: "Professionals are using AI tools — but mostly for isolated, one-off tasks. The organisations seeing 3× to 4× productivity gains aren't using AI more often. They're chaining it across connected, multi-step workflows.",
-    stats: [{ value: "24%", valueColour: "#38B2AC", label: "of organisations have moved beyond individual AI tasks to coordinated workflow automation", source: "McKinsey", desc: "Global Survey on AI, 2024" }],
+    stats: [{ value: "24%", valueColour: "#38B2AC", label: "of organisations have moved beyond individual AI tasks to coordinated workflow automation", source: "McKinsey", desc: "Global Survey on AI, 2024", visualType: "dotGrid" }],
     pullQuote: "The frontier isn't a better prompt. It's a process that runs itself.",
     sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
     sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
@@ -768,8 +865,10 @@ const L3T1_SLIDES: SlideData[] = [
     heading: "The gap is widening.",
     tealWord: "widening",
     body: "Organisations in the top quartile for AI productivity aren't using better models — they're using AI differently. McKinsey's 2024 global survey found that high performers are 3.4× more likely to have embedded AI across connected, multi-step workflows rather than deploying it as a single-purpose tool. The difference is process design, not model access.",
-    stats: [{ value: "3.4×", valueColour: "#38B2AC", label: "more likely to integrate AI across enterprise-wide workflows vs. using it as a standalone tool", source: "McKinsey", desc: "The State of AI: Global Survey, 2024" }],
+    stats: [{ value: "3.4×", valueColour: "#38B2AC", label: "more likely to integrate AI across enterprise-wide workflows vs. using it as a standalone tool", source: "McKinsey", desc: "The State of AI: Global Survey, 2024", visualType: "performanceGap" }],
     pullQuote: "The competitive gap isn't between companies using AI and those that aren't. It's between those who chain it and those who silo it.",
+    sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
+    sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
   },
 
   /* ── Slide 4 — Adoption vs. Integration ── */
@@ -778,9 +877,11 @@ const L3T1_SLIDES: SlideData[] = [
     takeaway: "75% of knowledge workers use AI tools — but most use them as one-off assistants, not as parts of a designed process",
     heading: "Adoption is high. Integration is rare.",
     tealWord: "Integration is rare",
-    body: "The 2024 Microsoft Work Trend Index found that 75% of knowledge workers now use AI tools at work. But the vast majority are using AI as a personal assistant — one prompt at a time, with no connection to the next step. Productivity gains stay individual and non-transferable. Workflows are what turn personal AI use into team capability that compounds.",
+    body: "Three in four knowledge workers now use AI at work. But the vast majority use it as a personal assistant — one prompt at a time, disconnected from the next step. Productivity gains stay individual and non-transferable. Workflows are what turn personal AI use into team capability that compounds.",
+    stats: [{ value: "75%", valueColour: "#38B2AC", label: "of knowledge workers use AI tools at work", source: "Microsoft", desc: "Work Trend Index, 2024", visualType: "adoptionGap" }],
     pullQuote: "Personal productivity doesn't scale. Workflow design does.",
-    footnote: "Source: Microsoft Work Trend Index Annual Report (2024) — survey of 31,000 people across 31 countries.",
+    sourceLink: "https://www.microsoft.com/en-us/worklab/work-trend-index",
+    sourceText: "Microsoft Work Trend Index Annual Report (2024) — survey of 31,000 people across 31 countries",
   },
 
   /* ── Slide 5 — You've Learned to Prompt ── */
@@ -794,15 +895,28 @@ const L3T1_SLIDES: SlideData[] = [
     footnote: "Most people who consider themselves 'good at AI' are still thinking one step at a time.",
   },
 
-  /* ── Slide 6 — When Does a Workflow Make Sense? ── */
+  /* ── Slide 6 — What is an AI workflow? ── */
+  {
+    section: "WHAT IS A WORKFLOW", type: "concept",
+    takeaway: "A workflow chains multiple agents into a process — trigger, steps, conditions, and output",
+    heading: "What is an AI workflow?",
+    tealWord: "AI workflow",
+    eyebrow: "THE DEFINITION",
+    body: "At Level 2, you built agents — individual AI tools that handle one task reliably. At Level 3, you connect those agents into a workflow: a sequence of steps triggered by an event, passing outputs between stages, applying conditions, and routing results to the right place.\n\nAn agent handles a task. A workflow handles a process.",
+    pullQuote: "Agents are the building blocks. Workflows are the architecture.",
+    visualId: "l3-workflow-vs-agent",
+  },
+
+  /* ── Slide 7 — When Does a Workflow Make Sense? ── */
   {
     section: "THE TECHNIQUE", type: "concept",
     takeaway: "A workflow adds value when a process is repetitive, structured, and has a defined output",
     heading: "Not every task needs a workflow.",
     tealWord: "needs a workflow",
     eyebrow: "WHEN TO USE ONE",
-    body: "A workflow is the right tool when a process runs repeatedly, follows consistent steps, has a clear trigger, and produces a defined output. If the same task runs weekly, involves structured decisions, and needs to be consistent across a team — it's a strong candidate.\n\nA workflow is not the right tool when the task is a one-off, when every instance requires a different judgment call, when volume is too low to justify the design effort, or when the process itself isn't stable yet. Automating a process you don't fully understand just makes the problem run faster.\n\nThe test: if this ran a hundred times, would the right output look broadly the same each time? If yes — design a workflow. If not — keep it as a prompt.",
+    body: "The test is simple: if this task ran a hundred times, would the right output look broadly the same each time?",
     pullQuote: "Automate the repetitive. Keep the judgment.",
+    visualId: "l3-workflow-decision",
   },
 
   /* ── Slide 7 — Workflow or Not? (Activity) ── */
@@ -853,7 +967,7 @@ const L3T1_SLIDES: SlideData[] = [
     takeaway: "Every AI workflow has three layers: Input → Processing → Output",
     heading: "The Anatomy of an AI Workflow",
     tealWord: "Anatomy",
-    body: "Every multi-step AI workflow is built from three layers.\n\nThe Input layer captures what triggers the workflow and what data it needs. The Processing layer chains AI actions, transformations, and conditional logic. The Output layer delivers results, routes them to the right place, and surfaces them for human review.\n\nMost people operate only in the middle — missing the connective tissue at either end.",
+    body: "At Level 2, you applied the three-layer model to a single agent — input, processing, output. At Level 3, the same structure scales up. Now the Input layer captures what triggers an entire process. The Processing layer chains multiple AI steps, conditions, and transformations together. The Output layer routes results to the right destination — or surfaces them for human review.\n\nThe difference isn't the shape. It's the scope.",
     pullQuote: "Without defined triggers and outputs, your AI workflow is just a series of prompts waiting for someone to remember them.",
     visualId: "l3-workflow-anatomy",
   },
@@ -961,9 +1075,9 @@ const L3T1_SLIDES: SlideData[] = [
         ],
       },
       {
-        personaName: "Priya",
+        personaName: "Nia",
         personaRole: "Operations Analyst",
-        scenario: "Priya is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
+        scenario: "Nia is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
         options: [
           "AI ACTION — the AI reads and interprets the text",
           "CONDITION — it evaluates a result and routes the workflow based on a rule",
@@ -971,9 +1085,9 @@ const L3T1_SLIDES: SlideData[] = [
         ],
         strongestChoice: 1,
         feedback: [
-          { quality: "partial", text: "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Priya is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does." },
+          { quality: "partial", text: "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Nia is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does." },
           { quality: "strong", text: "Exactly. A CONDITION node evaluates the outcome of the previous step — here, the sentiment classification — and routes the workflow down different paths based on a rule. It's what makes a workflow adaptive rather than linear." },
-          { quality: "weak", text: "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Priya's step isn't reshaping data; it's making a routing decision. That's a CONDITION." },
+          { quality: "weak", text: "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Nia's step isn't reshaping data; it's making a routing decision. That's a CONDITION." },
         ],
       },
       {

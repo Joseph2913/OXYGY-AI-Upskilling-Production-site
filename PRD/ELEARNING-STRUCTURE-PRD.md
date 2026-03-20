@@ -139,15 +139,20 @@ overflow: hidden;
 ### Fullscreen vs Inline Differences
 | Element | Inline | Fullscreen |
 |---------|--------|-----------|
-| Outer shell | White | Black outer, white content |
-| Top bar | Not present | Navy 48px |
-| Nav bar bg | White | Navy `#1A202C` |
-| Nav bar border | `1px solid #E2E8F0` | `1px solid #2D3748` |
-| Previous button | `border: 1px solid #E2E8F0`, navy text | `border: 1px solid #4A5568`, `#E2E8F0` text |
+| Outer shell | White card with border | White full-viewport |
+| Top bar | Not present | White, 48px, minimize button only (`Minimize2` icon, `#A0AEC0`) |
+| Nav bar bg | White | White |
+| Nav bar border | `1px solid #E2E8F0` | `1px solid #EDF2F7` |
+| Previous button | `border: 1px solid #E2E8F0`, navy text; disabled = `#CBD5E0` | Same |
 | Progress bar height | 2px | 3px |
-| Progress bar track | `#E2E8F0` | `#2D3748` |
+| Progress bar track | `#E2E8F0` | `#EDF2F7` |
+| Progress dots + counter | Inline in nav bar (right of Previous) | Bottom centre of nav bar |
 | Slide padding | `14–18px` | `24–32px` |
 | Base font sizes | base | base + 2–4px |
+
+**Nav bar layout — inline:** `[← Previous]` — `[dots · counter]` — `[⛶ fullscreen] [Next →]`
+
+**Nav bar layout — fullscreen:** `[← Previous]` — `[dots · counter (centred)]` — `[Next →]`
 
 ### Fullscreen Button
 ```css
@@ -217,6 +222,7 @@ The Next button is a multi-stage content reveal controller before it becomes a s
 
 | Slide Type | Next Behavior |
 |-----------|--------------|
+| `dragSort` | **Blocks** if any item in wrong zone — if all placed but some wrong: flashes red, returns incorrect items to pool after 1.2s, shows warning |
 | `buildAPrompt` | **Blocks** if no chips placed — shows activity warning |
 | `spotTheFlaw` | **Blocks** if nothing selected — shows activity warning |
 | `quiz` | **Blocks** if nothing selected — shows activity warning |
@@ -233,17 +239,46 @@ The Next button is a multi-stage content reveal controller before it becomes a s
 | Last slide | Shows Reflection screen instead of advancing |
 | All others | Advances immediately |
 
+### Next Button — Standard Spec
+Identical in both inline and fullscreen. Do not use different sizes or weights between views.
+```
+padding: 8px 20px
+border-radius: 24px (pill)
+minHeight: 40px
+border: none
+font-size: 13px
+font-weight: 600
+font-family: inherit
+display: inline-flex, align-items: center, gap: 4px
+cursor: pointer
+```
+Colors:
+- Normal slides: `background: #38B2AC`, `color: #FFFFFF`
+- Last slide: `background: accentColor`, `color: accentDark`
+
+Label: always `"Next →"` except on the last slide where it reads `"Finish E-Learning →"`.
+
 ### Activity Warning
+Shown **above the Next button** in both inline and fullscreen when `needsInteraction` is true and Next is clicked. Identical spec in both views.
 ```
-Text: "Try the activity before proceeding"
-Background: dark navy #1A202C
-Color: white
-Font: 13px bold
-Border-radius: 10px
+Background: #1A202C (dark navy)
+Color: #FFFFFF
+Font: 13px, fontWeight 700
 Padding: 8px 16px
-Position: above nav bar
-Animation: warningPop 2.5s ease forwards (auto-dismisses, no button)
+Border-radius: 10px
+Box-shadow: 0 4px 16px rgba(0,0,0,0.18)
+White-space: nowrap
+Pointer-events: none
+Animation: warningPop 2.5s ease forwards (auto-dismisses)
 ```
+
+**Message text — single source of truth (derive from slide type, not duplicated):**
+- `situationalJudgment` or `persona` (predictFirst) → `"👆 Select an option before continuing"`
+- `dragSort` (not all placed) → `"👆 Place all items before continuing"`
+- `dragSort` (all placed, some wrong) → `"↩ Some items are in the wrong layer — review and try again"`
+- All other blocked slide types → `"👆 Try the activity before continuing"`
+
+**Never duplicate this conditional** in multiple render paths. Define `activityWarningMsg` once in the component and reference it in both inline and fullscreen nav bars.
 
 ---
 
@@ -362,20 +397,27 @@ Navigation:
 ## 13. All Slide Type Layouts
 
 ### `courseIntro`
-**isStretchType. No takeaway header.**  
-Two columns:
+**isStretchType. No takeaway header.**
 
-**Left 58%** — `background: linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)`, `borderRight: 1px solid #E2E8F0`:
+**Layout rule — full-width single column.** The `courseIntro` slide uses a single full-width column. Do not add a right-side framework preview grid. The objectives and subheading have enough space to breathe and the learner's attention should not be split on the first slide.
+
+**Full-width column** — `flex: 1`, gradient background using the level's accent color, padding `44px 64px` (fullscreen) / `28px 40px` (inline):
 - Level badge: `background: accentLight, color: accentDark`, pill, 10px bold uppercase. Text: `"LEVEL N · E-LEARNING"`
-- Hook headline: two lines — line 1 navy bold, line 2 teal (or teal-underlined key word)
-- Description: 12px, `#4A5568`, maxWidth 380
-- Objectives list: eyebrow `"YOU'LL WALK AWAY WITH"` (9px uppercase `#A0AEC0`). Each item: emoji icon (13px) + text (12px `#2D3748` lineHeight 1.55 fontWeight 500). 3–4 items starting with action verbs.
-- Start button: teal `#38B2AC`, white, `borderRadius: 24`, 13px bold
+- Hook headline: `fontSize: 28px` (fullscreen) / `22px` (inline), `fontWeight: 800`, `#1A202C`
+- Subheading: `fontSize: 14px/13px`, `fontWeight: 600`, in level accent dark color, `maxWidth: 600`
+- Objectives list: eyebrow `"YOU'LL WALK AWAY WITH"` (9px uppercase `#A0AEC0`, `marginBottom: 12`). Each item: emoji icon (14px) + text (`14px/13px`, `#2D3748`, `lineHeight: 1.6`, `fontWeight: 500`), `gap: 10`, `marginBottom: 10`. 3–4 items starting with action verbs.
+- Start button: level accent color background, white text, `borderRadius: 24`, 13px bold, `alignSelf: flex-start`
 
-**Right 42%** — `#FAFBFC` background:
-- Eyebrow + one-line description
-- Framework preview grid (2×3 or 3×2): each cell `background: componentLight`, `border: 1.5px solid {componentColor}30`, `borderRadius: 10`, `padding: 10px 12px`, icon + label. Previews the core framework being taught.
-- Italic footnote (12px `#718096`)
+**Level accent colors for courseIntro:**
+- L1: `background: #38B2AC` (teal)
+- L2: `background: #38B2AC`
+- L3: `background: #C4A934` (pale yellow dark)
+- L4/L5: use `accentDark` for the Start button
+
+**Background gradient by level:**
+- L1: `linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)`
+- L2: `linear-gradient(160deg, #FEFCE8 0%, #FEF9C3 50%, #F7FAFC 100%)`
+- L3: `linear-gradient(160deg, #FFFBEB 0%, #FEF3C7 50%, #F7FAFC 100%)`
 
 ---
 
@@ -398,16 +440,56 @@ Two columns (50%/50%):
 
 **Left:** Body text only — 15px, `#4A5568`, `lineHeight: 1.75`
 
-**Right:** Stat card — **optional**. Use when a single strong statistic reinforces the left body text. Omit when the evidence is better conveyed through body text and pull-quote alone.
+**Right:** Stat visual — **optional**. Use when a single strong statistic reinforces the left body text. Omit when the evidence is better conveyed through body text and pull-quote alone.
 
-When present:
+#### Graphic requirement
+**Every evidence slide must include a graphic.** A slide with body text and pull-quote only is not acceptable. If no single-stat visual fits, use a `chart`, `pyramid`, or custom two-column layout instead. The visual column always occupies the right 52% of the slide.
+
+#### Text column width — standard
+The text/visual split is **48% text / 52% visual** in both inline and fullscreen. This must never vary between views. Do not apply `maxWidth` caps to the body text — let it fill its column naturally.
+
+#### Stat Visual Types
+The right-hand stat panel should be visualised in the most clear and engaging way for the specific number. Do not default to a plain large-number card if a more meaningful visual exists. Choose from:
+
+| `visualType` | When to use | Example |
+|---|---|---|
+| *(default — large number card)* | Generic percentages or counts with no obvious relational meaning | "74% of workers..." |
+| `dotGrid` | Percentages out of 100 — makes scale visceral and human | "24%" → 24 teal dots in a 10×10 grid of 100 |
+| `barComparison` | Multipliers or ratios comparing two groups | "3.4×" → two vertical bars, Others vs Top Performers |
+| `adoptionGap` | Two related stats showing a funnel drop — adoption vs integration | "75%" use AI → "24%" integrate it → "51pp gap" callout |
+
+**Set `visualType` on the stat object in `topicContent.ts`:**
+```typescript
+stats: [{ value: "24%", label: "...", source: "McKinsey", visualType: "dotGrid" }]
+stats: [{ value: "3.4×", label: "...", source: "McKinsey", visualType: "barComparison" }]
+stats: [{ value: "75%", label: "...", source: "Microsoft", visualType: "adoptionGap" }]
+// omit visualType to use the default large-number card
+```
+
+**Dot Grid spec (`dotGrid`):**
+- 10×10 grid of 100 circles, gap 4–5px, dot size 16–20px
+- Active dots: `#38B2AC` with subtle glow ring (`box-shadow: 0 0 0 1.5px #38B2AC55`)
+- Inactive dots: `#E2E8F0`
+- Below grid: stat value (28–36px, bold teal) + label + source badge
+
+**Bar Comparison spec (`barComparison`):**
+- Two vertical bars side by side, aligned to a shared baseline
+- "Others" bar: grey (`#E2E8F0`), baseline height (65–80px)
+- "Top performers" bar: teal gradient (`#38B2AC → #2C9A94`), height = baseline × multiplier
+- Centre bracket: dashed or solid line with the multiplier value (22px, bold teal)
+- Labels below each bar; multiplier value above performer bar
+- Below bars: label text + source badge
+
+**Default large-number card spec:**
 ```
 borderRadius: 24
 border: 2.5px solid #38B2AC
 background: linear-gradient(to bottom right, #E6FFFA, #EBF8FF, #FFFFFF)
 box-shadow: 0 0 0 8px #38B2AC12
 ```
-Inside: ↑ arrow (32px teal) + stat value (88px fontWeight 900 teal) + label (16px `#2D3748`) + desc (13px `#718096`) + source badge (white pill, `border: 1px solid #E2E8F0`)
+Inside: ↑ arrow (32px teal) + stat value (88px fontWeight 900 teal) + label (16px `#2D3748`) + desc (13px `#718096`) + source badge
+
+**Design principle:** Always ask "what visual makes this number *feel* true?" A 24% adoption rate is more striking as a sparse dot grid than as a large number. A 3.4× performance gap is more compelling as two bars of visibly different height than as digits alone. Prefer the visual that makes the insight land without needing to be explained.
 
 When omitted: body text expands to fill the slide, or uses a two-column split with a pull-quote panel instead of a stat card.
 
@@ -667,18 +749,57 @@ Two-column before/after with annotated prompt.
 ---
 
 ### `rctf`
-3×2 grid. No interaction — all content visible immediately.
+Supports three layouts depending on the data. Choose based on what best serves the content.
 
-Each cell:
+---
+
+#### Mode 1 — Static 3×2 grid (default)
+All cards visible immediately. No interaction.
+
+```typescript
+{ type: 'rctf', elements: [...6 items] }
 ```
-border: 1px solid {color}33
-background: {color}08
-border-radius: 10
-KEY: 11px bold uppercase
-description: 11–12px #4A5568
-example: italic, borderTop: 1px solid #E2E8F0
-whyItMatters: white bg, border: 1px solid {color}22, accent text
+
+Grid: 3 columns, fills available height (`flex: 1, minHeight: 0`). Each cell:
 ```
+padding: 18px 20px (fullscreen) / 14px 16px (inline)
+border: 1.5px solid {color}55
+background: {color}08 or el.light
+border-radius: 12
+justifyContent: space-between
+KEY: icon (22px/18px) + label (12px/11px bold uppercase in color)
+description: 13px/12px #2D3748, lineHeight: 1.6
+example: 12px/11px #718096 italic, borderTop: 1px solid {color}33, prefixed "e.g."
+whyItMatters: white bg, border: 1px solid {color}33, accent color text, padding: 5px 10px, marginTop: auto
+```
+
+**Card sizing:** Cards must fill the slide height. Use `flex: 1` on the grid container and `minHeight: 0` to prevent overflow. Never let cards shrink to a fraction of the frame.
+
+---
+
+#### Mode 2 — Grid with sequential reveal (`revealOnNext`)
+Same 3×2 grid, but cards reveal one-by-one as the learner clicks Next. Use when the content benefits from pacing (e.g. 6 node types — learner absorbs each before seeing the next).
+
+```typescript
+{ type: 'rctf', revealOnNext: true, elements: [...6 items] }
+```
+
+Unrevealed cards: `opacity: 0` (transparent but occupy space — layout never shifts). Revealed cards: `opacity: 1`, `transition: opacity 0.35s ease`. No visual distinction between revealed and unrevealed beyond opacity.
+
+---
+
+#### Mode 3 — Two-column anatomy reveal (`revealOnNext` + `visualId`)
+Left column shows a concept diagram; right column reveals detail cards one-by-one as Next is clicked. The diagram dynamically highlights the currently active element. Use when introducing layered or structured concepts where a visual map and card details reinforce each other (e.g. the three-layer workflow anatomy).
+
+```typescript
+{ type: 'rctf', revealOnNext: true, visualId: 'l3-workflow-anatomy', elements: [...3 items] }
+```
+
+Layout: `display: flex`, `gap: 16px`
+- **Left (38%):** `background: #F7FAFC, border: 1px solid #E2E8F0, borderRadius: 12`. Renders the named concept visual. The active element (matching `contextStep`) is highlighted: scaled up (`scale(1.02)`), full-color border and background, colored box-shadow. Elements before the active step remain visible at full opacity. Elements after the active step are dimmed (`opacity: 0.3`).
+- **Right (flex: 1):** Cards reveal left-to-right one per Next click. Revealed cards slide in from the right (`translateX(12px) → 0`). Active card gets a subtle `boxShadow`. Card structure: icon + key label + description + optional example + optional `whyItMatters` tag.
+
+State: `contextStep` drives both the anatomy highlight and card reveal. Starts at `0` — the first card and layer are always shown immediately.
 
 ---
 
@@ -707,6 +828,12 @@ Pull-quote: `borderLeft: 4px solid #38B2AC, background: #E6FFFA`, 15px italic bo
 Single column, wide padding (`22px 36px` inline / `36px 64px` full):
 
 Body text: 18–22px, `lineHeight: 1.75`, pull-quote below
+
+**Eyebrow label (`eyebrow` field):** Optional. Renders above the slide heading in the takeaway header bar — 9–10px bold uppercase, `#A0AEC0`, `letterSpacing: 0.12em`. Use to give the slide a named context that the section label alone doesn't provide (e.g. `"WHEN TO USE ONE"`, `"THE LAYERS"`, `"THE TECHNIQUE"`). Eyebrows are especially useful on concept slides that introduce a specific named framework component — they orient the learner before the heading lands.
+
+```typescript
+{ type: 'concept', eyebrow: 'WHEN TO USE ONE', heading: 'Not every task needs a workflow.', ... }
+```
 
 ---
 
@@ -811,6 +938,36 @@ Two-column layout with predict-first quiz.
 **Left:** Persona header (circle avatar 80px, name 20px bold, role 14px, tag pills) + scenario card (colored gradient header + white body)
 
 **Right:** Predict-first option buttons → on correct: `"HOW [NAME] ACTUALLY DOES IT"` card showing actual prompt (italic, truncated to 180 chars) + `"Why:"` explanation in accent color
+
+---
+
+### `dragSort`
+Classify drag-and-drop activity. Learner drags items from a source pool into labelled drop zones.
+
+**Layout (column, `height: 100%`, `padding: fs ? '20px 28px' : '14px 20px'`):**
+1. **Context bar** — scenario description. `fontSize: 13/12`, `#718096`, `#F7FAFC` bg, `#E2E8F0` border, `borderRadius: 8`, `padding: 9px 14px / 7px 12px`
+2. **Drop zones grid** — `gridTemplateColumns: 1fr 1fr 1fr`, `flex: 1, minHeight: 0`. Each zone: `2px dashed` border at `color55`, `borderRadius: 12`, `padding: 14px 12px / 10px 10px`. Zone header: icon `18/15px`, label `13/12px` bold uppercase in zone color
+3. **Source pool** — below zones, `borderTop: 1px solid #E2E8F0`. Label `11/10px` uppercase gray. Items `flexWrap: wrap`, `gap: 7`
+4. **Status bar** — replaces source pool when all items placed. "All placed" in teal; "All correct" in green with `#F0FFF4` bg
+
+**Item cards:** `fontSize: 14/13`, `padding: 10px 14px / 8px 12px`, `borderRadius: 8`, `lineHeight: 1.4`, `cursor: grab`
+
+**Item states:**
+- Unplaced: white bg, `#E2E8F0` border, `#4A5568` text
+- Placed (in zone): zone `light` bg, `zone.color55` border, `#1A202C` text
+- `dragChecked` correct: `#F0FFF4` bg, `#68D391` border, `#276749` text + `✓`
+- `dragChecked` wrong: `#FFF5F5` bg, `#FC8181` border, `#C53030` text + `✗`
+
+**Click on placed item** → returns it to source pool (removes from `dragPlacements`).
+
+**Next button logic:**
+1. Not all placed → block + `"👆 Place all items before continuing"`
+2. All placed, some wrong → `dragChecked = true` (flash colors), remove wrong items from placements after 1.2s, block + warning
+3. All correct → advance
+
+**Required `SlideData` fields:** `dragContext`, `dragZones[]` (`id, label, color, light, icon`), `dragItems[]` (`id, label, correctZone`)
+
+**When to use:** After a concept slide that introduces a classification framework (e.g. three-layer model, node types). Tests whether learners can apply the taxonomy before seeing it in practice.
 
 ---
 
@@ -1064,6 +1221,13 @@ Every new module must follow this structure, mapping to the five-beat narrative 
 | `bridge` or `moduleSummary` | — | 1 | **Mandatory** — always the last slide |
 
 **Evidence slides:** Use 2–3 evidence slides to build the Beat 1 case. They must not all use the same layout — vary between `evidenceHero`, `chart`, `concept`, or a custom two-column layout. Each must have a takeaway header, section label (`"THE REALITY"`), and source citation where applicable.
+
+**Narrative flow within Beat 3 (Concept):** When introducing a technique or framework, follow this order inside Beat 3:
+1. **"When to use it" concept slide** — Before explaining *how* it works, establish *when* it's appropriate. This sets expectation and gives learners a filter before they encounter the anatomy. Use `eyebrow: "WHEN TO USE ONE"` (or equivalent). This slide should directly follow the `tensionStatement`.
+2. **Judgment activity** — Immediately after the "when to use" slide, include a `situationalJudgment` with binary Yes/No scenarios. Learners apply the decision test before the full anatomy is introduced.
+3. **Anatomy/framework slides** — Only after learners have a working decision filter should you introduce the structural breakdown (layers, node types, components). Use `rctf` mode 3 (anatomy + reveal) for layered frameworks.
+
+This order — *decide → understand → apply* — prevents learners from memorising structure before they know when to use it.
 
 **Persona guidance:** Persona slides are optional. Use `situationalJudgment` as the primary judgment mechanic. Add persona slides only when showing how a specific person applies the technique adds meaningful context that scenarios alone do not provide.
 

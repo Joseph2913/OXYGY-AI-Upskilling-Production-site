@@ -6,7 +6,6 @@ import { LEVEL_TOPICS } from '../../data/levelTopics';
 import { getPrimaryTool } from '../../data/toolkitData';
 import { LEVELS } from '../../data/content';
 import { LevelProgress } from '../../hooks/useJourneyData';
-import { ActivityTracker } from './journey/ActivityTracker';
 
 interface LevelCardProps {
   level: LevelProgress;

@@ -43,6 +43,7 @@ This section defines the mandatory topics, titles, and learning objectives for e
 **Topic 1 — Designing Your First AI Agent**
 
 **Learning objectives:**
+- Understand what an AI agent is and how it differs from a one-off prompt
 - Understand what separates a repeatable agent from a one-off prompt
 - Identify which tasks in your work are agent-ready
 - Recognise the core components that make an agent reliable and reusable
@@ -68,6 +69,7 @@ This section defines the mandatory topics, titles, and learning objectives for e
 **Topic 1 — Mapping a Multi-Step AI Workflow**
 
 **Learning objectives:**
+- Understand what an AI workflow is and how it differs from a single agent
 - Understand the three-layer model: inputs, processing, and outputs
 - Translate a familiar professional process into a node-based workflow
 - Identify where handoffs between steps create risk or opportunity
@@ -351,6 +353,7 @@ Each objective must:
 - Start with an action verb
 - Describe an outcome the learner will have — not a topic that will be covered
 - Map to one of the five narrative beats
+- **Match the learning objectives listed in the Course Outline (§0) for this topic exactly.** Do not write new objectives or paraphrase loosely — the `courseIntro` slide is the contract between the module and the learner. Every objective listed here must be introduced in a concept slide and tested in a judgment or quiz slide before the module ends.
 
 | Wrong (topic coverage) | Right (learner outcome) |
 |------------------------|------------------------|
@@ -579,12 +582,14 @@ A typical module structure follows this pattern. Adapt to the topic — the arc 
 | 1 | `courseIntro` | — | Setup |
 | 2–3 | `evidenceHero`, `chart` or `pyramid` | `"THE REALITY"` | Beat 1 |
 | 4 | `tensionStatement` or `gapDiagram` | `"THE GAP"` | Beat 2 |
-| 5–6 | `concept`, `contextBar`, or `rctf` | `"THE TECHNIQUE"` | Beat 3 |
-| 7–8 | `scenarioComparison`, `parallelDemo`, or `flipcard` | `"SEE THE DIFFERENCE"` | Beat 4 |
-| 9–10 | `persona` (×2–3) | `"THE APPROACHES"` | Beat 3/4 |
-| 11 | `situationMatrix` or `approachMatrix` | `"THE TOOLKIT"` | Beat 5 |
-| 12–13 | `situationalJudgment` | `"IN PRACTICE"` | Beat 5 |
-| 14 | `moduleSummary` or `bridge` | `"WRAP UP"` | Bridge |
+| 5 | `concept` (definition) | `"WHAT IS [X]"` | Beat 3 |
+| 6 | `concept` (decision criteria) | `"THE TECHNIQUE"` | Beat 3 |
+| 7–8 | `situationalJudgment`, `rctf`, or `contextBar` | `"IN PRACTICE"` | Beat 3/5 |
+| 9–10 | `concept`, `rctf`, or `comparison` | `"THE ANATOMY"` | Beat 3 |
+| 11–12 | `scenarioComparison`, `parallelDemo`, or `flipcard` | `"SEE THE DIFFERENCE"` | Beat 4 |
+| 13 | `moduleSummary` or `bridge` | `"WRAP UP"` | Bridge |
+
+**Rule — Definition before judgment:** Slide 5 MUST be a plain-language definition of the core concept being taught. Learners must be shown *what something is* before they are asked to judge *when to use it* or *how to build it*. Never place a `situationalJudgment` or decision criteria slide before the concept has been defined.
 
 **Total slides:** 10–16 per module is typical. Never fewer than 8 (arc cannot be completed), rarely more than 18 (engagement drops).
 
@@ -594,11 +599,26 @@ A typical module structure follows this pattern. Adapt to the topic — the arc 
 
 Before any module is submitted for build, every item on this checklist must be confirmed.
 
+### Learning Objective Alignment
+- [ ] The `courseIntro` slide lists exactly the learning objectives defined in the Course Outline (§0) for this topic — word-for-word or equivalent in meaning. Do not substitute, reorder, or omit any objective.
+- [ ] Every learning objective is introduced in at least one concept/framework slide before it is tested in a judgment or quiz slide
+- [ ] Every `situationalJudgment` and `quiz` slide maps back to a specific learning objective — if you cannot name the objective it tests, rewrite or remove it
+- [ ] The `moduleSummary` approaches reflect the module's learning objectives — not generic AI advice
+
+### Test What You Teach
+- [ ] A plain-language **definition slide** (`"WHAT IS [X]"`) appears immediately after the tension statement and before any decision criteria or judgment slides
+- [ ] For every `situationalJudgment` scenario: identify which earlier slide taught the concept being tested. If no slide introduced it, add one or change the scenario.
+- [ ] For every `quiz` question: the correct answer must have been stated or demonstrated earlier in the module
+- [ ] Learners should never encounter a judgment scenario that requires knowledge the module has not yet provided
+- [ ] "When to use" concept slides appear *before* anatomy/framework slides — learners must have a working decision filter before they see the structural breakdown
+
 ### Evidence
+- [ ] Every evidence slide has a graphic — no slide with text-only layout is acceptable
 - [ ] Every stat has a named, reputable source
 - [ ] No stat uses a range — a specific number is cited
 - [ ] The pull-quote states the implication of the stat, not a restatement of it
 - [ ] Source logos are available at `/public/logos/` for named sources
+- [ ] The `visualType` on each stat has been chosen for the type of number (see STRUCTURE-PRD §`evidenceHero` — Stat Visual Types)
 
 ### Scenarios
 - [ ] Every scenario is recognisable to at least 3 completely different job functions

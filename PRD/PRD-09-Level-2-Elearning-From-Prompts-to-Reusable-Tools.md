@@ -688,20 +688,19 @@ Additional state needed for this module:
 
 | Slide | Type | Beat | Section |
 |-------|------|------|---------|
-| 1 | `title` | — | THE LEVEL 2 SHIFT |
-| 2 | `concept` | Situation | THE LEVEL 2 SHIFT |
-| 3 | `concept` | Tension | THE LEVEL 2 SHIFT |
-| 4 | `concept` | Concept — Theme 1 | BUILDING REUSABLE TOOLS |
-| 5 | `spectrum` | Concept — Theme 2 | BUILDING REUSABLE TOOLS |
-| 6 | `quiz` | Concept — Check 1 | BUILDING REUSABLE TOOLS |
-| 7 | `concept` | Concept — Theme 3 | THE THREE LAYERS |
-| 8 | `comparison` | Concept — Theme 3 | THE THREE LAYERS |
-| 9 | `concept` | Concept — Theme 4 | ACCOUNTABILITY BY DESIGN |
-| 10 | `flipcard` | Concept — Theme 4 | ACCOUNTABILITY BY DESIGN |
-| 11 | `quiz` | Concept — Check 2 | ACCOUNTABILITY BY DESIGN |
-| 12 | `concept` | Concept — Theme 5 | FROM TOOL TO TEAM ASSET |
-| 13 | `branching` | Contrast | TECHNIQUE IN ACTION |
-| 14 | `templates` | Bridge | YOUR NEXT STEP |
+| 1 | `courseIntro` | Setup | DESIGNING YOUR FIRST AI AGENT |
+| 2 | `evidenceHero` | Beat 1 | THE STANDARDISATION GAP |
+| 3 | `evidenceHero` | Beat 1 | THE STANDARDISATION GAP |
+| 4 | `tensionStatement` | Beat 2 | THE LEVEL 2 SHIFT |
+| 5 | `concept` — definition (`l2-agent-vs-prompt` visual) | Beat 3 | WHAT IS AN AGENT |
+| 6 | `concept` — decision criteria (`l2-agent-decision` visual) | Beat 3 | KNOW THE DIFFERENCE |
+| 7 | `situationalJudgment` | Beat 5 | WHEN TO BUILD ONE |
+| 8 | `concept` — anatomy (`l2-three-layers` visual) | Beat 3 | THE THREE-LAYER MODEL |
+| 9 | `rctf` (revealOnNext) | Beat 3 | THE THREE-LAYER MODEL |
+| 10 | `comparison` | Beat 4 | IN PRACTICE |
+| 11 | `moduleSummary` | Bridge | WHAT YOU'VE LEARNED |
+
+> **Note (2026-03-20):** Slide structure updated from the original PRD-09 v1.0 design (14 slides with legacy types: `spectrum`, `flipcard`, `branching`, `templates`) to match the implemented ELEARNING-CONTENT-PRD template. Slide 5 ("What is an AI agent?") added to provide a plain-language definition before decision criteria and judgment slides — per the definition-before-judgment rule added to ELEARNING-CONTENT-PRD §17 and §18.
 
 ### 9.3 Expandable Accordion Requirements
 
