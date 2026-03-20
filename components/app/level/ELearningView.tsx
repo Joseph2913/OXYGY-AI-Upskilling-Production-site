@@ -1056,43 +1056,60 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
         /* ── Level 3 intro variant ── */
         if (s.levelNumber === 3) {
-          const l3ObjIcons = ['🗺️', '⚙️', '🔁', '🎯'];
-          const nodePreview = [
+          const l3Nodes = [
             { label: 'TRIGGER',   color: '#667EEA', light: '#EBF4FF', icon: '▶' },
             { label: 'AI ACTION', color: '#38B2AC', light: '#E6FFFA', icon: '🤖' },
-            { label: 'TRANSFORM', color: '#ED8936', light: '#FFFBEB', icon: '↔' },
-            { label: 'CONDITION', color: '#48BB78', light: '#F0FFF4', icon: '?' },
+            { label: 'CONDITION', color: '#ED8936', light: '#FFFBEB', icon: '⑂' },
             { label: 'HANDOFF',   color: '#9F7AEA', light: '#FAF5FF', icon: '🤝' },
+            { label: 'TRANSFORM', color: '#48BB78', light: '#F0FFF4', icon: '↔' },
             { label: 'OUTPUT',    color: '#F6AD55', light: '#FFFAF0', icon: '📤' },
           ];
           return (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 64px' : '28px 40px', background: 'linear-gradient(160deg, #FFFBEB 0%, #FEF3C7 50%, #F7FAFC 100%)' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6A00', background: '#FBE8A6', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
+              {/* Left column */}
+              <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#1A7A76', background: '#A8F0E0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
                   LEVEL 3 · E-LEARNING
                 </span>
-                <h1 style={{ fontSize: fs ? 28 : 22, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
+                <h1 style={{ fontSize: fs ? 24 : 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
                   {s.heading}
                 </h1>
                 {s.subheading && (
-                  <p style={{ fontSize: fs ? 14 : 13, color: '#8A6A00', margin: '0 0 16px', lineHeight: 1.5, fontWeight: 600, maxWidth: 600 }}>
+                  <p style={{ fontSize: fs ? 13 : 12, color: '#1A7A76', margin: '0 0 14px', lineHeight: 1.5, fontWeight: 600, maxWidth: 380 }}>
                     {s.subheading}
                   </p>
                 )}
                 {s.objectives && (
-                  <div style={{ marginBottom: 28 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 12 }}>YOU'LL WALK AWAY WITH</div>
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 10 }}>YOU'LL WALK AWAY WITH</div>
                     {s.objectives.map((obj: string, i: number) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-                        <span style={{ fontSize: 14, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{l3ObjIcons[i] ?? '▸'}</span>
-                        <span style={{ fontSize: fs ? 14 : 13, color: '#2D3748', lineHeight: 1.6, fontWeight: 500 }}>{obj}</span>
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.55, fontWeight: 500 }}>{obj}</span>
                       </div>
                     ))}
                   </div>
                 )}
-                <button onClick={handleNextClick} style={{ alignSelf: 'flex-start', padding: '10px 26px', borderRadius: 24, border: 'none', background: '#C4A934', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+                <button onClick={handleNextClick} style={{ alignSelf: 'flex-start', padding: '10px 26px', borderRadius: 24, border: 'none', background: '#38B2AC', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
                   Start →
                 </button>
+              </div>
+              {/* Right column — Workflow node types preview */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '36px 32px' : '24px 22px', background: '#FAFBFC', gap: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 4 }}>WORKFLOW NODE TYPES</div>
+                <p style={{ fontSize: 11, color: '#718096', lineHeight: 1.55, margin: '0 0 10px' }}>
+                  Six building blocks. Chain them together to design any AI workflow.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+                  {l3Nodes.map((node) => (
+                    <div key={node.label} style={{ background: node.light, border: `1.5px solid ${node.color}40`, borderLeft: `3px solid ${node.color}`, borderRadius: '0 8px 8px 0', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>{node.icon}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: node.color, letterSpacing: '0.04em' }}>{node.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.5, margin: '8px 0 0', fontStyle: 'italic' }}>
+                  {s.estimatedTime} · You'll map a real workflow before this module ends.
+                </p>
               </div>
             </div>
           );
