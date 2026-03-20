@@ -129,7 +129,7 @@ function ExpandableText({ text, maxLen = 180, id, expanded, onToggle }: { text: 
 }
 
 /* ── Audio Bar (voiceover narration) ── */
-function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean }) {
+function AudioBar({ voiceover, isFullscreen, isInline }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean; isInline?: boolean }) {
   const { isLoading, isPlaying, isMuted, speed, volume, progress, duration } = voiceover;
   const speeds: Array<0.75 | 1 | 1.25 | 1.5 | 1.75 | 2> = [0.75, 1, 1.25, 1.5, 1.75, 2];
   const barPx = isFullscreen ? 28 : 16;
@@ -175,6 +175,71 @@ function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; 
     boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '8px 0',
     zIndex: 100, minWidth: 56,
   };
+
+  /* ── Inline variant: compact controls for embedding in the bottom nav bar ── */
+  if (isInline) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        {/* Play/Pause */}
+        <button
+          onClick={() => { if (isLoading) return; isPlaying ? voiceover.pause() : voiceover.play(); }}
+          style={{ width: 24, height: 24, borderRadius: '50%', background: '#1A202C', border: 'none', cursor: isLoading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
+        >
+          {isLoading ? (
+            <div style={{ width: 11, height: 11, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'voSpin 0.6s linear infinite' }} />
+          ) : isPlaying ? (
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="3.5" height="10" rx="1" fill="white"/><rect x="7.5" y="1" width="3.5" height="10" rx="1" fill="white"/></svg>
+          ) : (
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2.5 1L10.5 6L2.5 11V1Z" fill="white"/></svg>
+          )}
+        </button>
+        {/* Waveform */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 1.5, height: 13 }}>
+          {waveDelays.map((delay, i) => (
+            <div key={i} style={{ width: 2, borderRadius: 2, background: '#38B2AC', height: isPlaying ? undefined : 3, opacity: isPlaying ? 1 : 0.3, animation: isPlaying ? `voWave 0.9s ease-in-out ${delay}s infinite` : 'none' }} />
+          ))}
+        </div>
+        {/* Label */}
+        <span style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>Narration</span>
+        {timeStr && <span style={{ fontSize: 10, color: '#A0AEC0', fontVariantNumeric: 'tabular-nums' }}>{timeStr}</span>}
+        {/* Speed */}
+        <div ref={speedRef} style={{ position: 'relative' }}>
+          <button onClick={() => { setShowSpeedMenu(!showSpeedMenu); setShowVolumeMenu(false); }} style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, border: '1px solid #E2E8F0', background: showSpeedMenu ? '#1A202C' : '#FFFFFF', color: showSpeedMenu ? '#FFFFFF' : '#4A5568', cursor: 'pointer' }}>
+            {speed}×
+          </button>
+          {showSpeedMenu && (
+            <div style={popoverStyle}>
+              {speeds.map((s) => (
+                <button key={s} onClick={() => { voiceover.setSpeed(s); setShowSpeedMenu(false); }} style={{ display: 'block', width: '100%', padding: '6px 16px', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 12, fontWeight: speed === s ? 700 : 500, background: speed === s ? '#F7FAFC' : 'transparent', color: speed === s ? '#1A202C' : '#4A5568' }}>
+                  {s}×{speed === s ? ' ✓' : ''}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Volume */}
+        <div ref={volumeRef} style={{ position: 'relative' }}>
+          <button onClick={() => { setShowSpeedMenu(false); if (showVolumeMenu) { voiceover.toggleMute(); setShowVolumeMenu(false); } else { setShowVolumeMenu(true); } }} style={{ width: 24, height: 24, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: isMuted ? '#FC8181' : '#718096' }}>
+            {speakerIcon}
+          </button>
+          {showVolumeMenu && (
+            <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 6, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', zIndex: 100, width: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#1A202C' }}>{volPct}%</span>
+              <div style={{ position: 'relative', width: 20, height: 100, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ position: 'absolute', top: 0, width: 4, height: '100%', background: '#E2E8F0', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', bottom: 0, width: 4, height: `${volPct}%`, background: '#38B2AC', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', bottom: `calc(${volPct}% - 7px)`, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, borderRadius: '50%', background: '#38B2AC', border: '2px solid #FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.2)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} onMouseDown={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const setFromY = (clientY: number) => { const pxFromBottom = rect.bottom - clientY; voiceover.setVolume(Math.max(0, Math.min(1, pxFromBottom / rect.height))); }; setFromY(e.clientY); const onMove = (ev: MouseEvent) => setFromY(ev.clientY); const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); }} />
+              </div>
+              <button onClick={() => { voiceover.toggleMute(); setShowVolumeMenu(false); }} style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: isMuted ? '1.5px solid #E53E3E' : '1.5px solid #E2E8F0', cursor: 'pointer', padding: 0, background: isMuted ? '#FFF5F5' : '#F7FAFC', color: isMuted ? '#E53E3E' : '#718096' }}>
+                {isMuted ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ flexShrink: 0 }}>
@@ -3371,17 +3436,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   if (isFullscreen) {
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#FFFFFF', display: 'flex', flexDirection: 'column', fontFamily: "'DM Sans', sans-serif" }}>
-        {/* Top bar — white, minimize only */}
-        <div style={{ background: '#FFFFFF', height: 48, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0, borderBottom: '1px solid #EDF2F7' }}>
-          <button onClick={() => setIsFullscreen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }} title="Exit fullscreen (Esc)">
-            <Minimize2 size={16} color="#A0AEC0" />
-          </button>
-        </div>
-        {/* Progress bar */}
+        {/* Slide progress bar */}
         <div style={{ height: 3, background: '#EDF2F7', flexShrink: 0 }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
-        <AudioBar voiceover={voiceover} isFullscreen />
+        {/* Content */}
         <div style={{ flex: 1, position: 'relative', background: '#FFFFFF', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {renderTakeaway()}
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
@@ -3396,27 +3455,40 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
           )}
         </div>
-        {/* Bottom nav bar — white, dots centred */}
-        <div style={{ borderTop: '1px solid #EDF2F7', padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', flexShrink: 0 }}>
-          <button
-            onClick={() => goToSlide(currentSlide - 1)}
-            disabled={currentSlide === 1}
-            style={{ padding: '8px 20px', borderRadius: 24, minHeight: 40, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 13, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            ← Previous
-          </button>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            {renderDots('lg')}
-            <span style={{ fontSize: 10, color: '#A0AEC0' }}>{currentSlide} / {totalSlides}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            {showActivityWarning && (
-              <div className="activity-warning" style={{ background: '#1A202C', color: '#FFFFFF', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', whiteSpace: 'nowrap', letterSpacing: '0.01em', pointerEvents: 'none' }}>
-                {activityWarningMsg}
-              </div>
-            )}
-            <button onClick={handleNextClick} style={{ padding: '8px 20px', borderRadius: 24, minHeight: 40, border: 'none', background: isLastSlide ? accentColor : '#38B2AC', color: isLastSlide ? accentDark : '#FFFFFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}>
-              {nextLabel}
+        {/* Unified control panel */}
+        <div style={{ borderTop: '1px solid #EDF2F7', background: '#FFFFFF', flexShrink: 0 }}>
+          {/* Audio playback progress */}
+          {voiceover.duration > 0 && (
+            <div style={{ height: 2, background: '#E2E8F0' }}>
+              <div style={{ height: '100%', background: '#38B2AC', width: `${Math.min(voiceover.progress * 100, 100)}%`, transition: voiceover.isPlaying ? 'none' : 'width 0.2s ease', borderRadius: '0 1px 1px 0' }} />
+            </div>
+          )}
+          <div style={{ padding: '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            {/* ← Previous */}
+            <button onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide === 1} style={{ padding: '9px 22px', borderRadius: 24, minHeight: 42, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 13, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              ← Previous
             </button>
+            {/* Centre control panel pill */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 28, padding: '7px 18px' }}>
+              <AudioBar voiceover={voiceover} isInline />
+              <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{currentSlide} / {totalSlides}</span>
+              <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
+              <button onClick={() => setIsFullscreen(false)} title="Exit fullscreen (Esc)" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096' }}>
+                <Minimize2 size={15} />
+              </button>
+            </div>
+            {/* Next → */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              {showActivityWarning && (
+                <div className="activity-warning" style={{ background: '#1A202C', color: '#FFFFFF', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', whiteSpace: 'nowrap', letterSpacing: '0.01em', pointerEvents: 'none' }}>
+                  {activityWarningMsg}
+                </div>
+              )}
+              <button onClick={handleNextClick} style={{ padding: '9px 22px', borderRadius: 24, minHeight: 42, border: 'none', background: isLastSlide ? accentColor : '#38B2AC', color: isLastSlide ? accentDark : '#FFFFFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}>
+                {nextLabel}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -3498,14 +3570,13 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         <div style={{ height: 2, background: '#E2E8F0' }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
-        <AudioBar voiceover={voiceover} />
         {/* Nav bar and slide content are both inside the fixed-height container so nothing overflows */}
         <div style={{ width: '100%', height: 'calc(100vh - 260px)', minHeight: 440, maxHeight: 740, background: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
           {renderTakeaway()}
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
             {renderSlide()}
           </div>
-          {/* Source citation bar — shown only when slide has an external source */}
+          {/* Source citation bar */}
           {s.sourceLink && (
             <div style={{ flexShrink: 0, padding: '4px 20px', borderTop: '1px solid #EDF2F7', background: '#FAFBFC', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Source</span>
@@ -3514,28 +3585,37 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </a>
             </div>
           )}
-          {/* Nav bar lives inside the fixed container so it never pushes content offscreen */}
-          <div style={{ flexShrink: 0, borderTop: '1px solid #E2E8F0', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF' }}>
-            <button
-              onClick={() => goToSlide(currentSlide - 1)}
-              disabled={currentSlide === 1}
-              style={{ padding: '7px 18px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 13, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-            >
-              ← Previous
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {renderDots('sm')}
-              <span style={{ fontSize: 11, color: '#A0AEC0' }}>{currentSlide} / {totalSlides}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              {showActivityWarning && (
-                <div className="activity-warning" style={{ background: '#1A202C', color: '#FFFFFF', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', whiteSpace: 'nowrap', letterSpacing: '0.01em', pointerEvents: 'none' }}>
-                  {activityWarningMsg}
-                </div>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {renderFsButton()}
-                <button onClick={handleNextClick} style={{ padding: '8px 20px', borderRadius: 24, minHeight: 40, border: 'none', background: isLastSlide ? accentColor : '#38B2AC', color: isLastSlide ? accentDark : '#FFFFFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}>
+          {/* Unified control panel */}
+          <div style={{ flexShrink: 0, borderTop: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+            {/* Audio playback progress line */}
+            {voiceover.duration > 0 && (
+              <div style={{ height: 2, background: '#E2E8F0' }}>
+                <div style={{ height: '100%', background: '#38B2AC', width: `${Math.min(voiceover.progress * 100, 100)}%`, transition: voiceover.isPlaying ? 'none' : 'width 0.2s ease', borderRadius: '0 1px 1px 0' }} />
+              </div>
+            )}
+            <div style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              {/* ← Previous */}
+              <button onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide === 1} style={{ padding: '7px 16px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 12, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                ← Previous
+              </button>
+              {/* Centre control panel pill */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 24, padding: '5px 14px', minWidth: 0, overflow: 'hidden' }}>
+                <AudioBar voiceover={voiceover} isInline />
+                <div style={{ width: 1, height: 16, background: '#E2E8F0', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0 }}>{currentSlide} / {totalSlides}</span>
+                <div style={{ width: 1, height: 16, background: '#E2E8F0', flexShrink: 0 }} />
+                <button onClick={() => { setIsFullscreen(true); setShowFsTooltip(false); }} title="View fullscreen" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096', flexShrink: 0 }}>
+                  <Maximize2 size={13} />
+                </button>
+              </div>
+              {/* Next → */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
+                {showActivityWarning && (
+                  <div className="activity-warning" style={{ background: '#1A202C', color: '#FFFFFF', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', whiteSpace: 'nowrap', letterSpacing: '0.01em', pointerEvents: 'none' }}>
+                    {activityWarningMsg}
+                  </div>
+                )}
+                <button onClick={handleNextClick} style={{ padding: '7px 18px', borderRadius: 24, minHeight: 36, border: 'none', background: isLastSlide ? accentColor : '#38B2AC', color: isLastSlide ? accentDark : '#FFFFFF', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}>
                   {nextLabel}
                 </button>
               </div>
