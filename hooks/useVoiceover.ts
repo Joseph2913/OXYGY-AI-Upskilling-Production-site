@@ -68,6 +68,10 @@ export function useVoiceover(): UseVoiceoverReturn {
   const currentSrcRef = useRef<string | null>(null);
   const currentTypeRef = useRef<'setup' | 'reveal'>('setup');
   const genRef = useRef(0);
+  // Refs to track latest user settings — used when creating new Audio elements
+  const speedRef = useRef<Speed>(readSpeed());
+  const volumeRef = useRef(readVolume());
+  const mutedRef = useRef(readMuted());
 
   /* ── Progress animation ── */
   const startProgressLoop = useCallback(() => {
@@ -132,9 +136,9 @@ export function useVoiceover(): UseVoiceoverReturn {
 
     // Create audio element pointing to the static file
     const audio = new Audio(src);
-    audio.playbackRate = readSpeed();
-    audio.muted = readMuted();
-    audio.volume = readVolume();
+    audio.playbackRate = speedRef.current;
+    audio.muted = mutedRef.current;
+    audio.volume = volumeRef.current;
     audio.preload = 'auto';
     audioRef.current = audio;
 
@@ -172,6 +176,7 @@ export function useVoiceover(): UseVoiceoverReturn {
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev;
+      mutedRef.current = next;
       if (audioRef.current) audioRef.current.muted = next;
       try { localStorage.setItem('oxygy_vo_muted', String(next)); } catch { /* ignore */ }
       return next;
@@ -180,6 +185,7 @@ export function useVoiceover(): UseVoiceoverReturn {
 
   const setSpeed = useCallback((s: Speed) => {
     setSpeedState(s);
+    speedRef.current = s;
     if (audioRef.current) audioRef.current.playbackRate = s;
     try { localStorage.setItem('oxygy_vo_speed', String(s)); } catch { /* ignore */ }
   }, []);
@@ -187,9 +193,11 @@ export function useVoiceover(): UseVoiceoverReturn {
   const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v));
     setVolumeState(clamped);
+    volumeRef.current = clamped;
     if (audioRef.current) audioRef.current.volume = clamped;
     try { localStorage.setItem('oxygy_vo_volume', String(clamped)); } catch { /* ignore */ }
-    if (clamped > 0 && readMuted()) {
+    if (clamped > 0 && mutedRef.current) {
+      mutedRef.current = false;
       setIsMuted(false);
       if (audioRef.current) audioRef.current.muted = false;
       try { localStorage.setItem('oxygy_vo_muted', 'false'); } catch { /* ignore */ }
