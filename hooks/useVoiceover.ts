@@ -21,7 +21,7 @@ export interface UseVoiceoverReturn extends VoiceoverState {
   toggleMute: () => void;
   setSpeed: (speed: Speed) => void;
   setVolume: (vol: number) => void;
-  loadClip: (src: string, type: 'setup' | 'reveal') => Promise<void>;
+  loadClip: (src: string, type: 'setup' | 'reveal', autoPlay?: boolean) => Promise<void>;
   stopAndReset: () => void;
 }
 
@@ -123,7 +123,7 @@ export function useVoiceover(): UseVoiceoverReturn {
   };
 
   /* ── Load a static audio file ── */
-  const loadClip = useCallback((src: string, type: 'setup' | 'reveal') => {
+  const loadClip = useCallback((src: string, type: 'setup' | 'reveal', autoPlay = true) => {
     // Kill any existing audio immediately
     genRef.current += 1;
     const myGen = genRef.current;
@@ -169,9 +169,11 @@ export function useVoiceover(): UseVoiceoverReturn {
       setHasAudio(true);
       setIsLoading(false);
       if (isFinite(audio.duration)) setDuration(audio.duration);
-      audio.play().then(() => {
-        applySettings(audio); // re-apply after play resolves
-      }).catch(() => { /* autoplay blocked */ });
+      if (autoPlay) {
+        audio.play().then(() => {
+          applySettings(audio); // re-apply after play resolves
+        }).catch(() => { /* autoplay blocked */ });
+      }
     };
 
     audio.addEventListener('canplaythrough', () => { startPlayback(); }, { once: true });

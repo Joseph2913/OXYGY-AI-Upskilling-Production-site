@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2, ChevronDown, ChevronUp, User, Map, Target, Layout, List, ShieldCheck } from 'lucide-react';
 import { SlideData } from '../../../data/topicContent';
 import { useVoiceover, UseVoiceoverReturn } from '../../../hooks/useVoiceover';
@@ -129,7 +130,7 @@ function ExpandableText({ text, maxLen = 180, id, expanded, onToggle }: { text: 
 }
 
 /* ── Audio Bar (voiceover narration) ── */
-function AudioBar({ voiceover, isFullscreen, isInline }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean; isInline?: boolean }) {
+function AudioBar({ voiceover, isFullscreen, isInline, autoNarration, onToggleAutoNarration }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean; isInline?: boolean; autoNarration?: boolean; onToggleAutoNarration?: () => void }) {
   const { isLoading, isPlaying, isMuted, speed, volume, progress, duration } = voiceover;
   const speeds: Array<0.75 | 1 | 1.25 | 1.5 | 1.75 | 2> = [0.75, 1, 1.25, 1.5, 1.75, 2];
   const barPx = isFullscreen ? 28 : 16;
@@ -144,19 +145,28 @@ function AudioBar({ voiceover, isFullscreen, isInline }: { voiceover: UseVoiceov
 
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
+  const [showNarrationMenu, setShowNarrationMenu] = useState(false);
+  const [narrationMenuPos, setNarrationMenuPos] = useState({ bottom: 0, left: 0 });
   const speedRef = React.useRef<HTMLDivElement>(null);
   const volumeRef = React.useRef<HTMLDivElement>(null);
+  const narrationRef = React.useRef<HTMLDivElement>(null);
+  const narrationPopoverRef = React.useRef<HTMLDivElement>(null);
 
   // Close menus when clicking outside
   useEffect(() => {
-    if (!showSpeedMenu && !showVolumeMenu) return;
+    if (!showSpeedMenu && !showVolumeMenu && !showNarrationMenu) return;
     const handler = (e: MouseEvent) => {
       if (showSpeedMenu && speedRef.current && !speedRef.current.contains(e.target as Node)) setShowSpeedMenu(false);
       if (showVolumeMenu && volumeRef.current && !volumeRef.current.contains(e.target as Node)) setShowVolumeMenu(false);
+      if (showNarrationMenu) {
+        const inTrigger = narrationRef.current?.contains(e.target as Node);
+        const inPopover = narrationPopoverRef.current?.contains(e.target as Node);
+        if (!inTrigger && !inPopover) setShowNarrationMenu(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showSpeedMenu, showVolumeMenu]);
+  }, [showSpeedMenu, showVolumeMenu, showNarrationMenu]);
 
   const volPct = Math.round((isMuted ? 0 : volume) * 100);
 
@@ -179,44 +189,118 @@ function AudioBar({ voiceover, isFullscreen, isInline }: { voiceover: UseVoiceov
   /* ── Inline variant: compact controls for embedding in the bottom nav bar ── */
   if (isInline) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* Play/Pause */}
         <button
           onClick={() => { if (isLoading) return; isPlaying ? voiceover.pause() : voiceover.play(); }}
           style={{ width: 24, height: 24, borderRadius: '50%', background: '#1A202C', border: 'none', cursor: isLoading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
         >
           {isLoading ? (
-            <div style={{ width: 11, height: 11, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'voSpin 0.6s linear infinite' }} />
+            <div style={{ width: 10, height: 10, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'voSpin 0.6s linear infinite' }} />
           ) : isPlaying ? (
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="3.5" height="10" rx="1" fill="white"/><rect x="7.5" y="1" width="3.5" height="10" rx="1" fill="white"/></svg>
+            <svg width="8" height="8" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="3.5" height="10" rx="1" fill="white"/><rect x="7.5" y="1" width="3.5" height="10" rx="1" fill="white"/></svg>
           ) : (
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2.5 1L10.5 6L2.5 11V1Z" fill="white"/></svg>
+            <svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M2.5 1L10.5 6L2.5 11V1Z" fill="white"/></svg>
           )}
         </button>
-        {/* Waveform */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 1.5, height: 13 }}>
-          {waveDelays.map((delay, i) => (
-            <div key={i} style={{ width: 2, borderRadius: 2, background: '#38B2AC', height: isPlaying ? undefined : 3, opacity: isPlaying ? 1 : 0.3, animation: isPlaying ? `voWave 0.9s ease-in-out ${delay}s infinite` : 'none' }} />
-          ))}
-        </div>
-        {/* Label */}
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>Narration</span>
-        {timeStr && <span style={{ fontSize: 10, color: '#A0AEC0', fontVariantNumeric: 'tabular-nums' }}>{timeStr}</span>}
-        {/* Speed */}
-        <div ref={speedRef} style={{ position: 'relative' }}>
-          <button onClick={() => { setShowSpeedMenu(!showSpeedMenu); setShowVolumeMenu(false); }} style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, border: '1px solid #E2E8F0', background: showSpeedMenu ? '#1A202C' : '#FFFFFF', color: showSpeedMenu ? '#FFFFFF' : '#4A5568', cursor: 'pointer' }}>
-            {speed}×
+
+        {/* Time */}
+        {timeStr && (
+          <span style={{ fontSize: 10, color: '#A0AEC0', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{timeStr}</span>
+        )}
+
+        {/* Narration button — opens portal popover with settings */}
+        <div ref={narrationRef}>
+          <button
+            onClick={() => {
+              if (!showNarrationMenu && narrationRef.current) {
+                const rect = narrationRef.current.getBoundingClientRect();
+                setNarrationMenuPos({
+                  bottom: window.innerHeight - rect.top + 10,
+                  left: rect.left + rect.width / 2,
+                });
+              }
+              setShowNarrationMenu(prev => !prev);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4, background: showNarrationMenu ? '#1A202C' : 'transparent',
+              border: `1px solid ${showNarrationMenu ? '#1A202C' : '#E2E8F0'}`, borderRadius: 12,
+              padding: '3px 10px', cursor: 'pointer',
+              fontSize: 10, fontWeight: 700, color: showNarrationMenu ? '#FFFFFF' : '#718096',
+              letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+            }}
+          >
+            Narration
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+              <path d={showNarrationMenu ? 'M1 6L4 3L7 6' : 'M1 3L4 6L7 3'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </button>
-          {showSpeedMenu && (
-            <div style={popoverStyle}>
-              {speeds.map((s) => (
-                <button key={s} onClick={() => { voiceover.setSpeed(s); setShowSpeedMenu(false); }} style={{ display: 'block', width: '100%', padding: '6px 16px', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 12, fontWeight: speed === s ? 700 : 500, background: speed === s ? '#F7FAFC' : 'transparent', color: speed === s ? '#1A202C' : '#4A5568' }}>
-                  {s}×{speed === s ? ' ✓' : ''}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+
+        {/* Narration popover — rendered via portal so it escapes overflow:hidden parents */}
+        {showNarrationMenu && createPortal(
+          <div
+            ref={narrationPopoverRef}
+            style={{
+              position: 'fixed',
+              bottom: narrationMenuPos.bottom,
+              left: narrationMenuPos.left,
+              transform: 'translateX(-50%)',
+              background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 14,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.14)', padding: '14px 16px',
+              zIndex: 9999, minWidth: 210,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            {/* Arrow pointing down */}
+            <div style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%) rotate(45deg)', width: 9, height: 9, background: '#FFFFFF', borderRight: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }} />
+
+            {/* Speed */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, marginBottom: 6 }}>Speed</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
+                {speeds.map((s) => (
+                  <button key={s} onClick={() => voiceover.setSpeed(s)} style={{
+                    padding: '3px 9px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: speed === s ? 700 : 500,
+                    background: speed === s ? '#1A202C' : '#F7FAFC',
+                    color: speed === s ? '#FFFFFF' : '#4A5568',
+                  }}>
+                    {s}×
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mute */}
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#4A5568' }}>Mute</span>
+              <button
+                onClick={() => voiceover.toggleMute()}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 600, color: isMuted ? '#E53E3E' : '#38B2AC' }}
+              >
+                <span style={{ color: isMuted ? '#E53E3E' : '#718096' }}>{speakerIcon}</span>
+                {isMuted ? 'Muted' : 'On'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: '#EDF2F7', marginBottom: 12 }} />
+
+            {/* Auto-narrate */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#4A5568' }}>Auto-narrate</div>
+                <div style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.4 }}>Play audio on each slide</div>
+              </div>
+              <button onClick={onToggleAutoNarration} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                <div style={{ width: 32, height: 18, borderRadius: 9, background: autoNarration ? '#38B2AC' : '#CBD5E0', transition: 'background 0.2s', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 3, left: autoNarration ? 17 : 3, width: 12, height: 12, borderRadius: '50%', background: '#FFFFFF', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     );
   }
@@ -409,6 +493,16 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   };
   const practiceUrl = PRACTICE_URLS[moduleLevel] ?? '/app/toolkit';
   const voiceover = useVoiceover();
+  const [autoNarration, setAutoNarration] = useState<boolean>(() => {
+    try { return localStorage.getItem('oxygy_auto_narration') !== 'false'; } catch { return true; }
+  });
+  const toggleAutoNarration = useCallback(() => {
+    setAutoNarration(prev => {
+      const next = !prev;
+      try { localStorage.setItem('oxygy_auto_narration', String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([currentSlide]));
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFsTooltip, setShowFsTooltip] = useState(true);
@@ -3228,7 +3322,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     // Voiceover: load the new slide's setup clip (loadClip handles stopping previous audio)
     const currentSlideData = slides[currentSlide - 1];
     if (currentSlideData?.voiceover?.setup) {
-      voiceover.loadClip(currentSlideData.voiceover.setup, 'setup');
+      voiceover.loadClip(currentSlideData.voiceover.setup, 'setup', autoNarration);
     } else {
       voiceover.stopAndReset();
     }
@@ -3450,7 +3544,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </button>
             {/* Centre control panel pill */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 28, padding: '7px 18px' }}>
-              <AudioBar voiceover={voiceover} isInline />
+              <AudioBar voiceover={voiceover} isInline autoNarration={autoNarration} onToggleAutoNarration={toggleAutoNarration} />
               <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{currentSlide} / {totalSlides}</span>
               <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
@@ -3580,7 +3674,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </button>
               {/* Centre control panel pill */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 24, padding: '5px 14px', minWidth: 0, overflow: 'hidden' }}>
-                <AudioBar voiceover={voiceover} isInline />
+                <AudioBar voiceover={voiceover} isInline autoNarration={autoNarration} onToggleAutoNarration={toggleAutoNarration} />
                 <div style={{ width: 1, height: 16, background: '#E2E8F0', flexShrink: 0 }} />
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0 }}>{currentSlide} / {totalSlides}</span>
                 <div style={{ width: 1, height: 16, background: '#E2E8F0', flexShrink: 0 }} />
