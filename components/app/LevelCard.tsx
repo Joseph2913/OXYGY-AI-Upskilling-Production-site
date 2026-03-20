@@ -360,7 +360,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
 
             return (
               <>
-                <div style={chipStyle} onClick={() => navigate(level.levelNumber === 1 ? '/app/level-1' : `/app/level?level=${level.levelNumber}`)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={chipStyle} onClick={() => navigate(`/app/level?level=${level.levelNumber}`)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <BookOpen size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -422,7 +422,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
         </span>
         {isAccessible ? (
           <button
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(level.levelNumber === 1 ? '/app/level-1' : `/app/level?level=${level.levelNumber}`); }}
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(`/app/level?level=${level.levelNumber}`); }}
             style={{
               background: `${accent}30`, color: accentDark, border: `1.5px solid ${accent}88`,
               borderRadius: 20, padding: '7px 18px', fontSize: 12, fontWeight: 700,
@@ -518,7 +518,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 <button
                   onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
-                    navigate(level.levelNumber === 1 ? '/app/level-1' : `/app/level?level=${level.levelNumber}`);
+                    navigate(`/app/level?level=${level.levelNumber}`);
                   }}
                   style={{
                     background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,

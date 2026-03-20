@@ -684,7 +684,7 @@ const AppJourney: React.FC = () => {
             <button
               onClick={() => {
                 if (currentLevel.status === 'active' || currentLevel.status === 'completed') {
-                  navigate(currentLevel.levelNumber === 1 ? '/app/level-1' : `/app/level?level=${currentLevel.levelNumber}`);
+                  navigate(`/app/level?level=${currentLevel.levelNumber}`);
                 } else {
                   scrollToLevel(currentLevel.levelNumber);
                 }
