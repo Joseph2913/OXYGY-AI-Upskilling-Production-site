@@ -51,13 +51,18 @@ function killAudio(audio: HTMLAudioElement | null) {
   try { audio.removeAttribute('src'); audio.load(); } catch { /* ignore */ }
 }
 
+/* ── Module-level settings — single source of truth for speed/volume/mute ── */
+let _speed: Speed = readSpeed();
+let _volume: number = readVolume();
+let _muted: boolean = readMuted();
+
 /* ── Hook ── */
 export function useVoiceover(): UseVoiceoverReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(readMuted);
-  const [speed, setSpeedState] = useState<Speed>(readSpeed);
-  const [volume, setVolumeState] = useState(readVolume);
+  const [isMuted, setIsMuted] = useState(_muted);
+  const [speed, setSpeedState] = useState<Speed>(_speed);
+  const [volume, setVolumeState] = useState(_volume);
   const [hasAudio, setHasAudio] = useState(false);
   const [clipType, setClipType] = useState<'setup' | 'reveal'>('setup');
   const [progress, setProgress] = useState(0);
@@ -68,10 +73,6 @@ export function useVoiceover(): UseVoiceoverReturn {
   const currentSrcRef = useRef<string | null>(null);
   const currentTypeRef = useRef<'setup' | 'reveal'>('setup');
   const genRef = useRef(0);
-  // Refs to track latest user settings — used when creating new Audio elements
-  const speedRef = useRef<Speed>(readSpeed());
-  const volumeRef = useRef(readVolume());
-  const mutedRef = useRef(readMuted());
 
   /* ── Progress animation ── */
   const startProgressLoop = useCallback(() => {
@@ -114,8 +115,15 @@ export function useVoiceover(): UseVoiceoverReturn {
     setDuration(0);
   }, [stopProgressLoop]);
 
+  /** Apply current settings to an audio element */
+  const applySettings = (audio: HTMLAudioElement) => {
+    audio.playbackRate = _speed;
+    audio.muted = _muted;
+    audio.volume = _volume;
+  };
+
   /* ── Load a static audio file ── */
-  const loadClip = useCallback(async (src: string, type: 'setup' | 'reveal') => {
+  const loadClip = useCallback((src: string, type: 'setup' | 'reveal') => {
     // Kill any existing audio immediately
     genRef.current += 1;
     const myGen = genRef.current;
@@ -134,59 +142,73 @@ export function useVoiceover(): UseVoiceoverReturn {
 
     const isStale = () => genRef.current !== myGen;
 
-    // Create audio element pointing to the static file
     const audio = new Audio(src);
-    audio.playbackRate = speedRef.current;
-    audio.muted = mutedRef.current;
-    audio.volume = volumeRef.current;
     audio.preload = 'auto';
     audioRef.current = audio;
 
-    // Re-apply playbackRate after play — some browsers reset it
-    const ensureSpeed = () => {
-      if (audio.playbackRate !== speedRef.current) {
-        audio.playbackRate = speedRef.current;
+    // Apply settings immediately
+    applySettings(audio);
+
+    // Aggressively enforce speed: some browsers reset playbackRate at various points.
+    // Use timeupdate for the first 2 seconds to keep hammering it.
+    let speedEnforceCount = 0;
+    const enforceSpeed = () => {
+      if (audio.playbackRate !== _speed) {
+        audio.playbackRate = _speed;
+      }
+      speedEnforceCount++;
+      if (speedEnforceCount > 10) {
+        audio.removeEventListener('timeupdate', enforceSpeed);
       }
     };
+    audio.addEventListener('timeupdate', enforceSpeed);
 
-    audio.addEventListener('canplaythrough', () => {
+    const startPlayback = () => {
       if (isStale()) return;
+      applySettings(audio); // re-apply right before play
       setHasAudio(true);
       setIsLoading(false);
       if (isFinite(audio.duration)) setDuration(audio.duration);
-      audio.play().then(() => { ensureSpeed(); }).catch(() => { /* autoplay blocked */ });
-    }, { once: true });
+      audio.play().then(() => {
+        applySettings(audio); // re-apply after play resolves
+      }).catch(() => { /* autoplay blocked */ });
+    };
+
+    audio.addEventListener('canplaythrough', () => { startPlayback(); }, { once: true });
 
     audio.addEventListener('play', () => {
       if (isStale()) return;
-      ensureSpeed();
+      applySettings(audio);
       setIsPlaying(true);
       startProgressLoop();
     });
-    audio.addEventListener('pause', () => { if (!isStale() && !audio.ended) { setIsPlaying(false); stopProgressLoop(); } });
-    audio.addEventListener('ended', () => { if (!isStale()) { setIsPlaying(false); stopProgressLoop(); setProgress(1); } });
+    audio.addEventListener('pause', () => {
+      if (!isStale() && !audio.ended) { setIsPlaying(false); stopProgressLoop(); }
+    });
+    audio.addEventListener('ended', () => {
+      if (!isStale()) { setIsPlaying(false); stopProgressLoop(); setProgress(1); }
+    });
     audio.addEventListener('loadedmetadata', () => {
       if (isStale()) return;
       if (isFinite(audio.duration)) setDuration(audio.duration);
-      // If canplaythrough already fired (cached file), the audio may already be ready
-      if (audio.readyState >= 4) {
-        setHasAudio(true);
-        setIsLoading(false);
-        audio.play().then(() => { ensureSpeed(); }).catch(() => {});
-      }
+      applySettings(audio);
+      // If already buffered (cached file), start immediately
+      if (audio.readyState >= 4) startPlayback();
     });
     audio.addEventListener('error', () => {
       if (!isStale()) { setIsLoading(false); setHasAudio(false); }
     });
 
-    // Kick off loading
     audio.load();
   }, [startProgressLoop, stopProgressLoop]);
 
   /* ── Play (resume or reload) ── */
   const play = useCallback(() => {
     if (audioRef.current && audioRef.current.src) {
-      audioRef.current.play().catch(() => {});
+      applySettings(audioRef.current);
+      audioRef.current.play().then(() => {
+        if (audioRef.current) applySettings(audioRef.current);
+      }).catch(() => {});
     } else if (currentSrcRef.current) {
       loadClip(currentSrcRef.current, currentTypeRef.current);
     }
@@ -195,30 +217,28 @@ export function useVoiceover(): UseVoiceoverReturn {
   const pause = useCallback(() => { audioRef.current?.pause(); }, []);
 
   const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      mutedRef.current = next;
-      if (audioRef.current) audioRef.current.muted = next;
-      try { localStorage.setItem('oxygy_vo_muted', String(next)); } catch { /* ignore */ }
-      return next;
-    });
+    const next = !_muted;
+    _muted = next;
+    setIsMuted(next);
+    if (audioRef.current) audioRef.current.muted = next;
+    try { localStorage.setItem('oxygy_vo_muted', String(next)); } catch { /* ignore */ }
   }, []);
 
   const setSpeed = useCallback((s: Speed) => {
+    _speed = s;
     setSpeedState(s);
-    speedRef.current = s;
     if (audioRef.current) audioRef.current.playbackRate = s;
     try { localStorage.setItem('oxygy_vo_speed', String(s)); } catch { /* ignore */ }
   }, []);
 
   const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v));
+    _volume = clamped;
     setVolumeState(clamped);
-    volumeRef.current = clamped;
     if (audioRef.current) audioRef.current.volume = clamped;
     try { localStorage.setItem('oxygy_vo_volume', String(clamped)); } catch { /* ignore */ }
-    if (clamped > 0 && mutedRef.current) {
-      mutedRef.current = false;
+    if (clamped > 0 && _muted) {
+      _muted = false;
       setIsMuted(false);
       if (audioRef.current) audioRef.current.muted = false;
       try { localStorage.setItem('oxygy_vo_muted', 'false'); } catch { /* ignore */ }
