@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Maximize2, Minimize2, ChevronDown, ChevronUp, User, Map, Target, Layout, List, ShieldCheck } from 'lucide-react';
 import { SlideData } from '../../../data/topicContent';
+import { useVoiceover, UseVoiceoverReturn } from '../../../hooks/useVoiceover';
 
 /* ── Glow + animation keyframe CSS (injected once) ── */
 const GLOW_STYLE_ID = 'elearn-glow-style';
@@ -38,6 +39,13 @@ function injectGlowStyle() {
     .flip-card-inner.flipped { transform: rotateY(180deg); }
     .flip-card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
     .flip-card-back { transform: rotateY(180deg); }
+    @keyframes voWave {
+      0%, 100% { height: 4px; }
+      50% { height: 14px; }
+    }
+    @keyframes voSpin {
+      to { transform: rotate(360deg); }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -120,6 +128,204 @@ function ExpandableText({ text, maxLen = 180, id, expanded, onToggle }: { text: 
   );
 }
 
+/* ── Audio Bar (voiceover narration) ── */
+function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean }) {
+  const { isLoading, isPlaying, isMuted, speed, volume, progress } = voiceover;
+  const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+  const disabled = !apiKey;
+  const speeds: Array<0.75 | 1 | 1.25 | 1.5 | 1.75 | 2> = [0.75, 1, 1.25, 1.5, 1.75, 2];
+  const barPx = isFullscreen ? 28 : 16;
+  const waveDelays = [0, 0.1, 0.2, 0.1, 0];
+  const pct = Math.min(progress * 100, 100);
+
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showVolumeMenu, setShowVolumeMenu] = useState(false);
+  const speedRef = React.useRef<HTMLDivElement>(null);
+  const volumeRef = React.useRef<HTMLDivElement>(null);
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    if (!showSpeedMenu && !showVolumeMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (showSpeedMenu && speedRef.current && !speedRef.current.contains(e.target as Node)) setShowSpeedMenu(false);
+      if (showVolumeMenu && volumeRef.current && !volumeRef.current.contains(e.target as Node)) setShowVolumeMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSpeedMenu, showVolumeMenu]);
+
+  const volPct = Math.round((isMuted ? 0 : volume) * 100);
+
+  // Speaker icon changes based on volume level
+  const speakerIcon = isMuted || volume === 0 ? (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+  ) : volume < 0.5 ? (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+  ) : (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+  );
+
+  const popoverStyle: React.CSSProperties = {
+    position: 'absolute', top: '100%', right: 0, marginTop: 6,
+    background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10,
+    boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '8px 0',
+    zIndex: 100, minWidth: 56,
+  };
+
+  return (
+    <div style={{ flexShrink: 0, opacity: disabled ? 0.4 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
+      {/* Controls row */}
+      <div style={{ height: isFullscreen ? 40 : 36, background: '#F7FAFC', padding: `0 ${barPx}px`, display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Play / Pause / Spinner */}
+        <button
+          onClick={() => { if (isLoading) return; isPlaying ? voiceover.pause() : voiceover.play(); }}
+          style={{ width: 28, height: 28, borderRadius: '50%', background: '#1A202C', border: 'none', cursor: isLoading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
+          onMouseEnter={(e) => { if (!isLoading) (e.currentTarget as HTMLElement).style.background = '#2D3748'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '#1A202C'; }}
+        >
+          {isLoading ? (
+            <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'voSpin 0.6s linear infinite' }} />
+          ) : isPlaying ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="3.5" height="10" rx="1" fill="white"/><rect x="7.5" y="1" width="3.5" height="10" rx="1" fill="white"/></svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 1L10.5 6L2.5 11V1Z" fill="white"/></svg>
+          )}
+        </button>
+
+        {/* Waveform bars */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 16 }}>
+          {waveDelays.map((delay, i) => (
+            <div key={i} style={{
+              width: 2, borderRadius: 2, background: '#38B2AC',
+              height: isPlaying ? undefined : 4,
+              opacity: isPlaying ? 1 : 0.3,
+              animation: isPlaying ? `voWave 0.9s ease-in-out ${delay}s infinite` : (isLoading ? `voWave 1.5s ease-in-out ${delay}s infinite` : 'none'),
+              ...(isLoading && !isPlaying ? { opacity: 0.35 } : {}),
+              ...(!isPlaying && !isLoading ? { height: 4 } : {}),
+            }} />
+          ))}
+        </div>
+
+        {/* Label */}
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>Narration</span>
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Speed toggle + popover */}
+        <div ref={speedRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => { setShowSpeedMenu(!showSpeedMenu); setShowVolumeMenu(false); }}
+            style={{
+              fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 8,
+              border: '1px solid #E2E8F0', background: showSpeedMenu ? '#1A202C' : '#FFFFFF',
+              color: showSpeedMenu ? '#FFFFFF' : '#4A5568', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 3,
+            }}
+          >
+            {speed}× <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 3L4 6L7 3" stroke={showSpeedMenu ? '#FFFFFF' : '#A0AEC0'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          {showSpeedMenu && (
+            <div style={popoverStyle}>
+              {speeds.map((s) => (
+                <button key={s} onClick={() => { voiceover.setSpeed(s); setShowSpeedMenu(false); }} style={{
+                  display: 'block', width: '100%', padding: '6px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  fontSize: 12, fontWeight: speed === s ? 700 : 500,
+                  background: speed === s ? '#F7FAFC' : 'transparent',
+                  color: speed === s ? '#1A202C' : '#4A5568',
+                }}>
+                  {s}×{speed === s ? ' ✓' : ''}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Volume: single click = open panel, click again (when open) = mute */}
+        <div ref={volumeRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => {
+              setShowSpeedMenu(false);
+              if (showVolumeMenu) {
+                voiceover.toggleMute();
+                setShowVolumeMenu(false);
+              } else {
+                setShowVolumeMenu(true);
+              }
+            }}
+            style={{ width: 28, height: 28, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0, color: '#718096' }}
+          >
+            {speakerIcon}
+          </button>
+          {showVolumeMenu && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: 6,
+              background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px',
+              zIndex: 100, width: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            }}>
+              {/* Percentage */}
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#1A202C' }}>{volPct}%</span>
+              {/* Vertical slider track */}
+              <div style={{ position: 'relative', width: 20, height: 120, display: 'flex', justifyContent: 'center' }}>
+                {/* Track bg */}
+                <div style={{ position: 'absolute', top: 0, width: 4, height: '100%', background: '#E2E8F0', borderRadius: 2 }} />
+                {/* Track fill (from bottom) */}
+                <div style={{ position: 'absolute', bottom: 0, width: 4, height: `${volPct}%`, background: '#38B2AC', borderRadius: 2 }} />
+                {/* Visible thumb */}
+                <div style={{
+                  position: 'absolute', bottom: `calc(${volPct}% - 7px)`, left: '50%', transform: 'translateX(-50%)',
+                  width: 14, height: 14, borderRadius: '50%',
+                  background: '#38B2AC', border: '2px solid #FFFFFF',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)', pointerEvents: 'none',
+                }} />
+                {/* Clickable track area — captures clicks to set volume by position */}
+                <div
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }}
+                  onMouseDown={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const setFromY = (clientY: number) => {
+                      const pxFromBottom = rect.bottom - clientY;
+                      const ratio = Math.max(0, Math.min(1, pxFromBottom / rect.height));
+                      voiceover.setVolume(ratio);
+                    };
+                    setFromY(e.clientY);
+                    const onMove = (ev: MouseEvent) => setFromY(ev.clientY);
+                    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                  }}
+                />
+              </div>
+              {/* Mute icon button */}
+              <button
+                onClick={() => { voiceover.toggleMute(); setShowVolumeMenu(false); }}
+                style={{
+                  width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: isMuted ? '1.5px solid #E53E3E' : '1.5px solid #E2E8F0', cursor: 'pointer', padding: 0,
+                  background: isMuted ? '#FFF5F5' : '#F7FAFC',
+                  color: isMuted ? '#E53E3E' : '#718096',
+                }}
+              >
+                {isMuted ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Progress line */}
+      <div style={{ height: 3, background: '#E2E8F0' }}>
+        <div style={{ height: '100%', background: '#38B2AC', width: `${pct}%`, transition: isPlaying ? 'none' : 'width 0.2s ease', borderRadius: '0 1.5px 1.5px 0' }} />
+      </div>
+    </div>
+  );
+}
+
 /* ── Props ── */
 interface ELearningViewProps {
   slides: SlideData[];
@@ -152,6 +358,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     5: '/app/level-5/app-evaluator',
   };
   const practiceUrl = PRACTICE_URLS[moduleLevel] ?? '/app/toolkit';
+  const voiceover = useVoiceover();
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([currentSlide]));
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFsTooltip, setShowFsTooltip] = useState(true);
@@ -2401,7 +2608,22 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     setFlawSelected(null);
     setPersonaCaseStudyIdx(0);
     setSjSelectedOption(null);
+    // Voiceover: load the new slide's setup clip (loadClip handles stopping previous audio)
+    const currentSlideData = slides[currentSlide - 1];
+    if (currentSlideData?.voiceover?.setup) {
+      voiceover.loadClip(currentSlideData.voiceover.setup, 'setup');
+    } else {
+      voiceover.stopAndReset();
+    }
   }, [currentSlide]);
+
+  // Voiceover: play reveal clip when correct prediction is selected on persona slides
+  useEffect(() => {
+    const slide = slides[currentSlide - 1];
+    if (slide?.predictFirst && predictSelected !== null && predictSelected === slide.predictCorrect && slide.voiceover?.reveal) {
+      voiceover.loadClip(slide.voiceover.reveal, 'reveal');
+    }
+  }, [predictSelected]);
 
   /* ── Next button interception: reveal slides + situationalJudgment cycling ── */
   const showToast = (msg: string) => {
@@ -2559,6 +2781,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         <div style={{ height: 3, background: '#2D3748', flexShrink: 0 }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
+        <AudioBar voiceover={voiceover} isFullscreen />
         <div style={{ flex: 1, position: 'relative', background: '#FFFFFF', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {renderTakeaway()}
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
@@ -2662,6 +2885,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         <div style={{ height: 2, background: '#E2E8F0' }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
+        <AudioBar voiceover={voiceover} />
         {/* Nav bar and slide content are both inside the fixed-height container so nothing overflows */}
         <div style={{ width: '100%', height: 'calc(100vh - 260px)', minHeight: 440, maxHeight: 740, background: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
           {renderTakeaway()}

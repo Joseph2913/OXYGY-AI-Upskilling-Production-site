@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   X, ExternalLink, Copy, ChevronLeft, ChevronRight,
   Zap, Bot, GitBranch, LayoutDashboard, Layers,
-  BookOpen, FileText,
+  BookOpen, FileText, Award,
 } from 'lucide-react';
 import { LEVEL_ACCENT_COLORS, LEVEL_ACCENT_DARK_COLORS } from '../../../data/levelTopics';
 import { timeAgo } from '../../../utils/timeAgo';
@@ -16,27 +16,32 @@ import DashboardContent from './content/DashboardContent';
 import AppSpecContent from './content/AppSpecContent';
 import BuildGuideContent from './content/BuildGuideContent';
 import PrdContent from './content/PrdContent';
+import ProjectProofContent from './content/ProjectProofContent';
 
 const TYPE_ICONS: Record<ArtefactType, React.FC<{ size?: number; color?: string }>> = {
   prompt: Zap, agent: Bot, workflow: GitBranch, dashboard: LayoutDashboard,
-  app_spec: Layers, build_guide: BookOpen, prd: FileText,
+  app_spec: Layers, build_guide: BookOpen, prd: FileText, pathway: Zap,
+  project_proof: Award,
 };
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
   prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard',
-  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD',
+  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD', pathway: 'Pathway',
+  project_proof: 'Project Proof',
 };
 
 const TOOL_NAMES: Record<ArtefactType, string> = {
   prompt: 'Prompt Playground', agent: 'Agent Builder', workflow: 'Workflow Canvas',
   dashboard: 'Dashboard Designer', app_spec: 'App Builder',
-  build_guide: 'Various', prd: 'Dashboard Designer',
+  build_guide: 'Various', prd: 'Dashboard Designer', pathway: 'Learning Coach',
+  project_proof: 'Project Proof',
 };
 
 const TOOL_ROUTES: Record<ArtefactType, string> = {
   prompt: '/app/toolkit/prompt-playground', agent: '/app/toolkit/agent-builder',
   workflow: '/app/toolkit/workflow-canvas', dashboard: '/app/toolkit/dashboard-designer',
   app_spec: '/app/toolkit/app-builder', build_guide: '', prd: '/app/toolkit/dashboard-designer',
+  pathway: '', project_proof: '',
 };
 
 function getCopyText(content: ArtefactContent, type: ArtefactType): string {
@@ -48,6 +53,7 @@ function getCopyText(content: ArtefactContent, type: ArtefactType): string {
     case 'app_spec': return content.evaluationMarkdown || content.description || '';
     case 'build_guide': return content.markdown || '';
     case 'prd': return content.prdMarkdown || '';
+    case 'project_proof': return content.reflectionText || '';
     default: return '';
   }
 }
@@ -268,19 +274,45 @@ const QuickUsePanel: React.FC<Props> = ({
             background: `${accent}08`,
           }}
         >
-          {TOOL_ROUTES[artefact.type] && (
+          {artefact.type === 'project_proof' ? (
             <button
-              onClick={() => navigate(TOOL_ROUTES[artefact.type])}
+              onClick={() => {
+                const level = content?.level || artefact.level;
+                navigate(`/app/journey/project/${level}`);
+              }}
               style={{
                 background: '#38B2AC', color: '#FFFFFF', border: 'none', borderRadius: 24,
                 padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
+              View Project Proof
+              <ExternalLink size={13} />
+            </button>
+          ) : TOOL_ROUTES[artefact.type] ? (
+            <button
+              onClick={() => {
+                if (!content || !TOOL_ROUTES[artefact.type]) return;
+                navigate(TOOL_ROUTES[artefact.type], {
+                  state: {
+                    sourceArtefactId: artefact.id,
+                    sourceArtefactContent: content,
+                    sourceArtefactType: artefact.type,
+                  },
+                });
+              }}
+              disabled={!content}
+              style={{
+                background: '#38B2AC', color: '#FFFFFF', border: 'none', borderRadius: 24,
+                padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                cursor: content ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6,
+                opacity: content ? 1 : 0.5,
+              }}
+            >
               Launch in {TOOL_NAMES[artefact.type]}
               <ExternalLink size={13} />
             </button>
-          )}
+          ) : null}
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button
@@ -330,6 +362,7 @@ const QuickUsePanel: React.FC<Props> = ({
               {artefact.type === 'app_spec' && <AppSpecContent content={content} level={artefact.level} />}
               {artefact.type === 'build_guide' && <BuildGuideContent content={content} level={artefact.level} />}
               {artefact.type === 'prd' && <PrdContent content={content} level={artefact.level} />}
+              {artefact.type === 'project_proof' && <ProjectProofContent content={content} level={artefact.level} />}
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: 40, color: '#A0AEC0', fontSize: 13 }}>

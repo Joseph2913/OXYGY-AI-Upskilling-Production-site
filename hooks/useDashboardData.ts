@@ -9,7 +9,11 @@ import {
   getOrgLeaderboard,
   updateStreak,
   getActiveDaysThisWeek,
+  getAllProjectSubmissions,
+  getLatestLearningPlan,
 } from '../lib/database';
+import type { ProjectSubmission } from '../lib/database';
+import type { LevelDepth } from '../types';
 import { LEVEL_TOPICS } from '../data/levelTopics';
 import { ALL_TOOLS } from '../data/toolkitData';
 
@@ -57,6 +61,9 @@ export interface DashboardData {
   levelProgress: Record<number, LevelProgress>;
   toolUsage: Record<string, ToolUsage>;
 
+  projectSubmissions: Record<number, ProjectSubmission>;
+  levelDepths: Record<string, LevelDepth>;
+
   streakDays: number;
   activeDaysThisWeek: boolean[];
 
@@ -96,11 +103,13 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       setLoading(true);
 
       // Parallel fetch all data sources
-      const [topicProgressRows, artefactCounts, levelProgressRows, activeDaysThisWeek] = await Promise.all([
+      const [topicProgressRows, artefactCounts, levelProgressRows, activeDaysThisWeek, projectSubRows, learningPlanResult] = await Promise.all([
         getAllTopicProgress(user.id),
         getArtefactCountsByLevel(user.id),
         getLevelProgress(user.id),
         getActiveDaysThisWeek(user.id),
+        getAllProjectSubmissions(user.id),
+        getLatestLearningPlan(user.id),
       ]);
 
       // Fetch leaderboard if user has an org
@@ -221,6 +230,15 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         }];
       }
 
+      // ── Build project submissions map (level → submission) ──
+      const projectSubmissions: Record<number, ProjectSubmission> = {};
+      for (const sub of projectSubRows) {
+        projectSubmissions[sub.level] = sub;
+      }
+
+      // ── Build level depths from learning plan ──
+      const levelDepths: Record<string, LevelDepth> = learningPlanResult?.level_depths || {};
+
       setData({
         currentLevel,
         completedTopics: completedTopicsInCurrentLevel,
@@ -238,6 +256,9 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
 
         levelProgress,
         toolUsage,
+
+        projectSubmissions,
+        levelDepths,
 
         streakDays: streak,
         activeDaysThisWeek,
@@ -267,6 +288,8 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           levelsCompleted: 0,
           levelProgress: {},
           toolUsage: {},
+          projectSubmissions: {},
+          levelDepths: {},
           streakDays: 0,
           activeDaysThisWeek: Array(7).fill(false) as boolean[],
           leaderboard: [{

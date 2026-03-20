@@ -326,10 +326,10 @@ export const STRATEGY_ACCENT_COLORS: Record<StrategyId, string> = {
 
 /** v2 example chips for the Prompt Playground input (PRD Section 4.4) */
 export const PLAYGROUND_EXAMPLE_CHIPS = [
-  'Write a stakeholder update email',
-  'Design an AI introduction workshop for sceptics',
-  'Evaluate tools for my team',
-  'Create a 90-day onboarding plan',
-  'Summarise a research report into recommendations',
-  'Draft a business case for a new initiative',
+  'Write a learning needs analysis for a new AI upskilling programme',
+  'Summarise exit interview themes into recommendations for the CHRO',
+  'Draft a communication to managers about a policy change',
+  'Design a 90-day onboarding plan for a senior HR hire',
+  'Create a briefing note on AI adoption trends for an L&D director',
+  'Build a competency framework for a digital skills role',
 ];

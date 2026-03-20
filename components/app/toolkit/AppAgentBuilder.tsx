@@ -4,6 +4,7 @@ import {
   Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, Eye, Square, CheckSquare, X,
   FileText, BookOpen,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import {
   GOOD_EXAMPLES, NOT_RECOMMENDED_EXAMPLES, CRITERIA_LABELS,
   WHY_JSON_CONTENT, PROMPT_SECTION_COLORS,
@@ -14,7 +15,7 @@ import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck, Ag
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -346,7 +347,9 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
 
 const AppAgentBuilder: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const projectChip = projectChips?.[2] ?? null;
+  const location = useLocation();
 
   // Input state
   const [taskDescription, setTaskDescription] = useState('');
@@ -390,6 +393,7 @@ const AppAgentBuilder: React.FC = () => {
   const [buildPlanRefineExpanded, setBuildPlanRefineExpanded] = useState(false);
   const [buildPlanRefinementAnswers, setBuildPlanRefinementAnswers] = useState<Record<number, string>>({});
   const [buildPlanAdditionalContext, setBuildPlanAdditionalContext] = useState('');
+  const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
 
   // Refs
   const step1Ref = useRef<HTMLDivElement>(null);
@@ -399,6 +403,44 @@ const AppAgentBuilder: React.FC = () => {
 
   // API
   const { designAgent, generateSetupGuide, isLoading, setupLoading, error, clearError } = useAgentDesignApi();
+
+  // Artefact prefill from "Launch in Tool" — restore full result
+  useEffect(() => {
+    const state = location.state as {
+      sourceArtefactId?: string;
+      sourceArtefactContent?: Record<string, any>;
+      sourceArtefactType?: string;
+      artefactPrefill?: Record<string, any>;
+    } | null;
+    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    if (!prefill) return;
+    // Restore inputs
+    if (prefill.taskDescription) setTaskDescription(prefill.taskDescription);
+    if (prefill.inputDescription) setInputDataDescription(prefill.inputDescription);
+    // Restore full result so the output section is visible immediately
+    if (prefill.systemPrompt) {
+      setResult({
+        readiness: {
+          overall_score: prefill.readinessScore ?? 0,
+          verdict: '',
+          rationale: '',
+          criteria: {
+            frequency: { score: 0, assessment: '' },
+            consistency: { score: 0, assessment: '' },
+            shareability: { score: 0, assessment: '' },
+            complexity: { score: 0, assessment: '' },
+          },
+        },
+        output_format: prefill.outputFormat || { human_readable: '', json_template: {} },
+        system_prompt: prefill.systemPrompt,
+        accountability: prefill.accountability || [],
+        refinement_questions: prefill.refinementQuestions || [],
+      });
+      setVisibleBlocks(10);
+    }
+    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    window.history.replaceState({}, '');
+  }, []);
 
   // Loading step progression (per PRD §9.5)
   useEffect(() => {
@@ -545,6 +587,17 @@ const AppAgentBuilder: React.FC = () => {
     if (data) {
       setResult(data);
       localStorage.removeItem(DRAFT_KEY);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          systemPrompt: data.system_prompt,
+          outputFormat: data.output_format || null,
+          accountability: data.accountability || [],
+          readinessScore: data.readiness?.overall_score || null,
+          taskDescription,
+          inputDescription: inputDataDescription,
+        });
+      }
       if (!hasTrackedUsage && user) {
         upsertToolUsed(user.id, 2);
         setHasTrackedUsage(true);
@@ -638,6 +691,17 @@ const AppAgentBuilder: React.FC = () => {
 
     if (data) {
       setResult(data);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          systemPrompt: data.system_prompt,
+          outputFormat: data.output_format || null,
+          accountability: data.accountability || [],
+          readinessScore: data.readiness?.overall_score || null,
+          taskDescription,
+          inputDescription: inputDataDescription,
+        });
+      }
       setRefinementAnswers({});
       setAdditionalContext('');
       setRefinementCount(c => c + 1);
@@ -901,6 +965,30 @@ const AppAgentBuilder: React.FC = () => {
           done={step1Done}
           collapsed={step1Done}
         >
+          {/* Your Project chip */}
+          {projectChip && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 600, marginBottom: 6, fontFamily: FONT }}>
+                ◆ Your Project
+              </div>
+              <button
+                onClick={() => handleExampleClick(projectChip.task, projectChip.inputData)}
+                style={{
+                  width: '100%', textAlign: 'left', background: `${LEVEL_ACCENT}18`,
+                  border: `1.5px solid ${LEVEL_ACCENT_DARK}44`,
+                  borderRadius: 10, padding: '10px 14px',
+                  fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 500,
+                  cursor: 'pointer', fontFamily: FONT, lineHeight: 1.5,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}30`)}
+                onMouseLeave={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}18`)}
+              >
+                {projectChip.task}
+              </button>
+            </div>
+          )}
+
           {/* Example pills */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: '#718096', marginBottom: 8 }}>Try an example:</div>

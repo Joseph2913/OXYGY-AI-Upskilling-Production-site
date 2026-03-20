@@ -1,11 +1,11 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown } from 'lucide-react';
+import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown, MoveDown } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useJourneyData } from '../../hooks/useJourneyData';
 import type { JourneyData } from '../../hooks/useJourneyData';
-import { getProfile, getLatestLearningPlan } from '../../lib/database';
+import { getProfile, getLatestLearningPlan, upsertProfile } from '../../lib/database';
 import { LevelCard } from '../../components/app/LevelCard';
 import { LEVEL_META } from '../../data/levelTopics';
 import { LEVEL_TOPICS } from '../../data/levelTopics';
@@ -231,6 +231,17 @@ const AppJourney: React.FC = () => {
   // (must be declared here, before any conditional returns, per Rules of Hooks)
   const [expandedFromOverview, setExpandedFromOverview] = useState<number | null>(null);
 
+  // Edit Profile panel state
+  const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState<Partial<PathwayFormData> | null>(null);
+
+  useEffect(() => {
+    if (profilePanelOpen && user && !demoMode) {
+      getProfile(user.id).then(p => { if (p) setProfileForm(p as Partial<PathwayFormData>); });
+    }
+  }, [profilePanelOpen, user, demoMode]);
+
 
   // Fetch learning plan for project titles on level cards
   // Re-fetch when hasLearningPlan flips to true (e.g. after survey completion)
@@ -321,6 +332,19 @@ const AppJourney: React.FC = () => {
     if (result) {
       setPlanData(result);
       demoPlanCompleted.current = true;
+    }
+
+    // Generate project chips for all assigned toolkit tools
+    if (result && user) {
+      import('../../lib/generateProjectChips').then(({ generateProjectChips }) =>
+        generateProjectChips(result).then(chips => {
+          if (chips.length > 0) {
+            import('../../lib/database').then(({ upsertToolkitProjectChips }) =>
+              upsertToolkitProjectChips(user.id, chips)
+            );
+          }
+        })
+      );
     }
 
     // Transition to journey view
@@ -507,25 +531,50 @@ const AppJourney: React.FC = () => {
         </div>
       )}
 
-      {/* Page Header */}
+      {/* Page Header — title row */}
+      <div style={{
+        marginBottom: 20,
+        animation: 'journeyFadeSlideUp 0.3s ease 0ms both',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: 28, fontWeight: 800, color: '#1A202C',
+            letterSpacing: '-0.4px', margin: 0, marginBottom: 6,
+          }}>
+            My Journey
+          </h1>
+          <p style={{
+            fontSize: 14, color: '#718096', lineHeight: 1.6,
+            margin: 0,
+          }}>
+            Your path through the five levels of AI capability.
+          </p>
+        </div>
+        {!demoMode && (
+          <button
+            onClick={() => setProfilePanelOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#FFFFFF', border: '1px solid #E2E8F0',
+              borderRadius: 20, padding: '8px 16px',
+              fontSize: 13, fontWeight: 600, color: '#4A5568',
+              cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#38B2AC')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+          >
+            ✎ Edit Profile
+          </button>
+        )}
+      </div>
+
+      {/* Overall Progress Card — full width */}
       <div style={{
         marginBottom: 28,
         animation: 'journeyFadeSlideUp 0.3s ease 0ms both',
       }}>
-        <h1 style={{
-          fontSize: 28, fontWeight: 800, color: '#1A202C',
-          letterSpacing: '-0.4px', margin: 0, marginBottom: 6,
-        }}>
-          My Journey
-        </h1>
-        <p style={{
-          fontSize: 14, color: '#718096', lineHeight: 1.6,
-          margin: 0, marginBottom: 20,
-        }}>
-          Your path through the five levels of AI capability.
-        </p>
-
-        {/* Enhanced overall progress */}
         <div style={{
           background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
           padding: '20px 24px',
@@ -655,42 +704,53 @@ const AppJourney: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Regeneration link */}
-        <div style={{ marginTop: 8 }}>
-          <span
-            onClick={handleRegenerate}
-            style={{
-              fontSize: 12, fontWeight: 500, color: '#38B2AC',
-              cursor: 'pointer', textDecoration: 'none',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-          >
-            Regenerate your learning plan →
-          </span>
-        </div>
       </div>
 
       {/* Level Cards */}
-      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
         {levels.map((level, idx) => {
           const planLevel = planData?.levels?.[`L${level.levelNumber}`];
+          const nextPlanLevel = idx < levels.length - 1
+            ? planData?.levels?.[`L${levels[idx + 1].levelNumber}`]
+            : null;
+          const isAssigned = !!planLevel;
+          const nextIsAssigned = !!nextPlanLevel;
+          const showConnector = isAssigned && nextIsAssigned && idx < levels.length - 1;
+          const lvlMeta = LEVEL_META.find(m => m.number === level.levelNumber);
+          const lvlDone = level.status === 'completed';
+
           return (
-            <div
-              key={level.levelNumber}
-              ref={el => { levelRefs.current[level.levelNumber] = el; }}
-            >
-              <LevelCard
-                level={level}
-                animDelay={60 + idx * 60}
-                projectTitle={planLevel?.projectTitle || null}
-                deliverable={planLevel?.deliverable || null}
-                planDepth={planLevel?.depth || null}
-                planTime={planLevel?.sessionFormat || null}
-                forceExpand={expandedFromOverview === level.levelNumber}
-                hasLearningPlan={!!planData}
-              />
+            <div key={level.levelNumber}>
+              <div ref={el => { levelRefs.current[level.levelNumber] = el; }}>
+                <LevelCard
+                  level={level}
+                  animDelay={60 + idx * 60}
+                  projectTitle={planLevel?.projectTitle || null}
+                  deliverable={planLevel?.deliverable || null}
+                  planDepth={planLevel?.depth || null}
+                  planTime={planLevel?.sessionFormat || null}
+                  forceExpand={expandedFromOverview === level.levelNumber}
+                  hasLearningPlan={!!planData}
+                  isFocused={level.levelNumber === currentLevel.levelNumber}
+                />
+              </div>
+              {/* Vertical connector between levels */}
+              {showConnector && (
+                <div style={{
+                  display: 'flex', justifyContent: 'center',
+                  padding: '4px 0',
+                }}>
+                  <MoveDown
+                    size={20}
+                    strokeWidth={2.5}
+                    color={lvlMeta?.accentDark || '#CBD5E0'}
+                  />
+                </div>
+              )}
+              {/* Gap when no connector */}
+              {!showConnector && idx < levels.length - 1 && (
+                <div style={{ height: 10 }} />
+              )}
             </div>
           );
         })}
@@ -719,6 +779,78 @@ const AppJourney: React.FC = () => {
             Download Certificate →
           </button>
         </div>
+      )}
+
+      {/* Edit Profile slide-in panel */}
+      {!demoMode && profilePanelOpen && (
+        <>
+          <div
+            onClick={() => setProfilePanelOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 200 }}
+          />
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, width: 420,
+            background: '#FFFFFF', borderLeft: '1px solid #E2E8F0',
+            zIndex: 201, display: 'flex', flexDirection: 'column',
+            fontFamily: "'DM Sans', sans-serif",
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.08)',
+          }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C' }}>Edit Profile</div>
+                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Update your details to regenerate your learning plan</div>
+              </div>
+              <button onClick={() => setProfilePanelOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#A0AEC0', padding: 4, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ margin: '16px 24px 0', background: '#FEFCE8', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400E', lineHeight: 1.55 }}>
+              <strong>Heads up:</strong> Saving will regenerate your learning plan. Your progress and saved artefacts are not affected, but your project briefs may be updated to better reflect your new profile.
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {([
+                { key: 'role', label: 'Job Title / Role' },
+                { key: 'function', label: 'Function' },
+                { key: 'seniority', label: 'Seniority' },
+                { key: 'aiExperience', label: 'AI Experience' },
+                { key: 'ambition', label: 'Your Goal' },
+                { key: 'challenge', label: 'Main Challenge' },
+                { key: 'availability', label: 'Weekly Availability' },
+              ] as { key: keyof PathwayFormData; label: string }[]).map(({ key, label }) => (
+                <div key={key}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 5 }}>{label}</div>
+                  <input
+                    value={(profileForm?.[key] as string) || ''}
+                    onChange={e => setProfileForm(prev => ({ ...prev, [key]: e.target.value }))}
+                    style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#1A202C', fontFamily: 'inherit', outline: 'none' }}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#38B2AC')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setProfilePanelOpen(false)}
+                style={{ flex: 1, padding: '10px', borderRadius: 20, border: '1px solid #E2E8F0', background: '#FFFFFF', fontSize: 13, fontWeight: 600, color: '#4A5568', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={profileSaving}
+                onClick={async () => {
+                  if (!user || !profileForm) return;
+                  setProfileSaving(true);
+                  await upsertProfile(user.id, profileForm);
+                  setProfileSaving(false);
+                  setProfilePanelOpen(false);
+                  handleRegenerate();
+                }}
+                style={{ flex: 2, padding: '10px', borderRadius: 20, border: 'none', background: profileSaving ? '#A0AEC0' : '#38B2AC', fontSize: 13, fontWeight: 700, color: '#FFFFFF', cursor: profileSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+              >
+                {profileSaving ? 'Saving…' : 'Save & Regenerate Plan →'}
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

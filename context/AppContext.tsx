@@ -38,6 +38,7 @@ interface AppContextValue {
   orgContext: OrgContextData | null;
   projectSubmissions: Record<number, ProjectSubmissionSummary>;
   refreshProjectSubmissions: () => Promise<void>;
+  projectChips: Record<number, Record<string, string>>;
 }
 
 // Fallback profile when Supabase is not configured
@@ -62,6 +63,7 @@ const AppContext = createContext<AppContextValue>({
   orgContext: null,
   projectSubmissions: {},
   refreshProjectSubmissions: async () => {},
+  projectChips: {},
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -73,6 +75,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [learningPlanLoading, setLearningPlanLoading] = useState(true);
   const learningPlanInitialLoadDone = useRef(false);
   const [projectSubmissions, setProjectSubmissions] = useState<Record<number, ProjectSubmissionSummary>>({});
+  const [projectChips, setProjectChips] = useState<Record<number, Record<string, string>>>({});
 
   const fetchProjectSubmissions = useCallback(async () => {
     if (!isSupabaseConfigured || !user) {
@@ -208,6 +211,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchProjectSubmissions();
   }, [fetchProfile, checkLearningPlan, fetchProjectSubmissions]);
 
+  // Load project chips and retroactively generate if missing
+  useEffect(() => {
+    if (!user || !hasLearningPlan || learningPlanLoading) return;
+    import('../lib/database').then(async ({ getToolkitProjectChips, getLatestLearningPlan, upsertToolkitProjectChips }) => {
+      const existing = await getToolkitProjectChips(user.id);
+      if (existing.length > 0) {
+        const map: Record<number, Record<string, string>> = {};
+        existing.forEach(c => { map[c.level] = c.chipData; });
+        setProjectChips(map);
+      } else {
+        // Retroactively generate chips if user has a plan but no chips yet
+        const planResult = await getLatestLearningPlan(user.id);
+        if (planResult?.plan) {
+          const { generateProjectChips } = await import('../lib/generateProjectChips');
+          const chips = await generateProjectChips(planResult.plan);
+          if (chips.length > 0) {
+            await upsertToolkitProjectChips(user.id, chips);
+            const map: Record<number, Record<string, string>> = {};
+            chips.forEach(c => { map[c.level] = c.chipData; });
+            setProjectChips(map);
+          }
+        }
+      }
+    });
+  }, [user, hasLearningPlan, learningPlanLoading]);
+
   const setCurrentLevel = useCallback((level: number) => {
     if (!user) return;
     setProfile(prev => prev ? { ...prev, currentLevel: level } : prev);
@@ -226,6 +255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       orgContext,
       projectSubmissions,
       refreshProjectSubmissions: fetchProjectSubmissions,
+      projectChips,
     }}>
       {children}
     </AppContext.Provider>

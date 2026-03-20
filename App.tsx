@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppAuthGuard } from './components/app/AppAuthGuard';
 import { AppLayout } from './components/app/AppLayout';
+import { ScrollToTop } from './components/app/ScrollToTop';
 import { MarketingSite } from './MarketingSite';
 
 // Existing toolkit tool components (kept for legacy references)
@@ -12,7 +13,6 @@ import { AgentBuilder } from './components/AgentBuilder';
 // Lazy-load app pages
 const AppDashboard = React.lazy(() => import('./pages/app/AppDashboard'));
 const AppJourney = React.lazy(() => import('./pages/app/AppJourney'));
-const AppProjects = React.lazy(() => import('./pages/app/AppProjects'));
 const AppProjectProof = React.lazy(() => import('./pages/app/AppProjectProof'));
 const AppCurrentLevel = React.lazy(() => import('./pages/app/AppCurrentLevel'));
 const AppToolkit = React.lazy(() => import('./pages/app/AppToolkit'));
@@ -117,6 +117,7 @@ function HashRedirector() {
 function App() {
   return (
     <AuthProvider>
+      <ScrollToTop />
       <Routes>
         {/* Admin shell — platform administration (requires oxygy_admin or super_admin) */}
         <Route
@@ -165,7 +166,6 @@ function App() {
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<AppSuspense><AppDashboard /></AppSuspense>} />
           <Route path="journey" element={<AppSuspense><AppJourney /></AppSuspense>} />
-          <Route path="projects" element={<AppSuspense><AppProjects /></AppSuspense>} />
           <Route path="journey/project/:level" element={<AppSuspense><AppProjectProof /></AppSuspense>} />
           <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
           <Route path="level-1" element={<AppSuspense><AppLevel1Roadmap /></AppSuspense>} />

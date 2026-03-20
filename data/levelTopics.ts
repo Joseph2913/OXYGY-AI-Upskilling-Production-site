@@ -12,6 +12,7 @@ export interface Topic {
   estimatedMinutes: number;
   icon: string;
   phases: TopicPhase[];
+  comingSoon?: boolean;
 }
 
 export const LEVEL_TOPICS: Record<number, Topic[]> = {
@@ -26,6 +27,12 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
         { icon: "◈", label: "Practice", detail: "Build, test, and refine prompts using the Prompt Playground." },
       ],
     },
+    {
+      id: 2, title: "Context Engineering", subtitle: "Coming soon",
+      description: "Coming soon — master the art of giving AI the right context at the right time.",
+      estimatedMinutes: 0, icon: "🧠", comingSoon: true,
+      phases: [],
+    },
   ],
   2: [
     {
@@ -37,6 +44,12 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
         { icon: "▶", label: "E-Learning", detail: "14-slide interactive module covering the Level 2 shift, three-layer agent model, accountability by design, and team deployment." },
         { icon: "◈", label: "Practice", detail: "Design your first Level 2 agent using the Agent Builder." },
       ],
+    },
+    {
+      id: 2, title: "Multi-Agent Orchestration", subtitle: "Coming soon",
+      description: "Coming soon — coordinate multiple AI agents to solve complex, multi-step problems.",
+      estimatedMinutes: 0, icon: "🔗", comingSoon: true,
+      phases: [],
     },
   ],
   3: [
@@ -50,6 +63,12 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
         { icon: "◈", label: "Practice", detail: "Map and build a multi-step workflow using the Workflow Designer." },
       ],
     },
+    {
+      id: 2, title: "Process Mining with AI", subtitle: "Coming soon",
+      description: "Coming soon — use AI to discover, analyse, and optimise existing business processes.",
+      estimatedMinutes: 0, icon: "⛏️", comingSoon: true,
+      phases: [],
+    },
   ],
   4: [
     {
@@ -62,6 +81,12 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
         { icon: "◈", label: "Practice", detail: "Design and build a web application using the App Designer." },
       ],
     },
+    {
+      id: 2, title: "Real-Time Data Pipelines", subtitle: "Coming soon",
+      description: "Coming soon — connect live data sources to AI-powered dashboards that update in real time.",
+      estimatedMinutes: 0, icon: "📡", comingSoon: true,
+      phases: [],
+    },
   ],
   5: [
     {
@@ -73,6 +98,12 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
         { icon: "▶", label: "E-Learning", detail: "Interactive module deconstructing the OXYGY platform: personalisation, roles, memory, and full-stack architecture." },
         { icon: "◈", label: "Practice", detail: "Assemble a complete application using the Product Architecture Sprint." },
       ],
+    },
+    {
+      id: 2, title: "AI Product Strategy", subtitle: "Coming soon",
+      description: "Coming soon — learn to evaluate, position, and scale AI products for real-world impact.",
+      estimatedMinutes: 0, icon: "🎯", comingSoon: true,
+      phases: [],
     },
   ],
 };

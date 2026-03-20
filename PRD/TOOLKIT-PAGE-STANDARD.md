@@ -999,6 +999,32 @@ For tools with significant input (textarea, multi-field forms), save drafts to `
 
 ---
 
+## 8b. Step Auto-Scroll (mandatory)
+
+Every toolkit tool page must auto-scroll to the next step card whenever a step is completed and the next step becomes visible. This is non-negotiable — the user must never have to manually scroll down to discover that a new step has appeared.
+
+**Implementation pattern:**
+```tsx
+const step2Ref = useRef<HTMLDivElement>(null);
+const step3Ref = useRef<HTMLDivElement>(null); // for 3-step tools only
+
+// Attach to the outermost div of each step card:
+<div ref={step2Ref}>
+  <StepCard stepNumber={2} ...>...</StepCard>
+</div>
+
+// Call after each step-advance state update:
+setTimeout(() => {
+  step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}, 120);
+```
+
+The 120ms delay allows React to complete its render cycle before scrolling, ensuring the full step card is present in the DOM when `scrollIntoView` fires.
+
+This rule applies to all current and future toolkit tool pages. When building a new tool page, add step refs and scroll calls as part of the initial build — not as a retrofit.
+
+---
+
 ## 9. CSS Animations
 
 Every tool page should include these base animations in a `<style>` tag:

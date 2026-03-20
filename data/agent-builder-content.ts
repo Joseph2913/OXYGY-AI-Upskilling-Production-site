@@ -23,38 +23,38 @@ export const SETUP_STEP_DELAYS = [800, 1500, 3000, 4000, -1];
 // Good examples — strong candidates for a Level 2 agent
 export const GOOD_EXAMPLES = [
   {
-    name: 'Survey Analyzer',
-    task: 'Analyze employee engagement survey results to identify the top themes, sentiment trends by department, and prioritized recommendations for the leadership team',
-    inputData: 'Excel spreadsheet with columns: Employee ID, Department, Tenure Band, Question Category, Rating (1-5), Open-Text Response. Approximately 200-500 rows per survey cycle.',
+    name: 'Learning Needs Analyser',
+    task: 'Analyse employee skills assessment responses to identify capability gaps by function, seniority band, and priority level — and recommend a prioritised L&D intervention plan for each segment',
+    inputData: 'Excel spreadsheet with columns: Employee ID, Function, Seniority Band, Self-Assessment Score (1–5) per competency, Manager Assessment Score per competency, and Learning Preference. Approximately 150–400 rows per cycle.',
   },
   {
-    name: 'Meeting Summarizer',
-    task: "Summarize meeting recordings into structured notes with key decisions, action items, owners, and deadlines — so the team doesn't need to re-watch the recording",
-    inputData: 'Auto-generated meeting transcripts from Teams or Zoom, typically 30-60 minutes in length, with speaker labels and timestamps. May include multiple speakers across different roles.',
+    name: 'HR Policy Assistant',
+    task: 'Answer employee questions about HR policies, benefits, and procedures by referencing the company handbook — giving clear, plain-English responses and flagging anything that requires escalation to an HR Business Partner',
+    inputData: 'Company HR handbook (PDF), benefits guide, leave policy documents, and an FAQ log of the 50 most common HR queries with approved responses.',
   },
   {
-    name: 'Proposal Drafter',
-    task: 'Draft a first-pass client proposal based on project brief inputs, incorporating relevant case studies, methodology descriptions, and team structure recommendations',
-    inputData: 'Project brief documents (Word or PDF) containing client background, objectives, scope, timeline, and budget. Plus an internal case study library with past project descriptions and outcomes.',
+    name: 'Exit Interview Synthesiser',
+    task: 'Synthesise exit interview transcripts into a structured report identifying the top themes driving attrition, sentiment patterns by department and tenure band, and prioritised retention recommendations for the leadership team',
+    inputData: 'Exit interview transcripts (Word or PDF), each 20–40 minutes in length, with fields for department, tenure, role level, and voluntary/involuntary status. 10–30 interviews per quarter.',
   },
 ] as const;
 
 // Not-recommended examples — better suited to ad-hoc prompting
 export const NOT_RECOMMENDED_EXAMPLES = [
   {
-    name: 'Quick Email Reply',
-    task: 'Write a quick reply to a colleague asking about meeting availability next week',
-    inputData: 'A single email thread with 2-3 messages.',
+    name: 'One-Off Reference Check',
+    task: 'Write a reference check email for a specific candidate we interviewed last Tuesday',
+    inputData: 'A single candidate name and interviewer notes.',
   },
   {
-    name: 'One-Time Research',
-    task: 'Research the top 5 competitors in the sustainable packaging space for a one-off board presentation',
-    inputData: 'No specific input data — general web research needed.',
+    name: 'Single Job Posting',
+    task: 'Write a job description for a one-off internal vacancy we need to fill this month',
+    inputData: 'A brief job title and three bullet points about the role.',
   },
   {
-    name: 'Creative Brainstorm',
-    task: 'Help me brainstorm creative names and taglines for a new internal innovation program',
-    inputData: 'A brief description of the program goals and target audience.',
+    name: 'Ad-Hoc Org Chart',
+    task: 'Create an org chart for a restructure we are announcing next week',
+    inputData: 'A list of 12 names and their new reporting lines.',
   },
 ] as const;
 

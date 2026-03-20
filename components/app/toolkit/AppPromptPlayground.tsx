@@ -3,6 +3,7 @@ import {
   ArrowRight, ArrowDown, Copy, Check, Download, RotateCcw,
   ChevronRight, ChevronDown, Library, Code, Eye, Info, X,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { usePlaygroundApi } from '../../../hooks/usePlaygroundApi';
 import type { PlaygroundResult, PlaygroundStrategy } from '../../../types';
 import {
@@ -11,7 +12,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -52,8 +53,10 @@ const STEP_DELAYS = [800, 1500, 3000, 4000, 4500, 5000, -1];
 
 const AppPromptPlayground: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const projectChip = projectChips?.[1] ?? null;
   const { generate, isLoading, error, clearError } = usePlaygroundApi();
+  const location = useLocation();
 
   /* ── State ── */
   const [userInput, setUserInput] = useState('');
@@ -74,6 +77,7 @@ const AppPromptPlayground: React.FC = () => {
   const [refineExpanded, setRefineExpanded] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [isRefineLoading, setIsRefineLoading] = useState(false);
+  const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
@@ -81,6 +85,40 @@ const AppPromptPlayground: React.FC = () => {
   /* ── Derived step state ── */
   const step1Done = result !== null || isLoading;
   const step2Done = false; // output step is never "done" per se
+
+  /* ── Artefact prefill from "Launch in Tool" — restore full result ── */
+  useEffect(() => {
+    const state = location.state as {
+      sourceArtefactId?: string;
+      sourceArtefactContent?: Record<string, any>;
+      sourceArtefactType?: string;
+      artefactPrefill?: Record<string, any>;
+    } | null;
+    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    if (!prefill) return;
+    // Restore input
+    if (prefill.userInput) setUserInput(prefill.userInput);
+    // Restore full result so the output section is visible immediately
+    if (prefill.promptText) {
+      const strategies: PlaygroundStrategy[] = (prefill.strategies || []).map((s: any, i: number) => ({
+        id: s.id || `strategy_${i}`,
+        name: s.name || '',
+        icon: s.icon || '',
+        why: s.why || '',
+        what: s.what || '',
+        how_applied: s.how_applied || '',
+        prompt_excerpt: s.prompt_excerpt || '',
+      }));
+      setResult({
+        prompt: prefill.promptText,
+        strategies_used: strategies,
+        refinement_questions: prefill.refinementQuestions || [],
+      });
+      setVisibleBlocks(10);
+    }
+    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    window.history.replaceState({}, '');
+  }, []);
 
   /* ── Draft persistence ── */
   useEffect(() => {
@@ -174,6 +212,14 @@ const AppPromptPlayground: React.FC = () => {
     if (data) {
       setResult(data);
       localStorage.removeItem(DRAFT_KEY);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          promptText: data.prompt,
+          strategies: data.strategies_used || [],
+          userInput,
+        });
+      }
       // Track first usage
       if (!hasTrackedUsage && user) {
         upsertToolUsed(user.id, 1);
@@ -307,6 +353,14 @@ const AppPromptPlayground: React.FC = () => {
     const data = await generate(enrichedInput);
     if (data) {
       setResult(data);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          promptText: data.prompt,
+          strategies: data.strategies_used || [],
+          userInput,
+        });
+      }
       setSavedToLibrary(false);
       setCopied(false);
       setRefinementAnswers({});
@@ -529,6 +583,30 @@ const AppPromptPlayground: React.FC = () => {
         done={step1Done}
         collapsed={step1Done}
       >
+        {/* Your Project chip */}
+        {projectChip && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 600, marginBottom: 6, fontFamily: FONT }}>
+              ◆ Your Project
+            </div>
+            <button
+              onClick={() => handleChipClick(projectChip.task)}
+              style={{
+                width: '100%', textAlign: 'left', background: `${LEVEL_ACCENT}18`,
+                border: `1.5px solid ${LEVEL_ACCENT_DARK}44`,
+                borderRadius: 10, padding: '10px 14px',
+                fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 500,
+                cursor: 'pointer', fontFamily: FONT, lineHeight: 1.5,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}30`)}
+              onMouseLeave={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}18`)}
+            >
+              {projectChip.task}
+            </button>
+          </div>
+        )}
+
         {/* Example chips */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 12, color: '#718096', marginBottom: 8, fontFamily: FONT }}>Try an example:</div>

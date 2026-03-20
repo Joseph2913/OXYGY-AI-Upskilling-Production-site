@@ -417,3 +417,18 @@ Before marking this PRD complete, verify:
 - **Existing tool components** (Prompt Playground, Prompt Library, Workflow Designer) may have their own internal layout (headers, padding). When wrapping them in `AppLayout`, remove any top-level wrapper padding or margins they add that would conflict with the shell. Check each one individually.
 - **Supabase queries in AppContext** should use `.single()` with proper error handling. If the profile row doesn't exist yet for a user (race condition on first login), fall back to defaults gracefully rather than crashing.
 - **React Router version:** Check the existing `package.json` to confirm which version of `react-router-dom` is installed (v5 vs v6). The routing syntax differs significantly. Use whichever version is already installed — do not upgrade.
+
+---
+
+## Amendment — Navigation & Scroll Standards (added post-initial-build)
+
+### Scroll-to-top on route change
+A `ScrollToTop` component must be rendered inside the router in `App.tsx`. It listens to `pathname` changes via `useLocation` and calls `window.scrollTo({ top: 0, behavior: 'instant' })` on every route change. This ensures every page navigation starts at the top — no page should ever open mid-scroll.
+
+Implementation: `components/app/ScrollToTop.tsx` — rendered as the first child inside the router wrapper in `App.tsx`.
+
+### Settings panel
+The Settings button at the bottom of `AppSidebar.tsx` opens a slide-in panel overlay (not a route). The panel contains: Account actions (Edit Profile, Sign Out), Notification preferences (toggles, currently placeholder), and About info. Do not route `/app/settings` — settings UI lives entirely in the sidebar panel.
+
+### Rule: no dead navigation elements
+Every clickable element in the app shell — sidebar items, buttons, CTAs, step indicators — must either navigate to a real route or trigger a real action. Dead `div` elements styled as buttons are not acceptable. If a feature is not yet built, either omit the element or render it as explicitly disabled with a "Coming soon" tooltip.

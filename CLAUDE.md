@@ -258,6 +258,22 @@ This project experienced a critical RLS infinite recursion bug (2026-03-16) wher
 2. Any `useEffect` that sets a boolean to `true` based on a condition must also set it to `false` in the `else` branch — otherwise state can get stuck.
 3. Background refresh functions (e.g. `refreshLearningPlan()`) must NOT set loading flags that cause parent components to re-render with skeletons. Use a ref to track whether the initial load is done, and only show loading UI on the first call.
 
+## Navigation & Scroll Behaviour — App Shell Rules
+
+These rules apply to every page under `/app/*` and must be followed consistently across all current and future pages.
+
+### Scroll-to-top on route change
+Every route change within the app shell must scroll the window to the top. This is handled globally by the `ScrollToTop` component in `components/app/ScrollToTop.tsx`, which is rendered inside the router in `App.tsx`. **Do not add per-page scroll-to-top logic.** The global component handles it. If you add a new route, it is covered automatically.
+
+### Toolkit step auto-scroll
+Every toolkit tool page (Prompt Playground, Agent Builder, Workflow Canvas, Dashboard Designer, App Evaluator) must auto-scroll to the next step card when a step is completed. Use a `ref` on each step card div and call `ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })` with a 120ms delay after the state update that reveals the next step. **Never require the user to manually scroll down to see that a new step has been revealed.**
+
+### Settings panel
+The Settings button in the sidebar opens a slide-in panel (`components/app/AppSidebar.tsx`). It is **not** a separate route. Do not create a `/app/settings` page. All settings UI lives in the panel. When adding new settings options, add them to the panel's existing sections — do not create new routes or pages.
+
+### In-page anchor navigation
+When any button or link is intended to scroll the user to a specific section within the same page (e.g. clicking a level dot scrolling to that level's card), use `ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })`. Never rely on the user manually scrolling. Any interactive element that implies "jump to section X" must deliver that scroll automatically.
+
 ## Reference
 - Full content spec: OXYGY_AI_UPSKILLING_SYSTEM_PROMPT.md
 - PDF content source: OXYGY_AI_Upskilling.pdf

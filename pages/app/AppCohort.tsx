@@ -10,9 +10,9 @@ import {
   getOrgLeaderboard,
   getOrgWeeklyActivity,
   getOrgWorkshopSessions,
-  getMemberActivityLog,
   getMemberArtefacts,
   getAllTopicProgress,
+  getLatestLearningPlan,
   validateAndAcceptInvite,
   ScoredMember,
   TopicProgressRow,
@@ -57,56 +57,50 @@ const SCORE_BREAKDOWN_COMPONENTS = [
   { key: 'active', label: 'Active days (30d)', color: '#48BB78' },
 ];
 
-// ─── Utility: relative time ───
+const SCORE_ICONS: Record<string, React.ReactNode> = {
+  phases: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+  ),
+  artefacts: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    </svg>
+  ),
+  insights: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+  ),
+  streak: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+    </svg>
+  ),
+  active: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+};
 
-function relativeTime(isoDate: string): string {
-  const now = Date.now();
-  const then = new Date(isoDate).getTime();
-  const diffMs = now - then;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+const SCORE_ICON_BG: Record<string, string> = {
+  phases: '#EAF3DE',
+  artefacts: '#E6FFFA',
+  insights: '#FBEAF0',
+  streak: '#FAEEDA',
+  active: '#E6F1FB',
+};
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return new Date(isoDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-}
+const SCORE_ICON_COLOR: Record<string, string> = {
+  phases: '#27500A',
+  artefacts: '#085041',
+  insights: '#72243E',
+  streak: '#633806',
+  active: '#0C447C',
+};
 
-// ─── Utility: activity label ───
-
-function formatActivity(
-  action: string,
-  level: number | null,
-  topicId: number | null,
-  metadata: Record<string, unknown>,
-): string {
-  const topicName = level && topicId
-    ? LEVEL_TOPICS[level]?.find(t => t.id === topicId)?.title ?? `Topic ${topicId}`
-    : null;
-
-  switch (action) {
-    case 'completed_phase': {
-      const phase = (metadata.phase as string) || 'a phase';
-      return topicName ? `Completed ${phase} in ${topicName}` : `Completed ${phase}`;
-    }
-    case 'saved_artefact':
-      return 'Saved an artefact';
-    case 'opened_tool': {
-      const tool = (metadata.tool as string) || 'a tool';
-      return `Used ${tool.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
-    }
-    case 'started_level':
-      return level ? `Started Level ${level}` : 'Started a new level';
-    case 'login':
-      return 'Logged in';
-    default:
-      return action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-}
 
 // ─── Hook: animated count-up ───
 
@@ -158,9 +152,9 @@ const COHORT_STYLES = `
 // ─── Drawer data type ───
 
 interface DrawerData {
-  activity: Awaited<ReturnType<typeof getMemberActivityLog>>;
   artefacts: Awaited<ReturnType<typeof getMemberArtefacts>>;
   topicProgress: TopicProgressRow[];
+  assignedLevels: number[];
 }
 
 // ─── Main Component ───
@@ -230,11 +224,15 @@ const AppCohort: React.FC = () => {
     }
     setDrawerLoading(true);
     Promise.all([
-      getMemberActivityLog(selectedMemberId, 8),
       getMemberArtefacts(selectedMemberId),
       getAllTopicProgress(selectedMemberId),
-    ]).then(([activity, artefacts, topicProgress]) => {
-      const data = { activity, artefacts, topicProgress };
+      getLatestLearningPlan(selectedMemberId),
+    ]).then(([artefacts, topicProgress, planResult]) => {
+      const assignedLevels = [1, 2, 3, 4, 5].filter(lvl => {
+        const depth = planResult?.level_depths?.[`L${lvl}`];
+        return depth && depth !== 'skip';
+      });
+      const data: DrawerData = { artefacts, topicProgress, assignedLevels };
       drawerCacheRef.current.set(selectedMemberId, data);
       setDrawerData(data);
       setDrawerLoading(false);
@@ -1173,153 +1171,180 @@ const AppCohort: React.FC = () => {
 
             {/* Drawer Body */}
             <div>
-              {/* Score Breakdown */}
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '20px 24px 8px' }}>
-                Score Breakdown
-              </div>
-              <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {getScoreBreakdown(selectedMember).map((comp) => (
-                  <div key={comp.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: comp.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 500, color: '#4A5568', flex: 1 }}>{comp.label}</span>
-                    <div style={{ width: 80, height: 6, background: '#EDF2F7', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
-                      <div style={{
-                        height: '100%', background: comp.color, borderRadius: 3,
-                        width: selectedMember.score > 0 ? `${(comp.value / selectedMember.score) * 100}%` : '0%',
-                        transition: 'width 0.4s ease',
-                      }} />
-                    </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C', width: 36, textAlign: 'right' }}>{comp.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Completion Map */}
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0 24px 8px' }}>
-                Completion Map
-              </div>
-              <div style={{ padding: '0 24px 20px' }}>
-                {drawerLoading ? (
-                  <ShimmerRows count={3} />
-                ) : drawerData?.topicProgress && drawerData.topicProgress.length > 0 ? (
-                  (() => {
-                    const byLevel: Record<number, TopicProgressRow[]> = {};
-                    drawerData.topicProgress.forEach(tp => {
-                      if (!byLevel[tp.level]) byLevel[tp.level] = [];
-                      byLevel[tp.level].push(tp);
-                    });
-                    return Object.keys(byLevel).sort((a, b) => Number(a) - Number(b)).map(lvlStr => {
-                      const lvl = Number(lvlStr);
-                      const topics = byLevel[lvl];
+              {/* Assigned Levels */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.04em', padding: '20px 24px 10px' }}>
+                  Assigned Levels
+                </div>
+                <div style={{ padding: '0 24px 20px', display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                  {drawerLoading ? (
+                    <ShimmerRows count={1} />
+                  ) : (
+                    [1, 2, 3, 4, 5].map(lvl => {
+                      const isAssigned = drawerData?.assignedLevels?.includes(lvl) ?? false;
                       const accent = LEVEL_ACCENT_COLORS[lvl] || '#E2E8F0';
-                      const accentDark = LEVEL_ACCENT_DARK_COLORS[lvl] || '#4A5568';
+                      const accentDark = LEVEL_ACCENT_DARK_COLORS[lvl] || '#718096';
                       return (
-                        <div key={lvl} style={{ marginBottom: 14 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: accentDark, background: accent + '33', padding: '2px 10px', borderRadius: 8, display: 'inline-block', marginBottom: 8 }}>
-                            Level {lvl}
-                          </span>
-                          {topics.map(tp => {
-                            const topicMeta = LEVEL_TOPICS[lvl]?.find(t => t.id === tp.topic_id);
-                            const phases = [
-                              { name: 'E-Learn', done: !!tp.elearn_completed_at },
-                              { name: 'Read', done: !!tp.read_completed_at },
-                              { name: 'Watch', done: !!tp.watch_completed_at },
-                              { name: 'Practice', done: !!tp.practise_completed_at },
-                            ];
-                            return (
-                              <div key={tp.topic_id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '6px 10px', background: '#F7FAFC', borderRadius: 8 }}>
-                                <span style={{ fontSize: 12, fontWeight: 500, color: '#4A5568', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {topicMeta?.title || `Topic ${tp.topic_id}`}
-                                </span>
-                                <div style={{ display: 'flex', gap: 4 }}>
-                                  {phases.map(p => (
-                                    <div
-                                      key={p.name}
-                                      title={`${p.name}: ${p.done ? 'Completed' : 'Not started'}`}
-                                      style={{
-                                        width: 16, height: 16, borderRadius: 4,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        background: p.done ? accent : '#EDF2F7',
-                                        border: p.done ? 'none' : '1px solid #E2E8F0',
-                                        fontSize: 8, color: accentDark,
-                                      }}
-                                    >
-                                      {p.done && '✓'}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <div key={lvl} style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                          background: isAssigned ? `${accent}33` : '#F7FAFC',
+                          border: `1px solid ${isAssigned ? accent : '#E2E8F0'}`,
+                          color: isAssigned ? accentDark : '#A0AEC0',
+                        }}>
+                          <div style={{
+                            width: 7, height: 7, borderRadius: '50%',
+                            background: isAssigned ? accentDark : '#CBD5E0',
+                            flexShrink: 0,
+                          }} />
+                          Level {lvl}
                         </div>
                       );
-                    });
-                  })()
-                ) : (
-                  <div style={{ fontSize: 13, color: '#A0AEC0', textAlign: 'center', padding: '16px 0' }}>No progress data yet</div>
-                )}
+                    })
+                  )}
+                </div>
               </div>
+              <div style={{ height: 1, background: '#E2E8F0', margin: '0 24px' }} />
 
-              {/* Recent Activity */}
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0 24px 8px' }}>
-                Recent Activity
-              </div>
-              <div style={{ padding: '0 24px 20px' }}>
-                {drawerLoading ? (
-                  <ShimmerRows count={3} />
-                ) : drawerData?.activity && drawerData.activity.length > 0 ? (
-                  drawerData.activity.map((a, ai) => (
-                    <div key={ai} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: ai < drawerData.activity.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38B2AC', marginTop: 5, flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: '#2D3748', lineHeight: 1.5 }}>
-                          {formatActivity(a.action, a.level, a.topicId, a.metadata)}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 2 }}>{relativeTime(a.createdAt)}</div>
+              {/* Score Breakdown */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.04em', padding: '20px 24px 10px' }}>
+                  Score Breakdown
+                </div>
+                <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {getScoreBreakdown(selectedMember).map((comp) => (
+                    <div key={comp.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                        background: SCORE_ICON_BG[comp.key] || '#F7FAFC',
+                        color: SCORE_ICON_COLOR[comp.key] || '#718096',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {SCORE_ICONS[comp.key]}
                       </div>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: '#4A5568', flex: 1 }}>{comp.label}</span>
+                      <div style={{ width: 80, height: 5, background: '#EDF2F7', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{
+                          height: '100%', background: comp.color, borderRadius: 3,
+                          width: selectedMember.score > 0 ? `${Math.min((comp.value / selectedMember.score) * 100, 100)}%` : '0%',
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C', width: 36, textAlign: 'right' as const }}>{comp.value}</span>
                     </div>
-                  ))
-                ) : (
-                  <div style={{ fontSize: 13, color: '#A0AEC0', textAlign: 'center', padding: '24px 0' }}>No activity recorded yet</div>
-                )}
+                  ))}
+                </div>
               </div>
+              <div style={{ height: 1, background: '#E2E8F0', margin: '0 24px' }} />
 
               {/* Saved Artefacts */}
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0 24px 8px' }}>
-                Saved Artefacts ({drawerData?.artefacts?.length ?? 0})
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.04em', padding: '20px 24px 10px' }}>
+                  Saved Artefacts ({drawerData?.artefacts?.length ?? 0})
+                </div>
+                <div style={{ padding: '0 24px 20px' }}>
+                  {drawerLoading ? (
+                    <ShimmerRows count={2} />
+                  ) : drawerData?.artefacts && drawerData.artefacts.length > 0 ? (
+                    drawerData.artefacts.map(art => {
+                      const artAccent = LEVEL_ACCENT_COLORS[art.level] || '#E2E8F0';
+                      const artAccentDark = LEVEL_ACCENT_DARK_COLORS[art.level] || '#4A5568';
+                      return (
+                        <div key={art.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#F7FAFC', borderRadius: 8, marginBottom: 5, border: '1px solid #F1F5F9' }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 7, background: artAccent + '33', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <FileText size={14} color={artAccentDark} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1A202C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {art.name}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#A0AEC0' }}>
+                              {art.sourceTool || 'Unknown'} &middot; L{art.level}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 11, color: '#A0AEC0', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {new Date(art.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ fontSize: 13, color: '#A0AEC0', textAlign: 'center', padding: '20px 0' }}>No artefacts saved yet</div>
+                  )}
+                </div>
               </div>
-              <div style={{ padding: '0 24px 24px' }}>
-                {drawerLoading ? (
-                  <ShimmerRows count={2} />
-                ) : drawerData?.artefacts && drawerData.artefacts.length > 0 ? (
-                  drawerData.artefacts.map(art => {
-                    const artAccent = LEVEL_ACCENT_COLORS[art.level] || '#E2E8F0';
-                    const artAccentDark = LEVEL_ACCENT_DARK_COLORS[art.level] || '#4A5568';
-                    return (
-                      <div key={art.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#F7FAFC', borderRadius: 8, marginBottom: 6, border: '1px solid #F1F5F9' }}>
-                        <div style={{
-                          width: 28, height: 28, borderRadius: 6, background: artAccent + '33',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        }}>
-                          <FileText size={14} color={artAccentDark} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {art.name}
+              <div style={{ height: 1, background: '#E2E8F0', margin: '0 24px' }} />
+
+              {/* Completion Map */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.04em', padding: '20px 24px 10px' }}>
+                  Completion Map
+                </div>
+                <div style={{ padding: '0 24px 24px' }}>
+                  {drawerLoading ? (
+                    <ShimmerRows count={3} />
+                  ) : drawerData?.topicProgress && drawerData.topicProgress.length > 0 ? (
+                    (() => {
+                      const byLevel: Record<number, TopicProgressRow[]> = {};
+                      drawerData.topicProgress.forEach(tp => {
+                        if (!byLevel[tp.level]) byLevel[tp.level] = [];
+                        byLevel[tp.level].push(tp);
+                      });
+                      const assignedSet = new Set(drawerData?.assignedLevels || [1, 2, 3, 4, 5]);
+                      return Object.keys(byLevel)
+                        .sort((a, b) => Number(a) - Number(b))
+                        .filter(lvlStr => assignedSet.has(Number(lvlStr)))
+                        .map(lvlStr => {
+                        const lvl = Number(lvlStr);
+                        const topics = byLevel[lvl];
+                        const accent = LEVEL_ACCENT_COLORS[lvl] || '#E2E8F0';
+                        const accentDark = LEVEL_ACCENT_DARK_COLORS[lvl] || '#4A5568';
+                        return (
+                          <div key={lvl} style={{ marginBottom: 14 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: accentDark, background: accent + '33', padding: '2px 10px', borderRadius: 8, display: 'inline-block', marginBottom: 8 }}>
+                              Level {lvl}
+                            </span>
+                            {topics.map(tp => {
+                              const topicMeta = LEVEL_TOPICS[lvl]?.find(t => t.id === tp.topic_id);
+                              const phases = [
+                                { name: 'E-Learn', done: !!tp.elearn_completed_at },
+                                { name: 'Read', done: !!tp.read_completed_at },
+                                { name: 'Watch', done: !!tp.watch_completed_at },
+                                { name: 'Practice', done: !!tp.practise_completed_at },
+                              ];
+                              return (
+                                <div key={tp.topic_id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '6px 10px', background: '#F7FAFC', borderRadius: 8 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 500, color: '#4A5568', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {topicMeta?.title || `Topic ${tp.topic_id}`}
+                                  </span>
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    {phases.map(p => (
+                                      <div
+                                        key={p.name}
+                                        title={`${p.name}: ${p.done ? 'Completed' : 'Not started'}`}
+                                        style={{
+                                          width: 16, height: 16, borderRadius: 4,
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          background: p.done ? accent : '#EDF2F7',
+                                          border: p.done ? 'none' : '1px solid #E2E8F0',
+                                          fontSize: 8, color: accentDark,
+                                        }}
+                                      >
+                                        {p.done && '✓'}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <div style={{ fontSize: 11, color: '#A0AEC0' }}>
-                            {art.sourceTool || 'Unknown'} &middot; {new Date(art.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: artAccent + '55', color: artAccentDark }}>
-                          L{art.level}
-                        </span>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div style={{ fontSize: 13, color: '#A0AEC0', textAlign: 'center', padding: '24px 0' }}>No artefacts saved yet</div>
-                )}
+                        );
+                      });
+                    })()
+                  ) : (
+                    <div style={{ fontSize: 13, color: '#A0AEC0', textAlign: 'center', padding: '16px 0' }}>No progress data yet</div>
+                  )}
+                </div>
               </div>
             </div>
           </>

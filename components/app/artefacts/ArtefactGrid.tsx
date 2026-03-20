@@ -11,7 +11,8 @@ import type { Artefact, ArtefactType } from '../../../hooks/useArtefactsData';
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
   prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard',
-  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD',
+  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD', pathway: 'Pathway',
+  project_proof: 'Project Proof',
 };
 
 const GHOST_TYPES: { type: ArtefactType; level: number; Icon: React.FC<{ size?: number; color?: string }> }[] = [

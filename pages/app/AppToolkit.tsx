@@ -87,6 +87,50 @@ const TOOL_GUIDE: Record<string, { steps: string[]; outcome: string }> = {
   },
 };
 
+const TOOL_QUALITY_GUIDE: Record<string, {
+  goodLabel: string;
+  goodExample: string;
+  badLabel: string;
+  badExample: string;
+  scoringNote: string;
+}> = {
+  'prompt-playground': {
+    goodLabel: 'Specific, contextual task description',
+    goodExample: 'Summarise the key decisions and action owners from a 45-minute client steering committee meeting transcript. Format as a bullet list grouped by workstream. Tone should be formal and concise for a senior stakeholder audience.',
+    badLabel: 'Vague or one-line request',
+    badExample: 'Summarise a meeting.',
+    scoringNote: 'Prompts are scored on specificity (role, context, task, format), completeness of the RCTF framework, and whether the output would be immediately usable without further editing.',
+  },
+  'agent-builder': {
+    goodLabel: 'Well-scoped agent with clear role and constraints',
+    goodExample: 'An HR onboarding assistant for new joiners at a professional services firm. It answers questions about policies, IT setup, and first-week logistics. It never gives legal or contractual advice, and always directs sensitive questions to the HR Business Partner.',
+    badLabel: 'Overly broad or undefined agent purpose',
+    badExample: 'A helpful assistant that can answer any HR question.',
+    scoringNote: 'Agents are scored on role clarity, constraint definition, persona consistency, and whether the system prompt would produce reliably consistent outputs across different user inputs.',
+  },
+  'workflow-canvas': {
+    goodLabel: 'End-to-end process with triggers, steps, and handoffs defined',
+    goodExample: 'A proposal generation workflow: triggered when a pursuit is marked active in the CRM. Step 1 — AI drafts an exec summary from the client brief. Step 2 — human reviews and approves tone. Step 3 — AI populates the full proposal template. Step 4 — compliance check flags any restricted terms. Final output stored in SharePoint and notified to the pursuit lead.',
+    badLabel: 'Process description with no structure or handoff points',
+    badExample: 'Use AI to help write proposals faster.',
+    scoringNote: 'Workflows are scored on process completeness, clarity of human-in-the-loop checkpoints, data flow definition, and whether the output could be implemented without further clarification.',
+  },
+  'dashboard-designer': {
+    goodLabel: 'Clear audience, metrics, and decision context',
+    goodExample: 'A weekly AI adoption dashboard for L&D programme managers. Key metrics: module completion rates by cohort, artefact creation per learner, leaderboard trends, and stalled learners flagged for follow-up. Primary action: identify which cohort needs a nudge campaign this week.',
+    badLabel: 'Undefined audience or generic metric list',
+    badExample: 'A dashboard showing AI usage data for the team.',
+    scoringNote: 'Dashboard designs are scored on audience specificity, metric relevance to a stated decision, layout clarity, and whether a developer could build it from the specification alone.',
+  },
+  'ai-app-evaluator': {
+    goodLabel: 'Concrete app idea with defined users, data, and value proposition',
+    goodExample: 'A personalised learning path recommender for mid-career professionals returning to the workforce. Users input their work history and target role; the app cross-references a skills gap database and generates a weekly study plan. Data source: user CV uploads + O*NET skills taxonomy. Key differentiator: recommendations update as the user completes modules.',
+    badLabel: 'Abstract idea without users or data defined',
+    badExample: 'An AI app that helps people learn new skills.',
+    scoringNote: 'App evaluations are scored on idea specificity, feasibility of the described architecture, clarity of the personalisation logic, and alignment between the stated problem and the proposed solution.',
+  },
+};
+
 function getToolState(_tool: Tool, _currentLevel: number): 'unlocked' | 'locked' {
   // All tools unlocked by default
   return 'unlocked';
@@ -125,6 +169,7 @@ const AppToolkit: React.FC = () => {
   const [unlockedLevel, setUnlockedLevel] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
+  const [showScoring, setShowScoring] = useState(false);
 
   useEffect(() => {
     const unlocked = searchParams.get('unlocked');
@@ -196,12 +241,83 @@ const AppToolkit: React.FC = () => {
 
       {/* ═══ Page Header ═══ */}
       <div style={{ marginBottom: 28, animation: 'tkFadeSlideUp 0.3s ease 0ms both' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', letterSpacing: '-0.4px', margin: 0, marginBottom: 6 }}>
-          My Toolkit
-        </h1>
-        <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.6, margin: 0, marginBottom: 20 }}>
-          One powerful tool per level. Build artefacts to earn points on the leaderboard.
-        </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 6 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', letterSpacing: '-0.4px', margin: 0, marginBottom: 6 }}>
+              My Toolkit
+            </h1>
+            <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.6, margin: 0 }}>
+              One powerful tool per level. Build artefacts to earn points on the leaderboard.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowScoring(prev => !prev)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#FFFFFF', border: '1px solid #E2E8F0',
+              borderRadius: 20, padding: '8px 16px',
+              fontSize: 13, fontWeight: 600, color: '#4A5568',
+              cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+              transition: 'border-color 0.15s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#38B2AC')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+          >
+            <Star size={14} color="#F6AD55" /> How Scoring Works
+          </button>
+        </div>
+
+        {/* ═══ Scoring Overview (collapsible) ═══ */}
+        {/* NOTE TO DEVELOPER: The scoring values below reflect the current formula in
+            lib/database.ts (leaderboard scoring) and hooks/useToolkitData.ts (toolkit points).
+            Please update this card whenever the scoring logic changes. Note: there is currently
+            a discrepancy — the leaderboard uses 25 pts per artefact, but useToolkitData.ts uses
+            30 pts per artefact. Align these before showing exact values to users. */}
+        <div style={{
+          maxHeight: showScoring ? 300 : 0,
+          opacity: showScoring ? 1 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease',
+          marginTop: showScoring ? 16 : 0,
+          marginBottom: showScoring ? 20 : 0,
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+            padding: '18px 22px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
+              {/* Left — explanation */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                  How Points Work
+                </div>
+                <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6 }}>
+                  Every artefact you create in a toolkit tool earns points that count toward your cohort leaderboard ranking. The quality and completeness of your input directly affects your score — a well-structured brief produces a stronger artefact and earns more points.
+                </div>
+              </div>
+              {/* Right — scoring breakdown pills */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                {[
+                  { label: 'Per artefact created', value: '25 pts', color: '#38B2AC', bg: '#E6FFFA' },
+                  { label: 'Per learning phase completed', value: '4 pts', color: '#8B5CF6', bg: '#F5F3FF' },
+                  { label: 'Per insight saved', value: '30 pts', color: '#F6AD55', bg: '#FFFBEB' },
+                  { label: 'Per streak day (max 14)', value: '5 pts', color: '#ED8936', bg: '#FFF5EB' },
+                  { label: 'Per active day, last 30', value: '2 pts', color: '#718096', bg: '#F7FAFC' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <span style={{ fontSize: 11, color: '#718096' }}>{item.label}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: item.color,
+                      background: item.bg, borderRadius: 6, padding: '2px 8px',
+                      whiteSpace: 'nowrap',
+                    }}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ═══ Progress Header Card ═══ */}
         <div style={{ background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0', padding: '20px 24px' }}>
@@ -496,23 +612,59 @@ const AppToolkit: React.FC = () => {
                         </div>
                       </div>
 
-                      <div>
-                        <SectionLabel locked={isLocked}>Points & Leaderboard</SectionLabel>
-                        <div style={{
-                          background: isLocked ? '#FAFAFA' : '#FFFDF0',
-                          border: `1px solid ${isLocked ? '#E2E8F0' : '#F7E8A4'}`,
-                          borderRadius: 10, padding: '12px 16px',
-                          fontSize: 11.5, color: isLocked ? '#A0AEC0' : '#4A5568', lineHeight: 1.55,
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <Star size={12} color={isLocked ? '#CBD5E0' : '#F6AD55'} />
-                            <span style={{ fontWeight: 700, color: isLocked ? '#CBD5E0' : '#1A202C' }}>
-                              Earn points for every artefact
-                            </span>
+                      {/* Good vs Bad input */}
+                      {TOOL_QUALITY_GUIDE[tool.id] && (
+                        <div>
+                          <SectionLabel locked={isLocked}>What Makes a Good Input</SectionLabel>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {/* Good example */}
+                            <div style={{
+                              background: isLocked ? '#FAFAFA' : '#F0FFF4',
+                              border: `1px solid ${isLocked ? '#E2E8F0' : '#C6F6D5'}`,
+                              borderRadius: 10, padding: '10px 14px',
+                            }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: isLocked ? '#CBD5E0' : '#276749', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>
+                                ✓ {TOOL_QUALITY_GUIDE[tool.id].goodLabel}
+                              </div>
+                              <div style={{ fontSize: 11, color: isLocked ? '#A0AEC0' : '#2D3748', lineHeight: 1.55, fontStyle: 'italic' }}>
+                                "{TOOL_QUALITY_GUIDE[tool.id].goodExample}"
+                              </div>
+                            </div>
+                            {/* Bad example */}
+                            <div style={{
+                              background: isLocked ? '#FAFAFA' : '#FFF5F5',
+                              border: `1px solid ${isLocked ? '#E2E8F0' : '#FEB2B2'}`,
+                              borderRadius: 10, padding: '10px 14px',
+                            }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: isLocked ? '#CBD5E0' : '#C53030', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>
+                                ✗ {TOOL_QUALITY_GUIDE[tool.id].badLabel}
+                              </div>
+                              <div style={{ fontSize: 11, color: isLocked ? '#A0AEC0' : '#2D3748', lineHeight: 1.55, fontStyle: 'italic' }}>
+                                "{TOOL_QUALITY_GUIDE[tool.id].badExample}"
+                              </div>
+                            </div>
                           </div>
-                          Each artefact you create is scored on quality, completeness, and relevance. Higher-quality work earns more points, which contribute directly to your leaderboard ranking.
                         </div>
-                      </div>
+                      )}
+
+                      {/* Scoring guidance */}
+                      {TOOL_QUALITY_GUIDE[tool.id] && (
+                        <div>
+                          <SectionLabel locked={isLocked}>How Your Artefact Is Scored</SectionLabel>
+                          <div style={{
+                            background: isLocked ? '#FAFAFA' : '#FFFDF0',
+                            border: `1px solid ${isLocked ? '#E2E8F0' : '#F7E8A4'}`,
+                            borderRadius: 10, padding: '10px 14px',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                              <Star size={12} color={isLocked ? '#CBD5E0' : '#F6AD55'} style={{ marginTop: 2, flexShrink: 0 }} />
+                              <div style={{ fontSize: 11, color: isLocked ? '#A0AEC0' : '#4A5568', lineHeight: 1.6 }}>
+                                {TOOL_QUALITY_GUIDE[tool.id].scoringNote}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

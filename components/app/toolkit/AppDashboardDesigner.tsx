@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Users, Layers, BarChart3, Palette, Code2,
   Database, SlidersHorizontal, ShieldCheck, CheckSquare,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import {
   EXAMPLE_BRIEFS,
   VISUAL_STYLE_OPTIONS, PRD_SECTIONS,
@@ -18,7 +19,7 @@ import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -453,7 +454,9 @@ function getBuildPlanRefinementQuestions(platformLabel: string): string[] {
 
 const AppDashboardDesigner: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const projectChip = projectChips?.[4] ?? null;
+  const location = useLocation();
 
   // ─── Brief state ───
   const [brief, setBrief] = useState<DashboardBrief>({ ...INITIAL_BRIEF });
@@ -496,6 +499,7 @@ const AppDashboardDesigner: React.FC = () => {
   const [buildPlanRefinementAnswers, setBuildPlanRefinementAnswers] = useState<Record<number, string>>({});
   const [buildPlanAdditionalContext, setBuildPlanAdditionalContext] = useState('');
   const [checkedTests, setCheckedTests] = useState<Set<number>>(new Set());
+  const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
 
   // ─── Refs ───
   const prdRef = useRef<HTMLDivElement>(null);
@@ -674,6 +678,14 @@ const AppDashboardDesigner: React.FC = () => {
     const result = await generatePRD(updatedBrief, briefSummary);
     if (result) {
       setPrdResult(result as NewPRDResult);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          prdMarkdown: (result as NewPRDResult).prd_content || '',
+          sections: (result as NewPRDResult).sections || [],
+          brief: updatedBrief as unknown as Record<string, unknown>,
+        });
+      }
     } else {
       setPrdResult(generateFallbackPRD(updatedBrief));
     }
@@ -699,6 +711,38 @@ const AppDashboardDesigner: React.FC = () => {
     });
     setDataSourcesText(example.q5_dataSources);
   };
+
+  // ─── Artefact prefill from "Launch in Tool" — restore full result ───
+  useEffect(() => {
+    const state = location.state as {
+      sourceArtefactId?: string;
+      sourceArtefactContent?: Record<string, any>;
+      sourceArtefactType?: string;
+      artefactPrefill?: Record<string, any>;
+    } | null;
+    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    if (!prefill) return;
+    // Restore brief inputs
+    if (prefill.brief && typeof prefill.brief === 'object') {
+      handleExampleClick(prefill.brief as typeof EXAMPLE_BRIEFS[0]);
+    } else if (prefill.description) {
+      setBrief(prev => ({ ...prev, q1_purpose: prefill.description || '' }));
+    }
+    // Restore full PRD result so the output section is visible immediately
+    if (prefill.prdMarkdown && prefill.sections) {
+      setPrdResult({
+        prd_content: prefill.prdMarkdown,
+        sections: prefill.sections,
+        readiness: prefill.readiness || { score: 0, verdict: '', criteria: [] },
+        refinement_questions: prefill.refinementQuestions || [],
+        screen_map: prefill.screen_map,
+        data_model: prefill.data_model,
+      });
+      setVisibleBlocks(10);
+    }
+    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    window.history.replaceState({}, '');
+  }, []);
 
   // ─── Step-back navigation ───
   const handleGoBackToStep1 = () => {
@@ -773,6 +817,14 @@ const AppDashboardDesigner: React.FC = () => {
 
     if (guide) {
       setBuildGuide(guide);
+      // Auto-save back to source artefact if launched from library (build_guide type)
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          markdown: buildFullBuildGuide(),
+          platform: selectedPlatform || 'generic',
+          taskDescription: brief.q1_purpose,
+        });
+      }
       setBuildPlanCopied(false);
       setBuildPlanSaved(false);
       setCheckedTests(new Set());
@@ -895,6 +947,14 @@ const AppDashboardDesigner: React.FC = () => {
 
     if (result) {
       setPrdResult(result as NewPRDResult);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          prdMarkdown: (result as NewPRDResult).prd_content || '',
+          sections: (result as NewPRDResult).sections || [],
+          brief: brief as unknown as Record<string, unknown>,
+        });
+      }
     }
 
     setPrdRefinementCount(prev => prev + 1);
@@ -991,6 +1051,30 @@ const AppDashboardDesigner: React.FC = () => {
         done={step1Done}
         collapsed={step1Done}
       >
+        {/* Your Project chip */}
+        {projectChip && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 600, marginBottom: 6, fontFamily: FONT }}>
+              ◆ Your Project
+            </div>
+            <button
+              onClick={() => handleExampleClick(projectChip as typeof EXAMPLE_BRIEFS[0])}
+              style={{
+                width: '100%', textAlign: 'left', background: `${LEVEL_ACCENT}18`,
+                border: `1.5px solid ${LEVEL_ACCENT_DARK}44`,
+                borderRadius: 10, padding: '10px 14px',
+                fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 500,
+                cursor: 'pointer', fontFamily: FONT, lineHeight: 1.5,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}30`)}
+              onMouseLeave={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}18`)}
+            >
+              {projectChip.q1_purpose}
+            </button>
+          </div>
+        )}
+
         {/* Example quick-fills */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>

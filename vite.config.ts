@@ -3250,6 +3250,283 @@ function curatedVideosProxyPlugin(supabaseUrl: string, supabaseKey: string): Plu
   };
 }
 
+// ─── Review Project proxy (PRD 18) ───
+
+const REVIEW_PROJECT_SYSTEM_BASE = `You are the OXYGY AI Project Reviewer — a supportive, experienced mentor who evaluates project submissions from professionals completing an AI upskilling programme.
+
+Your role is to review a learner's project submission and provide constructive, specific feedback across four dimensions. You are NOT a gatekeeper — you are a development coach. Your default stance is GENEROUS. These are busy professionals who took the time to do real work and write it up — look for reasons to give credit, not reasons to withhold it.
+
+CRITICAL SCORING PHILOSOPHY:
+- DEFAULT TO GENEROSITY. If someone has clearly done real work, the minimum score should be B tier (8+ points out of 12). Reserve C and below for submissions that are genuinely incomplete or off-topic.
+- "needs_attention" (1 point) is EXTREMELY RARE. It should only be used when a section is literally empty, completely fabricated, or entirely irrelevant. One weak area does NOT justify needs_attention — that is what "developing" is for.
+- "developing" (2 points) means real work was done but could be deeper. This is the DEFAULT for any section where effort is visible.
+- "strong" (3 points) means the section is specific, detailed, and shows genuine thought. This should be COMMON for learners who put in real effort.
+
+CRITICAL TONE RULES:
+- Always reference the learner's specific submission — their tool name, their described workflow, their stated outcomes. NEVER give generic feedback.
+- When something is good, say specifically WHY it's good. "Your reflection shows genuine iteration" is better than "Good reflection."
+- When something needs work, frame it as an OPPORTUNITY, not a deficiency. "To push this to S-tier, consider adding..." is better than "This section lacks..."
+- Assume competence. These are working professionals, not students. Address them as peers.
+- The encouragement field must identify one genuinely specific thing they did well. If you can't find something specific, you're not looking hard enough.
+
+DIMENSION DEFINITIONS:
+
+1. APPLICATION QUALITY (id: "brief_alignment")
+Has the learner applied the skills from this level to a real piece of work? The project brief is a SUGGESTION, not a requirement. Learners may choose a completely different project or use case — that is perfectly fine and should NOT be penalised.
+- "strong": The learner applied the level's skills to a clear, real project — regardless of whether it matches the brief. They can articulate what they built and why.
+- "developing": The learner did something relevant but the connection to the level's skills is vague or the project description is thin.
+- "needs_attention": ONLY if the submission describes work that has no connection whatsoever to the level's skills (e.g., a Level 2 submission about prompting with no agent/tool built). This should be extremely rare.
+
+2. EVIDENCE QUALITY (id: "evidence_quality")
+Do the screenshots and descriptions demonstrate a real deliverable?
+- "strong": Screenshots show the tool/workflow/dashboard in action with real content. The description is specific enough to paint a clear picture.
+- "developing": Screenshots are present and relevant but only show a partial view (e.g., a project list, a setup screen). OR no screenshots but the written description is detailed enough to demonstrate real work.
+- "needs_attention": ONLY if zero screenshots are provided when required AND the written description is so vague that no real work can be inferred. If ANY relevant screenshot is uploaded, the minimum is "developing."
+
+3. REFLECTION DEPTH (id: "reflection_depth")
+Does the reflection show genuine learning and thoughtful application?
+- "strong": The learner names specific design decisions, tools, configurations, or approaches. They describe iteration, challenges, or connections to their daily work. They explain WHY they made choices.
+- "developing": The learner describes what they did but stays surface-level. They mention the tool and its purpose but don't go into design decisions or iteration.
+- "needs_attention": ONLY if the reflection is essentially empty (under 20 words) or is clearly copied boilerplate with no personal content.
+
+CALIBRATION EXAMPLES FOR REFLECTION:
+- STRONG: "I use this to document all of the files, projects, and information related to the site I'm building. I gave it custom instructions for PRD generation and use the memory feature with the GitHub URL so it references the codebase." → This names the tool, describes configuration, explains the design decision (memory + GitHub URL), and shows practical integration.
+- DEVELOPING: "I built an AI agent that helps with my work. It's useful for generating content." → Real work happened but no specifics about configuration or design decisions.
+- NEEDS_ATTENTION: "It was good." → No meaningful content.
+
+4. REAL-WORLD IMPACT (id: "impact")
+Has this created tangible value?
+- "strong": The learner describes WHO uses the tool (beyond just themselves), WHAT changed, or gives specific outcomes. Selecting "My team" or higher for adoption scope AND describing how the team uses it counts as strong.
+- "developing": The learner claims personal benefit but doesn't describe specific outcomes or broader adoption. Or they selected team adoption but the description of impact is vague.
+- "needs_attention": ONLY if the impact section is literally empty or the claims are clearly implausible (e.g., "saved my company $10M" with no context).
+
+RESPONSE FORMAT (JSON only, no markdown, no preamble):
+
+{
+  "dimensions": [
+    {
+      "id": "brief_alignment",
+      "name": "Application Quality",
+      "status": "strong",
+      "feedback": "You've applied Level 2 skills to a real project — your AI Learning Academy in Claude Projects..."
+    },
+    {
+      "id": "evidence_quality",
+      "name": "Evidence Quality",
+      "status": "developing",
+      "feedback": "Your screenshot shows the project exists in Claude. To reach S-tier, consider adding a screenshot of..."
+    },
+    {
+      "id": "reflection_depth",
+      "name": "Reflection Depth",
+      "status": "strong",
+      "feedback": "The way you described configuring custom instructions and using memory with the GitHub URL..."
+    },
+    {
+      "id": "impact",
+      "name": "Real-World Impact",
+      "status": "strong",
+      "feedback": "Sharing this with your teammate and building shared memory shows genuine team adoption..."
+    }
+  ],
+  "overallPassed": true,
+  "summary": "A strong Level 2 submission that demonstrates real applied learning...",
+  "encouragement": "The fact that you integrated Claude's memory feature with your GitHub codebase shows real initiative..."
+}`;
+
+const REVIEW_LEVEL_ADDITIONS: Record<number, string> = {
+  1: `\n\nLEVEL 1 — ADDITIONAL CONTEXT:
+This is a foundational level. The learner applied AI prompting to their daily work. They did NOT need to build a discrete tool — using AI in the context of their existing job is exactly what this level is about.
+
+Screenshots are OPTIONAL for L1. If not provided, do not penalise evidence_quality — evaluate based on written description alone. If provided, any screenshot showing AI tool usage is sufficient for "strong".
+
+The learner may have applied prompting to ANY work task — it does NOT need to match the suggested project brief. If they describe a real situation where they used AI prompting, that is valid application.
+
+At L1, if the learner wrote a substantive reflection (50+ words) describing a real use case, the minimum expected score is 10/12 (A tier).`,
+
+  2: `\n\nLEVEL 2 — ADDITIONAL CONTEXT:
+The learner built a custom AI agent, GPT, Claude Project, or similar configured AI tool. The tool should have a name and a purpose.
+
+Screenshots are helpful but a detailed written description of the tool is equally valid evidence. A screenshot showing the tool exists (even just a project list or builder view) is sufficient for "developing" evidence quality. A screenshot showing the tool in action (conversation, output) is "strong".
+
+The learner may have built ANY kind of AI agent or configured tool — it does NOT need to match the suggested project brief. What matters is that they built something real and can describe it.
+
+At L2, if the learner named their tool, described what it does, and wrote a reflection about how they built it, the minimum expected score is 8/12 (B tier).`,
+
+  3: `\n\nLEVEL 3 — ADDITIONAL CONTEXT:
+The learner designed an automated workflow, process, or multi-step AI integration. This could be in Make, Zapier, n8n, or even a manual process they systematised with AI.
+
+Screenshots showing a workflow canvas or process diagram are helpful but a detailed written description is equally valid. Any visual evidence of the workflow is sufficient for "developing" evidence quality.
+
+The learner may have automated ANY workflow — it does NOT need to match the suggested project brief.
+
+At L3, if the learner described a real multi-step workflow and reflected on their design decisions, the minimum expected score is 8/12 (B tier).`,
+
+  4: `\n\nLEVEL 4 — ADDITIONAL CONTEXT:
+The learner built a dashboard, data visualisation, or front-end interface that presents information to an audience.
+
+A link and/or screenshots showing the actual dashboard are expected. Screenshots showing the dashboard with real data are "strong" evidence. Screenshots showing wireframes or mockups are "developing".
+
+The learner may have built ANY kind of dashboard or data presentation — it does NOT need to match the suggested project brief.
+
+At L4, if the learner built something visual, can describe the audience and purpose, and reflected on design decisions, the minimum expected score is 8/12 (B tier).`,
+
+  5: `\n\nLEVEL 5 — ADDITIONAL CONTEXT:
+This is the capstone level. The learner built a full application and optionally wrote a structured case study (Problem, Solution, Outcome, Learnings).
+
+A link to the deployed app and multiple screenshots are expected. The case study sections, if completed, should be substantive.
+
+The learner may have built ANY kind of application — it does NOT need to match the suggested project brief. What matters is that they built something real, deployed it, and can articulate the journey.
+
+At L5, if the learner built and deployed an app with a substantive reflection and case study, the minimum expected score is 8/12 (B tier).`,
+};
+
+function buildReviewSystemPromptLocal(level: number): string {
+  return REVIEW_PROJECT_SYSTEM_BASE + (REVIEW_LEVEL_ADDITIONS[level] || '');
+}
+
+function buildReviewUserMessageLocal(
+  level: number,
+  brief: { projectTitle: string; projectDescription: string; deliverable: string; challengeConnection: string },
+  submission: {
+    toolName: string | null; platformUsed: string | null; toolLink: string | null;
+    reflectionText: string; adoptionScope: string | null; outcomeText: string;
+    caseStudyProblem: string | null; caseStudySolution: string | null;
+    caseStudyOutcome: string | null; caseStudyLearnings: string | null;
+  },
+  profile: { role: string; function: string; seniority: string; aiExperience: string },
+): string {
+  const parts: string[] = [];
+
+  parts.push('=== PROJECT BRIEF (what the learner was asked to do) ===');
+  parts.push(`Title: ${brief.projectTitle}`);
+  parts.push(`Description: ${brief.projectDescription}`);
+  parts.push(`Expected Deliverable: ${brief.deliverable}`);
+  parts.push(`Challenge Connection: ${brief.challengeConnection}`);
+
+  parts.push('\n=== LEARNER PROFILE ===');
+  parts.push(`Role: ${profile.role}`);
+  parts.push(`Function: ${profile.function}`);
+  parts.push(`Seniority: ${profile.seniority}`);
+  parts.push(`AI Experience: ${profile.aiExperience}`);
+
+  parts.push('\n=== SUBMISSION ===');
+
+  if (submission.toolName) {
+    parts.push('\n--- What They Built ---');
+    parts.push(`Tool/Agent Name: ${submission.toolName}`);
+    if (submission.platformUsed) parts.push(`Platform: ${submission.platformUsed}`);
+    if (submission.toolLink) parts.push(`Link: ${submission.toolLink}`);
+  }
+
+  parts.push('\n--- Reflection ---');
+  parts.push(submission.reflectionText || '(No reflection provided)');
+
+  parts.push('\n--- Impact ---');
+  if (submission.adoptionScope) parts.push(`Adoption: ${submission.adoptionScope}`);
+  parts.push(submission.outcomeText || '(No outcome provided)');
+
+  if (level === 5) {
+    parts.push('\n--- Case Study: Problem ---');
+    parts.push(submission.caseStudyProblem || '(Not provided)');
+    parts.push('\n--- Case Study: Solution ---');
+    parts.push(submission.caseStudySolution || '(Not provided)');
+    parts.push('\n--- Case Study: Outcome ---');
+    parts.push(submission.caseStudyOutcome || '(Not provided)');
+    parts.push('\n--- Case Study: Learnings ---');
+    parts.push(submission.caseStudyLearnings || '(Not provided)');
+  }
+
+  parts.push('\n=== SCREENSHOTS: Screenshots attached below ===');
+  parts.push('Evaluate the attached screenshots for relevance and evidence of a working deliverable.');
+
+  return parts.join('\n');
+}
+
+function reviewProjectProxyPlugin(apiKey: string, model: string): Plugin {
+  return {
+    name: 'review-project-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/review-project', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') { res.statusCode = 503; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'API key not configured' })); return; }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { level, projectBrief, submission, screenshots, learnerProfile } = JSON.parse(body);
+
+            if (!level || !projectBrief || !submission) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing required fields' }));
+              return;
+            }
+
+            const systemPrompt = buildReviewSystemPromptLocal(level);
+            const userMessageText = buildReviewUserMessageLocal(level, projectBrief, submission, learnerProfile || {});
+
+            const imageBlocks = (screenshots || []).slice(0, 5).map((dataUri: string) => ({
+              type: 'image_url',
+              image_url: { url: dataUri },
+            }));
+
+            const messages = [
+              { role: 'system', content: systemPrompt },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: userMessageText },
+                  ...imageBlocks,
+                ],
+              },
+            ];
+
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model,
+                messages,
+                temperature: 0.4,
+                max_tokens: 2000,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'review-project');
+
+            if (!openRouterResponse.ok) {
+              const errText = await openRouterResponse.text();
+              console.error('OpenRouter API error (review-project):', openRouterResponse.status, errText);
+              const status = openRouterResponse.status === 429 ? 429 : 502;
+              const message = openRouterResponse.status === 429
+                ? 'The AI service is temporarily busy. Please wait a moment and try again.'
+                : 'AI service error';
+              res.statusCode = status;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: message, retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const rawText = data?.choices?.[0]?.message?.content || '';
+            const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(parsed));
+          } catch (err) {
+            console.error('Proxy error (review-project):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
@@ -3282,6 +3559,7 @@ export default defineConfig(({ mode }) => {
       learningCoachChatProxyPlugin(env.OpenRouter_API, geminiModel),
       notebookGuideProxyPlugin(env.OpenRouter_API, geminiModel),
       perplexityGuideProxyPlugin(env.OpenRouter_API, geminiModel),
+      reviewProjectProxyPlugin(env.OpenRouter_API, geminiModel),
       curatedVideosProxyPlugin(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
     ],
     resolve: {

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, Play, PenTool, FolderOpen, KeyRound, Mail, Users } from 'lucide-react';
+import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, PenTool, KeyRound, Mail, Users, ChevronRight, Zap, FolderOpen, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { useAuth } from '../../context/AuthContext';
@@ -12,7 +12,6 @@ import {
   LEVEL_ACCENT_COLORS,
   LEVEL_ACCENT_DARK_COLORS,
 } from '../../data/levelTopics';
-import { getPrimaryTool } from '../../data/toolkitData';
 import { timeAgo } from '../../utils/timeAgo';
 
 /* ─── Greeting helper ─── */
@@ -79,42 +78,6 @@ function ProgressRing({
         <span style={{ fontSize: size > 60 ? 20 : 14, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{displayPct}%</span>
         {size > 60 && <span style={{ fontSize: 11, color: '#718096', marginTop: 2 }}>{completed} / {total}</span>}
       </div>
-    </div>
-  );
-}
-
-/* ─── Day dots for streak ─── */
-const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-function DayDots({ activeDays, streakDays }: { activeDays: boolean[]; streakDays: number }) {
-  const now = new Date();
-  const dow = now.getDay();
-  const monBased = dow === 0 ? 6 : dow - 1;
-
-  return (
-    <div style={{ display: 'flex', gap: 4 }}>
-      {DAY_LABELS.map((label, i) => {
-        const isPast = i < monBased;
-        const isToday = i === monBased;
-        const isFuture = i > monBased;
-        const isActive = activeDays[i];
-
-        let bg = '#E2E8F0';
-        let showCheck = false;
-        if (isPast && isActive) { bg = '#1A202C'; showCheck = true; }
-        if (isToday && streakDays > 0) { bg = '#38B2AC'; showCheck = true; }
-        if (isToday && streakDays === 0) { bg = '#E2E8F0'; }
-        if (isFuture) { bg = '#E2E8F0'; }
-
-        return (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {showCheck && <Check size={9} color="#FFFFFF" strokeWidth={3} />}
-            </div>
-            <span style={{ fontSize: 9, color: '#718096' }}>{label}</span>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -263,7 +226,7 @@ function JourneySteps({ currentLevel, levelsCompleted }: { currentLevel: number;
 const AppDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { userProfile, hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { userProfile, hasLearningPlan, learningPlanLoading, projectSubmissions } = useAppContext();
   const { data, loading } = useDashboardData();
 
   const firstName = userProfile?.fullName?.split(' ')[0] || 'User';
@@ -274,7 +237,19 @@ const AppDashboard: React.FC = () => {
   const [joinError, setJoinError] = useState('');
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [hoveredCell, setHoveredCell] = useState<{ key: string; rect: DOMRect; dateLabel: string; isActive: boolean; details: { level: number; tool: string; phases: number; artefacts: number }[] } | null>(null);
+  const [weekExpanded, setWeekExpanded] = useState(false);
+  const [levelDepths, setLevelDepths] = useState<Record<string, string>>({});
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (user) {
+      import('../../lib/database').then(({ getLatestLearningPlan }) => {
+        getLatestLearningPlan(user.id).then(result => {
+          if (result?.level_depths) setLevelDepths(result.level_depths);
+        });
+      });
+    }
+  }, [user]);
 
   const handleJoinOrg = async () => {
     if (!user || !inviteCode.trim()) return;
@@ -389,6 +364,43 @@ const AppDashboard: React.FC = () => {
 
         {/* Right — score + ring */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '10px 14px', background: '#FAEEDA33',
+            border: '1px solid #FAEEDA', borderRadius: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Flame size={13} color="#BA7517" />
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>
+                {data.streakDays}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#BA7517', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                day streak
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {(() => {
+                const now = new Date();
+                const dow = now.getDay();
+                const monBased = dow === 0 ? 6 : dow - 1;
+                return ['M','T','W','T','F','S','S'].map((label, i) => {
+                  const isActive = data.activeDaysThisWeek[i];
+                  const isPast = i < monBased;
+                  const isToday = i === monBased;
+                  let bg = '#F7FAFC';
+                  let border = '1px dashed #E2E8F0';
+                  let checkColor = '';
+                  if ((isPast || isToday) && isActive) { bg = isToday ? '#38B2AC' : '#A8F0E0'; border = 'none'; checkColor = isToday ? '#FFFFFF' : '#085041'; }
+                  else if (isPast) { bg = '#F1F5F9'; border = '1px solid #E2E8F0'; }
+                  return (
+                    <div key={i} style={{ width: 18, height: 18, borderRadius: '50%', background: bg, border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {checkColor && <Check size={7} color={checkColor} strokeWidth={3} />}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
           {currentUserData && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>Your Score</div>
@@ -413,498 +425,546 @@ const AppDashboard: React.FC = () => {
         {/* ─── LEFT COLUMN ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-          {/* Card: Resume Learning (redesigned — CTA right, phase icons) */}
+          {/* Card: Resume Learning + Your Week integrated */}
           <div
             style={{
               background: '#FFFFFF',
               borderRadius: 16,
               border: '1px solid #E2E8F0',
               borderLeft: `4px solid ${accent}`,
-              padding: '22px 26px',
-              display: 'flex',
-              gap: 20,
-              alignItems: 'stretch',
+              overflow: 'hidden',
             }}
           >
-            {/* Left content area */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-              {/* Header badges */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ background: accent + '55', color: accentDark, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', padding: '3px 10px', borderRadius: 20 }}>
-                  LEVEL {level}
-                </span>
-                <span style={{ fontSize: 12, color: '#718096' }}>
-                  Topic {data.activeTopicIndex + 1} of {totalTopics}
-                </span>
+            {/* Top section — Resume Learning */}
+            <div style={{ padding: '22px 26px', display: 'flex', gap: 20, alignItems: 'stretch' }}>
+              {/* Left content area */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+                {/* Header badges */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ background: accent + '55', color: accentDark, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', padding: '3px 10px', borderRadius: 20 }}>
+                    LEVEL {level}
+                  </span>
+                  <span style={{ fontSize: 12, color: '#718096' }}>
+                    Topic {data.activeTopicIndex + 1} of {totalTopics}
+                  </span>
+                </div>
+
+                {/* Title + description */}
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1A202C', letterSpacing: '-0.3px', marginBottom: 4 }}>
+                    {activeTopic?.title || 'Getting Started'}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
+                    {activeTopic?.description || ''}
+                  </div>
+                </div>
               </div>
 
-              {/* Title + description */}
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1A202C', letterSpacing: '-0.3px', marginBottom: 4 }}>
-                  {activeTopic?.title || 'Getting Started'}
-                </div>
-                <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
-                  {activeTopic?.description || ''}
-                </div>
-              </div>
-
-
-            </div>
-
-            {/* Right CTA area */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 18,
-                padding: '12px 24px',
-                borderRadius: 14,
-                background: accent + '15',
-                flexShrink: 0,
-                alignSelf: 'stretch',
-              }}
-            >
-              <ProgressRing completed={data.completedTopics} total={data.totalTopics} accentColor={accent} size={110} strokeWidth={8} />
-              <button
-                onClick={() => navigate('/app/level?phase=1')}
+              {/* Right CTA area */}
+              <div
                 style={{
-                  background: '#1A202C',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: 24,
-                  padding: '11px 26px',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  fontFamily: 'inherit',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 7,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                  whiteSpace: 'nowrap',
+                  justifyContent: 'center',
+                  gap: 18,
+                  padding: '12px 24px',
+                  borderRadius: 14,
+                  background: accent + '15',
+                  flexShrink: 0,
+                  alignSelf: 'stretch',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#2D3748')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#1A202C')}
               >
-                Resume <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Card: Engagement + Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {/* ── YOUR ENGAGEMENT (dark, split: activity | streak) ── */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
-              {/* Subtitles row */}
-              <div style={{ display: 'flex', marginBottom: 14 }}>
-                <div style={{ flex: 1, fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>Activity · Last 4 weeks</div>
-                <div style={{ flex: 1, fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em', paddingLeft: 18 }}>Streak · This week</div>
+                <ProgressRing completed={data.completedTopics} total={data.totalTopics} accentColor={accent} size={110} strokeWidth={8} />
+                <button
+                  onClick={() => navigate('/app/level?phase=1')}
+                  style={{
+                    background: '#1A202C',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 24,
+                    padding: '11px 26px',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    fontFamily: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#2D3748')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '#1A202C')}
+                >
+                  Resume <ArrowRight size={14} />
+                </button>
               </div>
-              {/* Content row */}
-              <div style={{ display: 'flex', gap: 0 }}>
-                {/* LEFT — Activity: stats left, grid right (fills space) */}
-                <div style={{ flex: 1, paddingRight: 18, display: 'flex', gap: 12, alignItems: 'center' }}>
-                  {/* Stats — centre-aligned with grid */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                    <div>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.activeDaysThisWeek.filter(Boolean).length}</div>
-                      <div style={{ fontSize: 9, color: '#A0AEC0', marginTop: 2 }}>active days</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: '#38B2AC', lineHeight: 1 }}>{Object.values(data.toolUsage).reduce((s, t) => s + t.artefactsCreated, 0)}</div>
-                      <div style={{ fontSize: 9, color: '#A0AEC0', marginTop: 2 }}>artefacts</div>
-                    </div>
-                  </div>
-                  {/* Grid — fills all remaining space with hover tooltips */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
-                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                        <div key={`h${i}`} style={{ fontSize: 7, color: '#A0AEC0', textAlign: 'center', lineHeight: '9px', marginBottom: 2 }}>{d}</div>
-                      ))}
-                      {(() => {
-                        const now = new Date();
-                        const dow = now.getDay();
-                        const monBased = dow === 0 ? 6 : dow - 1;
-                        const cells: React.ReactNode[] = [];
-                        const levelToolNames: Record<number, string> = { 1: 'Prompt Playground', 2: 'Agent Builder', 3: 'Workflow Canvas', 4: 'Dashboard Designer', 5: 'App Evaluator' };
-                        for (let w = 0; w < 4; w++) {
-                          for (let d = 0; d < 7; d++) {
-                            let bg = '#EDF2F7';
-                            let isActiveCell = false;
-                            const cellDate = new Date(now);
-                            const daysBack = (3 - w) * 7 + (monBased - d);
-                            cellDate.setDate(now.getDate() - daysBack);
-                            if (w === 3) {
-                              const isActive = data.activeDaysThisWeek[d];
-                              const isPast = d < monBased;
-                              const isToday = d === monBased;
-                              if (isPast && isActive) { bg = '#38B2AC'; isActiveCell = true; }
-                              else if (isPast) bg = '#E2E8F0';
-                              else if (isToday && isActive) { bg = '#4FD1C5'; isActiveCell = true; }
-                              else if (isToday) bg = '#B2DFDB';
-                              else bg = '#F7FAFC';
-                            }
-                            const dateLabel = cellDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-                            const cellKey = `${w}-${d}`;
-                            const cellDetails: { level: number; tool: string; phases: number; artefacts: number }[] = [];
-                            if (isActiveCell) {
-                              Object.entries(data.levelProgress).forEach(([lvl, lp]) => {
-                                const lvlNum = Number(lvl);
-                                const tKey = Object.keys(data.toolUsage).find(k => {
-                                  const mp: Record<string, number> = { 'prompt-playground': 1, 'agent-builder': 2, 'workflow-canvas': 3, 'dashboard-designer': 4, 'ai-app-evaluator': 5 };
-                                  return mp[k] === lvlNum;
-                                });
-                                const ac = tKey ? data.toolUsage[tKey]?.artefactsCreated || 0 : 0;
-                                const pd = lp.phasesCompleted.filter(Boolean).length;
-                                if (pd > 0 || ac > 0) cellDetails.push({ level: lvlNum, tool: levelToolNames[lvlNum], phases: pd, artefacts: ac });
-                              });
-                            }
-                            cells.push(
-                              <div
-                                key={cellKey}
-                                style={{ aspectRatio: '1', borderRadius: 2, background: bg, cursor: 'pointer', transition: 'transform 0.1s, box-shadow 0.1s' }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.transform = 'scale(1.15)';
-                                  e.currentTarget.style.boxShadow = '0 0 6px rgba(56,178,172,0.4)';
-                                  setHoveredCell({ key: cellKey, rect: e.currentTarget.getBoundingClientRect(), dateLabel, isActive: isActiveCell, details: cellDetails });
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                  e.currentTarget.style.boxShadow = 'none';
-                                  setHoveredCell(null);
-                                }}
-                              />
-                            );
-                          }
-                        }
-                        return cells;
-                      })()}
-                    </div>
-                  </div>
-                  {/* Tooltip rendered via portal — see bottom of return */}
-                </div>
+            </div>
 
-                {/* Divider */}
-                <div style={{ width: 1, background: '#E2E8F0', flexShrink: 0 }} />
+            {/* ── Your Week — integrated footer strip ── */}
+            {(() => {
+              // ── Derive Learning stats ──
+              const phaseLabels = ['E-Learning', 'Read', 'Watch', 'Practice'];
+              const phaseCounts = [0, 0, 0, 0];
+              Object.values(data.levelProgress).forEach(lp => {
+                lp.phasesCompleted.forEach((done, i) => { if (done) phaseCounts[i]++; });
+              });
+              const totalPhasesThisWeek = phaseCounts.reduce((a, b) => a + b, 0);
+              const maxPhase = Math.max(...phaseCounts, 1);
 
-                {/* RIGHT — Streak: ring + label top, days bottom-aligned with grid */}
-                <div style={{ flex: 1, paddingLeft: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
-                  {/* Ring + labels stacked */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
-                    {(() => {
-                      const ringSize = 72;
-                      const strokeW = 4.5;
-                      const radius = (ringSize - strokeW * 2) / 2;
-                      const circ = 2 * Math.PI * radius;
-                      const pct = Math.min(data.streakDays / 7, 1);
-                      const offset = circ * (1 - pct);
-                      return (
-                        <div style={{ position: 'relative', width: ringSize, height: ringSize }}>
-                          <svg width={ringSize} height={ringSize} style={{ transform: 'rotate(-90deg)' }}>
-                            <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="#F7FAFC" strokeWidth={strokeW} />
-                            <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="#F6AD55" strokeWidth={strokeW} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
-                          </svg>
-                          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                            <Flame size={13} color="#F6AD55" style={{ marginBottom: 2 }} />
-                            <span style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{data.streakDays}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    <div style={{ fontSize: 11, color: '#4A5568', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 700, color: '#F6AD55' }}>Current Streak</span>
-                      <span style={{ color: '#A0AEC0', marginLeft: 6 }}>
-                        {(() => {
-                          const now = new Date();
-                          const startDate = new Date(now);
-                          startDate.setDate(startDate.getDate() - (data.streakDays - 1));
-                          const fmt = (d: Date) => d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-                          return data.streakDays > 0 ? `${fmt(startDate)} – ${fmt(now)}` : 'Start today';
-                        })()}
+              // ── Derive Toolkit stats ──
+              const TOOL_DISPLAY: Record<string, { name: string; level: number }> = {
+                'prompt-playground': { name: 'Prompt Playground', level: 1 },
+                'agent-builder': { name: 'Agent Builder', level: 2 },
+                'workflow-canvas': { name: 'Workflow Canvas', level: 3 },
+                'dashboard-designer': { name: 'Dashboard Designer', level: 4 },
+                'ai-app-evaluator': { name: 'App Evaluator', level: 5 },
+              };
+              const toolEntries = Object.entries(data.toolUsage)
+                .filter(([, u]) => u.artefactsCreated > 0)
+                .map(([id, u]) => ({ id, ...TOOL_DISPLAY[id], count: u.artefactsCreated }))
+                .filter(t => t.name)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3);
+              const totalArtefacts = Object.values(data.toolUsage).reduce((s, u) => s + u.artefactsCreated, 0);
+              const toolCount = toolEntries.length;
+
+              // ── Derive Project stats ──
+              const assignedLevels = [1, 2, 3, 4, 5].filter(lvl => {
+                const depth = levelDepths[`L${lvl}`];
+                return !depth || depth !== 'skip';
+              });
+              const projectEntries = assignedLevels.map(lvl => {
+                const sub = projectSubmissions[lvl];
+                return { lvl, status: sub?.status || 'not-started' };
+              });
+              const activeProjects = projectEntries.filter(p => p.status !== 'not-started').length;
+
+              // ── Verdict label ──
+              const activeDaysCount = data.activeDaysThisWeek.filter(Boolean).length;
+              const verdict = activeDaysCount >= 5 ? { label: 'Strong week', bg: '#F0FFF4', color: '#276749' }
+                : activeDaysCount >= 3 ? { label: 'Good progress', bg: '#EBF8FF', color: '#2B6CB0' }
+                : activeDaysCount >= 1 ? { label: 'Getting going', bg: '#FFFBEB', color: '#92400E' }
+                : { label: 'Start today', bg: '#F7FAFC', color: '#718096' };
+
+              const PROJECT_STATUS_STYLES: Record<string, { label: string; color: string; dot: string }> = {
+                passed: { label: 'Passed ✓', color: '#276749', dot: '#48BB78' },
+                submitted: { label: 'Under review', color: '#92400E', dot: '#ECC94B' },
+                needs_revision: { label: 'Needs revision', color: '#C53030', dot: '#FC8181' },
+                draft: { label: 'Draft saved', color: '#718096', dot: '#A0AEC0' },
+                'not-started': { label: 'Not started', color: '#A0AEC0', dot: '#E2E8F0' },
+              };
+
+              const sectionStyle = { flex: 1, minWidth: 0, padding: '0 20px' };
+              const dividerStyle = { width: 1, background: accentDark + '22', flexShrink: 0 };
+              const colLabelStyle = { fontSize: 11, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 };
+              const iconBoxStyle = (bg: string) => ({ width: 18, height: 18, borderRadius: 5, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 });
+              const bigNumStyle = { fontSize: 30, fontWeight: 800, color: '#1A202C', lineHeight: 1, marginBottom: 2 };
+              const bigSubStyle = { fontSize: 12, color: '#718096', marginBottom: 12 };
+              const pillStyle = { display: 'flex', alignItems: 'center', gap: 7, padding: '5px 10px', borderRadius: 8, background: '#FFFFFF', border: '1px solid ' + accent + '55', marginBottom: 5 };
+
+              return (
+                <div style={{ background: accent + '12', borderTop: '1px solid ' + accent + '33' }}>
+                  {/* ── Collapsed header — always visible ── */}
+                  <div
+                    onClick={() => setWeekExpanded(!weekExpanded)}
+                    style={{ padding: '16px 26px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0 }}
+                  >
+                    {/* Week label + verdict */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>Your Week</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 11px', borderRadius: 20, background: verdict.bg, color: verdict.color }}>
+                        {verdict.label}
                       </span>
                     </div>
+                    {/* Summary stats row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 22, marginRight: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={iconBoxStyle('#EAF3DE')}>
+                          <BookOpen size={11} color="#27500A" />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalPhasesThisWeek}</span>
+                        <span style={{ fontSize: 13, color: '#718096' }}>phases</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={iconBoxStyle('#E6FFFA')}>
+                          <Zap size={11} color="#085041" />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalArtefacts}</span>
+                        <span style={{ fontSize: 13, color: '#718096' }}>artefacts</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={iconBoxStyle('#EEEDFE')}>
+                          <FolderOpen size={11} color="#3C3489" />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{activeProjects}</span>
+                        <span style={{ fontSize: 13, color: '#718096' }}>projects</span>
+                      </div>
+                    </div>
+                    <ChevronDown size={18} color="#A0AEC0" style={{ transition: 'transform 0.25s ease', transform: weekExpanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
                   </div>
-                  {/* Day circles — bottom-aligned to match grid's last row */}
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {(() => {
-                      const now = new Date();
-                      const dow = now.getDay();
-                      const monBased = dow === 0 ? 6 : dow - 1;
-                      return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => {
-                        const isActive = data.activeDaysThisWeek[i];
-                        const isPast = i < monBased;
-                        const isToday = i === monBased;
-                        let bg = '#EDF2F7';
-                        if ((isPast || isToday) && isActive) bg = '#38B2AC';
-                        else if (isToday) bg = '#B2DFDB';
-                        else if (isPast) bg = '#E2E8F0';
-                        return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {isActive && (isPast || isToday) ? <Check size={11} color="#FFF" strokeWidth={3} /> : null}
+
+                  {/* ── Expanded detail — only visible when open ── */}
+                  <div style={{ maxHeight: weekExpanded ? 300 : 0, overflow: 'hidden', transition: 'max-height 0.35s ease', borderTop: weekExpanded ? '1px solid ' + accent + '33' : 'none' }}>
+                    <div style={{ padding: '18px 26px', display: 'flex', gap: 0, alignItems: 'flex-start' }}>
+
+                      {/* Learning column */}
+                      <div style={{ ...sectionStyle, paddingLeft: 0 }}>
+                        <div style={colLabelStyle}>
+                          <div style={iconBoxStyle('#EAF3DE')}><BookOpen size={11} color="#27500A" /></div>
+                          Learning
+                        </div>
+                        <div style={bigNumStyle}>{totalPhasesThisWeek} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>phases</span></div>
+                        <div style={bigSubStyle}>Completed to date</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {phaseLabels.map((label, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 11, color: '#718096', width: 68, flexShrink: 0 }}>{label}</span>
+                              <div style={{ flex: 1, height: 5, background: '#FFFFFF', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', borderRadius: 3, background: LEVEL_ACCENT_COLORS[i + 1] || '#A8F0E0', width: `${(phaseCounts[i] / maxPhase) * 100}%`, transition: 'width 0.4s ease' }} />
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#1A202C', width: 18, textAlign: 'right' as const }}>{phaseCounts[i]}</span>
                             </div>
-                            <span style={{ fontSize: 9, color: isToday ? '#38B2AC' : '#A0AEC0', fontWeight: isToday ? 600 : 400 }}>{label}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={dividerStyle} />
+
+                      {/* Toolkit column */}
+                      <div style={sectionStyle}>
+                        <div style={colLabelStyle}>
+                          <div style={iconBoxStyle('#E6FFFA')}><Zap size={11} color="#085041" /></div>
+                          Toolkit
+                        </div>
+                        <div style={bigNumStyle}>{totalArtefacts} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>artefacts</span></div>
+                        <div style={bigSubStyle}>Across {toolCount} tool{toolCount !== 1 ? 's' : ''}</div>
+                        {toolEntries.length > 0 ? toolEntries.map(t => (
+                          <div key={t.id} style={pillStyle}>
+                            <div style={{ width: 7, height: 7, borderRadius: '50%', background: LEVEL_ACCENT_COLORS[t.level] || '#E2E8F0', flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: '#4A5568', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>{t.count}</span>
                           </div>
-                        );
-                      });
-                    })()}
+                        )) : (
+                          <div style={{ fontSize: 13, color: '#A0AEC0', fontStyle: 'italic' }}>No artefacts yet</div>
+                        )}
+                      </div>
+
+                      <div style={dividerStyle} />
+
+                      {/* Projects column */}
+                      <div style={{ ...sectionStyle, paddingRight: 0 }}>
+                        <div style={colLabelStyle}>
+                          <div style={iconBoxStyle('#EEEDFE')}><FolderOpen size={11} color="#3C3489" /></div>
+                          Projects
+                        </div>
+                        <div style={bigNumStyle}>{activeProjects} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>active</span></div>
+                        <div style={bigSubStyle}>Across assigned levels</div>
+                        {projectEntries.map(({ lvl, status }) => {
+                          const s = PROJECT_STATUS_STYLES[status] || PROJECT_STATUS_STYLES['not-started'];
+                          const weekAccent = LEVEL_ACCENT_COLORS[lvl];
+                          const weekAccentDk = LEVEL_ACCENT_DARK_COLORS[lvl];
+                          return (
+                            <div key={lvl} style={pillStyle}>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: weekAccent + '33', color: weekAccentDk, flexShrink: 0 }}>L{lvl}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: s.color, flex: 1 }}>{s.label}</span>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* ── YOUR STATS ── */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#718096', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>
-                YOUR STATS
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {[
-                  { icon: <Target size={14} color="#38B2AC" />, bg: '#F0FFF4', label: 'Topics Completed', value: `${data.overallCompletedTopics} / ${data.overallTotalTopics}`, barPct: data.overallTotalTopics > 0 ? (data.overallCompletedTopics / data.overallTotalTopics) * 100 : 0, barColor: '#38B2AC' },
-                  { icon: <BookOpen size={14} color="#8B5CF6" />, bg: '#F5F3FF', label: 'Assessment Avg', value: `${currentUserData?.assessmentAvg || 0}%`, barPct: currentUserData?.assessmentAvg || 0, barColor: '#8B5CF6' },
-                  { icon: <Trophy size={14} color="#F6AD55" />, bg: '#FFFBEB', label: 'Completion', value: `${currentUserData?.completionPct || 0}%`, barPct: currentUserData?.completionPct || 0, barColor: '#F6AD55' },
-                ].map((stat, i, arr) => (
-                  <div key={i} style={{ padding: '9px 0', borderBottom: i < arr.length - 1 ? '1px solid #F7FAFC' : 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 7, background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {stat.icon}
-                      </div>
-                      <span style={{ flex: 1, fontSize: 13, color: '#4A5568', fontWeight: 500 }}>{stat.label}</span>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>{stat.value}</span>
-                    </div>
-                    {stat.barPct !== null && (
-                      <div style={{ marginLeft: 38, marginTop: 5, height: 4, background: '#F1F5F9', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(stat.barPct, 100)}%`, height: '100%', background: stat.barColor, borderRadius: 2, transition: 'width 0.4s ease' }} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+              );
+            })()}
           </div>
 
-          {/* ── Unified Journey + Toolkit card ── */}
-          <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '22px 22px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          {/* ── Unified Journey card (collapsible levels) ── */}
+          <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', padding: '22px 22px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+            {/* Card header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid #E2E8F0', marginBottom: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <BookOpen size={16} color="#1A202C" />
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Your Journey</span>
               </div>
-              <div style={{ display: 'flex', gap: 14 }}>
-                <button
-                  onClick={() => navigate('/app/journey')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                >
-                  All topics →
-                </button>
-                <button
-                  onClick={() => navigate('/app/toolkit')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                >
-                  All tools →
-                </button>
-              </div>
-            </div>
-
-            {/* Column labels */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, padding: '0 14px 8px', marginBottom: 2 }}>
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Topic & Progress</span>
-              <div />
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em', paddingLeft: 14 }}>Tool & Artefacts</span>
+              <button
+                onClick={() => navigate('/app/journey')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#38B2AC', padding: 0, transition: 'opacity 0.15s', fontFamily: 'inherit' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                View all →
+              </button>
             </div>
 
             {/* Level rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               {[1, 2, 3, 4, 5].map(lvl => {
-                const lvlTopics = LEVEL_TOPICS[lvl] || [];
-                const topic = lvlTopics[0];
-                const primaryTool = getPrimaryTool(lvl);
-                if (!topic || !primaryTool) return null;
-
                 const lvlAccent = LEVEL_ACCENT_COLORS[lvl];
                 const lvlAccentDark = LEVEL_ACCENT_DARK_COLORS[lvl];
-                const isCurrentLevel = lvl === level;
-                const isCompletedLevel = lvl < level;
-                const isLocked = false; // All levels accessible
+                const depth = data.levelDepths[String(lvl)] ?? 'full';
+                const isSkipped = depth === 'skip';
                 const progress = data.levelProgress[lvl];
-                const phases = progress?.phasesCompleted || [false, false];
-                const usage = data.toolUsage[primaryTool.id];
-                const artefactsCreated = usage?.artefactsCreated || 0;
+                const phasesCompleted = progress?.phasesCompleted?.filter(Boolean).length ?? 0;
 
-                // Status badge config
-                const statusLabel = isCompletedLevel ? 'COMPLETED' : isCurrentLevel ? 'IN PROGRESS' : 'NOT STARTED';
-                const statusBg = isCompletedLevel ? '#C6F6D5' : isCurrentLevel ? lvlAccent + '44' : '#EDF2F7';
-                const statusColor = isCompletedLevel ? '#276749' : isCurrentLevel ? lvlAccentDark : '#A0AEC0';
+                const eLearnStatus = isSkipped ? 'n/a' : phasesCompleted >= 2 ? 'done' : phasesCompleted >= 1 ? 'progress' : 'not-started';
 
-                // Short tool descriptions
-                const toolDescriptions: Record<string, string> = {
-                  'prompt-playground': 'Write, test, and refine prompts with live AI feedback',
-                  'agent-builder': 'Design custom AI agents with personas and guardrails',
-                  'workflow-canvas': 'Map end-to-end automated AI pipelines visually',
-                  'dashboard-designer': 'Prototype interactive dashboards for AI outputs',
-                  'ai-app-evaluator': 'Evaluate and score your AI application architecture',
+                const toolKeyMap: Record<number, string> = { 1: 'prompt-playground', 2: 'agent-builder', 3: 'workflow-canvas', 4: 'dashboard-designer', 5: 'ai-app-evaluator' };
+                const toolUsageKey = toolKeyMap[lvl];
+                const artefacts = data.toolUsage[toolUsageKey]?.artefactsCreated ?? 0;
+                const toolkitStatus = isSkipped ? 'n/a' : artefacts > 0 ? 'done' : 'not-started';
+
+                const projectSub = data.projectSubmissions[lvl];
+                const projectStatus = isSkipped ? 'n/a' : projectSub?.status === 'passed' ? 'done' : (projectSub?.status === 'submitted' || projectSub?.status === 'needs_revision' || projectSub?.status === 'draft') ? 'progress' : 'not-started';
+
+                const levelNames: Record<number, string> = { 1: 'AI Fundamentals', 2: 'Applied Capability', 3: 'Systemic Integration', 4: 'Interactive Dashboards', 5: 'Full AI Applications' };
+                const toolkitRouteMap: Record<number, string> = { 1: '/app/toolkit/prompt-playground', 2: '/app/toolkit/agent-builder', 3: '/app/toolkit/workflow-canvas', 4: '/app/toolkit/dashboard-designer', 5: '/app/toolkit/ai-app-evaluator' };
+
+                const eLearnTooltips: Record<number, string> = {
+                  1: 'Learn the Prompt Blueprint framework – Role, Context, Task, Format, Steps, Checks',
+                  2: 'Build reusable AI agents with personas, guardrails, and memory',
+                  3: 'Map end-to-end AI workflows with triggers, steps, and outputs',
+                  4: 'Design interactive dashboards that surface AI-generated insights',
+                  5: 'Architect and evaluate full-stack AI applications',
+                };
+                const toolkitTooltips: Record<number, string> = {
+                  1: 'Prompt Playground – Write, test, and refine prompts with live AI feedback',
+                  2: 'Agent Builder – Design custom AI agents with personas and guardrails',
+                  3: 'Workflow Canvas – Map automated AI pipelines visually',
+                  4: 'Dashboard Designer – Prototype interactive dashboards for AI outputs',
+                  5: 'App Evaluator – Evaluate and score your AI application architecture',
+                };
+                const projectTooltips: Record<number, string> = {
+                  1: 'Submit a prompt artefact demonstrating the Blueprint framework',
+                  2: 'Submit a working AI agent you built on a platform',
+                  3: 'Submit a documented AI workflow with real outputs',
+                  4: 'Submit an interactive dashboard prototype with AI data',
+                  5: 'Submit a full AI application case study with outcomes',
+                };
+
+                const StatusPill = ({ status, onClick, tooltip }: { status: string; onClick?: () => void; tooltip?: string }) => {
+                  const isClickable = onClick && status !== 'n/a';
+                  const styles: Record<string, React.CSSProperties> = {
+                    'done': { background: '#C6F6D5', color: '#276749' },
+                    'progress': { background: lvlAccent + '33', color: lvlAccentDark },
+                    'not-started': { background: '#F7FAFC', color: '#A0AEC0', border: '1px solid #E2E8F0' },
+                    'n/a': { background: 'transparent', color: '#CBD5E0' },
+                  };
+                  const labels: Record<string, string> = { 'done': 'Done', 'progress': 'In progress', 'not-started': 'Not started', 'n/a': '—' };
+                  return (
+                    <div
+                      title={isClickable ? tooltip : undefined}
+                      onClick={isClickable ? onClick : undefined}
+                      style={{
+                        textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '4px 6px', borderRadius: 20,
+                        cursor: isClickable ? 'pointer' : 'default',
+                        transition: 'transform 0.1s, box-shadow 0.1s',
+                        ...styles[status],
+                      }}
+                      onMouseEnter={e => { if (isClickable) { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.1)'; } }}
+                      onMouseLeave={e => { if (isClickable) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; } }}
+                    >
+                      {labels[status]}
+                      {isClickable && <span style={{ marginLeft: 3, fontSize: 10 }}>→</span>}
+                    </div>
+                  );
+                };
+
+                const doneCount = [eLearnStatus, toolkitStatus, projectStatus].filter(s => s === 'done').length;
+                const levelPct = isSkipped ? -1 : Math.round((doneCount / 3) * 100);
+                const lvlTopics = LEVEL_TOPICS[lvl] || [];
+                const isExpanded = expandedLevels.has(lvl);
+
+                const toggleLevel = () => {
+                  if (isSkipped) return;
+                  setExpandedLevels(prev => {
+                    const next = new Set(prev);
+                    if (next.has(lvl)) next.delete(lvl); else next.add(lvl);
+                    return next;
+                  });
                 };
 
                 return (
-                  <div
-                    key={lvl}
-                    style={{
-                      flex: 1,
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1px 1fr',
-                      borderRadius: 10,
-                      border: `1px solid ${isLocked ? '#EDF2F7' : isCurrentLevel ? lvlAccent + '99' : '#E2E8F0'}`,
-                      borderLeft: `3px solid ${isCompletedLevel ? lvlAccent : isCurrentLevel ? lvlAccent : isLocked ? '#EDF2F7' : '#E2E8F0'}`,
-                      background: isLocked ? '#FAFBFC' : isCurrentLevel ? lvlAccent + '08' : '#FFFFFF',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {/* LEFT — Topic + progress */}
+                  <div key={lvl} style={{ borderBottom: lvl < 5 ? '1px solid #F0F4F8' : 'none', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    {/* ── Collapsed level row — always visible ── */}
                     <div
+                      onClick={toggleLevel}
                       style={{
-                        padding: '12px 14px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 5,
-                        opacity: isLocked ? 0.45 : 1,
+                        display: 'grid',
+                        gridTemplateColumns: '36px 1fr auto 50px 22px',
+                        gap: 8,
+                        alignItems: 'center',
+                        padding: '0 10px',
+                        flex: 1,
+                        cursor: isSkipped ? 'default' : 'pointer',
+                        borderRadius: 10,
+                        transition: 'background 0.12s',
                       }}
+                      onMouseEnter={e => { if (!isSkipped) e.currentTarget.style.background = '#F7FAFC'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                     >
-                      {/* Title + status badge */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{
-                          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isCompletedLevel ? lvlAccent : isCurrentLevel ? lvlAccent : '#E2E8F0',
-                          fontSize: 10, fontWeight: 800, color: lvlAccentDark,
-                        }}>
-                          {isCompletedLevel ? <Check size={10} color={lvlAccentDark} strokeWidth={3} /> : isLocked ? <Lock size={9} color="#718096" /> : lvl}
+                      {/* Level badge */}
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: isSkipped ? '#F7FAFC' : lvlAccent + '33',
+                        border: `2px solid ${isSkipped ? '#E2E8F0' : lvlAccent}`,
+                        color: isSkipped ? '#A0AEC0' : lvlAccentDark,
+                        fontSize: 13, fontWeight: 700,
+                      }}>
+                        {lvl}
+                      </div>
+
+                      {/* Level name + topic list */}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: isSkipped ? '#A0AEC0' : '#1A202C', whiteSpace: 'nowrap' }}>
+                          {levelNames[lvl]}
+                          {isSkipped && <span style={{ fontSize: 12, color: '#CBD5E0', fontWeight: 400, marginLeft: 6 }}>Not assigned</span>}
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {topic.title}
-                        </span>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: statusColor, background: statusBg, padding: '2px 7px', borderRadius: 6, flexShrink: 0, letterSpacing: '0.02em' }}>
-                          {statusLabel}
-                        </span>
-                      </div>
-
-                      {/* Subtitle */}
-                      <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.3, paddingLeft: 29, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {topic.subtitle}
-                      </div>
-
-                      {/* Phase count + course button */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 29, marginTop: 'auto' }}>
-                        {(() => {
-                          const phasesCompleted = phases.filter(Boolean).length;
-                          return (
-                            <div
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: 4,
-                                padding: '2px 8px', borderRadius: 8,
-                                background: phasesCompleted === 2 ? lvlAccent + '25' : '#F7FAFC',
-                                border: `1px solid ${phasesCompleted === 2 ? lvlAccent + '55' : '#E2E8F0'}`,
-                                fontSize: 10, fontWeight: 600,
-                                color: phasesCompleted === 2 ? lvlAccentDark : '#4A5568',
-                              }}
-                            >
-                              {phasesCompleted === 2 ? <Check size={9} strokeWidth={3} /> : <Play size={9} />}
-                              {phasesCompleted} of 2 phases
-                            </div>
-                          );
-                        })()}
-                        {!isLocked && (
-                          <button
-                            onClick={() => navigate('/app/level')}
-                            style={{
-                              marginLeft: 'auto', background: 'none', border: `1px solid ${lvlAccent}`,
-                              borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 600,
-                              color: lvlAccentDark, cursor: 'pointer', flexShrink: 0,
-                              transition: 'background 0.12s', fontFamily: 'inherit',
-                            }}
-                            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = lvlAccent + '30')}
-                            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'transparent')}
-                          >
-                            Go to course →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Divider */}
-                    <div style={{ background: '#E2E8F0', margin: '8px 0' }} />
-
-                    {/* RIGHT — Tool + description + artefacts */}
-                    <div
-                      style={{
-                        padding: '12px 14px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 5,
-                        opacity: isLocked ? 0.45 : 1,
-                      }}
-                    >
-                      {/* Tool name + icon */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{
-                          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: !isLocked ? lvlAccent + '55' : '#E2E8F0', fontSize: 12,
-                        }}>
-                          {!isLocked ? primaryTool.icon : <Lock size={9} color="#718096" />}
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: !isLocked ? '#1A202C' : '#718096', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {primaryTool.name}
-                        </span>
-                      </div>
-
-                      {/* Tool description */}
-                      <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.3, paddingLeft: 29, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {toolDescriptions[primaryTool.id] || primaryTool.toolType}
-                      </div>
-
-                      {/* Artefact badge + open tool button */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 29, marginTop: 'auto' }}>
-                        {!isLocked && artefactsCreated > 0 && (
-                          <div
-                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); navigate('/app/artefacts'); }}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 4,
-                              padding: '2px 8px', borderRadius: 8,
-                              background: lvlAccent + '25', border: `1px solid ${lvlAccent + '55'}`,
-                              fontSize: 10, fontWeight: 600, color: lvlAccentDark,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <FolderOpen size={9} />
-                            {artefactsCreated} artefact{artefactsCreated !== 1 ? 's' : ''}
+                        {!isSkipped && lvlTopics.length > 0 && (
+                          <div style={{ fontSize: 12, color: '#718096', marginTop: 2, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+                            {lvlTopics.map(t => t.title).join(', ')}
                           </div>
                         )}
-                        {!isLocked && artefactsCreated === 0 && (
-                          <span style={{ fontSize: 10, color: '#A0AEC0' }}>No artefacts yet</span>
-                        )}
-                        {!isLocked && (
-                          <button
-                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); navigate(primaryTool.route); }}
-                            style={{
-                              marginLeft: 'auto', background: 'none', border: `1px solid ${lvlAccent}`,
-                              borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 600,
-                              color: lvlAccentDark, cursor: 'pointer', flexShrink: 0,
-                              transition: 'background 0.12s', fontFamily: 'inherit',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = lvlAccent + '30')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                          >
-                            Open tool →
-                          </button>
-                        )}
                       </div>
+
+                      {/* E-Learning → Artefacts → Project flow */}
+                      {!isSkipped ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                          {/* E-Learning */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#EAF3DE88' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: 5, background: '#EAF3DE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <BookOpen size={11} color="#27500A" />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: phasesCompleted > 0 ? '#27500A' : '#CBD5E0' }}>{phasesCompleted}/2</span>
+                          </div>
+                          <ChevronRight size={14} color="#CBD5E0" strokeWidth={2} style={{ flexShrink: 0 }} />
+                          {/* Artefacts */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#E6FFFA88' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: 5, background: '#E6FFFA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Zap size={11} color="#085041" />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: artefacts > 0 ? '#085041' : '#CBD5E0' }}>{artefacts}</span>
+                          </div>
+                          <ChevronRight size={14} color="#CBD5E0" strokeWidth={2} style={{ flexShrink: 0 }} />
+                          {/* Project */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#EEEDFE88' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: 5, background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <FolderOpen size={11} color="#3C3489" />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: (projectStatus === 'done' ? 1 : 0) > 0 ? '#3C3489' : '#CBD5E0' }}>{projectStatus === 'done' ? 1 : 0}/1</span>
+                          </div>
+                        </div>
+                      ) : <div />}
+
+                      {/* Progress ring */}
+                      {(() => {
+                        if (isSkipped) return <div style={{ textAlign: 'center', fontSize: 12, color: '#CBD5E0' }}>—</div>;
+                        const size = 44;
+                        const stroke = 3.5;
+                        const r = (size - stroke) / 2;
+                        const circ = 2 * Math.PI * r;
+                        const offset = circ - (levelPct / 100) * circ;
+                        const ringColor = levelPct === 100 ? '#48BB78' : levelPct > 0 ? lvlAccent : '#EDF2F7';
+                        return (
+                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                            <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+                              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EDF2F7" strokeWidth={stroke} />
+                              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.4s ease' }} />
+                            </svg>
+                            <span style={{ position: 'absolute', fontSize: 12, fontWeight: 700, color: levelPct === 100 ? '#276749' : levelPct > 0 ? lvlAccentDark : '#A0AEC0' }}>{levelPct}%</span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Chevron */}
+                      {!isSkipped ? (
+                        <ChevronDown
+                          size={18}
+                          color="#A0AEC0"
+                          style={{ transition: 'transform 0.25s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        />
+                      ) : <div />}
                     </div>
+
+                    {/* ── Expanded topic detail ── */}
+                    {!isSkipped && (
+                      <div style={{
+                        maxHeight: isExpanded ? lvlTopics.length * 80 + 50 : 0,
+                        overflow: 'hidden',
+                        transition: 'max-height 0.3s ease',
+                      }}>
+                        {/* Column labels row */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '36px 1fr 96px 16px 96px 16px 96px',
+                          gap: 4,
+                          alignItems: 'center',
+                          padding: '2px 6px 6px',
+                        }}>
+                          <div />
+                          <div />
+                          <div style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>E-Learning</div>
+                          <div />
+                          <div style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Toolkit</div>
+                          <div />
+                          <div style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Project</div>
+                        </div>
+
+                        {/* Topic rows */}
+                        {lvlTopics.map((topic, tIdx) => {
+                          const isSoon = !!(topic as any).comingSoon;
+                          return (
+                            <div
+                              key={tIdx}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '36px 1fr 96px 16px 96px 16px 96px',
+                                gap: 4,
+                                alignItems: 'center',
+                                borderRadius: 8,
+                                padding: '5px 6px',
+                                marginLeft: 4,
+                                background: isSoon ? '#F7FAFC' : lvlAccent + '08',
+                                marginBottom: tIdx < lvlTopics.length - 1 ? 4 : 8,
+                                transition: 'background 0.12s',
+                                opacity: isSoon ? 0.7 : 1,
+                              }}
+                              onMouseEnter={e => { if (!isSoon) e.currentTarget.style.background = lvlAccent + '18'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = isSoon ? '#F7FAFC' : lvlAccent + '08'; }}
+                            >
+                              <div />
+                              <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 12, color: isSoon ? '#A0AEC0' : '#4A5568', fontWeight: 500 }}>
+                                {topic.title}
+                                {isSoon && <span style={{ fontSize: 10, fontWeight: 600, color: '#CBD5E0', marginLeft: 8, fontStyle: 'italic' }}>Coming soon</span>}
+                              </div>
+                              {isSoon ? (
+                                <>
+                                  <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
+                                  <div />
+                                  <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
+                                  <div />
+                                  <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
+                                </>
+                              ) : (
+                                <>
+                                  <StatusPill status={eLearnStatus} onClick={() => navigate(`/app/level?level=${lvl}`)} tooltip={eLearnTooltips[lvl]} />
+                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <ChevronRight size={14} color={lvlAccent} strokeWidth={2.5} />
+                                  </div>
+                                  <StatusPill status={toolkitStatus} onClick={() => navigate(toolkitRouteMap[lvl])} tooltip={toolkitTooltips[lvl]} />
+                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <ChevronRight size={14} color={lvlAccent} strokeWidth={2.5} />
+                                  </div>
+                                  <StatusPill status={projectStatus} onClick={() => navigate(`/app/journey/project/${lvl}`)} tooltip={projectTooltips[lvl]} />
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1094,44 +1154,6 @@ const AppDashboard: React.FC = () => {
           )}
         </div>
       </div>
-      {/* Activity grid tooltip — fixed position, rendered at top level */}
-      {hoveredCell && (
-        <div
-          style={{
-            position: 'fixed',
-            left: hoveredCell.rect.left + hoveredCell.rect.width / 2,
-            top: hoveredCell.rect.top - 10,
-            transform: 'translate(-50%, -100%)',
-            background: '#1A202C',
-            color: '#FFFFFF',
-            borderRadius: 10,
-            padding: '10px 14px',
-            minWidth: 180,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-            zIndex: 1000,
-            fontFamily: "'DM Sans', sans-serif",
-            pointerEvents: 'none',
-          }}
-        >
-          <div style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%) rotate(45deg)', width: 10, height: 10, background: '#1A202C', borderRadius: 2 }} />
-          <div style={{ fontSize: 11, fontWeight: 700, marginBottom: hoveredCell.isActive ? 6 : 0 }}>{hoveredCell.dateLabel}</div>
-          {hoveredCell.isActive ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {hoveredCell.details.map((d, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: LEVEL_ACCENT_COLORS[d.level] || '#38B2AC', flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: '#E2E8F0' }}>L{d.level} {d.tool}</div>
-                    <div style={{ fontSize: 9, color: '#A0AEC0' }}>{d.phases} phase{d.phases !== 1 ? 's' : ''} · {d.artefacts} artefact{d.artefacts !== 1 ? 's' : ''}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: 10, color: '#718096' }}>No activity</div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

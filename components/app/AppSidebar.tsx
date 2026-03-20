@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Map, FolderKanban, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
+import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: Home, path: '/app/dashboard' },
   { label: 'My Journey', icon: Map, path: '/app/journey' },
-  { label: 'My Projects', icon: FolderKanban, path: '/app/projects' },
   { label: 'Current Level', icon: BookOpen, path: '/app/level' }, // path overridden dynamically below
   { label: 'My Toolkit', icon: Wrench, path: '/app/toolkit' },
   { label: 'Learning Coach', icon: GraduationCap, path: '/app/toolkit/learning-coach' },
@@ -27,8 +27,10 @@ export const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { isAdmin } = useOrg();
   const { userProfile } = useAppContext();
+  const { signOut } = useAuth();
   const level = userProfile?.current_level ?? 1;
   const [expanded, setExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === '/app/toolkit/learning-coach') {
@@ -39,9 +41,6 @@ export const AppSidebar: React.FC = () => {
     }
     if (path === '/app/journey') {
       return location.pathname.startsWith('/app/journey');
-    }
-    if (path === '/app/projects') {
-      return location.pathname === '/app/projects';
     }
     return location.pathname === path;
   };
@@ -138,8 +137,8 @@ export const AppSidebar: React.FC = () => {
         style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}
       >
         {NAV_ITEMS.map((item) => {
-          const resolvedPath = item.label === 'Current Level' ? `/app/level-${level}` : item.path;
-          const active = isActive(resolvedPath) || (item.label === 'Current Level' && isActive(item.path));
+          const resolvedPath = item.path;
+          const active = isActive(item.path);
           const Icon = item.icon;
           return (
             <Link
@@ -244,7 +243,8 @@ export const AppSidebar: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        <div
+        <button
+          onClick={() => setSettingsOpen(true)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -254,6 +254,10 @@ export const AppSidebar: React.FC = () => {
             borderLeft: '3px solid transparent',
             transition: 'background 0.15s',
             whiteSpace: 'nowrap',
+            background: 'none',
+            border: 'none',
+            fontFamily: 'inherit',
+            width: '100%',
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLElement).style.background =
@@ -275,9 +279,99 @@ export const AppSidebar: React.FC = () => {
           >
             Settings
           </span>
-        </div>
+        </button>
       </div>
     </div>
+
+    {/* Settings slide-in panel */}
+    {settingsOpen && (
+      <>
+        <div
+          onClick={() => setSettingsOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 100 }}
+        />
+        <div style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, width: 400,
+          background: '#FFFFFF', borderLeft: '1px solid #E2E8F0',
+          zIndex: 101, display: 'flex', flexDirection: 'column',
+          fontFamily: "'DM Sans', sans-serif",
+          boxShadow: '-4px 0 24px rgba(0,0,0,0.08)',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C' }}>Settings</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Manage your account and preferences</div>
+            </div>
+            <button onClick={() => setSettingsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#A0AEC0', padding: 4, lineHeight: 1, fontFamily: 'inherit' }}>{'\u00D7'}</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+            {/* Account section */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>Account</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[
+                  { label: 'Edit Profile & Regenerate Plan', desc: 'Update your role, goals, and availability', action: () => { setSettingsOpen(false); window.location.href = '/app/journey'; } },
+                  { label: 'Sign Out', desc: 'Sign out of your Oxygy account', action: () => { setSettingsOpen(false); signOut(); } },
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={item.action}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '12px 14px', borderRadius: 10, border: '1px solid #E2E8F0', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'background 0.12s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#F7FAFC')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#FFFFFF')}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>{item.label}</span>
+                    <span style={{ fontSize: 11, color: '#718096' }}>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notifications section */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>Notifications</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[
+                  { label: 'Streak reminders', desc: 'Daily nudge to keep your learning streak alive' },
+                  { label: 'Cohort activity', desc: 'When colleagues earn points or complete levels' },
+                  { label: 'Project feedback', desc: 'When your submitted project is reviewed' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: 10, border: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#1A202C' }}>{item.label}</div>
+                      <div style={{ fontSize: 11, color: '#718096' }}>{item.desc}</div>
+                    </div>
+                    <div style={{ width: 36, height: 20, borderRadius: 10, background: '#E2E8F0', cursor: 'not-allowed', flexShrink: 0, position: 'relative' as const }}>
+                      <div style={{ position: 'absolute', top: 2, left: 2, width: 16, height: 16, borderRadius: '50%', background: '#A0AEC0' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: '#A0AEC0', marginTop: 8, fontStyle: 'italic' }}>Notification preferences coming soon</div>
+            </div>
+
+            {/* About section */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>About</div>
+              <div style={{ padding: '12px 14px', borderRadius: 10, border: '1px solid #E2E8F0', background: '#F7FAFC' }}>
+                <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span>Platform</span><span style={{ color: '#1A202C', fontWeight: 500 }}>Oxygy AI Upskilling</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Support</span><span style={{ color: '#38B2AC', fontWeight: 500 }}>legal@oxygyconsulting.com</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
     </>
   );
 };

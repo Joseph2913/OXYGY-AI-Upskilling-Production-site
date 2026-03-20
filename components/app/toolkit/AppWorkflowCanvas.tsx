@@ -5,6 +5,7 @@ import {
   Loader2, Eye, Code,
   FileText, Key, ListChecks, Clock, Layers, GitBranch,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import type {
   WorkflowNode, WorkflowGenerateResult, WorkflowFeedbackResult,
   WorkflowIntermediate,
@@ -17,7 +18,7 @@ import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
@@ -610,7 +611,9 @@ const CanvasSkeleton: React.FC<{ nodesPerRow: number }> = ({ nodesPerRow }) => {
 
 const AppWorkflowCanvas: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const projectChip = projectChips?.[3] ?? null;
+  const location = useLocation();
 
   /* ── Step 1 State ── */
   const [taskDescription, setTaskDescription] = useState('');
@@ -657,6 +660,7 @@ const AppWorkflowCanvas: React.FC = () => {
   const [additionalContext, setAdditionalContext] = useState('');
   const [refinementCount, setRefinementCount] = useState(0);
   const [refineExpanded, setRefineExpanded] = useState(false);
+  const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
 
   /* ── Shared State ── */
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -691,6 +695,56 @@ const AppWorkflowCanvas: React.FC = () => {
   const workflowName = generateResult ? generateResult.workflow_name : 'Custom Workflow';
   const workflowDescription = generateResult ? generateResult.workflow_description : taskDescription;
   const finalNodes = pathAFeedbackResult ? pathAFeedbackResult.suggested_workflow : generateResult?.nodes || [];
+
+  /* ── Artefact prefill from "Launch in Tool" — restore full result ── */
+  useEffect(() => {
+    const state = location.state as {
+      sourceArtefactId?: string;
+      sourceArtefactContent?: Record<string, any>;
+      sourceArtefactType?: string;
+      artefactPrefill?: Record<string, any>;
+    } | null;
+    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    if (!prefill) return;
+    // Restore input
+    const desc = prefill.workflowName || prefill.summary || '';
+    if (desc) setTaskDescription(desc);
+    // Restore full result so the canvas + build guide are visible immediately
+    if (prefill.nodes && Array.isArray(prefill.nodes) && prefill.nodes.length > 0) {
+      setSelectedPath('a');
+      setGenerateResult({
+        workflow_name: prefill.workflowName || 'Restored Workflow',
+        workflow_description: desc,
+        nodes: prefill.nodes,
+      });
+      setNodesAnimated(prefill.nodes.length);
+      setConnectionsAnimated(prefill.nodes.length);
+      setPathAApproved(true);
+      // If we have a build guide markdown, restore that too
+      if (prefill.designMarkdown) {
+        setBuildGuideMarkdown(prefill.designMarkdown);
+        setBuildGuideIntermediate({
+          workflowName: prefill.workflowName || 'Restored Workflow',
+          summary: desc,
+          complexity: 'moderate',
+          estimatedRunTime: '',
+          humanInTheLoop: prefill.nodes.some((n: any) => n.type === 'human_review'),
+          nodes: prefill.nodes.map((n: any) => ({
+            name: n.name || '',
+            type: n.type || 'action',
+            appName: '',
+            description: '',
+            config: {},
+            connections: [],
+          })),
+        } as WorkflowIntermediate);
+        setPlatformStepDone(true);
+        setVisibleBlocks(10);
+      }
+    }
+    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    window.history.replaceState({}, '');
+  }, []);
 
   /* ── Draft persistence ── */
   useEffect(() => {
@@ -821,6 +875,18 @@ const AppWorkflowCanvas: React.FC = () => {
 
       const data = await response.json();
       setBuildGuideMarkdown(data.markdown || '');
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        const nodes = finalNodes || [];
+        updateArtefactContent(sourceArtefactId, user.id, {
+          designMarkdown: data.markdown || '',
+          nodeCount: nodes.length,
+          agentCount: nodes.filter((n: any) => n.type === 'agent').length,
+          humanCheckpoints: nodes.filter((n: any) => n.type === 'human_review').length,
+          nodes,
+          workflowName,
+        });
+      }
       setExportLoading(false);
     } catch (err) {
       console.error('[build-guide] Generation error:', err);
@@ -1077,6 +1143,18 @@ const AppWorkflowCanvas: React.FC = () => {
 
       const data = await response.json();
       setBuildGuideMarkdown(data.markdown || '');
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        const nodes = finalNodes || [];
+        updateArtefactContent(sourceArtefactId, user.id, {
+          designMarkdown: data.markdown || '',
+          nodeCount: nodes.length,
+          agentCount: nodes.filter((n: any) => n.type === 'agent').length,
+          humanCheckpoints: nodes.filter((n: any) => n.type === 'human_review').length,
+          nodes,
+          workflowName,
+        });
+      }
       setRefinementCount(prev => prev + 1);
       setRefinementAnswers({});
       setAdditionalContext('');
@@ -1145,6 +1223,30 @@ const AppWorkflowCanvas: React.FC = () => {
         done={step1Done}
         collapsed={step1Done}
       >
+        {/* Your Project chip */}
+        {projectChip && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 600, marginBottom: 6, fontFamily: FONT }}>
+              ◆ Your Project
+            </div>
+            <button
+              onClick={() => { setTaskDescription(projectChip.task); setToolsAndSystems(projectChip.tools); }}
+              style={{
+                width: '100%', textAlign: 'left', background: `${LEVEL_ACCENT}18`,
+                border: `1.5px solid ${LEVEL_ACCENT_DARK}44`,
+                borderRadius: 10, padding: '10px 14px',
+                fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 500,
+                cursor: 'pointer', fontFamily: FONT, lineHeight: 1.5,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}30`)}
+              onMouseLeave={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}18`)}
+            >
+              {projectChip.task}
+            </button>
+          </div>
+        )}
+
         {/* Example pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
           <span style={{ fontSize: 12, color: '#A0AEC0', fontWeight: 600, alignSelf: 'center' }}>Try an example:</span>

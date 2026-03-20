@@ -82,18 +82,18 @@ NODE_LIBRARY.forEach(n => { NODE_MAP[n.nodeId] = n; });
 // ─── Pre-loaded examples ──────────────────────────────────────────
 export const WORKFLOW_EXAMPLES = [
   {
-    name: 'Survey Analysis Pipeline',
-    task: 'After each client engagement, our team runs a feedback survey. I want the responses automatically analyzed for themes, sentiment by question category, and key improvement areas. The results should be stored in a database for tracking over time and a summary report should be emailed to the project lead.',
-    tools: 'Surveys are collected via Microsoft Forms. We use SharePoint for document storage and Outlook for email. Historical data is in an Excel tracker.',
+    name: 'Learning Programme Reporting',
+    task: 'At the end of each training cohort, I want completion data, assessment scores, and learner feedback automatically pulled together into a programme effectiveness report. The report should flag underperforming modules and learners at risk of disengagement, and be sent to the L&D lead and relevant line managers.',
+    tools: 'Learning data is in our LMS (Cornerstone or equivalent). Feedback is collected via Microsoft Forms. We use SharePoint for document storage and Outlook for distribution.',
   },
   {
-    name: 'Meeting Notes Automation',
-    task: 'After every client meeting, the recording transcript should be automatically processed to extract key decisions, action items with owners and deadlines, and any risks or blockers mentioned. The structured notes should be posted to the project\'s Teams channel and the action items added to our tracking sheet.',
-    tools: 'Meetings are recorded on Microsoft Teams with auto-transcription. We track action items in Google Sheets and communicate via Teams channels.',
+    name: 'Recruitment Pipeline Automation',
+    task: 'When a candidate reaches the final interview stage in our ATS, I want an AI agent to automatically compile a candidate summary — pulling their CV, assessment scores, and interview notes — and generate a structured hiring recommendation for the panel. A recruiter should review before it is shared.',
+    tools: 'We use Workday as our ATS. Interview notes are in a shared Teams folder. Assessment scores come from a third-party tool via email export.',
   },
   {
-    name: 'Proposal Generator',
-    task: 'When a new project brief is submitted, I want an AI agent to draft a first-pass proposal that incorporates relevant case studies from our library, recommends a team structure, and outlines a methodology. A senior consultant should review it before the final version is generated as a Word document and emailed to the BD lead.',
-    tools: 'Project briefs come in via a Typeform. Case studies are stored in a SharePoint library. We use Word for proposals and Outlook for delivery.',
+    name: 'Employee Relations Case Tracker',
+    task: 'When a new ER case is logged, I want key details automatically extracted, the relevant policy sections surfaced, a timeline started, and a case summary drafted for the HR Business Partner. Updates should be logged automatically as the case progresses.',
+    tools: 'Cases are currently logged via a Microsoft Forms intake form. Policy documents are in SharePoint. We communicate via Outlook and track cases in a shared Excel file.',
   },
 ] as const;

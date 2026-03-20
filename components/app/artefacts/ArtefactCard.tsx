@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Zap, Bot, GitBranch, LayoutDashboard, Layers,
-  BookOpen, FileText,
+  BookOpen, FileText, Award,
 } from 'lucide-react';
 import { LEVEL_ACCENT_COLORS, LEVEL_ACCENT_DARK_COLORS } from '../../../data/levelTopics';
 import { timeAgo } from '../../../utils/timeAgo';
@@ -15,6 +15,8 @@ const TYPE_ICONS: Record<ArtefactType, React.FC<{ size?: number; color?: string 
   app_spec: Layers,
   build_guide: BookOpen,
   prd: FileText,
+  pathway: Zap,
+  project_proof: Award,
 };
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
@@ -25,6 +27,8 @@ const TYPE_LABELS: Record<ArtefactType, string> = {
   app_spec: 'App Spec',
   build_guide: 'Build Guide',
   prd: 'PRD',
+  pathway: 'Pathway',
+  project_proof: 'Project Proof',
 };
 
 interface Props {

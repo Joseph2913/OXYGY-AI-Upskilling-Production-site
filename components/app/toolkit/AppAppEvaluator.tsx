@@ -4,6 +4,7 @@ import {
   Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, X, Server, Database, Cpu,
   Users, HardDrive, Wand2, Settings, TrendingUp, Zap, Target, RefreshCw, Lightbulb,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import {
   EVALUATOR_SECTIONS, EXAMPLE_APPS, SCORE_CRITERIA_LABELS,
   TECH_STACK_HOSTING, TECH_STACK_DATABASE, TECH_STACK_AI_ENGINE,
@@ -19,7 +20,7 @@ import type {
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -653,7 +654,9 @@ const CodeBlockWithCopy: React.FC<{ code: string }> = ({ code }) => {
 
 const AppAppEvaluator: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const projectChip = projectChips?.[5] ?? null;
+  const location = useLocation();
 
   // Input state
   const [appDescription, setAppDescription] = useState('');
@@ -705,6 +708,7 @@ const AppAppEvaluator: React.FC = () => {
   const [buildRefinementAnswers, setBuildRefinementAnswers] = useState<Record<number, string>>({});
   const [buildRefinementAdditional, setBuildRefinementAdditional] = useState('');
   const [buildRefinementCount, setBuildRefinementCount] = useState(0);
+  const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
 
   // Refs
   const step1Ref = useRef<HTMLDivElement>(null);
@@ -720,6 +724,35 @@ const AppAppEvaluator: React.FC = () => {
   const step2Done = step1Done && step2Approved;
   const allStackSelected = selectedHosting !== null && selectedDatabase !== null && selectedAiEngine !== null;
   const step3Done = step2Done && allStackSelected && (buildPlan !== null || isBuildPlanLoading);
+
+  // Artefact prefill from "Launch in Tool" — restore full result
+  useEffect(() => {
+    const state = location.state as {
+      sourceArtefactId?: string;
+      sourceArtefactContent?: Record<string, any>;
+      sourceArtefactType?: string;
+      artefactPrefill?: Record<string, any>;
+    } | null;
+    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    if (!prefill) return;
+    // Restore inputs
+    if (prefill.appDescription) setAppDescription(prefill.appDescription);
+    if (prefill.problemStatement) setProblemAndUsers(prefill.problemStatement);
+    // Restore full result so the evaluation output is visible immediately
+    if (prefill.designScore || prefill.architecture) {
+      setResult({
+        design_score: prefill.designScore || { overall: 0, criteria: {}, verdict: '' },
+        matrix_placement: prefill.matrixPlacement || { quadrant: '', x: 0, y: 0, label: '' },
+        architecture: prefill.architecture || { summary: '', components: [] },
+        implementation_plan: prefill.implementationPlan || { summary: '', steps: [] },
+        risks_and_gaps: prefill.risksAndGaps || { summary: '', items: [] },
+        refinement_questions: prefill.refinementQuestions || [],
+      });
+      setVisibleBlocks(10);
+    }
+    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    window.history.replaceState({}, '');
+  }, []);
 
   // Staggered block appearance — Step 2 (score card + matrix card + summary + refinement)
   useEffect(() => {
@@ -839,6 +872,15 @@ const AppAppEvaluator: React.FC = () => {
 
     if (data) {
       setResult(data);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          designScore: data.design_score?.overall_score ?? null,
+          architectureSections: data.architecture?.components || [],
+          appDescription,
+          problemStatement: problemAndUsers,
+        });
+      }
       if (user) upsertToolUsed(user.id, 5);
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
@@ -994,6 +1036,15 @@ const AppAppEvaluator: React.FC = () => {
 
     if (data) {
       setResult(data);
+      // Auto-save back to source artefact if launched from library
+      if (sourceArtefactId && user) {
+        updateArtefactContent(sourceArtefactId, user.id, {
+          designScore: data.design_score?.overall_score ?? null,
+          architectureSections: data.architecture?.components || [],
+          appDescription,
+          problemStatement: problemAndUsers,
+        });
+      }
       setRefinementCount(c => c + 1);
       setRefinementAnswers({});
       setRefinementAdditional('');
@@ -1248,6 +1299,30 @@ const AppAppEvaluator: React.FC = () => {
           subtitle="Tell us about your AI application idea — what it does, who uses it, and what data it needs."
           done={step1Done} collapsed={step1Done}
         >
+          {/* Your Project chip */}
+          {projectChip && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 600, marginBottom: 6, fontFamily: FONT }}>
+                ◆ Your Project
+              </div>
+              <button
+                onClick={() => { setAppDescription(projectChip.appDescription); setProblemAndUsers(projectChip.problemAndUsers); setDataAndContent(projectChip.dataAndContent); }}
+                style={{
+                  width: '100%', textAlign: 'left', background: `${LEVEL_ACCENT}18`,
+                  border: `1.5px solid ${LEVEL_ACCENT_DARK}44`,
+                  borderRadius: 10, padding: '10px 14px',
+                  fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 500,
+                  cursor: 'pointer', fontFamily: FONT, lineHeight: 1.5,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}30`)}
+                onMouseLeave={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}18`)}
+              >
+                {projectChip.appDescription}
+              </button>
+            </div>
+          )}
+
           {/* Example chips (§4.6) */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: '#A0AEC0', fontWeight: 500, marginBottom: 8, fontFamily: FONT }}>Try an example:</div>

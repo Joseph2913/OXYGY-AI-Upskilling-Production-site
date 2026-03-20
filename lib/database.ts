@@ -450,7 +450,7 @@ export async function upsertLearnerCoachProfile(
 
 export type ArtefactType =
   | 'prompt' | 'agent' | 'workflow' | 'dashboard' | 'app_spec'
-  | 'build_guide' | 'prd' | 'pathway';
+  | 'build_guide' | 'prd' | 'pathway' | 'project_proof';
 
 export interface Artefact {
   id: string;
@@ -2176,6 +2176,7 @@ export interface ProjectSubmission {
   reviewedAt: number | null;
   submittedAt: number | null;
   completedAt: number | null;
+  artefactId: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -2204,6 +2205,7 @@ function dbToProjectSubmission(row: Record<string, unknown>): ProjectSubmission 
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at as string).getTime() : null,
     submittedAt: row.submitted_at ? new Date(row.submitted_at as string).getTime() : null,
     completedAt: row.completed_at ? new Date(row.completed_at as string).getTime() : null,
+    artefactId: (row.artefact_id as string) || null,
     createdAt: new Date((row.created_at as string) || Date.now()).getTime(),
     updatedAt: new Date((row.updated_at as string) || Date.now()).getTime(),
   };
@@ -2222,6 +2224,32 @@ export async function getProjectSubmission(userId: string, level: number): Promi
   } catch { return null; }
 }
 
+export async function getProjectSubmissionById(userId: string, id: string): Promise<ProjectSubmission | null> {
+  try {
+    const { data, error } = await supabase
+      .from('project_submissions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return dbToProjectSubmission(data as Record<string, unknown>);
+  } catch { return null; }
+}
+
+export async function getLevelSubmissions(userId: string, level: number): Promise<ProjectSubmission[]> {
+  try {
+    const { data, error } = await supabase
+      .from('project_submissions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('level', level)
+      .order('created_at', { ascending: false });
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).map(dbToProjectSubmission);
+  } catch { return []; }
+}
+
 export async function getAllProjectSubmissions(userId: string): Promise<ProjectSubmission[]> {
   try {
     const { data, error } = await supabase
@@ -2231,6 +2259,151 @@ export async function getAllProjectSubmissions(userId: string): Promise<ProjectS
     if (error || !data) return [];
     return (data as Record<string, unknown>[]).map(dbToProjectSubmission);
   } catch { return []; }
+}
+
+/** Create or update the linked artefact for a reviewed project submission */
+export async function upsertProjectArtefact(
+  userId: string,
+  submission: ProjectSubmission,
+  tierLabel: string,
+  tierLetter: string,
+): Promise<string | null> {
+  try {
+    const proofName = submission.toolName
+      ? `${submission.toolName} — Level ${submission.level} Project`
+      : `Level ${submission.level} Project Proof`;
+
+    const preview = submission.reflectionText
+      ? submission.reflectionText.slice(0, 180) + (submission.reflectionText.length > 180 ? '…' : '')
+      : 'Project submission';
+
+    const content: Record<string, unknown> = {
+      submissionId: submission.id,
+      level: submission.level,
+      tier: tierLetter,
+      tierLabel,
+      toolName: submission.toolName,
+      platformUsed: submission.platformUsed,
+      toolLink: submission.toolLink,
+      reflectionText: submission.reflectionText,
+      adoptionScope: submission.adoptionScope,
+      outcomeText: submission.outcomeText,
+      reviewDimensions: submission.reviewDimensions,
+      reviewSummary: submission.reviewSummary,
+      reviewEncouragement: submission.reviewEncouragement,
+      reviewPassed: submission.reviewPassed,
+      screenshotPaths: submission.screenshotPaths,
+    };
+    if (submission.caseStudyProblem) content.caseStudyProblem = submission.caseStudyProblem;
+    if (submission.caseStudySolution) content.caseStudySolution = submission.caseStudySolution;
+    if (submission.caseStudyOutcome) content.caseStudyOutcome = submission.caseStudyOutcome;
+    if (submission.caseStudyLearnings) content.caseStudyLearnings = submission.caseStudyLearnings;
+
+    // Update existing artefact if linked
+    if (submission.artefactId) {
+      const ok = await updateArtefactContent(submission.artefactId, userId, content);
+      if (ok) {
+        // Also update name + preview
+        await supabase
+          .from('artefacts')
+          .update({ name: proofName, preview: preview.slice(0, 200), updated_at: new Date().toISOString() })
+          .eq('id', submission.artefactId)
+          .eq('user_id', userId);
+        return submission.artefactId;
+      }
+    }
+
+    // Create new artefact
+    const result = await createArtefactFromTool(userId, {
+      name: proofName,
+      type: 'project_proof',
+      level: submission.level,
+      sourceTool: 'project-proof',
+      content,
+      preview,
+    });
+    if (!result) return null;
+
+    // Link the artefact to the submission
+    await supabase
+      .from('project_submissions')
+      .update({ artefact_id: result.id, updated_at: new Date().toISOString() })
+      .eq('id', submission.id)
+      .eq('user_id', userId);
+
+    return result.id;
+  } catch (err) {
+    console.error('upsertProjectArtefact error:', err);
+    return null;
+  }
+}
+
+// ─── TOOLKIT PROJECT CHIPS ───
+//
+// create table if not exists toolkit_project_chips (
+//   id uuid primary key default gen_random_uuid(),
+//   user_id uuid not null references auth.users(id) on delete cascade,
+//   level integer not null check (level between 1 and 5),
+//   tool_id text not null,
+//   chip_data jsonb not null default '{}',
+//   generated_at timestamptz not null default now(),
+//   unique(user_id, level)
+// );
+// alter table toolkit_project_chips enable row level security;
+// create policy "Users can read own chips" on toolkit_project_chips for select using (auth.uid() = user_id);
+// create policy "Users can insert own chips" on toolkit_project_chips for insert with check (auth.uid() = user_id);
+// create policy "Users can update own chips" on toolkit_project_chips for update using (auth.uid() = user_id);
+// create index toolkit_project_chips_user on toolkit_project_chips(user_id);
+
+export interface ToolkitProjectChip {
+  id: string;
+  userId: string;
+  level: number;
+  toolId: string;
+  chipData: Record<string, string>;
+  generatedAt: string;
+}
+
+function dbToChip(row: Record<string, unknown>): ToolkitProjectChip {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    level: row.level as number,
+    toolId: row.tool_id as string,
+    chipData: (row.chip_data as Record<string, string>) || {},
+    generatedAt: row.generated_at as string,
+  };
+}
+
+export async function getToolkitProjectChips(userId: string): Promise<ToolkitProjectChip[]> {
+  try {
+    const { data, error } = await supabase
+      .from('toolkit_project_chips')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) { console.error('getToolkitProjectChips error:', error); return []; }
+    return (data as Record<string, unknown>[]).map(dbToChip);
+  } catch (err) { console.error('getToolkitProjectChips error:', err); return []; }
+}
+
+export async function upsertToolkitProjectChips(
+  userId: string,
+  chips: Omit<ToolkitProjectChip, 'id' | 'userId' | 'generatedAt'>[]
+): Promise<boolean> {
+  try {
+    const rows = chips.map(c => ({
+      user_id: userId,
+      level: c.level,
+      tool_id: c.toolId,
+      chip_data: c.chipData,
+      generated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase
+      .from('toolkit_project_chips')
+      .upsert(rows, { onConflict: 'user_id,level' });
+    if (error) { console.error('upsertToolkitProjectChips error:', error); return false; }
+    return true;
+  } catch (err) { console.error('upsertToolkitProjectChips error:', err); return false; }
 }
 
 export async function upsertProjectDraft(
@@ -2397,6 +2570,12 @@ export async function submitProject(
 
     return { success: true, review, error: null };
   } catch (err) {
+    // Revert status to draft on any error (network failure, JSON parse, etc.)
+    await supabase
+      .from('project_submissions')
+      .update({ status: 'draft', updated_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('level', level);
     return { success: false, review: null, error: (err as Error).message };
   }
 }

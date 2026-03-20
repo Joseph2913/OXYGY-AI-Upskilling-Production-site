@@ -87,6 +87,28 @@ export interface ArtefactContent {
   spec?: Record<string, unknown>;
   layout?: Record<string, unknown>;
 
+  // ── Project Proof ──
+  submissionId?: string;
+  tier?: string;
+  tierLabel?: string;
+  reflectionText?: string;
+  adoptionScope?: string;
+  outcomeText?: string;
+  reviewDimensions?: Array<{
+    id: string;
+    name: string;
+    status: 'strong' | 'developing' | 'needs_attention';
+    feedback: string;
+  }>;
+  reviewSummary?: string;
+  reviewEncouragement?: string;
+  reviewPassed?: boolean;
+  screenshotPaths?: string[];
+  caseStudyProblem?: string;
+  caseStudySolution?: string;
+  caseStudyOutcome?: string;
+  caseStudyLearnings?: string;
+
   // ── Generic fallback ──
   summary?: string;
   [key: string]: unknown;
