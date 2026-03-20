@@ -85,9 +85,14 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         };
       });
 
-      // Active topic = first incomplete, or last topic
+      // Active topic = first incomplete non-comingSoon topic, or last non-comingSoon topic
+      const availableTopics = topics.filter(t => !t.comingSoon);
+      const availableProgress = topicProgress.filter(tp =>
+        availableTopics.some(t => t.id === tp.topicId)
+      );
       const activeTopicId =
-        topicProgress.find(tp => !tp.completedAt)?.topicId
+        availableProgress.find(tp => !tp.completedAt)?.topicId
+        ?? availableTopics[availableTopics.length - 1]?.id
         ?? topics[topics.length - 1]?.id
         ?? 1;
 

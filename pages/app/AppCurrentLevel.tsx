@@ -47,7 +47,14 @@ const AppCurrentLevel: React.FC = () => {
         setSelectedTopicId(paramId);
       }
     } else {
-      setSelectedTopicId(levelData.activeTopicId);
+      // Skip comingSoon topics — they have no content
+      const activeTopic = topics.find(t => t.id === levelData.activeTopicId);
+      if (activeTopic?.comingSoon) {
+        const fallback = topics.find(t => !t.comingSoon);
+        setSelectedTopicId(fallback?.id ?? levelData.activeTopicId);
+      } else {
+        setSelectedTopicId(levelData.activeTopicId);
+      }
     }
     // If ?phase=1 is present, jump straight into e-learning review
     const phaseParam = searchParams.get('phase');
