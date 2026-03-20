@@ -217,26 +217,6 @@ function AudioBar({ voiceover, isFullscreen, isInline }: { voiceover: UseVoiceov
             </div>
           )}
         </div>
-        {/* Volume */}
-        <div ref={volumeRef} style={{ position: 'relative' }}>
-          <button onClick={() => { setShowSpeedMenu(false); if (showVolumeMenu) { voiceover.toggleMute(); setShowVolumeMenu(false); } else { setShowVolumeMenu(true); } }} style={{ width: 24, height: 24, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: isMuted ? '#FC8181' : '#718096' }}>
-            {speakerIcon}
-          </button>
-          {showVolumeMenu && (
-            <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 6, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', zIndex: 100, width: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#1A202C' }}>{volPct}%</span>
-              <div style={{ position: 'relative', width: 20, height: 100, display: 'flex', justifyContent: 'center' }}>
-                <div style={{ position: 'absolute', top: 0, width: 4, height: '100%', background: '#E2E8F0', borderRadius: 2 }} />
-                <div style={{ position: 'absolute', bottom: 0, width: 4, height: `${volPct}%`, background: '#38B2AC', borderRadius: 2 }} />
-                <div style={{ position: 'absolute', bottom: `calc(${volPct}% - 7px)`, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, borderRadius: '50%', background: '#38B2AC', border: '2px solid #FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.2)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} onMouseDown={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const setFromY = (clientY: number) => { const pxFromBottom = rect.bottom - clientY; voiceover.setVolume(Math.max(0, Math.min(1, pxFromBottom / rect.height))); }; setFromY(e.clientY); const onMove = (ev: MouseEvent) => setFromY(ev.clientY); const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); }} />
-              </div>
-              <button onClick={() => { voiceover.toggleMute(); setShowVolumeMenu(false); }} style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: isMuted ? '1.5px solid #E53E3E' : '1.5px solid #E2E8F0', cursor: 'pointer', padding: 0, background: isMuted ? '#FFF5F5' : '#F7FAFC', color: isMuted ? '#E53E3E' : '#718096' }}>
-                {isMuted ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>}
-              </button>
-            </div>
-          )}
-        </div>
       </div>
     );
   }
