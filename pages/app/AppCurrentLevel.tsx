@@ -231,6 +231,16 @@ const AppCurrentLevel: React.FC = () => {
           />
         )}
 
+        {displayPhase === 1 && !topicContent && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, padding: '48px 24px' }}>
+            <div style={{ fontSize: 40 }}>🚧</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1A202C' }}>E-learning coming soon</div>
+            <div style={{ fontSize: 14, color: '#718096', textAlign: 'center', maxWidth: 360, lineHeight: 1.6 }}>
+              The interactive module for this level is being built. Check back soon.
+            </div>
+          </div>
+        )}
+
         {displayPhase === 2 && (
           <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 24 }}>
             {/* Practice card */}
