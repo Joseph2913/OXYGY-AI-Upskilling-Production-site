@@ -232,7 +232,7 @@ function AudioBar({ voiceover, isFullscreen, isInline, autoNarration, onToggleAu
           >
             Narration
             <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-              <path d={showNarrationMenu ? 'M1 6L4 3L7 6' : 'M1 3L4 6L7 3'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d={showNarrationMenu ? 'M1 3L4 6L7 3' : 'M1 6L4 3L7 6'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </div>
