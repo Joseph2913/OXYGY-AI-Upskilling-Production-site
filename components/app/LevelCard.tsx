@@ -219,10 +219,15 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
          ════════════════════════════════════════════════ */}
       <div
         onClick={() => setShowPhases(!showPhases)}
-        style={{ padding: showPhases ? '16px 20px 0' : '14px 20px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', opacity: showPhases ? 1 : 0.7, transition: 'opacity 0.2s' }}
+        style={{
+          padding: showPhases ? '16px 20px 0' : '14px 20px',
+          display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+          transition: 'padding 0.2s',
+        }}
       >
+        {/* Level circle */}
         <div style={{
-          width: showPhases ? 38 : 32, height: showPhases ? 38 : 32, borderRadius: '50%', flexShrink: 0,
+          width: showPhases ? 40 : 34, height: showPhases ? 40 : 34, borderRadius: '50%', flexShrink: 0,
           background: isCompleted ? `${accent}55` : isActive ? accent : `${accent}33`,
           border: isCompleted ? 'none' : isActive ? 'none' : `1px solid ${accent}88`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -232,8 +237,10 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
           {isCompleted ? <Check size={showPhases ? 16 : 14} color={accentDark} strokeWidth={3} /> : isAccessible ? level.levelNumber : <Lock size={14} color="#A0AEC0" />}
         </div>
 
+        {/* Title + description block */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Top row: Level label + depth badge + time */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
               Level {level.levelNumber}
             </span>
@@ -242,65 +249,29 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 {planDepth === 'full' ? 'Full Program' : 'Fast-track'}
               </span>
             )}
-            {showPhases && planTime && (
+            {planTime && (
               <span style={{ fontSize: 10, color: '#A0AEC0' }}>{planTime}</span>
             )}
           </div>
 
-
-          {/* CTA button — level-coloured */}
-          {isAccessible ? (
-            <button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(level.levelNumber === 1 ? '/app/level-1' : `/app/level?level=${level.levelNumber}`); }}
-              style={{
-                background: `${accent}30`,
-                color: accentDark,
-                border: `1.5px solid ${accent}88`,
-                borderRadius: 24, padding: '10px 22px', fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', transition: 'all 0.15s',
-                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-                flexShrink: 0, fontFamily: 'inherit',
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.background = `${accent}50`;
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.background = `${accent}30`;
-              }}
-            >
-              {ctaLabel} <ArrowRight size={13} />
-            </button>
-          ) : (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              color: '#A0AEC0', fontSize: 12, fontWeight: 600,
-              padding: '10px 16px',
-            }}>
-              <Lock size={13} /> Locked
-            </div>
-          )}
-
-          {/* Expand chevron */}
+          {/* Title */}
           <div style={{
-            width: 30, height: 30, borderRadius: '50%',
-            background: expanded ? `${accent}25` : '#F7FAFC',
-            border: `1px solid ${expanded ? accent + '55' : '#E2E8F0'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, transition: 'all 0.2s ease',
+            fontSize: showPhases ? 16 : 14, fontWeight: 700, color: '#1A202C',
+            letterSpacing: '-0.2px', lineHeight: 1.25, marginBottom: showPhases ? 4 : 2,
+            transition: 'font-size 0.2s',
           }}>
-            <ChevronDown size={14} color={expanded ? accentDark : '#718096'} style={{
-              transition: 'transform 0.25s ease',
-              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            }} />
+            {meta.name}
           </div>
-          {showPhases && (
-            <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.5, marginTop: 3 }}>{description}</div>
-          )}
-          {!showPhases && (
-            <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.4, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.tagline}</div>
+
+          {/* Description — full when focused, truncated tagline when collapsed */}
+          {showPhases ? (
+            <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}>{description}</div>
+          ) : (
+            <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.tagline}</div>
           )}
         </div>
 
+        {/* Right side — status badges + chevron */}
         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {isCompleted && (
             <span style={{ fontSize: 10, fontWeight: 700, color: '#276749', background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 10, padding: '2px 10px' }}>Complete</span>
