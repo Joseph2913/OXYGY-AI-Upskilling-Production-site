@@ -21,45 +21,8 @@ export interface UseVoiceoverReturn extends VoiceoverState {
   toggleMute: () => void;
   setSpeed: (speed: Speed) => void;
   setVolume: (vol: number) => void;
-  loadClip: (text: string, type: 'setup' | 'reveal') => Promise<void>;
+  loadClip: (src: string, type: 'setup' | 'reveal') => Promise<void>;
   stopAndReset: () => void;
-}
-
-/* ── Module-level cache: hash(text) → blobURL ── */
-const audioCache = new Map<string, string>();
-
-function simpleHash(text: string): string {
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text.charCodeAt(i);
-    hash = ((hash << 5) - hash) + ch;
-    hash |= 0;
-  }
-  return String(hash);
-}
-
-/* ── Voice ID resolution ── */
-let resolvedVoiceId: string | null = null;
-let voiceIdPromise: Promise<string> | null = null;
-const FALLBACK_VOICE_ID = 'nPczCjzI2devNBz1zQrb'; // Brian
-
-function getVoiceId(apiKey: string): Promise<string> {
-  if (resolvedVoiceId) return Promise.resolve(resolvedVoiceId);
-  if (voiceIdPromise) return voiceIdPromise;
-  voiceIdPromise = fetch('https://api.elevenlabs.io/v1/voices', {
-    headers: { 'xi-api-key': apiKey },
-  })
-    .then((r) => r.json())
-    .then((data) => {
-      const brian = data.voices?.find((v: any) => v.name === 'Brian');
-      resolvedVoiceId = brian?.voice_id || FALLBACK_VOICE_ID;
-      return resolvedVoiceId!;
-    })
-    .catch(() => {
-      resolvedVoiceId = FALLBACK_VOICE_ID;
-      return resolvedVoiceId;
-    });
-  return voiceIdPromise;
 }
 
 /* ── localStorage helpers ── */
@@ -81,10 +44,7 @@ function readVolume(): number {
   return 0.8;
 }
 
-/**
- * Forcefully kill an HTMLAudioElement so it cannot produce sound.
- * After this call the element is inert — no events, no playback.
- */
+/** Forcefully kill an HTMLAudioElement so it cannot produce sound. */
 function killAudio(audio: HTMLAudioElement | null) {
   if (!audio) return;
   try { audio.pause(); } catch { /* ignore */ }
@@ -105,15 +65,9 @@ export function useVoiceover(): UseVoiceoverReturn {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentTextRef = useRef<string | null>(null);
+  const currentSrcRef = useRef<string | null>(null);
   const currentTypeRef = useRef<'setup' | 'reveal'>('setup');
-
-  // Generation counter: incremented on every load/stop. Any async work
-  // that started under a previous generation is stale and must not touch state.
   const genRef = useRef(0);
-
-  const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string | undefined;
 
   /* ── Progress animation ── */
   const startProgressLoop = useCallback(() => {
@@ -136,17 +90,16 @@ export function useVoiceover(): UseVoiceoverReturn {
   /* ── Cleanup on unmount ── */
   useEffect(() => {
     return () => {
-      genRef.current += 1; // invalidate any in-flight loads
+      genRef.current += 1;
       killAudio(audioRef.current);
       audioRef.current = null;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     };
   }, []);
 
   /* ── Stop everything ── */
   const stopAndReset = useCallback(() => {
-    genRef.current += 1; // cancel any in-flight async loads
+    genRef.current += 1;
     stopProgressLoop();
     killAudio(audioRef.current);
     audioRef.current = null;
@@ -155,22 +108,18 @@ export function useVoiceover(): UseVoiceoverReturn {
     setHasAudio(false);
     setProgress(0);
     setDuration(0);
-    if (loadingTimerRef.current) { clearTimeout(loadingTimerRef.current); loadingTimerRef.current = null; }
   }, [stopProgressLoop]);
 
-  /* ── Core load logic ── */
-  const loadClip = useCallback(async (text: string, type: 'setup' | 'reveal') => {
-    if (!apiKey) return;
-
-    // 1. Kill any existing audio immediately — no gap, no delay
+  /* ── Load a static audio file ── */
+  const loadClip = useCallback(async (src: string, type: 'setup' | 'reveal') => {
+    // Kill any existing audio immediately
     genRef.current += 1;
     const myGen = genRef.current;
     stopProgressLoop();
     killAudio(audioRef.current);
     audioRef.current = null;
-    if (loadingTimerRef.current) { clearTimeout(loadingTimerRef.current); loadingTimerRef.current = null; }
 
-    currentTextRef.current = text;
+    currentSrcRef.current = src;
     currentTypeRef.current = type;
     setClipType(type);
     setIsPlaying(false);
@@ -179,79 +128,42 @@ export function useVoiceover(): UseVoiceoverReturn {
     setDuration(0);
     setIsLoading(true);
 
-    // Helper: check if this call is still the active one
     const isStale = () => genRef.current !== myGen;
 
-    // 2. Check cache first
-    const cacheKey = simpleHash(text);
-    let blobUrl = audioCache.get(cacheKey);
-
-    // 3. Fetch from API if not cached
-    if (!blobUrl) {
-      try {
-        const voiceId = await getVoiceId(apiKey);
-        if (isStale()) return; // another load started while we waited
-
-        const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-          method: 'POST',
-          headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text,
-            model_id: 'eleven_turbo_v2_5',
-            voice_settings: { stability: 0.45, similarity_boost: 0.80, style: 0.20, use_speaker_boost: true },
-          }),
-        });
-        if (isStale()) return;
-
-        if (!resp.ok) {
-          loadingTimerRef.current = setTimeout(() => {
-            if (!isStale()) { setIsLoading(false); setHasAudio(false); }
-          }, 2000);
-          return;
-        }
-
-        const blob = await resp.blob();
-        if (isStale()) return;
-
-        blobUrl = URL.createObjectURL(blob);
-        audioCache.set(cacheKey, blobUrl);
-      } catch {
-        if (!isStale()) {
-          loadingTimerRef.current = setTimeout(() => {
-            if (!isStale()) { setIsLoading(false); setHasAudio(false); }
-          }, 2000);
-        }
-        return;
-      }
-    }
-
-    if (isStale()) return; // one final check before creating the audio element
-
-    // 4. Create audio element and play
-    const audio = new Audio(blobUrl);
+    // Create audio element pointing to the static file
+    const audio = new Audio(src);
     audio.playbackRate = readSpeed();
     audio.muted = readMuted();
     audio.volume = readVolume();
+    audio.preload = 'auto';
     audioRef.current = audio;
+
+    audio.addEventListener('canplaythrough', () => {
+      if (isStale()) return;
+      setHasAudio(true);
+      setIsLoading(false);
+      if (isFinite(audio.duration)) setDuration(audio.duration);
+      audio.play().catch(() => { /* autoplay blocked — user can click play */ });
+    }, { once: true });
 
     audio.addEventListener('play', () => { if (!isStale()) { setIsPlaying(true); startProgressLoop(); } });
     audio.addEventListener('pause', () => { if (!isStale() && !audio.ended) { setIsPlaying(false); stopProgressLoop(); } });
     audio.addEventListener('ended', () => { if (!isStale()) { setIsPlaying(false); stopProgressLoop(); setProgress(1); } });
     audio.addEventListener('loadedmetadata', () => { if (!isStale() && isFinite(audio.duration)) setDuration(audio.duration); });
+    audio.addEventListener('error', () => {
+      if (!isStale()) { setIsLoading(false); setHasAudio(false); }
+    });
 
-    setHasAudio(true);
-    setIsLoading(false);
-    setProgress(0);
-
-    audio.play().catch(() => { /* autoplay blocked — user can click play */ });
-  }, [apiKey, startProgressLoop, stopProgressLoop]);
+    // Kick off loading
+    audio.load();
+  }, [startProgressLoop, stopProgressLoop]);
 
   /* ── Play (resume or reload) ── */
   const play = useCallback(() => {
     if (audioRef.current && audioRef.current.src) {
       audioRef.current.play().catch(() => {});
-    } else if (currentTextRef.current) {
-      loadClip(currentTextRef.current, currentTypeRef.current);
+    } else if (currentSrcRef.current) {
+      loadClip(currentSrcRef.current, currentTypeRef.current);
     }
   }, [loadClip]);
 

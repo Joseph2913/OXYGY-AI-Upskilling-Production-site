@@ -131,8 +131,6 @@ function ExpandableText({ text, maxLen = 180, id, expanded, onToggle }: { text: 
 /* ── Audio Bar (voiceover narration) ── */
 function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; isFullscreen?: boolean }) {
   const { isLoading, isPlaying, isMuted, speed, volume, progress } = voiceover;
-  const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-  const disabled = !apiKey;
   const speeds: Array<0.75 | 1 | 1.25 | 1.5 | 1.75 | 2> = [0.75, 1, 1.25, 1.5, 1.75, 2];
   const barPx = isFullscreen ? 28 : 16;
   const waveDelays = [0, 0.1, 0.2, 0.1, 0];
@@ -173,7 +171,7 @@ function AudioBar({ voiceover, isFullscreen }: { voiceover: UseVoiceoverReturn; 
   };
 
   return (
-    <div style={{ flexShrink: 0, opacity: disabled ? 0.4 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
+    <div style={{ flexShrink: 0 }}>
       {/* Controls row */}
       <div style={{ height: isFullscreen ? 40 : 36, background: '#F7FAFC', padding: `0 ${barPx}px`, display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* Play / Pause / Spinner */}

@@ -124,9 +124,9 @@ export interface SlideData {
   sourceText?: string;
   /* Approach cards — used by approachIntro (L1) and data-driven moduleSummary (L3+) */
   approaches?: Array<{ icon: string; label?: string; name?: string; color: string; light: string; when?: string; tagline?: string; how?: string; connection?: string }>;
-  /* Voiceover narration scripts (ElevenLabs TTS) */
+  /* Voiceover narration — paths to static audio files in public/audio/ */
   voiceover?: {
-    setup: string;       // always present — plays on slide load
+    setup: string;       // audio file path (e.g. "/audio/l1t1-s01-setup.mp3"), plays on slide load
     reveal?: string;     // only on predictFirst persona slides — plays after prediction submitted
   };
 }
@@ -187,7 +187,7 @@ const L1T1_SLIDES: SlideData[] = [
       "How to choose the right technique for any task you face",
     ],
     voiceover: {
-      setup: "Welcome to Prompt Engineering Essentials \u2014 the first module in the Oxygy AI Upskilling programme. By the end of this session, you\u2019ll understand why the same AI tools produce dramatically different results across professionals \u2014 and you\u2019ll have a complete toolkit to close that gap. We\u2019ll cover the six-component Prompt Blueprint framework, five prompting approaches, and \u2014 critically \u2014 how to choose the right technique for any situation. This module takes around twenty-five minutes. Let\u2019s get started.",
+      setup: "/audio/l1t1-s01-setup.mp3",
     },
   },
 
@@ -202,7 +202,7 @@ const L1T1_SLIDES: SlideData[] = [
     sourceLink: "https://www.microsoft.com/en-us/worklab/work-trend-index/ai-at-work-is-here-now-comes-the-hard-part",
     sourceText: "Microsoft & LinkedIn: 2024 Work Trend Index \u2014 survey of 31,000 people across 31 countries (May 2024)",
     voiceover: {
-      setup: "Here\u2019s where we\u2019re starting. Three quarters of knowledge workers now use AI tools at work. That\u2019s not a projection \u2014 it\u2019s a 2024 survey of thirty-one thousand people across thirty-one countries. The tools are already in the room. Your colleagues, your clients, your competitors \u2014 most of them are using AI in some form every single day. But adoption tells you nothing about results. And that\u2019s what the next slide is about.",
+      setup: "/audio/l1t1-s02-setup.mp3",
     },
   },
 
@@ -216,7 +216,7 @@ const L1T1_SLIDES: SlideData[] = [
     sourceLink: "https://www.nngroup.com/articles/ai-tools-productivity-gains/",
     sourceText: "NN/G meta-analysis (2023) of: Brynjolfsson, Li & Raymond (NBER/Stanford/MIT, 2023); Noy & Zhang (MIT, 2023); GitHub Copilot Research (GitHub, 2022)",
     voiceover: {
-      setup: "Same tool. Same AI. But depending on how you use it, the productivity gain can be anywhere from fourteen percent \u2014 or one hundred and twenty-six percent. That\u2019s a nine-times difference. Not from a better tool. Not from a smarter person. Just from knowing how to use it well. This gap is what this course exists to close.",
+      setup: "/audio/l1t1-s03-setup.mp3",
     },
   },
 
@@ -228,7 +228,7 @@ const L1T1_SLIDES: SlideData[] = [
     body: "Every AI agent, automated workflow, intelligent dashboard, and full-stack application runs on prompts. Get the foundation right and every layer above it gets better.",
     pullQuote: "Every level of the OXYGY framework builds on the skills from this one. This is where it starts.",
     voiceover: {
-      setup: "Before we get into techniques, it\u2019s worth being clear about why prompting matters at the framework level. Every AI agent, every automated workflow, every intelligent dashboard \u2014 at the bottom of all of it, there\u2019s a prompt. The instructions that tell the AI what to do, how to think, and what to produce. Get the foundation right and everything built on top of it gets better. Let\u2019s see the difference in action.",
+      setup: "/audio/l1t1-s04-setup.mp3",
     },
   },
 
@@ -253,7 +253,7 @@ const L1T1_SLIDES: SlideData[] = [
       },
     ],
     voiceover: {
-      setup: "Let\u2019s make this concrete. Imagine you\u2019re onboarding a new team member \u2014 capable, eager, ready to help. You need a stakeholder summary by end of day. Toggle between the two tabs and read both the prompt and the output on each side. Take a moment to notice what changes. The capability is identical in both cases. The only variable is how well you briefed them.",
+      setup: "/audio/l1t1-s05-setup.mp3",
     },
   },
 
@@ -263,7 +263,7 @@ const L1T1_SLIDES: SlideData[] = [
     tealWord: "Fill the tank",
     body: "Each component you provide eliminates a set of assumptions. Press Next to reveal each one.",
     voiceover: {
-      setup: "So what exactly separates those two briefs? It comes down to six components \u2014 six types of context that determine how precisely you\u2019re guiding the AI. Each time you press Next, one component will be revealed. As you work through them, think about which ones you typically include \u2014 and which ones you tend to leave out. Every component you include removes a set of assumptions the AI would otherwise have to make on your behalf.",
+      setup: "/audio/l1t1-s06-setup.mp3",
     },
   },
 
@@ -287,7 +287,7 @@ const L1T1_SLIDES: SlideData[] = [
     buildAssembledPrompt: "Act as a senior HR analyst with experience presenting people data to executive audiences.\n\nThis is for our Q3 engagement survey. We ran the same survey last year so year-on-year comparison is possible. The exec team has 10 minutes to review this before a board meeting.\n\nWrite a one-page executive summary covering: (1) the top three themes from the survey, (2) what has improved vs last year, and (3) one clear recommendation.\n\nUse three short sections with bold headers. Each section max 80 words. No bullet points — flowing prose only. Professional tone.\n\nFirst identify the three highest-scoring themes by frequency across responses. Then compare scores to last year's data. Then derive one recommendation from the biggest gap or opportunity.\n\nDo not include raw percentages unless they appear in the source data. Do not speculate beyond what the data shows. Flag if year-on-year comparison is not possible for any theme.",
     buildInsight: "A complete Blueprint prompt doesn't just tell the AI what to produce \u2014 it tells it who to be, what it's working with, how to think, and what to avoid. Each component removes a set of assumptions the AI would otherwise have to make.",
     voiceover: {
-      setup: "Now it\u2019s your turn to build one. You\u2019ve got a real task in front of you \u2014 an executive summary of a quarterly engagement survey. On the left, you\u2019ll see six component chips. Drag each one into the matching slot on the right, and watch how the prompt assembles as you add each layer. There\u2019s no trick here \u2014 this is just about building the muscle of thinking in all six components before you write a single word.",
+      setup: "/audio/l1t1-s07-setup.mp3",
     },
   },
 
@@ -304,7 +304,7 @@ const L1T1_SLIDES: SlideData[] = [
     correct: 3,
     explanation: "The prompt has a clear task and some context \u2014 but it gives the AI zero guidance on how the output should be structured. Should it be a slide deck, a memo, a table, a bulleted list? The AI will guess. Adding a Format instruction (e.g. 'Two-page memo, section headers, executive tone') removes that ambiguity entirely.",
     voiceover: {
-      setup: "Here\u2019s a prompt someone wrote for a real task. It\u2019s actually quite detailed \u2014 and at first glance it looks solid. But one Blueprint component is completely absent. Read it carefully, then select which component you think is missing. Ask yourself: what would the AI have to guess here that it shouldn\u2019t have to?",
+      setup: "/audio/l1t1-s08-setup.mp3",
     },
   },
 
@@ -349,7 +349,7 @@ const L1T1_SLIDES: SlideData[] = [
       },
     ],
     voiceover: {
-      setup: "Now here\u2019s something important. The Blueprint \u2014 the six-component framework you just built \u2014 is a powerful tool. But it\u2019s not always the right one. Skilled prompting means knowing when to reach for it, and when a different approach gets you there faster. There are three core approaches, sitting on a spectrum from unstructured to precise. Read through the three cards \u2014 Brain Dump, Conversational, and Blueprint \u2014 then we\u2019ll meet five professionals who each use a different one.",
+      setup: "/audio/l1t1-s09-setup.mp3",
     },
   },
 
@@ -371,8 +371,8 @@ const L1T1_SLIDES: SlideData[] = [
       modifier: null, modDef: null,
     },
     voiceover: {
-      setup: "Meet Sam \u2014 a Programme Coordinator. It\u2019s four in the afternoon, they\u2019ve just come out of three back-to-back workshops, and the manager wants a summary of the key themes by nine tomorrow morning. Sam has rough notes, a half-finished voice memo, and hasn\u2019t processed any of it yet. Before I show you what Sam does \u2014 which approach do you think fits this situation? Take a moment to predict, then select your answer.",
-      reveal: "Let\u2019s look at how Sam actually approaches this. When your thinking is genuinely unstructured \u2014 when you can\u2019t even fill in the Blueprint yet \u2014 a Brain Dump lets the AI find the structure for you. You\u2019re not organising first. You\u2019re using the AI to help you do it. Notice how the output doesn\u2019t just answer the question \u2014 it surfaces what Sam was missing.",
+      setup: "/audio/l1t1-s10-setup.mp3",
+      reveal: "/audio/l1t1-s10-reveal.mp3",
     },
   },
 
@@ -395,8 +395,8 @@ const L1T1_SLIDES: SlideData[] = [
       modDef: "Improve output across turns by giving targeted, specific feedback on what to change.",
     },
     voiceover: {
-      setup: "This is Priya \u2014 a Strategy Analyst. She\u2019s drafting the strategic case for centralising procurement across four regions. She has a direction, but she isn\u2019t sure which argument to lead with, and she knows there\u2019ll be pushback she hasn\u2019t fully anticipated. The proposal goes to committee in forty-eight hours. Which approach do you think Priya uses? Make your prediction before we reveal it.",
-      reveal: "Watch how Priya builds her answer not in one shot, but through a series of increasingly specific turns \u2014 each one sharpening the output based on what came back. She doesn\u2019t know the final shape when she starts. Conversational prompting lets her steer progressively \u2014 co-creating, not delegating. Each turn adds specificity based on the previous response.",
+      setup: "/audio/l1t1-s11-setup.mp3",
+      reveal: "/audio/l1t1-s11-reveal.mp3",
     },
   },
 
@@ -419,8 +419,8 @@ const L1T1_SLIDES: SlideData[] = [
       modDef: "Show the AI what good looks like by providing 1\u20133 reference examples it should match.",
     },
     voiceover: {
-      setup: "Marcus is a Delivery Lead. The quarterly review is tomorrow at nine AM. The CFO and two divisional heads want a tight four-hundred-word executive summary \u2014 milestones, biggest risk, one recommendation. It needs to land right first time. There\u2019s no window to iterate. Which approach does Marcus use? Predict before we reveal.",
-      reveal: "Notice that Marcus doesn\u2019t use the full six-component Blueprint \u2014 but he front-loads rich context in a single, precise message. That\u2019s what structured input looks like in practice. He knows the audience, the stakes, and the constraints before he starts. Front-loading all of that eliminates guesswork and gets it right first time.",
+      setup: "/audio/l1t1-s12-setup.mp3",
+      reveal: "/audio/l1t1-s12-reveal.mp3",
     },
   },
 
@@ -443,8 +443,8 @@ const L1T1_SLIDES: SlideData[] = [
       modDef: "Ask the AI to reason through the problem step by step before producing output.",
     },
     voiceover: {
-      setup: "Aisha is a Communications Lead. She has to write the internal announcement for a company restructuring \u2014 by end of day. She\u2019s been too close to this process for months. She knows her draft might sound defensive, but she can\u2019t see it clearly anymore. She needs fresh eyes before it goes out. What approach does Aisha reach for? Make your prediction.",
-      reveal: "Aisha isn\u2019t using the AI to produce something. She\u2019s using it to think better \u2014 to see around corners she can\u2019t see from where she\u2019s standing. That\u2019s the brainstorming partner mode. Different goal, different technique. She\u2019s not asking for a draft. She\u2019s asking for challenges, alternatives, and the perspective of the most sceptical reader in the room.",
+      setup: "/audio/l1t1-s13-setup.mp3",
+      reveal: "/audio/l1t1-s13-reveal.mp3",
     },
   },
 
@@ -466,8 +466,8 @@ const L1T1_SLIDES: SlideData[] = [
       modifier: null, modDef: null,
     },
     voiceover: {
-      setup: "And finally, Jordan \u2014 a Process Designer. Every single Friday, he produces the same programme status report for the same four stakeholders. Every single Friday, he rewrites it from scratch. It takes ninety minutes. The content barely changes \u2014 just the numbers. Which approach fits Jordan\u2019s situation? You\u2019ve now seen all approaches in context. Make your final prediction.",
-      reveal: "The Blueprint took Jordan twenty minutes to write once. Now it takes him thirty seconds to reuse \u2014 he swaps in the week\u2019s data and the structure, tone, and quality are already handled. That\u2019s the compounding return of building once rather than rewriting repeatedly. The up-front investment pays back across every future use.",
+      setup: "/audio/l1t1-s14-setup.mp3",
+      reveal: "/audio/l1t1-s14-reveal.mp3",
     },
   },
 
@@ -478,7 +478,7 @@ const L1T1_SLIDES: SlideData[] = [
     tealWord: "situation",
     body: "The right choice depends on how well you know the desired output and whether the task repeats. Click any situation row to see a real-world example.",
     voiceover: {
-      setup: "Now let\u2019s pull everything together into a decision framework. The matrix on screen maps the three approaches to different types of situations \u2014 based on how well-defined the task is, and whether it repeats. Click any row to see a real-world example of that situation. The goal here isn\u2019t to memorise the grid \u2014 it\u2019s to start developing the instinct of reading a task and knowing where to start.",
+      setup: "/audio/l1t1-s15-setup.mp3",
     },
   },
 
@@ -507,7 +507,7 @@ const L1T1_SLIDES: SlideData[] = [
     ctaText: "Open Prompt Playground \u2192",
     ctaHref: "/app/toolkit/prompt-playground",
     voiceover: {
-      setup: "That\u2019s the full prompting toolkit. You\u2019ve covered the six-component Blueprint framework, three prompting approaches and five professionals who use them, and a decision framework for matching the technique to the task. The key insight: prompt engineering isn\u2019t about magic phrases. It\u2019s about reading what kind of task you have \u2014 then choosing the right tool for it. Your next step is the Prompt Playground. Click the button below to put this into practice on a task from your own work. Good luck.",
+      setup: "/audio/l1t1-s16-setup.mp3",
     },
   },
 ];
