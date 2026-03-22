@@ -593,10 +593,12 @@ const L2T1_SLIDES: SlideData[] = [
   /* ── Slide 4 — Tension Statement ── */
   {
     section: "THE LEVEL 2 SHIFT", type: "tensionStatement",
+    takeaway: "A great prompt stays with one person — the Level 2 unlock is making it a standardised tool for the whole team",
     heading: "You've built something great.",
     subheading: "But it only works when you're there.",
     tealPhrase: "only works when you're there",
-    footnote: "Level 2 turns your best work into tools that run without you — consistently, for everyone on your team.",
+    body: "Level 1 gave you a prompt that gets results. But that prompt lives in your session history — it doesn't run when you're away, it doesn't reach your colleagues, and it produces slightly different output each time someone else tries it.",
+    footnote: "Level 1 unlock → a prompt that gets results. Level 2 unlock → a standardised tool anyone on the team can run, any time, and get the same output.",
   },
 
   /* ── Slide 5 — What is an AI agent? ── */
@@ -884,15 +886,15 @@ const L3T1_SLIDES: SlideData[] = [
     sourceText: "Microsoft Work Trend Index Annual Report (2024) — survey of 31,000 people across 31 countries",
   },
 
-  /* ── Slide 5 — You've Learned to Prompt ── */
+  /* ── Slide 5 — You've Built Agents. They Still Need You to Trigger Them ── */
   {
     section: "THE GAP", type: "tensionStatement",
-    takeaway: "A prompt is a request. A workflow is a system. The next skill is building the system.",
-    heading: "You've learned to prompt.",
-    subheading: "But a prompt is a request. A workflow is a system.",
-    tealPhrase: "a prompt is a request. A workflow is a system.",
-    body: "The next skill gap isn't writing better prompts — it's knowing which steps connect, what triggers each one, where a human must review, and what the output feeds into next.",
-    footnote: "Most people who consider themselves 'good at AI' are still thinking one step at a time.",
+    takeaway: "An agent runs consistently — but only when someone presses go. The Level 3 unlock is removing the human from the loop entirely",
+    heading: "You've built agents that work.",
+    subheading: "But every one of them still needs someone to press go.",
+    tealPhrase: "still needs someone to press go",
+    body: "At Level 2, you turned your best prompts into reusable tools — agents that run the same way for anyone on your team. But an agent doesn't run until someone triggers it. The next gap is building processes that start themselves, chain across steps, and deliver outputs without a human in the middle.",
+    footnote: "Level 2 unlock → a standardised agent shareable with the team. Level 3 unlock → background automation that removes the human from the loop — triggered by events, not by people.",
   },
 
   /* ── Slide 6 — What is an AI workflow? ── */
@@ -1228,14 +1230,15 @@ const L4T1_SLIDES: SlideData[] = [
     sourceText: "Gartner Top Strategic Technology Trends for 2024 — published October 2023",
   },
 
-  /* ── Slide 4 — The Brief Is the Bottleneck ── */
+  /* ── Slide 4 — The Workflow Runs. Nobody Sees It ── */
   {
     section: "THE GAP", type: "tensionStatement",
-    takeaway: "When building is easy, the brief becomes the bottleneck — not the build",
-    heading: "The tool gets built. The problem doesn't get solved.",
-    subheading: "When the build takes hours, the wrong build takes hours too.",
-    tealPhrase: "the brief becomes the bottleneck",
-    footnote: "Most failed AI tools weren't badly built — they were badly defined. The builder knew what to build. Nobody had agreed on what was worth building.",
+    takeaway: "A workflow delivers outputs — but outputs in a log reach no one. The Level 4 unlock is building a front end that surfaces the right insight to the right person",
+    heading: "The workflow runs. Nobody sees it.",
+    subheading: "Automated outputs that never reach the people who need them.",
+    tealPhrase: "nobody sees it",
+    body: "At Level 3, you built workflows that run themselves — triggered by events, chained across steps, delivering outputs without anyone pressing go. But those outputs land somewhere: a log file, a spreadsheet, a database row. The people who need to act on them still have to go looking.",
+    footnote: "Level 3 unlock → background automation with no human in the loop. Level 4 unlock → a designed front end that surfaces the right output to the right person at the right time.",
   },
 
   /* ── Slide 5 — What is a PRD? ── */
