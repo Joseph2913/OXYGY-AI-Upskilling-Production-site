@@ -1142,6 +1142,40 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         );
       }
 
+      case 'l4-prd-components': {
+        const prdComponents = [
+          { key: 'PURPOSE',      color: '#667EEA', light: '#EBF4FF', icon: '🎯', hint: 'What problem it solves and how success is measured' },
+          { key: 'USERS',        color: '#38B2AC', light: '#E6FFFA', icon: '👥', hint: 'Who opens it, when, and what they need to do' },
+          { key: 'FEATURES',     color: '#ED8936', light: '#FFFBEB', icon: '⚙️', hint: 'Inputs, AI processing, and outputs — scoped to user need' },
+          { key: 'DATA SOURCES', color: '#48BB78', light: '#F0FFF4', icon: '🗄️', hint: 'What data the tool needs and whether it exists' },
+        ];
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 10 }}>
+            <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 2 }}>THE BRIEF</div>
+            <div style={{ border: '1.5px solid #E2E8F0', borderRadius: 10, overflow: 'hidden', background: '#FFFFFF' }}>
+              <div style={{ background: '#1A202C', padding: fs ? '8px 14px' : '6px 12px' }}>
+                <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>PRODUCT REQUIREMENTS DOCUMENT</div>
+              </div>
+              {prdComponents.map((comp, i) => {
+                const isActive = activeIdx !== undefined && i <= activeIdx;
+                const isCurrent = activeIdx === i;
+                return (
+                  <div key={comp.key} style={{ padding: fs ? '10px 14px' : '8px 12px', borderBottom: i < 3 ? '1px solid #E2E8F0' : 'none', background: isActive ? comp.light : '#FFFFFF', borderLeft: `4px solid ${isActive ? comp.color : '#E2E8F0'}`, transition: 'all 0.35s ease' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: fs ? 15 : 13, opacity: isActive ? 1 : 0.25, transition: 'opacity 0.35s ease' }}>{comp.icon}</span>
+                      <span style={{ fontSize: fs ? 11 : 10, fontWeight: 800, color: isActive ? comp.color : '#CBD5E0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, transition: 'color 0.35s ease' }}>{comp.key}</span>
+                    </div>
+                    {isCurrent && (
+                      <div style={{ fontSize: fs ? 10 : 9, color: comp.color, marginTop: 4, fontStyle: 'italic' as const, lineHeight: 1.4, opacity: 1, transition: 'opacity 0.3s ease' }}>{comp.hint}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -1248,6 +1282,68 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 </div>
                 <p style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.5, margin: '8px 0 0', fontStyle: 'italic' }}>
                   {s.estimatedTime} · You'll map a real workflow before this module ends.
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        /* ── Level 4 intro variant ── */
+        if (s.levelNumber === 4) {
+          const prdPreview = [
+            { key: 'PURPOSE',      color: '#667EEA', light: '#EBF4FF', icon: '🎯' },
+            { key: 'USERS',        color: '#38B2AC', light: '#E6FFFA', icon: '👥' },
+            { key: 'FEATURES',     color: '#ED8936', light: '#FFFBEB', icon: '⚙️' },
+            { key: 'DATA SOURCES', color: '#48BB78', light: '#F0FFF4', icon: '🗄️' },
+          ];
+          return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+              {/* Left column */}
+              <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #FFF7F4 0%, #FDEAE0 60%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#8C3A1A', background: '#F5B8A0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
+                  LEVEL 4 · E-LEARNING
+                </span>
+                <h1 style={{ fontSize: fs ? 24 : 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
+                  {s.heading}
+                </h1>
+                {s.subheading && (
+                  <p style={{ fontSize: fs ? 13 : 12, color: '#8C3A1A', margin: '0 0 14px', lineHeight: 1.5, fontWeight: 600, maxWidth: 380 }}>
+                    {s.subheading}
+                  </p>
+                )}
+                {s.objectives && (
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 10 }}>YOU'LL WALK AWAY WITH</div>
+                    {s.objectives.map((obj: string, i: number) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.55, fontWeight: 500 }}>{obj}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={handleNextClick} style={{ alignSelf: 'flex-start', padding: '10px 26px', borderRadius: 24, border: 'none', background: '#8C3A1A', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+                  Start →
+                </button>
+              </div>
+              {/* Right column — PRD components preview */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '36px 32px' : '24px 22px', background: '#FAFBFC', gap: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE BRIEF FRAMEWORK</div>
+                <p style={{ fontSize: 11, color: '#718096', lineHeight: 1.55, margin: '0 0 10px' }}>
+                  Four components that turn any idea into a tool ready to build.
+                </p>
+                <div style={{ border: '1.5px solid #E2E8F0', borderRadius: 10, overflow: 'hidden', background: '#FFFFFF' }}>
+                  <div style={{ background: '#1A202C', padding: '7px 12px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>PRODUCT REQUIREMENTS DOCUMENT</div>
+                  </div>
+                  {prdPreview.map((comp, i) => (
+                    <div key={comp.key} style={{ padding: '9px 12px', borderBottom: i < 3 ? '1px solid #E2E8F0' : 'none', background: comp.light, borderLeft: `3px solid ${comp.color}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13 }}>{comp.icon}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: comp.color, letterSpacing: '0.07em', textTransform: 'uppercase' as const }}>{comp.key}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.5, margin: '6px 0 0', fontStyle: 'italic' }}>
+                  {s.estimatedTime} · You'll score a real brief before this module ends.
                 </p>
               </div>
             </div>

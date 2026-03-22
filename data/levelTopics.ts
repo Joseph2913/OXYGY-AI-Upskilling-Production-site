@@ -72,13 +72,13 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
   ],
   4: [
     {
-      id: 1, title: "Designing Interactive Dashboards", subtitle: "From AI outputs to designed intelligence",
-      description: "Working backwards from what the end user needs to see. Learn user-centred design for AI-powered interfaces — how automated pipeline outputs become structured, interactive dashboard components.",
-      estimatedMinutes: 50, icon: "📊",
+      id: 1, title: "Scoping Your AI Tool", subtitle: "From idea to brief — the PRD framework",
+      description: "The barrier to building has moved from 'can you code?' to 'can you clearly define what you want?' Learn the four-component brief framework — Purpose, Users, Features, and Data Sources — and how to score your brief before you build.",
+      estimatedMinutes: 50, icon: "📋",
 
       phases: [
-        { icon: "▶", label: "E-Learning", detail: "Interactive module on user-centred AI design, data transformation, and dashboard architecture." },
-        { icon: "◈", label: "Practice", detail: "Design and build a web application using the App Designer." },
+        { icon: "▶", label: "E-Learning", detail: "13-slide interactive module covering the vibe coding paradigm, PRD framework, brief contrast cases, and the Brief Readiness Framework." },
+        { icon: "◈", label: "Practice", detail: "Define and score your own AI tool brief using the Dashboard Designer." },
       ],
     },
     {

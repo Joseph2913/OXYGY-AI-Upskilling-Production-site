@@ -1181,6 +1181,431 @@ const L3T1_VIDEOS: VideoData[] = [
 
 
 /* ══════════════════════════════════════════════════════════════════
+   LEVEL 4, TOPIC 1 — Scoping an AI-Powered Tool
+   ══════════════════════════════════════════════════════════════════ */
+
+const L4T1_SLIDES: SlideData[] = [
+
+  /* ── Slide 1 — Course Intro ── */
+  {
+    section: "DASHBOARD DESIGNER", type: "courseIntro",
+    heading: "From Idea to Brief: Scoping Your AI Tool",
+    subheading: "The barrier to building has moved. AI makes creating tools accessible to everyone — but the bottleneck is no longer technical. It's clarity. This module teaches you to define what you want before you build it.",
+    levelNumber: 4,
+    topicIcon: "📋",
+    estimatedTime: "~20 min",
+    objectives: [
+      "📋 What a PRD is and why it's the most underrated tool in any AI builder's kit",
+      "🎯 The four components of a strong brief: Purpose, Users, Features, and Data Sources",
+      "⚖️ How to tell a well-scoped AI tool from an under-defined idea",
+      "✅ A scoring framework to pressure-test any brief before you build",
+    ],
+  },
+
+  /* ── Slide 2 — The New Building Paradigm ── */
+  {
+    section: "THE REALITY", type: "evidenceHero",
+    takeaway: "Building AI tools is no longer a developer skill — it's a professional skill",
+    heading: "Anyone can build now.",
+    tealWord: "build",
+    body: "A new paradigm has arrived: describe what you want in plain language, and an AI tool builds it. No traditional coding required. 'Vibe coding' — the practice of directing AI to generate working software through natural language — has moved AI tool creation into the hands of any knowledge worker.\n\nIn two years, generative AI has moved from experimental to embedded in the majority of organisations. The barrier to creating AI-powered tools has never been lower.",
+    stats: [{ value: "65%", valueColour: "#8C3A1A", label: "of organizations now regularly use generative AI — up from 33% just two years earlier", source: "McKinsey", desc: "State of AI Global Survey, 2024", visualType: "dotGrid" }],
+    pullQuote: "When building is this accessible, the constraint shifts. The question is no longer 'can you code?' — it's 'can you clearly define what you want?'",
+    sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
+    sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
+  },
+
+  /* ── Slide 3 — Most AI Projects Don't Make It ── */
+  {
+    section: "THE REALITY", type: "evidenceHero",
+    takeaway: "The problem isn't the build — it's what comes before it",
+    heading: "Most AI projects stall — not because of the tech.",
+    tealWord: "stall",
+    body: "When organisations are surveyed on why generative AI projects are abandoned after proof of concept, technical failure ranks well below unclear business value, poor data quality, and misaligned expectations.\n\nThe tools work. The problem is that builders couldn't articulate who the tool was for, what it needed to do, or what data it needed to run.",
+    stats: [{ value: "30%", valueColour: "#8C3A1A", label: "of generative AI projects will be abandoned after proof of concept — most due to unclear scope or misaligned expectations", source: "Gartner", desc: "Top Strategic Technology Trends, 2024" }],
+    pullQuote: "The build takes hours. A project abandoned because the brief was wrong takes weeks.",
+    sourceLink: "https://www.gartner.com/en/articles/gartner-top-10-strategic-technology-trends-for-2024",
+    sourceText: "Gartner Top Strategic Technology Trends for 2024 — published October 2023",
+  },
+
+  /* ── Slide 4 — The Brief Is the Bottleneck ── */
+  {
+    section: "THE GAP", type: "tensionStatement",
+    takeaway: "When building is easy, the brief becomes the bottleneck — not the build",
+    heading: "The tool gets built. The problem doesn't get solved.",
+    subheading: "When the build takes hours, the wrong build takes hours too.",
+    tealPhrase: "the brief becomes the bottleneck",
+    footnote: "Most failed AI tools weren't badly built — they were badly defined. The builder knew what to build. Nobody had agreed on what was worth building.",
+  },
+
+  /* ── Slide 5 — What is a PRD? ── */
+  {
+    section: "THE TECHNIQUE", type: "concept",
+    takeaway: "A PRD is a structured definition of what you're building, for whom, and why — written before you build",
+    heading: "What is a Product Requirements Document?",
+    tealWord: "Requirements Document",
+    eyebrow: "THE DEFINITION",
+    body: "A Product Requirements Document — or PRD — is a written definition of the tool you intend to build, created before a single line of code is written or a single prompt is submitted to an AI builder.\n\nIt answers four questions: What problem does this solve? Who will use it? What should it do? What data does it need?\n\nIt's not a specification for engineers — it's a clarity tool for the builder. In an era where AI can build almost anything you describe, the PRD is how you make sure you describe the right thing.",
+    pullQuote: "A PRD isn't bureaucracy. It's the shortest path between an idea and a working tool.",
+  },
+
+  /* ── Slide 6 — The Four Components ── */
+  {
+    section: "THE TECHNIQUE", type: "rctf",
+    revealOnNext: true,
+    visualId: "l4-prd-components",
+    takeaway: "A strong brief has exactly four components — skip one and the build will reflect it",
+    heading: "The Four Components of a Brief",
+    tealWord: "Four Components",
+    subheading: "Click Next to explore each component.",
+    elements: [
+      {
+        key: "PURPOSE",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "🎯",
+        desc: "What problem this tool solves and for whom. A clear purpose includes the trigger (when someone opens the tool), the outcome (what they should be able to do after using it), and the success criteria (how you'll know it's working).",
+        example: "A manager opens this dashboard every Monday to see which projects are at risk before the weekly sync",
+        whyItMatters: "Without this → any output feels like it worked — there's no agreed definition of success",
+      },
+      {
+        key: "USERS",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "👥",
+        desc: "Who will actually use the tool day-to-day. Not the team it benefits — the specific person who opens it. Their role, context, technical comfort, and what they already know shape every design decision that follows.",
+        example: "A non-technical operations manager who checks in weekly — not a data analyst who reads raw tables",
+        whyItMatters: "Without this → features get built for the builder's preferences, not the user's actual needs",
+      },
+      {
+        key: "FEATURES",
+        color: "#ED8936",
+        light: "#FFFBEB",
+        icon: "⚙️",
+        desc: "What the tool does: what inputs it accepts, what AI processing it performs, and what outputs it produces. Features should be scoped to what the user needs — not to everything the builder could add.",
+        example: "Input: project name. AI step: risk assessment prompt. Output: traffic-light status + one recommended action",
+        whyItMatters: "Without this → the build has no scope and expands indefinitely as new ideas arrive",
+      },
+      {
+        key: "DATA SOURCES",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "🗄️",
+        desc: "Where the tool gets its information. Every AI-powered tool depends on data — and many fail at this point because the data required doesn't exist, isn't accessible, or isn't clean enough to use. Define this before you build.",
+        example: "Project status from the existing tracker spreadsheet · risk criteria from the delivery framework doc",
+        whyItMatters: "Without this → the tool gets built and then discovers the data it needs doesn't exist",
+      },
+    ],
+  },
+
+  /* ── Slide 7 — Spot the Missing Component (Activity) ── */
+  {
+    section: "THE TECHNIQUE", type: "situationalJudgment",
+    takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
+    heading: "Which component is under-defined?",
+    scenarios: [
+      {
+        personaName: "Sam",
+        personaRole: "Product Manager",
+        personaIcon: "sam",
+        scenario: "Sam's brief describes a tool to 'give management visibility into project performance.' The data sources are confirmed and the user is defined (a VP who checks in on Fridays). But after launch, the VP doesn't know what to do with what they're seeing. Which component was under-defined?",
+        options: [
+          "Users — the VP's needs weren't understood well enough",
+          "Purpose — 'visibility' doesn't define what decisions this should enable",
+          "Data Sources — the data doesn't match what the VP needs to see",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "The user is partially defined — we know who opens the tool. But 'visibility' as a purpose leaves no clear outcome. Without defining what decision the VP should make after using it, there's no way to know if the tool is working." },
+          { quality: "strong", text: "Exactly. 'Visibility' isn't a purpose — it's a vague gesture toward one. A strong purpose defines the outcome: what decision the user should be able to make, and what action they should take. Without that, every design decision gets made by default." },
+          { quality: "weak", text: "The data sources may well be appropriate — the issue is that we don't know what 'appropriate' looks like because success criteria were never defined. The gap is in purpose, not data." },
+        ],
+      },
+      {
+        personaName: "Priya",
+        personaRole: "Marketing Lead",
+        personaIcon: "priya",
+        scenario: "Priya's team builds a tool that surfaces 'key metrics from the sales pipeline for the sales team.' Purpose, features, and data are all confirmed. It launches — and adoption is near zero within two weeks. Which component was most likely under-defined?",
+        options: [
+          "Features — the tool showed too many metrics",
+          "Users — the brief described the team, not the person who opens it and why",
+          "Purpose — the success criteria weren't tied to a specific outcome",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "Feature overload is a symptom — but it's caused by not knowing who the actual user is and what they need to do. When you design for 'the sales team,' you design for everyone — which means designing for no one." },
+          { quality: "strong", text: "Right. 'The sales team' is not a user. A user is a specific person with a specific need at a specific moment. Is it the rep reviewing their own pipeline before a call? The manager preparing for a Monday forecast? Each person needs something different." },
+          { quality: "weak", text: "The purpose was described as clear. But even a well-defined purpose produces the wrong tool if you're building for a team instead of a person. The user definition was too broad to make any design decision." },
+        ],
+      },
+      {
+        personaName: "Jordan",
+        personaRole: "Operations Analyst",
+        personaIcon: "jordan",
+        scenario: "Jordan's brief is thorough — purpose, users, and features are all well-defined. The build starts and stalls on day three. The AI classification step can't run because the historical ticket data exists only in PDF format with no consistent structure. Which component should have caught this?",
+        options: [
+          "Features — the classification feature was too ambitious",
+          "Purpose — the success criteria assumed data quality that wasn't there",
+          "Data Sources — this needed to be validated before the build started",
+        ],
+        strongestChoice: 2,
+        feedback: [
+          { quality: "partial", text: "The feature may need revision — but the root issue is that the data dependency wasn't evaluated before building. Even a simple classification feature fails without accessible, structured data. That's a data sources problem." },
+          { quality: "weak", text: "The purpose is well-defined and reasonable. The issue is that the data required to fulfil it was never evaluated for accessibility or quality. A thorough data sources review would have surfaced this on day one, not day three." },
+          { quality: "strong", text: "Exactly. The data sources component of a brief isn't just 'what data do we need?' — it's 'does it exist, is it accessible, and is it usable?' PDFs with inconsistent formatting aren't a usable data source for classification without significant preprocessing." },
+        ],
+      },
+    ],
+  },
+
+  /* ── Slide 8 — Weak vs. Strong Brief ── */
+  {
+    section: "SEE THE DIFFERENCE", type: "scenarioComparison",
+    takeaway: "The same idea produces a very different tool depending on the brief it's built from",
+    heading: "Same idea. Two very different briefs.",
+    tealWord: "Two very different",
+    body: "Toggle between two briefs for the same tool idea — a project status dashboard for the leadership team. One will produce something. The other will produce the right thing.",
+    tabs: [
+      {
+        label: "Under-defined Brief",
+        prompt: "Build a dashboard showing project status for leadership.",
+        annotation: "Every design decision — what 'status' means, which projects, what format, which leader, what action they should take — gets made by the AI tool or the builder's assumption. Not by the actual user's need.",
+      },
+      {
+        label: "Strong Brief",
+        prompt: "PURPOSE: Give the Head of Delivery a Monday pre-standup view of which projects need attention this week.\n\nUSERS: Head of Delivery — checks for 5 minutes before 9am standup, non-technical, needs actionable summaries not raw data.\n\nFEATURES: Input = project list + status updates. AI step = risk classification + recommended action. Output = traffic-light card per project + one-sentence next step.\n\nDATA SOURCES: Weekly status updates from the existing project tracker spreadsheet, exported every Friday at 5pm.",
+        annotation: "Every design decision is now answerable: format (summary-first, mobile-friendly), content (at-risk projects only), language (non-technical, action-oriented), timing (available by Monday 8am).",
+      },
+    ],
+  },
+
+  /* ── Slide 9 — Flipcard: Strong vs. Weak Components ── */
+  {
+    section: "SEE THE DIFFERENCE", type: "flipcard",
+    takeaway: "Specific components produce working tools — vague components produce generic ones",
+    heading: "Strong vs. weak at the component level.",
+    tealWord: "Strong vs. weak",
+    cards: [
+      {
+        frontLabel: "WEAK PURPOSE",
+        frontBadge: "Under-defined",
+        frontPrompt: "Create a tool that gives the team visibility into customer feedback.",
+        backLabel: "STRONG PURPOSE",
+        backBadge: "Well-scoped",
+        backPrompt: "Give the Customer Success lead a weekly view of the top 5 recurring complaints, so they can prepare specific talking points for the Friday client review.",
+        backResponse: "Clear trigger (weekly), clear user (CS lead), clear output (top 5 complaints), clear use case (client review prep). Every feature decision follows naturally from this.",
+      },
+      {
+        frontLabel: "WEAK USERS",
+        frontBadge: "Under-defined",
+        frontPrompt: "Users: the leadership team.",
+        backLabel: "STRONG USERS",
+        backBadge: "Well-scoped",
+        backPrompt: "User: the COO. Checks the dashboard Monday mornings for 5 minutes before the weekly review. Non-technical — needs summaries, not charts. Needs to act, not just observe.",
+        backResponse: "This level of user detail changes everything: fewer data points, action-oriented language, summary-first layout, mobile-compatible format. 'Leadership team' could mean 12 different people with 12 different needs.",
+      },
+    ],
+  },
+
+  /* ── Slide 10 — Brief Readiness Scoring (Activity) ── */
+  {
+    section: "IN PRACTICE", type: "situationalJudgment",
+    takeaway: "Apply the Brief Readiness Framework: score each component before you build",
+    heading: "Is this brief ready to build from?",
+    scenarios: [
+      {
+        personaName: "Aisha",
+        personaRole: "Finance Manager",
+        personaIcon: "aisha",
+        scenario: "A brief reads: 'Build a tool for the finance team that surfaces budget variance data from our monthly reports. The CFO will check it at the end of each month.' Purpose and users are present — but features and data sources are absent. What's the readiness verdict?",
+        options: [
+          "Ready — purpose and users are clear enough to start",
+          "Partial — needs features and data sources before building",
+          "Not ready — purpose and users are still too vague",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Purpose and users are a starting point — but without defined features (what 'surfaces' means in practice) and confirmed data sources (which reports, in what format, how they're accessed), every build decision gets made by default. Starting now adds unnecessary risk." },
+          { quality: "strong", text: "Correct. This brief scores well on purpose and users but features and data sources are blank. In the Brief Readiness Framework, any component scoring 0 or 1 is a gap to close before building. Define those two components first." },
+          { quality: "partial", text: "Purpose and users are present — the reason to pause isn't them, it's the missing components. Features and data sources are the blockers. The brief doesn't need to be scrapped — it needs two more sections." },
+        ],
+      },
+      {
+        personaName: "Marcus",
+        personaRole: "Strategy Analyst",
+        personaIcon: "marcus",
+        scenario: "A brief defines purpose, users, and data sources clearly. Under features, it reads: 'Show everything we know about each client — sentiment, usage data, renewal risk, support history, NPS, and account health.' What's the most likely problem?",
+        options: [
+          "The feature list is data-led rather than user-need-led — no prioritisation",
+          "The data sources may not support all of these features",
+          "The purpose needs to be tighter before features can be scoped",
+        ],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Exactly. 'Show everything we know' is not a feature definition — it's an invitation to never finish. Strong features are scoped to what the user needs to decide and act, not to what data exists. This needs to be cut to 2–3 outcomes the user will actually use." },
+          { quality: "partial", text: "Data source gaps may emerge — but that's a secondary problem. The primary issue is that this feature list was written by asking 'what do we have?' rather than 'what does the user need?' Scope to user need first, then validate data availability." },
+          { quality: "weak", text: "The purpose may be solid — but even a well-defined purpose can't rescue a feature list built around data availability rather than user need. The features component is the problem here." },
+        ],
+      },
+      {
+        personaName: "Sam",
+        personaRole: "Operations Lead",
+        personaIcon: "sam",
+        scenario: "Sam has a brief that scores 3 on purpose, 3 on users, 2 on features, and 2 on data sources — a total of 10 out of 12. Is this brief ready to build from?",
+        options: [
+          "Yes — a score of 10 or above is ready to build",
+          "Not quite — the two partial scores need more detail first",
+          "No — all four components need to score 3 before building",
+        ],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "A brief scoring 10 or above is build-ready. Scores of 2 on features and data sources mean some assumptions will be tested in the first day of building — which is fine. A score of 10/12 means the core decisions are made. Build it." },
+          { quality: "partial", text: "A score of 2 means 'partial but defined' — not 'vague and risky.' The Brief Readiness Framework sets 10 as the threshold because expecting perfect clarity before starting is a path to never building. Partial clarity on features and data is enough to proceed." },
+          { quality: "weak", text: "A score of 3 on every component is aspirational, not required. Waiting for perfect clarity produces paralysis — not better tools. The threshold is 10/12, which flags genuine gaps (0s and 1s) without demanding a specification-grade document." },
+        ],
+      },
+    ],
+  },
+
+  /* ── Slide 11 — The Brief Readiness Framework ── */
+  {
+    section: "IN PRACTICE", type: "concept",
+    takeaway: "Score your brief on four dimensions before you build — a score of 10+ means you're ready",
+    heading: "The Brief Readiness Framework.",
+    tealWord: "Brief Readiness Framework",
+    eyebrow: "YOUR PRE-BUILD CHECKPOINT",
+    body: "Before you open any AI builder tool, score your brief on each of the four components:\n\n3 — Specific: clear enough to make a design decision from it\n2 — Partial: defined, but some decisions still need more detail\n1 — Vague: something is there, but not specific enough to act on\n0 — Missing: not addressed at all\n\nA brief scoring 10 or above (out of 12) is ready to build from. Below 8, identify your lowest-scoring component and define it further before starting. Any 0 is a blocker — do not build until it has at least a 1.",
+    pullQuote: "A brief that scores 10 takes 20 minutes to write. The rebuild it prevents takes weeks.",
+  },
+
+  /* ── Slide 12 — Module Summary ── */
+  {
+    section: "WRAP UP", type: "moduleSummary",
+    takeaway: "You now have a complete framework for scoping any AI-powered tool before you build it",
+    heading: "The Brief: Your Pre-Build Toolkit",
+    tealWord: "Pre-Build Toolkit",
+    elements: [
+      { key: "PURPOSE",      color: "#667EEA", light: "#EBF4FF", desc: "What problem it solves and how success is defined" },
+      { key: "USERS",        color: "#38B2AC", light: "#E6FFFA", desc: "Who opens it, when, and what they need to do" },
+      { key: "FEATURES",     color: "#ED8936", light: "#FFFBEB", desc: "Inputs, AI processing, outputs — scoped to user need" },
+      { key: "DATA SOURCES", color: "#48BB78", light: "#F0FFF4", desc: "What data the tool needs — and whether it exists" },
+    ],
+    approaches: [
+      { icon: "📋", label: "Write before you build", color: "#667EEA", light: "#EBF4FF", when: "Before opening any AI builder — write all four components. Even a rough first draft surfaces gaps you wouldn't find mid-build." },
+      { icon: "✅", label: "Score before you start",  color: "#38B2AC", light: "#E6FFFA", when: "Use the Brief Readiness Framework. Any component scoring 0 or 1 needs more definition before you proceed." },
+      { icon: "🎯", label: "Define users precisely",  color: "#ED8936", light: "#FFFBEB", when: "The more specific your user definition, the fewer design decisions get made by default. A team is not a user. A person with a specific task is." },
+    ],
+  },
+
+  /* ── Slide 13 — Bridge to Dashboard Designer ── */
+  {
+    section: "WHAT'S NEXT", type: "bridge",
+    heading: "Your brief is ready. Now build it.",
+    body: "You've defined purpose, users, features, and data sources. You've scored your brief against the readiness framework. The Dashboard Designer takes it from here — walk through the scoping tool, refine your components, and produce a specification ready to build from.",
+    ctaText: "Open the Dashboard Designer →",
+    ctaHref: "/app/level-4/app-designer",
+    panelHeading: "What the Dashboard Designer does",
+    panelItems: [
+      "Guides you through each brief component step by step",
+      "Flags gaps between your features and your data sources",
+      "Scores your brief on the Brief Readiness Framework",
+      "Produces a shareable specification document",
+    ],
+  },
+
+];
+
+const L4T1_ARTICLES: ArticleData[] = [
+  {
+    id: "a1",
+    title: "The State of AI in 2024: Building Has Gone Mainstream — Briefing Hasn't",
+    source: "McKinsey Global Institute",
+    readTime: "~12 min read",
+    desc: "McKinsey's annual global AI survey tracks how organisations are adopting, deploying, and — most importantly — failing to scale generative AI. The patterns of project abandonment map directly to the four components of a weak brief: unclear purpose, unspecified users, undefined features, and unvalidated data.",
+    url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
+    reflection: "Which of the failure modes described in this report most closely resembles a project you've seen stall or underdeliver? Which PRD component would have changed the outcome?",
+  },
+  {
+    id: "a2",
+    title: "Why Software Projects Fail — and What Requirements Have to Do With It",
+    source: "Harvard Business Review",
+    readTime: "~8 min read",
+    desc: "A recurring finding across decades of software project research: the number one cause of project failure is not technical complexity — it's unclear requirements. This HBR analysis connects the dots between product definition quality and delivery outcomes, with practical implications for anyone scoping an AI-powered tool.",
+    url: "https://hbr.org/2021/09/why-your-it-project-may-be-riskier-than-you-think",
+    reflection: "The article distinguishes between 'soft failures' (delivered but not used) and 'hard failures' (cancelled or abandoned). Which type of failure is more likely when the Users component of a brief is under-defined?",
+  },
+  {
+    id: "a3",
+    title: "How to Write a Product Requirements Document",
+    source: "Nielsen Norman Group",
+    readTime: "~10 min read",
+    desc: "The Nielsen Norman Group's definitive guide to writing PRDs that actually drive design decisions. Covers how to frame user needs, how to distinguish a feature from a capability, and how to write requirements that a builder — human or AI — can act on without interpretation.",
+    url: "https://www.nngroup.com/articles/ux-without-user-research/",
+    reflection: "NNG makes a distinction between 'user requirements' and 'product requirements.' How does this map to the Users and Features components of the PRD framework from this module?",
+  },
+];
+
+const L4T1_VIDEOS: VideoData[] = [
+  {
+    id: "v1",
+    title: "What Is Vibe Coding — and Why It Changes Everything About How We Build",
+    channel: "Y Combinator",
+    duration: "18:42",
+    desc: "An accessible introduction to the 'vibe coding' paradigm — describing what you want in natural language and letting AI generate the implementation. This video covers how the shift changes the skill profile of effective builders and why brief quality has become the determining factor in whether a tool works.",
+    url: "https://www.youtube.com/watch?v=XHmNXf8Gxrg",
+    quiz: [
+      {
+        q: "According to the video, what has become the primary bottleneck in AI-assisted building?",
+        options: [
+          "Access to capable AI models",
+          "Clearly defining what you want the tool to do",
+          "Finding engineers who understand the AI tools",
+        ],
+        correct: 1,
+      },
+    ],
+  },
+  {
+    id: "v2",
+    title: "Product Thinking for Non-Product People: How to Define What You're Building",
+    channel: "Lenny's Podcast",
+    duration: "24:15",
+    desc: "Lenny Rachitsky interviews product leaders on how non-PMs approach product definition — and where they consistently go wrong. The recurring theme: skipping from idea to build without stopping to define who the tool is for and what success looks like. Directly applicable to the PRD framework in this module.",
+    url: "https://www.youtube.com/watch?v=GWkMs385Uas",
+    quiz: [
+      {
+        q: "The video describes a common mistake when scoping a new tool. What is it?",
+        options: [
+          "Defining features before defining the user",
+          "Spending too long on the brief before starting to build",
+          "Using too many data sources in the first version",
+        ],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    id: "v3",
+    title: "How to Write a PRD: Structure, Examples, and Common Mistakes",
+    channel: "Product School",
+    duration: "21:30",
+    desc: "A practical walkthrough of the PRD format, with real examples of weak and strong briefs for the same product idea. Covers the four components covered in this module — purpose, users, features, and data — and demonstrates how each component change affects the resulting tool.",
+    url: "https://www.youtube.com/watch?v=NxG1PMTQ1Qo",
+    quiz: [
+      {
+        q: "In the video's before/after comparison, what single change had the biggest impact on the quality of the resulting tool?",
+        options: [
+          "Specifying more features in the brief",
+          "Defining a specific user instead of a general audience",
+          "Adding more detail to the data sources section",
+        ],
+        correct: 1,
+      },
+    ],
+  },
+];
+
+/* ══════════════════════════════════════════════════════════════════
    TOPIC CONTENT REGISTRY
    ══════════════════════════════════════════════════════════════════ */
 
@@ -1199,6 +1624,11 @@ export const TOPIC_CONTENT: Record<string, TopicContent> = {
     slides: L3T1_SLIDES,
     articles: L3T1_ARTICLES,
     videos: L3T1_VIDEOS,
+  },
+  "4-1": {
+    slides: L4T1_SLIDES,
+    articles: L4T1_ARTICLES,
+    videos: L4T1_VIDEOS,
   },
 };
 
