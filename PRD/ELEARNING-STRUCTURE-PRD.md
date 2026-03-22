@@ -1326,3 +1326,182 @@ This structure ensures every node type is introduced, explained, and tested befo
 ---
 
 *Companion document: CONTENT-PRD.md*
+
+---
+
+## 19. Rendered Fields Reference — Per Slide Type
+
+**Read this before authoring content for any slide.** Every field you add must appear in the "Rendered" column for that slide type. Fields not listed are silently ignored — they will not appear in the player and may mask content gaps.
+
+### `rctf` — Rendered fields
+
+| Field | Mode 1 (static grid) | Mode 2 (revealOnNext) | Mode 3 (revealOnNext + visualId) |
+|---|---|---|---|
+| `heading` | ✅ | ✅ | ❌ Not rendered in content area |
+| `tealWord` | ✅ | ✅ | ❌ |
+| `takeaway` | ✅ | ✅ | ✅ (in takeaway header) |
+| `subheading` | ⚠️ Only when `contextStep < 0` | ⚠️ Only when `contextStep < 0` | ❌ Dead field — `contextStep` initialises at 0, this never renders |
+| `visualId` | ❌ | ❌ | ✅ Controls left anatomy panel |
+| `elements[].key` | ✅ | ✅ | ✅ |
+| `elements[].desc` | ✅ | ✅ | ✅ |
+| `elements[].icon` | ✅ | ✅ | ✅ |
+| `elements[].example` | ✅ | ✅ | ❌ Omitted in Mode 3 to keep cards compact |
+| `elements[].whyItMatters` | ✅ | ✅ | ❌ Omitted in Mode 3 to keep cards compact |
+| `elements[].color` / `light` | ✅ | ✅ | ✅ |
+
+> **Mode 3 card height budget:** With `example` and `whyItMatters` omitted, each card is ~110px. Four cards + three gaps = ~470px, which fits the ~576px available content area. Never add both fields back to Mode 3 — total card height will exceed the frame.
+
+### `scenarioComparison` — Rendered fields
+
+| Field | Rendered? | Notes |
+|---|---|---|
+| `tabs[].label` | ✅ | Tab button text |
+| `tabs[].prompt` | ✅ | "You say" chat bubble |
+| `tabs[].shortOutput` | ✅ **Required** | "They deliver" bubble — omit = empty section |
+| `tabs[].checks` | ✅ Required for checklist | Boolean array — omit = no component checklist |
+| `tabs[].annotation` | ❌ Not rendered | Use `comparison` type instead if annotation is needed |
+| `body` | ❌ Not rendered | |
+| `tealWord` | ❌ Not rendered | |
+
+> **Format constraint:** `scenarioComparison` is hardcoded to prompt → AI-output chat bubbles. It is not suitable for document-vs-document comparisons (briefs, PRDs, structured text). For side-by-side document comparison, use `comparison` type.
+
+### `comparison` — Rendered fields
+
+| Field | Rendered? | Notes |
+|---|---|---|
+| `scenario` | ✅ | Top banner text (gradient bg) |
+| `tabs[].label` | ✅ | Tab button text |
+| `tabs[].prompt` | ✅ | Styled prompt box (italic, teal left border) |
+| `tabs[].annotation` | ✅ | Annotation below prompt in `#F7FAFC` |
+| `heading` / `tealWord` | ✅ | In takeaway header and content |
+| `body` | ❌ Not rendered | |
+
+### `situationalJudgment` — Rendered fields
+
+| Field | Rendered? | Notes |
+|---|---|---|
+| `scenarios[].personaName` | ✅ | Name shown in persona tab and header |
+| `scenarios[].personaRole` | ✅ | Role shown in persona header |
+| `scenarios[].personaIcon` | ✅ | **Must be an imported asset variable — not a raw string** |
+| `scenarios[].scenario` | ✅ | Scenario card text — keep under 3 lines (inline) / 4 lines (fullscreen) |
+| `scenarios[].options` | ✅ | Three option buttons at fixed height (`75px` inline / `90px` fullscreen) |
+| `scenarios[].feedback` | ✅ | Quality-coded feedback card |
+| `heading` | ✅ | |
+| `tealWord` | ✅ | |
+
+> **Vertical budget:** The full `situationalJudgment` layout (persona tabs + header + scenario card + 3 option cards + feedback) totals ~600px. The available content area is ~576px. Scenario text exceeding 3–4 lines will push the slide over budget and clip content at the top.
+
+> **Option card fill rule:** Options render at `height: 75px` (inline) / `90px` (fullscreen). At 13px/15px line-height 1.5, each card holds 4–5 lines. Options should be **80–160 characters** to fill the card without appearing sparse.
+
+### `moduleSummary` — Rendered fields
+
+| Field | Rendered? | Notes |
+|---|---|---|
+| `elements[]` | ✅ | Framework component grid |
+| `elements[].key` | ✅ | Component name |
+| `elements[].desc` | ✅ | One-line description |
+| `elements[].color` / `light` | ✅ | Card colour |
+| `approaches[]` | ✅ | Bottom row of approach cards |
+| `panelHeading` | ✅ | Label above element grid |
+| `tealWord` | ❌ Not rendered | moduleSummary does not apply tealWord to its heading |
+| `body` | ✅ | Shown below panelHeading label |
+
+> **Grid column rule:** The element grid uses `gridTemplateColumns` derived from `elements.length`: 4 elements → 2×2 grid, 3 or 6 elements → 3-column grid. **Element count must be 3, 4, or 6.** Any other count leaves empty grid cells. Do not add a 5th or 7th element.
+
+### `flipcard` — Rendered fields
+
+| Field | Rendered? | Notes |
+|---|---|---|
+| `cards[].frontLabel` | ✅ | Front badge label |
+| `cards[].frontBadge` | ✅ | Front quality tag |
+| `cards[].frontPrompt` | ✅ | Front text content |
+| `cards[].backLabel` | ✅ | Back badge label |
+| `cards[].backBadge` | ✅ | Back quality tag |
+| `cards[].backPrompt` | ✅ | Back text content |
+| `cards[].backResponse` | ✅ **Required** | Back explanation panel — omit = empty explanation box |
+
+> **Front card fill rule:** Front cards render at a fixed height. `frontPrompt` should be **100–200 characters** to fill the card face. A one-sentence prompt will appear sparse. Add a prompt cue or question to fill the space (e.g., "What questions does this leave unanswered?").
+
+---
+
+## 20. Topic Composition Rules
+
+Apply these rules before authoring any new topic. Violating them produces redundant UX, confusing personas, and activity fatigue within a single module.
+
+### Evidence slide variety
+> No two consecutive evidence slides may use the same slide type. A module with two evidence slides must use two different layouts (e.g. `evidenceHero` + `concept`, not `evidenceHero` + `evidenceHero`). Use `visualType` variants (`dotGrid`, `barComparison`, `adoptionGap`) to further differentiate within the same slide type.
+
+### Interactive slide type limits
+> No interactive slide type may appear **more than twice** in a single topic. A third `situationalJudgment` in one topic is a content design failure — replace it with `dragSort`, `buildAPrompt`, `spotTheFlaw`, or `flipcard`.
+
+### No consecutive identical types
+> Never place two instances of the same interactive slide type back-to-back. If `situationalJudgment` appears on slide 7, the next interactive slide must be a different type.
+
+### Activity variety by beat
+> Each narrative beat (Situation / Tension / Concept / Contrast / Bridge) should use a different interaction format. Do not use `situationalJudgment` for both the Concept beat and the Contrast beat.
+
+### Persona name uniqueness
+> Each persona name may be used **once per topic**. Personas carry identity — reusing a name with a different role in the same module creates learner confusion. Track names in a per-topic register before authoring. Available personas: Sam, Priya, Marcus, Aisha, Jordan.
+
+### dragSort as default for classification tasks
+> When the goal is to apply a classification framework (scoring rubric, category system, level taxonomy), prefer `dragSort` over `situationalJudgment`. Reserve `situationalJudgment` for judgment calls where the right answer requires reasoning, not categorisation.
+
+---
+
+## 21. Asset Reference Conventions
+
+### Persona images
+Persona face icons are imported at the top of `data/topicContent.ts` as named TypeScript variables:
+
+```typescript
+import samImg from '../src/assets/face-icons/sam.png';
+import priyaImg from '../src/assets/face-icons/priya.png';
+import marcusImg from '../src/assets/face-icons/marcus.png';
+import aishaImg from '../src/assets/face-icons/aisha.png';
+import jordanImg from '../src/assets/face-icons/jordan.png';
+```
+
+The `personaIcon` field on `ScenarioData` **must reference the imported variable**, never a raw string:
+
+```typescript
+// ✅ Correct
+personaIcon: samImg
+
+// ❌ Wrong — will not resolve to an image
+personaIcon: "sam"
+```
+
+---
+
+## 22. Content Authoring Checklist
+
+Run this checklist before adding any new topic to `topicContent.ts`. Do not author slide content without completing it.
+
+```
+EVIDENCE SLIDES
+[ ] Two or more evidence slides use different slide types or visualType variants
+[ ] Every evidence slide includes a graphic (no text-only stat slides)
+[ ] No two consecutive evidence slides share the same layout
+
+INTERACTIVE SLIDES
+[ ] No interactive slide type appears more than twice in the topic
+[ ] No two consecutive slides use the same interactive type
+[ ] Each narrative beat uses a different interaction format
+[ ] Each persona name is used only once in the topic
+[ ] Classification tasks use dragSort, not situationalJudgment
+
+FIELD VALIDATION
+[ ] Every field used appears in the §19 Rendered Fields table for that slide type
+[ ] scenarioComparison tabs include shortOutput on every tab (or use comparison instead)
+[ ] moduleSummary element count is 3, 4, or 6 (not 5 or 7)
+[ ] moduleSummary does not use tealWord (not rendered)
+[ ] personaIcon references imported asset variables, not raw strings
+[ ] rctf Mode 3 slides do not set subheading (dead field)
+[ ] flipcard frontPrompt is 100–200 characters per card
+
+VERTICAL BUDGET
+[ ] situationalJudgment scenario text is under 3 lines (inline) / 4 lines (fullscreen)
+[ ] situationalJudgment option text is 80–160 characters per option
+[ ] rctf Mode 3 does not include example or whyItMatters on elements (Mode 3 omits them)
+[ ] All slide content verified in fullscreen mode before commit
+```

@@ -2415,7 +2415,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div style={{ background: '#FFFFFF', borderRadius: 14, padding: fs ? '16px 20px' : '12px 16px', border: '1.5px solid #E2E8F0', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: fs ? 13 : 12, fontWeight: 800, color: '#38B2AC', letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: 4 }}>{s.panelHeading || 'The Six Node Types'}</div>
                 <div style={{ fontSize: fs ? 15 : 14, color: '#4A5568', marginBottom: 10, lineHeight: 1.4 }}>{s.body || 'Every workflow step is one of these six. Identify them and you can map any process.'}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, flex: 1 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: s.elements.length === 4 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: 8, flex: 1 }}>
                   {s.elements.map((el, i) => (
                     <div key={i} style={{ background: el.light || `${el.color}0A`, border: `1.5px solid ${el.color}55`, borderRadius: 10, padding: fs ? '14px 16px' : '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
                       <div style={{ fontSize: fs ? 15 : 13, fontWeight: 900, color: el.color }}>{el.key}</div>
@@ -2629,9 +2629,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: fs ? '18px 20px' : '14px 16px' }}>
                 {renderConceptVisual(s.visualId, fs, contextStep >= 0 ? contextStep : undefined)}
               </div>
-              {/* Right: cards reveal one by one */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center' }}>
-                {s.subheading && contextStep < 0 && <p style={{ fontSize: fs ? 14 : 12, color: '#718096', lineHeight: 1.6, margin: 0 }}>{s.subheading}</p>}
+              {/* Right: cards reveal one by one — example/whyItMatters omitted in Mode 3 to stay within vertical budget */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'flex-start' }}>
                 {s.elements?.map((el, i) => {
                   const revealed = !(s as any).revealOnNext || i <= contextStep;
                   return (
@@ -2648,13 +2647,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                         {el.icon && <span style={{ fontSize: fs ? 18 : 16 }}>{el.icon}</span>}
                         <span style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: el.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{el.key}</span>
                       </div>
-                      <div style={{ fontSize: fs ? 13 : 12, color: '#2D3748', lineHeight: 1.6, marginBottom: 6 }}>{el.desc}</div>
-                      {el.example && <div style={{ fontSize: fs ? 11 : 10, color: '#718096', fontStyle: 'italic', lineHeight: 1.5, borderTop: `1px solid ${el.color}33`, paddingTop: 6, marginBottom: 5 }}>{el.example}</div>}
-                      {el.whyItMatters && (
-                        <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: el.color, padding: '4px 10px', background: '#FFFFFF', borderRadius: 6, border: `1px solid ${el.color}33`, display: 'inline-block' }}>
-                          {el.whyItMatters}
-                        </div>
-                      )}
+                      <div style={{ fontSize: fs ? 13 : 12, color: '#2D3748', lineHeight: 1.6 }}>{el.desc}</div>
                     </div>
                   );
                 })}
