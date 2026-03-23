@@ -2112,6 +2112,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                           <span style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>All chips placed — check your answers →</span>
                         )}
                       </div>
+                    </div>
                   </>
                 )}
               </div>
