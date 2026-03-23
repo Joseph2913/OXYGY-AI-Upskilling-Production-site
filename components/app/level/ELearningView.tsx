@@ -3967,7 +3967,7 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
             color: i === activeScenarioIdx ? '#FFFFFF' : '#718096',
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
-            {sc.personaIcon && <span style={{ fontSize: 14 }}>{sc.personaIcon}</span>}
+            {sc.personaIcon && <img src={sc.personaIcon} alt={sc.personaName} style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />}
             {sc.personaName ? `${sc.personaName}'s Task` : `Scenario ${i + 1}`}
           </button>
         ))}
@@ -3976,7 +3976,7 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
       {/* Persona header */}
       {scenario.personaName && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0', flexShrink: 0 }}>
-          {scenario.personaIcon && <span style={{ fontSize: 20 }}>{scenario.personaIcon}</span>}
+          {scenario.personaIcon && <img src={scenario.personaIcon} alt={scenario.personaName} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />}
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{scenario.personaName}</div>
             <div style={{ fontSize: 11, color: '#718096' }}>{scenario.personaRole}</div>
