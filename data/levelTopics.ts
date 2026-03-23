@@ -90,13 +90,13 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
   ],
   5: [
     {
-      id: 1, title: "Building Full-Stack AI Applications", subtitle: "The complete picture, end to end",
-      description: "How workflows, front-ends, individual accounts, and personalised experiences combine into a complete AI application. A worked example using the OXYGY platform as a Level 5 case study.",
+      id: 1, title: "Building Full-Stack AI Applications", subtitle: "The five-stage pipeline, end to end",
+      description: "The jump from a dashboard to a full AI application requires more than a new tool — it requires a mental model. Learn the five-stage build pipeline (Prototype → Version Control → Logic → Data → Deploy), where your Level 1–4 skills plug in, and how to read any product brief for the stages that matter most.",
       estimatedMinutes: 55, icon: "🏗️",
 
       phases: [
-        { icon: "▶", label: "E-Learning", detail: "Interactive module deconstructing the OXYGY platform: personalisation, roles, memory, and full-stack architecture." },
-        { icon: "◈", label: "Practice", detail: "Assemble a complete application using the Product Architecture Sprint." },
+        { icon: "▶", label: "E-Learning", detail: "16-slide interactive module covering the L4→L5 architectural leap, the five-stage build pipeline, workplace analogies for each stage, and how to read a brief for pipeline signals." },
+        { icon: "◈", label: "Practice", detail: "Walk through all five pipeline stages using the App Evaluator." },
       ],
     },
     {

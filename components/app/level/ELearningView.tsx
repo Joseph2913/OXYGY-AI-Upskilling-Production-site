@@ -546,6 +546,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   // activity warning popup
   const [showActivityWarning, setShowActivityWarning] = useState(false);
   const activityWarningTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   // reflection screen state
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionA, setReflectionA] = useState('');
@@ -594,6 +595,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [currentSlide, totalSlides, onSlideChange]);
+
+  // Sync React state with native fullscreen changes (e.g. user pressing Escape)
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement) setIsFullscreen(false);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
 
   const goToSlide = useCallback((i: number) => { if (i >= 1 && i <= totalSlides) onSlideChange(i); }, [totalSlides, onSlideChange]);
   const isLastSlide = currentSlide === totalSlides;
@@ -2212,7 +2222,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', lineHeight: 1.1, marginBottom: 3 }}>{p.name}</div>
                     <div style={{ fontSize: 14, color: '#4A5568', fontWeight: 500, marginBottom: 8 }}>{p.role}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-                      {p.tags.map((t, i) => (
+                      {(p.tags || []).map((t, i) => (
                         <span key={i} style={{ fontSize: 11, color: p.color, background: `${p.color}18`, border: `1px solid ${p.color}44`, borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>{t}</span>
                       ))}
                     </div>
@@ -2227,7 +2237,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {/* ── Question ── */}
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#1A202C', marginBottom: 6 }}>
-                  Which approach fits {p.name}'s situation?
+                  {(s as any).predictQuestion ?? `Which approach fits ${p.name}'s situation?`}
                 </div>
                 {predictSelected === null && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EBF8FF', border: '1px solid #BEE3F8', borderRadius: 8, padding: '5px 12px', marginBottom: 10 }}>
@@ -2261,7 +2271,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     <div style={{ fontSize: 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 5 }}>{isCorrect ? '✅ That\'s the best fit!' : '❌ Not quite — here\'s why'}</div>
                     <p style={{ fontSize: 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.65, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
                   </div>
-                  {isCorrect && (
+                  {isCorrect && p.prompt && (
                     <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: '14px 18px' }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
                       <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.65, marginBottom: 8, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
@@ -3527,7 +3537,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <button
         className="fs-glow-btn"
-        onClick={() => { setIsFullscreen(true); setShowFsTooltip(false); }}
+        onClick={() => { containerRef.current?.requestFullscreen().catch(() => {}); setIsFullscreen(true); setShowFsTooltip(false); }}
         style={{ background: '#38B2AC', border: 'none', cursor: 'pointer', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6 }}
         title="View fullscreen"
       >
@@ -3729,7 +3739,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     }
     // Default: navigate to next slide
     if (isLastSlide) {
-      if (isFullscreen) setIsFullscreen(false);
+      if (isFullscreen) { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); setIsFullscreen(false); }
       setShowReflection(true);
     } else {
       goToSlide(currentSlide + 1);
@@ -3801,7 +3811,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{currentSlide} / {totalSlides}</span>
               <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
-              <button onClick={() => setIsFullscreen(false)} title="Exit fullscreen (Esc)" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096' }}>
+              <button onClick={() => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); setIsFullscreen(false); }} title="Exit fullscreen (Esc)" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096' }}>
                 <Minimize2 size={15} />
               </button>
             </div>
@@ -3886,7 +3896,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
   /* ── Inline (compact) player ── */
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={containerRef} style={{ position: 'relative' }}>
       {/* Toast notification */}
       {toastMsg && (
         <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1A202C', color: '#FFFFFF', padding: '12px 24px', borderRadius: 24, fontSize: 14, fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 16px rgba(0,0,0,0.25)', whiteSpace: 'nowrap', animation: 'fadeInUp 0.2s ease' }}>
@@ -3938,7 +3948,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 <div style={{ width: 1, height: 16, background: '#E2E8F0', flexShrink: 0 }} />
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0 }}>{currentSlide} / {totalSlides}</span>
                 <div style={{ width: 1, height: 16, background: '#E2E8F0', flexShrink: 0 }} />
-                <button onClick={() => { setIsFullscreen(true); setShowFsTooltip(false); }} title="View fullscreen" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096', flexShrink: 0 }}>
+                <button onClick={() => { containerRef.current?.requestFullscreen().catch(() => {}); setIsFullscreen(true); setShowFsTooltip(false); }} title="View fullscreen" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096', flexShrink: 0 }}>
                   <Maximize2 size={13} />
                 </button>
               </div>
