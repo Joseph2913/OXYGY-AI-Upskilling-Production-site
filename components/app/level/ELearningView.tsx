@@ -865,8 +865,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                   }}>
                     <span style={{ fontSize: isActive ? 20 : 17, transition: 'font-size 0.3s ease' }}>{layer.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: isRevealed ? layer.color : '#A0AEC0', letterSpacing: '0.06em', transition: 'color 0.3s ease' }}>{layer.label}</div>
-                      <div style={{ fontSize: 11, color: isRevealed ? '#4A5568' : '#CBD5E0', marginTop: 2, transition: 'color 0.3s ease' }}>{layer.items.join(' · ')}</div>
+                      <div style={{ fontSize: _fs ? 14 : 12, fontWeight: 800, color: isRevealed ? layer.color : '#A0AEC0', letterSpacing: '0.06em', transition: 'color 0.3s ease' }}>{layer.label}</div>
+                      <div style={{ fontSize: _fs ? 13 : 11, color: isRevealed ? '#4A5568' : '#CBD5E0', marginTop: 2, transition: 'color 0.3s ease' }}>{layer.items.join(' · ')}</div>
                     </div>
                     {isActive && <div style={{ width: 8, height: 8, borderRadius: '50%', background: layer.color, flexShrink: 0 }} />}
                   </div>
@@ -901,26 +901,26 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {/* Use it */}
               <div style={{ background: '#F0FFF4', border: '1.5px solid #68D39155', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontSize: 15 }}>✅</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#276749', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Use a workflow</span>
+                  <span style={{ fontSize: _fs ? 17 : 15 }}>✅</span>
+                  <span style={{ fontSize: _fs ? 13 : 11, fontWeight: 800, color: '#276749', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Use a workflow</span>
                 </div>
                 {useWhen.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#FFFFFF', borderRadius: 8, padding: '8px 10px', border: '1px solid #68D39133' }}>
-                    <span style={{ fontSize: 15, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
-                    <span style={{ fontSize: 12, color: '#276749', lineHeight: 1.45, fontWeight: 500 }}>{item.text}</span>
+                    <span style={{ fontSize: _fs ? 17 : 15, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
+                    <span style={{ fontSize: _fs ? 14 : 12, color: '#276749', lineHeight: 1.45, fontWeight: 500 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
               {/* Skip it */}
               <div style={{ background: '#FFFBEB', border: '1.5px solid #F6AD5555', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontSize: 15 }}>⚠️</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#C05621', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Skip it when</span>
+                  <span style={{ fontSize: _fs ? 17 : 15 }}>⚠️</span>
+                  <span style={{ fontSize: _fs ? 13 : 11, fontWeight: 800, color: '#C05621', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Skip it when</span>
                 </div>
                 {skipWhen.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#FFFFFF', borderRadius: 8, padding: '8px 10px', border: '1px solid #F6AD5533' }}>
-                    <span style={{ fontSize: 15, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
-                    <span style={{ fontSize: 12, color: '#C05621', lineHeight: 1.45, fontWeight: 500 }}>{item.text}</span>
+                    <span style={{ fontSize: _fs ? 17 : 15, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
+                    <span style={{ fontSize: _fs ? 14 : 12, color: '#C05621', lineHeight: 1.45, fontWeight: 500 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
@@ -1139,14 +1139,14 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             {layers.map((layer, li) => (
               <div key={li}>
                 <div style={{ background: layer.light, border: `1.5px solid ${layer.color}55`, borderRadius: 8, padding: '8px 10px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: layer.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>{layer.label}</div>
+                  <div style={{ fontSize: _fs ? 11 : 9, fontWeight: 800, color: layer.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>{layer.label}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {layer.nodes.map((node, ni) => (
                       <div key={ni} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FFFFFF', borderRadius: 6, padding: '5px 8px', border: `1px solid ${layer.color}33` }}>
                         <span style={{ fontSize: 13 }}>{node.icon}</span>
                         <div>
-                          <span style={{ fontSize: 9, fontWeight: 800, color: layer.color, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{node.type}</span>
-                          <span style={{ fontSize: 10, color: '#4A5568', marginLeft: 5 }}>{node.desc}</span>
+                          <span style={{ fontSize: _fs ? 11 : 9, fontWeight: 800, color: layer.color, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{node.type}</span>
+                          <span style={{ fontSize: _fs ? 12 : 10, color: '#4A5568', marginLeft: 5 }}>{node.desc}</span>
                         </div>
                       </div>
                     ))}
@@ -1172,8 +1172,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         ];
         return (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 8 }}>
-            <div style={{ fontSize: fs ? 10 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 2 }}>THE BRIEF</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, maxHeight: fs ? 280 : 220 }}>
+            <div style={{ fontSize: _fs ? 12 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 2 }}>THE BRIEF</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, maxHeight: _fs ? 340 : 220 }}>
               {prdComponents.map((comp, i) => {
                 const isActive = activeIdx !== undefined && i <= activeIdx;
                 const isCurrent = activeIdx === i;
@@ -1186,9 +1186,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     transition: 'all 0.35s ease', opacity: isActive ? 1 : 0.35,
                   }}>
                     <span style={{ fontSize: fs ? 22 : 18, marginBottom: 6, display: 'block', filter: isActive ? 'none' : 'grayscale(1)', transition: 'filter 0.35s ease' }}>{comp.icon}</span>
-                    <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: isActive ? comp.color : '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, lineHeight: 1.2, transition: 'color 0.35s ease' }}>{comp.key}</div>
+                    <div style={{ fontSize: _fs ? 13 : 9, fontWeight: 800, color: isActive ? comp.color : '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, lineHeight: 1.2, transition: 'color 0.35s ease' }}>{comp.key}</div>
                     {isCurrent && (
-                      <div style={{ fontSize: fs ? 10 : 9, color: comp.color, marginTop: 5, lineHeight: 1.4 }}>{comp.hint}</div>
+                      <div style={{ fontSize: _fs ? 12 : 9, color: comp.color, marginTop: 5, lineHeight: 1.4 }}>{comp.hint}</div>
                     )}
                   </div>
                 );
@@ -1208,7 +1208,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const tools = ['Cursor', 'Bolt', 'Lovable', 'Replit Agent'];
         return (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 6 }}>
-            <div style={{ fontSize: fs ? 10 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE WORKFLOW</div>
+            <div style={{ fontSize: _fs ? 12 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE WORKFLOW</div>
             {steps.map((step, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
                 {i < steps.length - 1 && (
@@ -1218,13 +1218,13 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                   <span style={{ fontSize: 14 }}>{step.icon}</span>
                 </div>
                 <div>
-                  <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: step.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{step.label}</div>
-                  <div style={{ fontSize: fs ? 12 : 11, color: '#4A5568', lineHeight: 1.4 }}>{step.desc}</div>
+                  <div style={{ fontSize: _fs ? 12 : 9, fontWeight: 800, color: step.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{step.label}</div>
+                  <div style={{ fontSize: _fs ? 14 : 11, color: '#4A5568', lineHeight: 1.4 }}>{step.desc}</div>
                 </div>
               </div>
             ))}
             <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
-              <div style={{ fontSize: fs ? 9 : 8, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 5 }}>TOOLS</div>
+              <div style={{ fontSize: _fs ? 11 : 8, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 5 }}>TOOLS</div>
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
                 {tools.map((t) => (
                   <span key={t} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: '#F7FAFC', border: '1px solid #E2E8F0', color: '#718096', fontWeight: 600 }}>{t}</span>
@@ -1246,17 +1246,17 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 10 }}>
             <div style={{ textAlign: 'center' as const, background: '#FFF5F5', border: '1.5px solid #FC8181', borderRadius: 12, padding: fs ? '14px 16px' : '10px 14px' }}>
               <div style={{ fontSize: fs ? 48 : 40, fontWeight: 900, color: '#E53E3E', lineHeight: 1 }}>30%</div>
-              <div style={{ fontSize: fs ? 11 : 10, color: '#718096', marginTop: 4, lineHeight: 1.5 }}>of GenAI projects abandoned<br />after proof of concept</div>
+              <div style={{ fontSize: _fs ? 13 : 10, color: '#718096', marginTop: 4, lineHeight: 1.5 }}>of GenAI projects abandoned<br />after proof of concept</div>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', marginTop: 4, letterSpacing: '0.06em' }}>GARTNER 2024</div>
             </div>
-            <div style={{ fontSize: fs ? 10 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>WHY PROJECTS STALL</div>
+            <div style={{ fontSize: _fs ? 12 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>WHY PROJECTS STALL</div>
             {reasons.map((r) => (
               <div key={r.rank} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: r.light, border: `1.5px solid ${r.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: 9, fontWeight: 800, color: r.color }}>#{r.rank}</span>
                 </div>
-                <div style={{ flex: 1, fontSize: fs ? 12 : 11, color: '#4A5568', lineHeight: 1.3 }}>{r.label}</div>
-                <span style={{ fontSize: 8, fontWeight: 700, color: r.color, background: r.light, padding: '2px 6px', borderRadius: 8, whiteSpace: 'nowrap' as const, border: `1px solid ${r.color}` }}>{r.tag}</span>
+                <div style={{ flex: 1, fontSize: _fs ? 14 : 11, color: '#4A5568', lineHeight: 1.3 }}>{r.label}</div>
+                <span style={{ fontSize: _fs ? 10 : 8, fontWeight: 700, color: r.color, background: r.light, padding: '2px 6px', borderRadius: 8, whiteSpace: 'nowrap' as const, border: `1px solid ${r.color}` }}>{r.tag}</span>
               </div>
             ))}
           </div>
@@ -2261,15 +2261,17 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 </div>
               </div>
 
-              {/* ── Feedback ── */}
-              {predictSelected !== null && (
-                <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease' }}>
-                  <div style={{ background: isCorrect ? '#F0FFF4' : '#FFF5F5', border: `2px solid ${isCorrect ? '#68D391' : '#FC8181'}`, borderRadius: 12, padding: fs ? '18px 22px' : '14px 18px' }}>
-                    <div style={{ fontSize: fs ? 16 : 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 6 }}>{isCorrect ? '✅ Correct!' : '❌ Not quite — here\'s why'}</div>
-                    <p style={{ fontSize: fs ? 16 : 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.7, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
+              {/* ── Feedback — always reserves space so options don't shift ── */}
+              <div style={{ flexShrink: 0, minHeight: fs ? 110 : 90 }}>
+                {predictSelected !== null && (
+                  <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease', height: '100%' }}>
+                    <div style={{ background: isCorrect ? '#F0FFF4' : '#FFF5F5', border: `2px solid ${isCorrect ? '#68D391' : '#FC8181'}`, borderRadius: 12, padding: fs ? '18px 22px' : '14px 18px', boxSizing: 'border-box' as const, height: '100%' }}>
+                      <div style={{ fontSize: fs ? 16 : 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 6 }}>{isCorrect ? '✅ Correct!' : '❌ Not quite — here\'s why'}</div>
+                      <p style={{ fontSize: fs ? 16 : 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.7, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         }
