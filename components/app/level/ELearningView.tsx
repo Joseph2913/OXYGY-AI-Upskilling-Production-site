@@ -1920,7 +1920,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {/* You say */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', letterSpacing: '0.06em', textTransform: 'uppercase' }}>You say</span>
-                <div style={{ background: '#2D3748', color: '#F7FAFC', borderRadius: '16px 4px 16px 16px', padding: fs ? '12px 16px' : '10px 14px', fontSize: fs ? 14 : 13, lineHeight: 1.6, fontStyle: 'italic', maxWidth: '85%' }}>
+                <div style={{ background: '#2D3748', color: '#F7FAFC', borderRadius: '16px 4px 16px 16px', padding: fs ? '16px 20px' : '12px 16px', fontSize: fs ? 17 : 15, lineHeight: 1.75, fontStyle: 'italic', maxWidth: '85%' }}>
                   "{t?.prompt}"
                 </div>
               </div>
@@ -1928,7 +1928,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {/* They deliver */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0', letterSpacing: '0.06em', textTransform: 'uppercase' }}>They deliver</span>
-                <div style={{ background: '#FFFFFF', border: `1.5px solid ${borderColor}`, borderRadius: '4px 16px 16px 16px', padding: fs ? '12px 16px' : '10px 14px', fontSize: fs ? 14 : 13, lineHeight: 1.6, color: replyColor, fontWeight: 600, maxWidth: '85%' }}>
+                <div style={{ background: '#FFFFFF', border: `1.5px solid ${borderColor}`, borderRadius: '4px 16px 16px 16px', padding: fs ? '16px 20px' : '12px 16px', fontSize: fs ? 17 : 15, lineHeight: 1.75, color: replyColor, fontWeight: 600, maxWidth: '85%' }}>
                   {t?.shortOutput}
                 </div>
               </div>
@@ -3780,10 +3780,17 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
           )}
           <div style={{ padding: '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-            {/* ← Previous */}
-            <button onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide === 1} style={{ padding: '9px 22px', borderRadius: 24, minHeight: 42, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 13, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              ← Previous
-            </button>
+            {/* ← Previous + Restart */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide === 1} style={{ padding: '9px 22px', borderRadius: 24, minHeight: 42, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 13, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                ← Previous
+              </button>
+              {currentSlide > 1 && (
+                <button onClick={() => goToSlide(1)} title="Restart from the beginning" style={{ padding: '9px 16px', borderRadius: 24, minHeight: 42, border: '1px solid #E2E8F0', background: 'transparent', color: '#718096', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  ↺
+                </button>
+              )}
+            </div>
             {/* Centre control panel pill */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 28, padding: '7px 18px' }}>
               <AudioBar voiceover={voiceover} isInline autoNarration={autoNarration} onToggleAutoNarration={toggleAutoNarration} />
@@ -3910,10 +3917,17 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </div>
             )}
             <div style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              {/* ← Previous */}
-              <button onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide === 1} style={{ padding: '7px 16px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 12, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                ← Previous
-              </button>
+              {/* ← Previous + Restart */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <button onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide === 1} style={{ padding: '7px 16px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: currentSlide === 1 ? '#CBD5E0' : '#1A202C', fontSize: 12, fontWeight: 600, cursor: currentSlide === 1 ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  ← Previous
+                </button>
+                {currentSlide > 1 && (
+                  <button onClick={() => goToSlide(1)} title="Restart from the beginning" style={{ padding: '7px 12px', borderRadius: 24, minHeight: 36, border: '1px solid #E2E8F0', background: 'transparent', color: '#718096', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    ↺
+                  </button>
+                )}
+              </div>
               {/* Centre control panel pill */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 24, padding: '5px 14px', minWidth: 0, overflow: 'hidden' }}>
                 <AudioBar voiceover={voiceover} isInline autoNarration={autoNarration} onToggleAutoNarration={toggleAutoNarration} />
