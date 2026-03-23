@@ -626,46 +626,67 @@ const L2T1_SLIDES: SlideData[] = [
     visualId: "l2-agent-decision",
   },
 
-  /* ── Slide 6 — Situational Judgment: Agent or prompt? ── */
+  /* ── Slide 6a — Maya: Agent or prompt? ── */
   {
-    section: "WHEN TO BUILD ONE", type: "situationalJudgment",
-    takeaway: "Apply the agent decision test to real tasks from three different roles",
-    heading: "Agent or prompt?",
-    scenarios: [
-      {
-        personaName: "Maya",
-        personaRole: "Operations Manager",
-        scenario: "Maya starts every morning by reading 20+ internal emails and manually summarising the key actions for her team. She does this every single day, and her colleague does the same — but their summaries look completely different.",
-        options: ["Build a reusable agent", "Just write a good prompt"],
-        strongestChoice: 0,
-        feedback: [
-          { quality: "strong", text: "Correct. Daily frequency, consistency gap across two people, and a structured output that matters downstream — all three agent conditions are met. This is exactly the kind of task worth standardising." },
-          { quality: "weak", text: "A prompt would work, but it disappears after each session. With daily frequency and two people producing inconsistent outputs, an agent would standardise the result once and run the same way every time." },
-        ],
-      },
-      {
-        personaName: "James",
-        personaRole: "Senior Strategy Consultant",
-        scenario: "James's manager has asked for a one-time competitor landscape report ahead of a client pitch next week. Different competitors, different client framing — the context changes completely each time this type of analysis comes up.",
-        options: ["Build a reusable agent", "Just write a good prompt"],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "weak", text: "Building an agent adds complexity without value here. The analysis is one-time and highly context-dependent — the effort of standardising inputs and outputs won't pay off for a single use." },
-          { quality: "strong", text: "Right. One-time, context-dependent tasks are prompt territory. A well-crafted Level 1 prompt is the right tool. Save the agent investment for tasks that repeat." },
-        ],
-      },
-      {
-        personaName: "Priya",
-        personaRole: "Risk & Compliance Lead",
-        scenario: "Priya's team produces a risk summary for six stakeholder groups every quarter. Each uses the same structure and the same source data — just different audience framing. Three people on her team produce these independently, with inconsistent results.",
-        options: ["Build a reusable agent", "Just write a good prompt"],
-        strongestChoice: 0,
-        feedback: [
-          { quality: "strong", text: "Strong agent case. Quarterly cadence, same structure across six outputs, and three people producing inconsistent results — standardising this as an agent delivers consistent quality every quarter with no extra effort." },
-          { quality: "weak", text: "A prompt alone won't solve the inconsistency across three people. This task repeats on a schedule and follows a fixed structure — the conditions for an agent are all there." },
-        ],
-      },
+    section: "WHEN TO BUILD ONE", type: "persona",
+    takeaway: "Apply the agent decision test to real tasks",
+    heading: "Maya — Operations Manager",
+    predictFirst: true,
+    predictQuestion: "Agent or one-off prompt for Maya's task?",
+    predictOptions: ["Build a reusable agent", "Just write a good prompt"],
+    predictCorrect: 0,
+    predictFeedback: [
+      "Correct. Daily frequency, consistency gap across two people, and a structured output that matters downstream — all three agent conditions are met. This is exactly the kind of task worth standardising.",
+      "A prompt would work, but it disappears after each session. With daily frequency and two people producing inconsistent outputs, an agent would standardise the result once and run the same way every time.",
     ],
+    personaData: {
+      name: "Maya", initial: "M", role: "Operations Manager", color: "#38B2AC", iconPath: null,
+      scenario: "Maya starts every morning by reading 20+ internal emails and manually summarising the key actions for her team. She does this every single day, and her colleague does the same — but their summaries look completely different.",
+      tags: ["Daily task", "Team consistency", "Structured output"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 6b — James: Agent or prompt? ── */
+  {
+    section: "WHEN TO BUILD ONE", type: "persona",
+    takeaway: "Apply the agent decision test to real tasks",
+    heading: "James — Senior Strategy Consultant",
+    predictFirst: true,
+    predictQuestion: "Agent or one-off prompt for James's task?",
+    predictOptions: ["Build a reusable agent", "Just write a good prompt"],
+    predictCorrect: 1,
+    predictFeedback: [
+      "Building an agent adds complexity without value here. The analysis is one-time and highly context-dependent — the effort of standardising inputs and outputs won't pay off for a single use.",
+      "Right. One-time, context-dependent tasks are prompt territory. A well-crafted Level 1 prompt is the right tool. Save the agent investment for tasks that repeat.",
+    ],
+    personaData: {
+      name: "James", initial: "J", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: null,
+      scenario: "James's manager has asked for a one-time competitor landscape report ahead of a client pitch next week. Different competitors, different client framing — the context changes completely each time this type of analysis comes up.",
+      tags: ["One-time task", "Context-dependent", "Strategic analysis"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 6c — Priya: Agent or prompt? ── */
+  {
+    section: "WHEN TO BUILD ONE", type: "persona",
+    takeaway: "Apply the agent decision test to real tasks",
+    heading: "Priya — Risk & Compliance Lead",
+    predictFirst: true,
+    predictQuestion: "Agent or one-off prompt for Priya's task?",
+    predictOptions: ["Build a reusable agent", "Just write a good prompt"],
+    predictCorrect: 0,
+    predictFeedback: [
+      "Strong agent case. Quarterly cadence, same structure across six outputs, and three people producing inconsistent results — standardising this as an agent delivers consistent quality every quarter with no extra effort.",
+      "A prompt alone won't solve the inconsistency across three people. This task repeats on a schedule and follows a fixed structure — the conditions for an agent are all there.",
+    ],
+    personaData: {
+      name: "Priya", initial: "P", role: "Risk & Compliance Lead", color: "#805AD5", iconPath: null,
+      scenario: "Priya's team produces a risk summary for six stakeholder groups every quarter. Each uses the same structure and the same source data — just different audience framing. Three people on her team produce these independently, with inconsistent results.",
+      tags: ["Quarterly cadence", "Multiple outputs", "Team consistency"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
   },
 
   /* ── Slide 7 — The Three-Layer Model (concept with visual) ── */
@@ -922,46 +943,67 @@ const L3T1_SLIDES: SlideData[] = [
     visualId: "l3-workflow-decision",
   },
 
-  /* ── Slide 7 — Workflow or Not? (Activity) ── */
+  /* ── Slide 7a — Lena: Workflow or not? ── */
   {
-    section: "THE TECHNIQUE", type: "situationalJudgment",
-    takeaway: "Apply the workflow decision test to real tasks from three different roles",
-    heading: "Workflow or not?",
-    scenarios: [
-      {
-        personaName: "Lena",
-        personaRole: "HR Manager",
-        scenario: "Every time a new employee joins, Lena manually sends a welcome email, shares an onboarding document pack, creates a system account request, and schedules a Day 1 check-in. The steps are always the same — the only variable is the employee's name and start date. Should Lena build a workflow?",
-        options: ["Yes", "No"],
-        strongestChoice: 0,
-        feedback: [
-          { quality: "strong", text: "Exactly right. The trigger is clear (new hire confirmed), the steps are fixed, and the output is always the same set of actions. Personalisation — name, start date — is just data the workflow receives. This is a textbook workflow candidate." },
-          { quality: "weak", text: "A workflow doesn't remove the personal touch — it ensures it happens consistently. The steps Lena does manually are identical every time. A workflow handles the repetitive parts and frees Lena's attention for the genuinely personal moments." },
-        ],
-      },
-      {
-        personaName: "Ravi",
-        personaRole: "Senior Strategy Consultant",
-        scenario: "A client has escalated a complaint about a project that went over budget. Ravi needs to review six months of project history, understand the client relationship context, and decide whether to offer a partial refund, a discount on future work, or simply a detailed explanation. Should Ravi build a workflow?",
-        options: ["Yes", "No"],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "weak", text: "Consistency matters for routine complaints, but this case requires Ravi to weigh context that changes significantly from client to client. A workflow would force a structured response onto a situation that needs genuine judgment." },
-          { quality: "strong", text: "Correct. The decision depends on relationship history, risk appetite, and strategic context — none of which can be reliably encoded as rules. Ravi should handle this as a one-off, with AI as a thinking tool if helpful, not as an automated step." },
-        ],
-      },
-      {
-        personaName: "Diane",
-        personaRole: "Marketing Manager",
-        scenario: "Diane's team receives inbound press enquiries by email. Each one needs to be categorised (media, analyst, or blogger), checked against a media list, and either forwarded to the PR lead or logged as low priority. The volume is two to three per day and the routing logic is always the same. Should Diane build a workflow?",
-        options: ["Yes", "No"],
-        strongestChoice: 0,
-        feedback: [
-          { quality: "strong", text: "Right. The trigger is clear (email arrives), the logic is rule-based (media list check + category routing), and the output is always the same type of action. Volume is low but the process is perfectly suited to a workflow." },
-          { quality: "weak", text: "Low volume doesn't disqualify a workflow — even two to three requests a day adds up to 600–900 per year. Consistent categorisation and routing at that scale is worth automating." },
-        ],
-      },
+    section: "THE TECHNIQUE", type: "persona",
+    takeaway: "Apply the workflow decision test to real tasks",
+    heading: "Lena — HR Manager",
+    predictFirst: true,
+    predictQuestion: "Should Lena build a workflow?",
+    predictOptions: ["Yes", "No"],
+    predictCorrect: 0,
+    predictFeedback: [
+      "Exactly right. The trigger is clear (new hire confirmed), the steps are fixed, and the output is always the same set of actions. Personalisation — name, start date — is just data the workflow receives. This is a textbook workflow candidate.",
+      "A workflow doesn't remove the personal touch — it ensures it happens consistently. The steps Lena does manually are identical every time. A workflow handles the repetitive parts and frees Lena's attention for the genuinely personal moments.",
     ],
+    personaData: {
+      name: "Lena", initial: "L", role: "HR Manager", color: "#38B2AC", iconPath: null,
+      scenario: "Every time a new employee joins, Lena manually sends a welcome email, shares an onboarding document pack, creates a system account request, and schedules a Day 1 check-in. The steps are always the same — the only variable is the employee's name and start date.",
+      tags: ["Fixed steps", "Repeating trigger", "Onboarding"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 7b — Ravi: Workflow or not? ── */
+  {
+    section: "THE TECHNIQUE", type: "persona",
+    takeaway: "Apply the workflow decision test to real tasks",
+    heading: "Ravi — Senior Strategy Consultant",
+    predictFirst: true,
+    predictQuestion: "Should Ravi build a workflow?",
+    predictOptions: ["Yes", "No"],
+    predictCorrect: 1,
+    predictFeedback: [
+      "Consistency matters for routine complaints, but this case requires Ravi to weigh context that changes significantly from client to client. A workflow would force a structured response onto a situation that needs genuine judgment.",
+      "Correct. The decision depends on relationship history, risk appetite, and strategic context — none of which can be reliably encoded as rules. Ravi should handle this as a one-off, with AI as a thinking tool if helpful, not as an automated step.",
+    ],
+    personaData: {
+      name: "Ravi", initial: "R", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: null,
+      scenario: "A client has escalated a complaint about a project that went over budget. Ravi needs to review six months of project history, understand the client relationship context, and decide whether to offer a partial refund, a discount on future work, or simply a detailed explanation.",
+      tags: ["Contextual judgment", "Client escalation", "One-off decision"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 7c — Diane: Workflow or not? ── */
+  {
+    section: "THE TECHNIQUE", type: "persona",
+    takeaway: "Apply the workflow decision test to real tasks",
+    heading: "Diane — Marketing Manager",
+    predictFirst: true,
+    predictQuestion: "Should Diane build a workflow?",
+    predictOptions: ["Yes", "No"],
+    predictCorrect: 0,
+    predictFeedback: [
+      "Right. The trigger is clear (email arrives), the logic is rule-based (media list check + category routing), and the output is always the same type of action. Volume is low but the process is perfectly suited to a workflow.",
+      "Low volume doesn't disqualify a workflow — even two to three requests a day adds up to 600–900 per year. Consistent categorisation and routing at that scale is worth automating.",
+    ],
+    personaData: {
+      name: "Diane", initial: "D", role: "Marketing Manager", color: "#ED8936", iconPath: null,
+      scenario: "Diane's team receives inbound press enquiries by email. Each one needs to be categorised (media, analyst, or blogger), checked against a media list, and either forwarded to the PR lead or logged as low priority. The volume is two to three per day and the routing logic is always the same.",
+      tags: ["Rule-based routing", "Daily volume", "Consistent logic"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
   },
 
   /* ── Slide 8 — The Anatomy of an AI Workflow ── */
@@ -1055,61 +1097,82 @@ const L3T1_SLIDES: SlideData[] = [
     pullQuote: "An undesigned handoff is just a gap waiting to cause a problem.",
   },
 
-  /* ── Slide 13 — Apply It: Situational Judgment ── */
+  /* ── Slide 13 — Apply It: Situational Judgment (Alex) ── */
   {
-    section: "IN PRACTICE", type: "situationalJudgment",
+    section: "IN PRACTICE", type: "persona",
     takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
-    heading: "Apply It: Workflow Design Decisions",
-    scenarios: [
-      {
-        personaName: "Alex",
-        personaRole: "Marketing Coordinator",
-        scenario: "Alex is mapping a workflow. A client brief arrives by email → the AI extracts key themes → the AI formats the content into a standard template → the final document is emailed to the client. She's unsure where each step sits. Which layer does the formatting step belong to?",
-        options: [
-          "Input Layer — it's working with data that arrived in the email",
-          "Processing Layer — it transforms the extracted content into a new structure",
-          "Output Layer — it produces the final document the client will receive",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "weak", text: "The Input Layer captures the trigger and incoming data — in this case, the email arriving. Formatting happens after that data has already been received and processed. It belongs in the middle layer." },
-          { quality: "strong", text: "Correct. Formatting is a Processing Layer step — it takes extracted content and reshapes it into a new structure. The Processing Layer handles all AI work, logic, and transformation between what arrives and what gets delivered." },
-          { quality: "partial", text: "The Output Layer is where the final document is delivered — the email to the client. But formatting it is the step before that. Transformation belongs in the Processing Layer; delivery belongs in the Output Layer." },
-        ],
-      },
-      {
-        personaName: "Nia",
-        personaRole: "Operations Analyst",
-        scenario: "Nia is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
-        options: [
-          "AI ACTION — the AI reads and interprets the text",
-          "CONDITION — it evaluates a result and routes the workflow based on a rule",
-          "TRANSFORM — it reformats the feedback into a structured record",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "partial", text: "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Nia is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does." },
-          { quality: "strong", text: "Exactly. A CONDITION node evaluates the outcome of the previous step — here, the sentiment classification — and routes the workflow down different paths based on a rule. It's what makes a workflow adaptive rather than linear." },
-          { quality: "weak", text: "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Nia's step isn't reshaping data; it's making a routing decision. That's a CONDITION." },
-        ],
-      },
-      {
-        personaName: "Tom",
-        personaRole: "HR Coordinator",
-        scenario: "Tom's AI workflow drafts interview invitation emails for incoming job applications. It's been running accurately in testing. He wants to remove the human review step to speed things up. What's the right call?",
-        options: [
-          "Remove it — the AI is accurate and the extra step slows the process down",
-          "Keep a quick human check before sending — candidate emails carry reputational risk",
-          "Replace the human review with a second AI pass to check for errors",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "weak", text: "Testing accuracy doesn't guarantee production accuracy. A single wrong name, role, or tone in a candidate email can damage trust and the employer brand. The cost of a 30-second review is far lower than the cost of a mistake." },
-          { quality: "strong", text: "This is good handoff design. A lightweight human review on high-stakes outputs is worth keeping — at least until you have weeks of consistent real-world results. Design the handoff as a feature, not a bottleneck." },
-          { quality: "partial", text: "A second AI pass catches some errors, but AI can't reliably catch its own mistakes — especially issues of tone, context, or candidate-specific details. A human handoff is more reliable for this type of output." },
-        ],
-      },
+    heading: "Alex — Marketing Coordinator",
+    predictFirst: true,
+    predictQuestion: "Which layer does Alex's formatting step belong to?",
+    predictOptions: [
+      "Input Layer — it's working with data that arrived in the email",
+      "Processing Layer — it transforms the extracted content into a new structure",
+      "Output Layer — it produces the final document the client will receive",
     ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "The Input Layer captures the trigger and incoming data — in this case, the email arriving. Formatting happens after that data has already been received and processed. It belongs in the middle layer.",
+      "Correct. Formatting is a Processing Layer step — it takes extracted content and reshapes it into a new structure. The Processing Layer handles all AI work, logic, and transformation between what arrives and what gets delivered.",
+      "The Output Layer is where the final document is delivered — the email to the client. But formatting it is the step before that. Transformation belongs in the Processing Layer; delivery belongs in the Output Layer.",
+    ],
+    personaData: {
+      name: "Alex", initial: "A", role: "Marketing Coordinator", color: "#38B2AC", iconPath: null,
+      scenario: "Alex is mapping a workflow. A client brief arrives by email → the AI extracts key themes → the AI formats the content into a standard template → the final document is emailed to the client. She's unsure where each step sits. Which layer does the formatting step belong to?",
+      tags: ["Three-layer model", "Processing Layer", "Workflow mapping"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 13b — Apply It: Situational Judgment (Nia) ── */
+  {
+    section: "IN PRACTICE", type: "persona",
+    takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
+    heading: "Nia — Operations Analyst",
+    predictFirst: true,
+    predictQuestion: "Which node type fits Nia's routing step?",
+    predictOptions: [
+      "AI ACTION — the AI reads and interprets the text",
+      "CONDITION — it evaluates a result and routes the workflow based on a rule",
+      "TRANSFORM — it reformats the feedback into a structured record",
+    ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Nia is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does.",
+      "Exactly. A CONDITION node evaluates the outcome of the previous step — here, the sentiment classification — and routes the workflow down different paths based on a rule. It's what makes a workflow adaptive rather than linear.",
+      "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Nia's step isn't reshaping data; it's making a routing decision. That's a CONDITION.",
+    ],
+    personaData: {
+      name: "Nia", initial: "N", role: "Operations Analyst", color: "#667EEA", iconPath: null,
+      scenario: "Nia is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
+      tags: ["Node types", "CONDITION", "Routing logic"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 13c — Apply It: Situational Judgment (Tom) ── */
+  {
+    section: "IN PRACTICE", type: "persona",
+    takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
+    heading: "Tom — HR Coordinator",
+    predictFirst: true,
+    predictQuestion: "Should Tom remove the human review from his workflow?",
+    predictOptions: [
+      "Remove it — the AI is accurate and the extra step slows the process down",
+      "Keep a quick human check before sending — candidate emails carry reputational risk",
+      "Replace the human review with a second AI pass to check for errors",
+    ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "Testing accuracy doesn't guarantee production accuracy. A single wrong name, role, or tone in a candidate email can damage trust and the employer brand. The cost of a 30-second review is far lower than the cost of a mistake.",
+      "This is good handoff design. A lightweight human review on high-stakes outputs is worth keeping — at least until you have weeks of consistent real-world results. Design the handoff as a feature, not a bottleneck.",
+      "A second AI pass catches some errors, but AI can't reliably catch its own mistakes — especially issues of tone, context, or candidate-specific details. A human handoff is more reliable for this type of output.",
+    ],
+    personaData: {
+      name: "Tom", initial: "T", role: "HR Coordinator", color: "#ED8936", iconPath: null,
+      scenario: "Tom's AI workflow drafts interview invitation emails for incoming job applications. It's been running accurately in testing. He wants to remove the human review step to speed things up. What's the right call?",
+      tags: ["Handoff design", "Human review", "High-stakes outputs"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
   },
 
   /* ── Slide 14 — Module Summary ── */
@@ -1314,67 +1377,82 @@ const L4T1_SLIDES: SlideData[] = [
     ],
   },
 
-  /* ── Slide 7 — Spot the Missing Component (Activity) ── */
+  /* ── Slide 7 — Spot the Missing Component: Sam ── */
   {
-    section: "THE TECHNIQUE", type: "situationalJudgment",
+    section: "THE TECHNIQUE", type: "persona",
     takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
-    heading: "Which component is under-defined?",
-    scenarios: [
-      {
-        personaName: "Sam",
-        personaRole: "Product Manager",
-        personaIcon: samImg,
-        personaColor: "#ED8936",
-        scenario: "Sam's brief says 'give management visibility into project performance.' The user (a VP, checks Fridays) and data sources are confirmed. After launch, the VP doesn't know what to act on. Which component was under-defined?",
-        options: [
-          "Users — the VP's needs weren't understood well enough",
-          "Purpose — 'visibility' doesn't define what decisions this should enable",
-          "Data Sources — the data doesn't match what the VP needs",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "partial", text: "The user is partially defined — we know who opens the tool. But 'visibility' as a purpose leaves no clear outcome. Without defining what decision the VP should make after using it, there's no way to know if the tool is working." },
-          { quality: "strong", text: "Exactly. 'Visibility' isn't a purpose — it's a vague gesture toward one. A strong purpose defines the outcome: what decision the user should be able to make, and what action they should take. Without that, every design decision gets made by default." },
-          { quality: "weak", text: "The data sources may be appropriate — the issue is we don't know what 'appropriate' looks like because success criteria were never defined. The gap is in purpose, not data." },
-        ],
-      },
-      {
-        personaName: "Priya",
-        personaRole: "Marketing Lead",
-        personaIcon: priyaImg,
-        personaColor: "#805AD5",
-        scenario: "Priya's team builds a tool surfacing 'key metrics from the sales pipeline for the sales team.' Purpose, features, and data are all confirmed. It launches — adoption is near zero within two weeks. Which component was most likely under-defined?",
-        options: [
-          "Features — the tool showed too many metrics",
-          "Users — the brief named the team, not the person who opens it and why",
-          "Purpose — success criteria weren't tied to a specific outcome",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "partial", text: "Feature overload is a symptom — but it's caused by not knowing who the actual user is. When you design for 'the sales team,' you design for everyone — which means designing for no one." },
-          { quality: "strong", text: "Right. 'The sales team' is not a user. A user is a specific person with a specific need at a specific moment. Is it the rep reviewing their pipeline before a call? The manager preparing the Monday forecast? Each needs something different." },
-          { quality: "weak", text: "The purpose was described as clear. But even a well-defined purpose produces the wrong tool if you're building for a team instead of a person. The user definition was too broad to make any design decision." },
-        ],
-      },
-      {
-        personaName: "Jordan",
-        personaRole: "Operations Analyst",
-        personaIcon: jordanImg,
-        personaColor: "#2B6CB0",
-        scenario: "Jordan's brief is thorough — purpose, users, and features are all well-defined. The build stalls on day three: the AI classification step can't run because historical ticket data exists only in PDFs with inconsistent structure. Which component should have caught this?",
-        options: [
-          "Features — the classification feature was too ambitious",
-          "Purpose — success criteria assumed data quality that wasn't there",
-          "Data Sources — this needed to be validated before building started",
-        ],
-        strongestChoice: 2,
-        feedback: [
-          { quality: "partial", text: "The feature may need revision — but the root issue is that the data dependency wasn't evaluated before building. Even a simple classification step fails without accessible, structured data. That's a data sources problem." },
-          { quality: "weak", text: "The purpose is well-defined. The issue is that the data required to fulfil it was never evaluated for accessibility or quality. A thorough data sources review would have surfaced this on day one, not day three." },
-          { quality: "strong", text: "Exactly. The data sources component isn't just 'what data do we need?' — it's 'does it exist, is it accessible, and is it usable?' PDFs with inconsistent formatting aren't a usable data source for classification without significant preprocessing." },
-        ],
-      },
+    heading: "Sam — Product Manager",
+    predictFirst: true,
+    predictQuestion: "Which PRD component did Sam leave under-defined?",
+    predictOptions: [
+      "Users — the VP's needs weren't understood well enough",
+      "Purpose — 'visibility' doesn't define what decisions this should enable",
+      "Data Sources — the data doesn't match what the VP needs",
     ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "The user is partially defined — we know who opens the tool. But 'visibility' as a purpose leaves no clear outcome. Without defining what decision the VP should make after using it, there's no way to know if the tool is working.",
+      "Exactly. 'Visibility' isn't a purpose — it's a vague gesture toward one. A strong purpose defines the outcome: what decision the user should be able to make, and what action they should take. Without that, every design decision gets made by default.",
+      "The data sources may be appropriate — the issue is we don't know what 'appropriate' looks like because success criteria were never defined. The gap is in purpose, not data.",
+    ],
+    personaData: {
+      name: "Sam", initial: "S", role: "Product Manager", color: "#ED8936", iconPath: samImg,
+      scenario: "Sam's brief says 'give management visibility into project performance.' The user (a VP, checks Fridays) and data sources are confirmed. After launch, the VP doesn't know what to act on. Which component was under-defined?",
+      tags: ["PRD components", "Purpose definition", "Brief review"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 7b — Spot the Missing Component: Priya ── */
+  {
+    section: "THE TECHNIQUE", type: "persona",
+    takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
+    heading: "Priya — Marketing Lead",
+    predictFirst: true,
+    predictQuestion: "Which PRD component caused Priya's tool to fail?",
+    predictOptions: [
+      "Features — the tool showed too many metrics",
+      "Users — the brief named the team, not the person who opens it and why",
+      "Purpose — success criteria weren't tied to a specific outcome",
+    ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "Feature overload is a symptom — but it's caused by not knowing who the actual user is. When you design for 'the sales team,' you design for everyone — which means designing for no one.",
+      "Right. 'The sales team' is not a user. A user is a specific person with a specific need at a specific moment. Is it the rep reviewing their pipeline before a call? The manager preparing the Monday forecast? Each needs something different.",
+      "The purpose was described as clear. But even a well-defined purpose produces the wrong tool if you're building for a team instead of a person. The user definition was too broad to make any design decision.",
+    ],
+    personaData: {
+      name: "Priya", initial: "P", role: "Marketing Lead", color: "#805AD5", iconPath: priyaImg,
+      scenario: "Priya's team builds a tool surfacing 'key metrics from the sales pipeline for the sales team.' Purpose, features, and data are all confirmed. It launches — adoption is near zero within two weeks. Which component was most likely under-defined?",
+      tags: ["User definition", "PRD components", "Adoption failure"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 7c — Spot the Missing Component: Jordan ── */
+  {
+    section: "THE TECHNIQUE", type: "persona",
+    takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
+    heading: "Jordan — Operations Analyst",
+    predictFirst: true,
+    predictQuestion: "Which component should have caught Jordan's data problem?",
+    predictOptions: [
+      "Features — the classification feature was too ambitious",
+      "Purpose — success criteria assumed data quality that wasn't there",
+      "Data Sources — this needed to be validated before building started",
+    ],
+    predictCorrect: 2,
+    predictFeedback: [
+      "The feature may need revision — but the root issue is that the data dependency wasn't evaluated before building. Even a simple classification step fails without accessible, structured data. That's a data sources problem.",
+      "The purpose is well-defined. The issue is that the data required to fulfil it was never evaluated for accessibility or quality. A thorough data sources review would have surfaced this on day one, not day three.",
+      "Exactly. The data sources component isn't just 'what data do we need?' — it's 'does it exist, is it accessible, and is it usable?' PDFs with inconsistent formatting aren't a usable data source for classification without significant preprocessing.",
+    ],
+    personaData: {
+      name: "Jordan", initial: "J", role: "Operations Analyst", color: "#2B6CB0", iconPath: jordanImg,
+      scenario: "Jordan's brief is thorough — purpose, users, and features are all well-defined. The build stalls on day three: the AI classification step can't run because historical ticket data exists only in PDFs with inconsistent structure. Which component should have caught this?",
+      tags: ["Data Sources", "PRD validation", "Build failure"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
   },
 
   /* ── Slide 8 — Weak vs. Strong Brief ── */
@@ -1685,42 +1763,52 @@ const L5T1_SLIDES: SlideData[] = [
     footnote: "A prototyping tool is not a database. A vibe coding tool is not version control. A deployment platform is not a builder. Using the wrong tool for a stage produces the same result as skipping the stage entirely.",
   },
 
-  /* ── Slide 6 — The Missing Mental Model (Beat 2 — Tension) ── */
+  /* ── Slide 6 — The Missing Mental Model: Builder A ── */
   {
-    section: "THE GAP", type: "situationalJudgment",
+    section: "THE GAP", type: "persona",
     takeaway: "Two builders, the same brief — what each one does next reveals the mental model they're working with",
-    heading: "Two responses to complexity.",
-    tealWord: "Two responses",
-    scenarios: [
-      {
-        personaName: "Builder A",
-        personaRole: "Jumps straight to Logic",
-        scenario: "Given a complex brief — build a personalised team summary app with individual accounts and a trending view — Builder A opens a vibe coding tool immediately and starts generating code. What is the most likely outcome?",
-        options: [
-          "Impressive demo by end of day — the right move when the brief is clear enough.",
-          "Rework. The brief contained signals Logic alone can't solve — skipping the pipeline means discovering that late.",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "partial", text: "A demo is possible — but 'personalised' means each user needs stored data. Without a Data stage plan, personalisation breaks at the first logout." },
-          { quality: "strong",  text: "Speed at Logic often means discovering hard problems mid-build. Without Version Control, one mistake requires a full rebuild. The pipeline prevents the most expensive rework." },
-        ],
-      },
-      {
-        personaName: "Builder B",
-        personaRole: "Reads the brief for pipeline signals",
-        scenario: "Builder B pauses before opening any tool. They read the brief and flag 'personalised' and 'each team member' as signals that Data is load-bearing. They set up Version Control before writing a line of code. What does this approach change?",
-        options: [
-          "Not much — the pipeline is just process overhead. The code still needs to be written.",
-          "The build takes longer to start and less time to finish — critical decisions are made before they become blockers.",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "partial", text: "The pipeline is not overhead — it is the sequence that prevents the most expensive mistake: building in the wrong order with the wrong tool." },
-          { quality: "strong",  text: "Correct. Reading the brief for pipeline signals means tool selection is informed. A vibe coding tool with a deployment path is chosen before coding starts." },
-        ],
-      },
+    heading: "Builder A — Jumps straight to Logic",
+    predictFirst: true,
+    predictQuestion: "What's the most likely outcome for Builder A?",
+    predictOptions: [
+      "Impressive demo by end of day — the right move when the brief is clear enough.",
+      "Rework. The brief contained signals Logic alone can't solve — skipping the pipeline means discovering that late.",
     ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "A demo is possible — but 'personalised' means each user needs stored data. Without a Data stage plan, personalisation breaks at the first logout.",
+      "Speed at Logic often means discovering hard problems mid-build. Without Version Control, one mistake requires a full rebuild. The pipeline prevents the most expensive rework.",
+    ],
+    personaData: {
+      name: "Builder A", initial: "A", role: "Jumps straight to Logic", color: "#E53E3E", iconPath: null,
+      scenario: "Given a complex brief — build a personalised team summary app with individual accounts and a trending view — Builder A opens a vibe coding tool immediately and starts generating code. What is the most likely outcome?",
+      tags: ["Pipeline thinking", "Logic-first", "Build order"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 6b — The Missing Mental Model: Builder B ── */
+  {
+    section: "THE GAP", type: "persona",
+    takeaway: "Two builders, the same brief — what each one does next reveals the mental model they're working with",
+    heading: "Builder B — Reads the brief for pipeline signals",
+    predictFirst: true,
+    predictQuestion: "What does Builder B's approach change?",
+    predictOptions: [
+      "Not much — the pipeline is just process overhead. The code still needs to be written.",
+      "The build takes longer to start and less time to finish — critical decisions are made before they become blockers.",
+    ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "The pipeline is not overhead — it is the sequence that prevents the most expensive mistake: building in the wrong order with the wrong tool.",
+      "Correct. Reading the brief for pipeline signals means tool selection is informed. A vibe coding tool with a deployment path is chosen before coding starts.",
+    ],
+    personaData: {
+      name: "Builder B", initial: "B", role: "Reads the brief for pipeline signals", color: "#38B2AC", iconPath: null,
+      scenario: "Builder B pauses before opening any tool. They read the brief and flag 'personalised' and 'each team member' as signals that Data is load-bearing. They set up Version Control before writing a line of code. What does this approach change?",
+      tags: ["Pipeline signals", "Version Control", "Build order"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
   },
 
   /* ── Slide 7 — The Five-Stage Pipeline (Beat 3 — Concept) ── */
@@ -1896,42 +1984,56 @@ const L5T1_SLIDES: SlideData[] = [
     approach2OutputPreview: "Two weeks later: the tool is running. Team members log in with their own accounts. Their history is saved. The builder can update it without disrupting users. The product exists independently of its creator's machine.",
   },
 
-  /* ── Slide 12 — Situational Judgment (Beat 4 — Contrast) ── */
+  /* ── Slide 12 — Situational Judgment: Alex ── */
   {
-    section: "SEE THE DIFFERENCE", type: "situationalJudgment",
+    section: "SEE THE DIFFERENCE", type: "persona",
     takeaway: "Pipeline understanding changes your first move — before a single line of code is written",
-    heading: "Same brief. Different first move.",
-    tealWord: "Different first move",
-    scenarios: [
-      {
-        scenario: "You receive a brief: 'Build an internal tool where team members can log their weekly AI experiments and see what others are doing.' Your manager wants a demo next Friday. What is your first move?",
-        options: [
-          "Open a vibe coding tool and start building — a working demo by Friday is the goal",
-          "Write the brief: who logs in, what they submit, what they see, how data is stored",
-          "Find an existing template that does something similar and adapt it",
-        ],
-        strongestChoice: 1,
-        feedback: [
-          { quality: "partial", text: "A working demo by Friday is achievable — but without a brief, you risk building the wrong thing. What does 'log their weekly AI experiments' actually mean? What do people see when viewing others' entries? Without answers, the demo will need rebuilding after the first feedback session." },
-          { quality: "strong", text: "Writing the brief first takes an hour and saves three days of rebuilds. Who logs in? What exactly do they submit? What does the view of others' entries show? Answering these in a document before opening any builder ensures Friday's demo matches what was actually needed." },
-          { quality: "partial", text: "Adapting an existing tool is a reasonable shortcut — but only if you know what the tool actually needs to do. Without the brief, you will evaluate templates against a vague standard and likely pick one that is close but wrong in a detail that matters." },
-        ],
-      },
-      {
-        scenario: "You have built a working prototype in a vibe coding tool. It looks exactly right. You want to share it with the team. What do you check before sharing?",
-        options: [
-          "Whether the tool has a deployment option — or whether it only runs locally",
-          "Whether every feature in the brief has been implemented",
-          "Whether the design matches the original mockup exactly",
-        ],
-        strongestChoice: 0,
-        feedback: [
-          { quality: "strong", text: "This is the right check. If your vibe coding tool only runs locally, sharing a link will fail. Before investing more time in features, confirm that the tool you are using has a deployment path to a live URL. If it does not, you need to know now — not after three more days of building." },
-          { quality: "partial", text: "Feature completeness matters — but it is a secondary check. The primary blocker is whether anyone else can access the tool at all. A simple, deployable version that matches the core brief is more valuable than a feature-complete version nobody can reach." },
-          { quality: "weak", text: "Design fidelity is the least urgent concern here. Getting the tool in front of the team is. A deployed application that looks 80% right is worth far more than a locally-running application that looks perfect." },
-        ],
-      },
+    heading: "Alex — Team Lead",
+    predictFirst: true,
+    predictQuestion: "What's Alex's first move with this brief?",
+    predictOptions: [
+      "Open a vibe coding tool and start building — a working demo by Friday is the goal",
+      "Write the brief: who logs in, what they submit, what they see, how data is stored",
+      "Find an existing template that does something similar and adapt it",
     ],
+    predictCorrect: 1,
+    predictFeedback: [
+      "A working demo by Friday is achievable — but without a brief, you risk building the wrong thing. What does 'log their weekly AI experiments' actually mean? What do people see when viewing others' entries? Without answers, the demo will need rebuilding after the first feedback session.",
+      "Writing the brief first takes an hour and saves three days of rebuilds. Who logs in? What exactly do they submit? What does the view of others' entries show? Answering these in a document before opening any builder ensures Friday's demo matches what was actually needed.",
+      "Adapting an existing tool is a reasonable shortcut — but only if you know what the tool actually needs to do. Without the brief, you will evaluate templates against a vague standard and likely pick one that is close but wrong in a detail that matters.",
+    ],
+    personaData: {
+      name: "Alex", initial: "A", role: "Team Lead", color: "#667EEA", iconPath: null,
+      scenario: "Alex receives a brief: 'Build an internal tool where team members can log their weekly AI experiments and see what others are doing.' The manager wants a demo next Friday. What is Alex's first move?",
+      tags: ["Brief-first", "Pipeline thinking", "Demo planning"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
+  },
+
+  /* ── Slide 12b — Situational Judgment: Morgan ── */
+  {
+    section: "SEE THE DIFFERENCE", type: "persona",
+    takeaway: "Pipeline understanding changes your first move — before a single line of code is written",
+    heading: "Morgan — Product Builder",
+    predictFirst: true,
+    predictQuestion: "What should Morgan check before sharing the prototype?",
+    predictOptions: [
+      "Whether the tool has a deployment option — or whether it only runs locally",
+      "Whether every feature in the brief has been implemented",
+      "Whether the design matches the original mockup exactly",
+    ],
+    predictCorrect: 0,
+    predictFeedback: [
+      "This is the right check. If the vibe coding tool only runs locally, sharing a link will fail. Before investing more time in features, confirm that the tool has a deployment path to a live URL. If it does not, Morgan needs to know now — not after three more days of building.",
+      "Feature completeness matters — but it is a secondary check. The primary blocker is whether anyone else can access the tool at all. A simple, deployable version that matches the core brief is more valuable than a feature-complete version nobody can reach.",
+      "Design fidelity is the least urgent concern here. Getting the tool in front of the team is. A deployed application that looks 80% right is worth far more than a locally-running application that looks perfect.",
+    ],
+    personaData: {
+      name: "Morgan", initial: "M", role: "Product Builder", color: "#48BB78", iconPath: null,
+      scenario: "Morgan has built a working prototype in a vibe coding tool. It looks exactly right. Morgan wants to share it with the team. What should Morgan check before sharing?",
+      tags: ["Deployment check", "Pipeline thinking", "Sharing a prototype"],
+      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    },
   },
 
   /* ── Slide 13 — Reading a Brief for Pipeline Signals (Beat 5 — Bridge) ── */

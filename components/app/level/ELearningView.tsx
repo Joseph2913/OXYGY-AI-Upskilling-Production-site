@@ -3433,8 +3433,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </p>
             </div>
 
-            {/* Option buttons — 3×2 grid, fills remaining space */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr', gap: fs ? 10 : 8, flex: 1, minHeight: 0 }}>
+            {/* Option buttons — 3×2 grid, fixed height rows */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: 'auto auto', gap: fs ? 10 : 8, flexShrink: 0 }}>
               {flawOptions.map((opt, i) => {
                 const isCorrect = i === flawCorrect;
                 const isSelected = flawSelected === i;
@@ -3444,14 +3444,14 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 else if (wasWrong) { bg = '#FED7D7'; border = '#E53E3E'; color = '#C53030'; }
                 return (
                   <button key={opt} onClick={() => !flawSolved && setFlawSelected(i)} style={{
-                    padding: '6px 8px', borderRadius: 10,
+                    padding: fs ? '14px 10px' : '11px 8px', borderRadius: 10,
                     fontSize: fs ? 15 : 13, fontWeight: 700,
                     background: bg, border: `2px solid ${border}`, color,
                     cursor: flawSolved ? 'default' : 'pointer',
                     transition: 'all 0.15s', fontFamily: 'inherit',
                     boxShadow: !flawSolved ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    height: '100%', textAlign: 'center' as const, lineHeight: 1.3,
+                    textAlign: 'center' as const, lineHeight: 1.3,
                   }}>
                     {flawSolved && isCorrect ? '✓ ' : wasWrong ? '✗ ' : ''}{opt}
                   </button>
