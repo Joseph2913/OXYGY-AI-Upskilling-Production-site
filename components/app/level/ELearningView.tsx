@@ -3158,24 +3158,25 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div key={activeCompTab} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, animation: 'fadeInUp 0.2s ease', minHeight: 0 }}>
                 {/* Prompt block */}
                 <div style={{
-                  flex: 1, background: tc.bg, border: `1.5px solid ${tc.border}`,
+                  flex: '0 0 44%', background: '#1A202C', border: `1.5px solid #2D3748`,
                   borderLeft: `4px solid ${tc.border}`, borderRadius: '0 10px 10px 0',
-                  padding: fs ? '18px 22px' : '14px 18px',
-                  fontSize: fs ? 15 : 14, color: '#2D3748', lineHeight: 1.8,
-                  whiteSpace: 'pre-line', overflowY: 'auto', minHeight: 0,
+                  padding: fs ? '14px 22px 18px' : '10px 18px 14px',
+                  overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8,
                 }}>
-                  {s.tabs![activeCompTab].prompt}
+                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, background: tc.badgeBg, color: tc.badgeText, borderRadius: 6, padding: '2px 8px', letterSpacing: '0.04em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Prompt</span>
+                  <div style={{ fontSize: fs ? 15 : 13, color: '#E2E8F0', lineHeight: 1.8, whiteSpace: 'pre-line', fontFamily: "'Fira Code', 'Cascadia Code', 'Courier New', monospace" }}>
+                    {s.tabs![activeCompTab].prompt}
+                  </div>
                 </div>
-                {/* Annotation block */}
+                {/* Analysis block */}
                 <div style={{
                   flex: 1, background: tc.annotBg, borderRadius: 10,
-                  border: `1px solid ${tc.border}55`,
-                  padding: fs ? '18px 22px' : '14px 18px',
-                  fontSize: fs ? 19 : 17, color: '#4A5568', lineHeight: 1.9,
-                  overflowY: 'auto', minHeight: 0,
+                  border: `1.5px solid ${tc.border}55`,
+                  padding: fs ? '14px 22px 18px' : '10px 18px 14px',
+                  overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8,
                 }}>
-                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, background: tc.badgeBg, color: tc.badgeText, borderRadius: 6, padding: '2px 8px', marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>Analysis</span>
-                  <div>{s.tabs[activeCompTab].annotation}</div>
+                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, background: tc.badgeBg, color: tc.badgeText, borderRadius: 6, padding: '2px 8px', letterSpacing: '0.04em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Analysis</span>
+                  <div style={{ fontSize: fs ? 16 : 14, color: '#4A5568', lineHeight: 1.85 }}>{s.tabs[activeCompTab].annotation}</div>
                 </div>
               </div>
             )}
