@@ -3411,9 +3411,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const OPTION_COLORS = ['#667EEA', '#38B2AC', '#ED8936', '#48BB78', '#9F7AEA', '#F6AD55'];
         const OPTION_LIGHTS = ['#EBF4FF', '#E6FFFA', '#FFFBEB', '#F0FFF4', '#FAF5FF', '#FFFAF0'];
         return (
-          <div style={{ padding: fs ? '24px 36px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 20 : 14, boxSizing: 'border-box' as const }}>
-            {/* Prompt box — grows to fill space */}
-            <div style={{ background: '#EDF2F7', border: '2px solid #CBD5E0', borderLeft: '4px solid #38B2AC', borderRadius: 12, padding: fs ? '18px 24px' : '12px 16px', flex: fs ? 1 : '0 0 auto', overflowY: 'auto', maxHeight: fs ? undefined : 180 }}>
+          <div style={{ padding: fs ? '24px 36px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 16 : 12, boxSizing: 'border-box' as const }}>
+            {/* Prompt box — fills remaining space above fixed elements */}
+            <div style={{ background: '#EDF2F7', border: '2px solid #CBD5E0', borderLeft: '4px solid #38B2AC', borderRadius: 12, padding: fs ? '18px 24px' : '12px 16px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
               <div style={{ fontSize: fs ? 11 : 9, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>The Prompt</div>
               <div style={{ fontSize: fs ? 19 : 16, color: '#2D3748', lineHeight: 1.75, whiteSpace: 'pre-line', fontStyle: 'italic' }}>
                 {s.buildTask?.replace(/^Here's the prompt to analyse:\n\n/, '')}
@@ -3427,7 +3427,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               </p>
             </div>
 
-            {/* Option buttons — 3×2 grid */}
+            {/* Option buttons — 3×2 grid, fixed size always */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: 'auto auto', gap: fs ? 14 : 8, flexShrink: 0 }}>
               {flawOptions.map((opt, i) => {
                 const isCorrect = i === flawCorrect;
@@ -3453,13 +3453,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               })}
             </div>
 
-            {/* Feedback — only shown on correct, no placeholder text so grid stays stable */}
-            {flawSolved && s.explanation && (
-              <div style={{ flexShrink: 0, background: '#F0FFF4', border: '2px solid #68D391', borderRadius: 12, padding: fs ? '16px 20px' : '12px 16px', animation: 'fadeInUp 0.25s ease' }}>
-                <span style={{ fontWeight: 800, fontSize: fs ? 22 : 18, color: '#276749', display: 'block', marginBottom: 6 }}>✓ Correct!</span>
-                <span style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.7 }}>{s.explanation}</span>
-              </div>
-            )}
+            {/* Feedback — always reserves space; fills with card when answered */}
+            <div style={{ flexShrink: 0, minHeight: fs ? 130 : 105 }}>
+              {flawSolved && s.explanation && (
+                <div style={{ background: '#F0FFF4', border: '2px solid #68D391', borderRadius: 12, padding: fs ? '16px 20px' : '12px 16px', animation: 'fadeInUp 0.25s ease', height: '100%', boxSizing: 'border-box' as const }}>
+                  <span style={{ fontWeight: 800, fontSize: fs ? 22 : 18, color: '#276749', display: 'block', marginBottom: 6 }}>✓ Correct!</span>
+                  <span style={{ fontSize: fs ? 15 : 13, color: '#2D3748', lineHeight: 1.7 }}>{s.explanation}</span>
+                </div>
+              )}
+            </div>
           </div>
         );
       }
