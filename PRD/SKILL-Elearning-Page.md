@@ -1310,6 +1310,7 @@ Check every item before considering a module complete.
 - [ ] Key Insight cards use the animated pulse style
 - [ ] Bridge slides use real internal routes — never hash fragments
 - [ ] Vertical composition balanced: no top-heavy slides with empty space below
+- [ ] Interactive slides with a feedback/response card always reserve space for it (see §22a below) — the card area is present before answering, never causes layout shift when it appears
 
 ### Tone & Language
 - [ ] No language implies blame, shame, or inadequacy
@@ -1321,6 +1322,49 @@ Check every item before considering a module complete.
 - [ ] Both reflection questions are fresh (not reused from another module)
 - [ ] Question 1 prompts application to immediate real work
 - [ ] Question 2 prompts exploration or curiosity
+
+---
+
+## 22a. Fullscreen Layout Rules
+
+### Dynamic zoom (non-negotiable)
+
+`ELearningView.tsx` uses a CSS `transform: scale()` approach to fill any screen size in fullscreen mode.
+
+**How it works:**
+- Reference baseline: 900px viewport height (progress bar 3px + nav bar ~77px = 80px overhead = 820px design height)
+- `slideZoom = max(1, min(2, (windowHeight − 80) / 820))` — computed live from `window.innerHeight`
+- In fullscreen, a design-height container (`position: absolute, top: 0, left: 0`) is scaled up with `transform: scale(slideZoom)` and `transformOrigin: '0 0'`
+- Width: `100 / slideZoom %` pre-scale, so after scaling it fills exactly 100% of container width
+- On screens ≤ 900px: `slideZoom = 1` (no scaling, content renders as designed)
+- On 1080p: `slideZoom ≈ 1.22`; on 1440p: `slideZoom ≈ 1.66` (capped at 2×)
+
+**Rules:**
+- Never set fixed pixel heights on slide containers — use `flex: 1`, `height: '100%'`, or `minHeight: 0` so they fill their parent
+- Never use `position: fixed` inside a slide renderer — it breaks inside the scaled container
+- `fs` boolean is still valid for non-size layout decisions (padding direction, grid vs stack, etc.)
+
+### Feedback / response card reservation (non-negotiable)
+
+Any interactive slide that reveals a response card after the user interacts (e.g. `spotTheFlaw`, predict-first persona, quiz) **must always reserve the response area's space** — even before the user has answered.
+
+**Pattern:**
+```jsx
+{/* Response area — always reserves space; content appears after interaction */}
+<div style={{ flexShrink: 0, minHeight: fs ? 130 : 105 }}>
+  {answered && (
+    <div style={{ height: '100%', ... }}>
+      response card content
+    </div>
+  )}
+</div>
+```
+
+**Rules:**
+- The wrapper `div` always renders (no conditional outer element)
+- Use `minHeight` on the wrapper — not `height`, which would block the wrapper from growing if text is long
+- The prompt / question / options above the wrapper use `flex: 1` so they fill available space *above* the reservation; they automatically give space to the reservation without shrinking the interactive options
+- Never conditionally render the outer wrapper — only the inner card content is conditional
 
 ---
 
