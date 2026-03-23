@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Check } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { Topic } from '../../../data/levelTopics';
 
 interface CompletedTopicViewProps {
@@ -11,8 +11,6 @@ interface CompletedTopicViewProps {
   onReviewELearning: () => void;
   onNextTopic: () => void;
 }
-
-const PHASE_LABELS = ['E-Learn', 'Read', 'Watch', 'Practise'];
 
 const CompletedTopicView: React.FC<CompletedTopicViewProps> = ({
   topic,
@@ -70,34 +68,23 @@ const CompletedTopicView: React.FC<CompletedTopicViewProps> = ({
         You completed "{topic.title}" on {dateStr}.
       </div>
 
-      {/* Phase review strip */}
+      {/* E-learning completion badge */}
       <div
         style={{
-          display: 'flex',
-          gap: 10,
-          justifyContent: 'center',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 16px',
+          borderRadius: 20,
+          fontSize: 12,
+          fontWeight: 700,
+          background: `${accentColor}33`,
+          color: accentDark,
           marginBottom: 24,
         }}
       >
-        {PHASE_LABELS.map((label) => (
-          <div
-            key={label}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 14px',
-              borderRadius: 20,
-              fontSize: 12,
-              fontWeight: 600,
-              background: `${accentColor}33`,
-              color: accentDark,
-            }}
-          >
-            <Check size={11} />
-            {label}
-          </div>
-        ))}
+        <CheckCircle size={13} />
+        E-learning complete
       </div>
 
       {/* Action buttons */}

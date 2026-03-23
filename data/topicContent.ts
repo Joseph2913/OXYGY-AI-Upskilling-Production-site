@@ -640,7 +640,7 @@ const L2T1_SLIDES: SlideData[] = [
       "A prompt would work, but it disappears after each session. With daily frequency and two people producing inconsistent outputs, an agent would standardise the result once and run the same way every time.",
     ],
     personaData: {
-      name: "Maya", initial: "M", role: "Operations Manager", color: "#38B2AC", iconPath: null,
+      name: "Maya", initial: "M", role: "Operations Manager", color: "#38B2AC", iconPath: aishaImg,
       scenario: "Maya starts every morning by reading 20+ internal emails and manually summarising the key actions for her team. She does this every single day, and her colleague does the same — but their summaries look completely different.",
       tags: ["Daily task", "Team consistency", "Structured output"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -661,7 +661,7 @@ const L2T1_SLIDES: SlideData[] = [
       "Right. One-time, context-dependent tasks are prompt territory. A well-crafted Level 1 prompt is the right tool. Save the agent investment for tasks that repeat.",
     ],
     personaData: {
-      name: "James", initial: "J", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: null,
+      name: "James", initial: "J", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: marcusImg,
       scenario: "James's manager has asked for a one-time competitor landscape report ahead of a client pitch next week. Different competitors, different client framing — the context changes completely each time this type of analysis comes up.",
       tags: ["One-time task", "Context-dependent", "Strategic analysis"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -682,7 +682,7 @@ const L2T1_SLIDES: SlideData[] = [
       "A prompt alone won't solve the inconsistency across three people. This task repeats on a schedule and follows a fixed structure — the conditions for an agent are all there.",
     ],
     personaData: {
-      name: "Priya", initial: "P", role: "Risk & Compliance Lead", color: "#805AD5", iconPath: null,
+      name: "Priya", initial: "P", role: "Risk & Compliance Lead", color: "#805AD5", iconPath: priyaImg,
       scenario: "Priya's team produces a risk summary for six stakeholder groups every quarter. Each uses the same structure and the same source data — just different audience framing. Three people on her team produce these independently, with inconsistent results.",
       tags: ["Quarterly cadence", "Multiple outputs", "Team consistency"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -957,7 +957,7 @@ const L3T1_SLIDES: SlideData[] = [
       "A workflow doesn't remove the personal touch — it ensures it happens consistently. The steps Lena does manually are identical every time. A workflow handles the repetitive parts and frees Lena's attention for the genuinely personal moments.",
     ],
     personaData: {
-      name: "Lena", initial: "L", role: "HR Manager", color: "#38B2AC", iconPath: null,
+      name: "Lena", initial: "L", role: "HR Manager", color: "#38B2AC", iconPath: priyaImg,
       scenario: "Every time a new employee joins, Lena manually sends a welcome email, shares an onboarding document pack, creates a system account request, and schedules a Day 1 check-in. The steps are always the same — the only variable is the employee's name and start date.",
       tags: ["Fixed steps", "Repeating trigger", "Onboarding"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -978,7 +978,7 @@ const L3T1_SLIDES: SlideData[] = [
       "Correct. The decision depends on relationship history, risk appetite, and strategic context — none of which can be reliably encoded as rules. Ravi should handle this as a one-off, with AI as a thinking tool if helpful, not as an automated step.",
     ],
     personaData: {
-      name: "Ravi", initial: "R", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: null,
+      name: "Ravi", initial: "R", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: jordanImg,
       scenario: "A client has escalated a complaint about a project that went over budget. Ravi needs to review six months of project history, understand the client relationship context, and decide whether to offer a partial refund, a discount on future work, or simply a detailed explanation.",
       tags: ["Contextual judgment", "Client escalation", "One-off decision"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -999,7 +999,7 @@ const L3T1_SLIDES: SlideData[] = [
       "Low volume doesn't disqualify a workflow — even two to three requests a day adds up to 600–900 per year. Consistent categorisation and routing at that scale is worth automating.",
     ],
     personaData: {
-      name: "Diane", initial: "D", role: "Marketing Manager", color: "#ED8936", iconPath: null,
+      name: "Diane", initial: "D", role: "Marketing Manager", color: "#ED8936", iconPath: aishaImg,
       scenario: "Diane's team receives inbound press enquiries by email. Each one needs to be categorised (media, analyst, or blogger), checked against a media list, and either forwarded to the PR lead or logged as low priority. The volume is two to three per day and the routing logic is always the same.",
       tags: ["Rule-based routing", "Daily volume", "Consistent logic"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -1116,7 +1116,7 @@ const L3T1_SLIDES: SlideData[] = [
       "The Output Layer is where the final document is delivered — the email to the client. But formatting it is the step before that. Transformation belongs in the Processing Layer; delivery belongs in the Output Layer.",
     ],
     personaData: {
-      name: "Alex", initial: "A", role: "Marketing Coordinator", color: "#38B2AC", iconPath: null,
+      name: "Alex", initial: "A", role: "Marketing Coordinator", color: "#38B2AC", iconPath: samImg,
       scenario: "Alex is mapping a workflow. A client brief arrives by email → the AI extracts key themes → the AI formats the content into a standard template → the final document is emailed to the client. She's unsure where each step sits. Which layer does the formatting step belong to?",
       tags: ["Three-layer model", "Processing Layer", "Workflow mapping"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -1142,7 +1142,7 @@ const L3T1_SLIDES: SlideData[] = [
       "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Nia's step isn't reshaping data; it's making a routing decision. That's a CONDITION.",
     ],
     personaData: {
-      name: "Nia", initial: "N", role: "Operations Analyst", color: "#667EEA", iconPath: null,
+      name: "Nia", initial: "N", role: "Operations Analyst", color: "#667EEA", iconPath: aishaImg,
       scenario: "Nia is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
       tags: ["Node types", "CONDITION", "Routing logic"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -1168,7 +1168,7 @@ const L3T1_SLIDES: SlideData[] = [
       "A second AI pass catches some errors, but AI can't reliably catch its own mistakes — especially issues of tone, context, or candidate-specific details. A human handoff is more reliable for this type of output.",
     ],
     personaData: {
-      name: "Tom", initial: "T", role: "HR Coordinator", color: "#ED8936", iconPath: null,
+      name: "Tom", initial: "T", role: "HR Coordinator", color: "#ED8936", iconPath: marcusImg,
       scenario: "Tom's AI workflow drafts interview invitation emails for incoming job applications. It's been running accurately in testing. He wants to remove the human review step to speed things up. What's the right call?",
       tags: ["Handoff design", "Human review", "High-stakes outputs"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -1780,7 +1780,7 @@ const L5T1_SLIDES: SlideData[] = [
       "Speed at Logic often means discovering hard problems mid-build. Without Version Control, one mistake requires a full rebuild. The pipeline prevents the most expensive rework.",
     ],
     personaData: {
-      name: "Builder A", initial: "A", role: "Jumps straight to Logic", color: "#E53E3E", iconPath: null,
+      name: "Builder A", initial: "A", role: "Jumps straight to Logic", color: "#E53E3E", iconPath: aishaImg,
       scenario: "Given a complex brief — build a personalised team summary app with individual accounts and a trending view — Builder A opens a vibe coding tool immediately and starts generating code. What is the most likely outcome?",
       tags: ["Pipeline thinking", "Logic-first", "Build order"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -1804,7 +1804,7 @@ const L5T1_SLIDES: SlideData[] = [
       "Correct. Reading the brief for pipeline signals means tool selection is informed. A vibe coding tool with a deployment path is chosen before coding starts.",
     ],
     personaData: {
-      name: "Builder B", initial: "B", role: "Reads the brief for pipeline signals", color: "#38B2AC", iconPath: null,
+      name: "Builder B", initial: "B", role: "Reads the brief for pipeline signals", color: "#38B2AC", iconPath: marcusImg,
       scenario: "Builder B pauses before opening any tool. They read the brief and flag 'personalised' and 'each team member' as signals that Data is load-bearing. They set up Version Control before writing a line of code. What does this approach change?",
       tags: ["Pipeline signals", "Version Control", "Build order"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -2003,7 +2003,7 @@ const L5T1_SLIDES: SlideData[] = [
       "Adapting an existing tool is a reasonable shortcut — but only if you know what the tool actually needs to do. Without the brief, you will evaluate templates against a vague standard and likely pick one that is close but wrong in a detail that matters.",
     ],
     personaData: {
-      name: "Alex", initial: "A", role: "Team Lead", color: "#667EEA", iconPath: null,
+      name: "Alex", initial: "A", role: "Team Lead", color: "#667EEA", iconPath: jordanImg,
       scenario: "Alex receives a brief: 'Build an internal tool where team members can log their weekly AI experiments and see what others are doing.' The manager wants a demo next Friday. What is Alex's first move?",
       tags: ["Brief-first", "Pipeline thinking", "Demo planning"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
@@ -2029,7 +2029,7 @@ const L5T1_SLIDES: SlideData[] = [
       "Design fidelity is the least urgent concern here. Getting the tool in front of the team is. A deployed application that looks 80% right is worth far more than a locally-running application that looks perfect.",
     ],
     personaData: {
-      name: "Morgan", initial: "M", role: "Product Builder", color: "#48BB78", iconPath: null,
+      name: "Morgan", initial: "M", role: "Product Builder", color: "#48BB78", iconPath: samImg,
       scenario: "Morgan has built a working prototype in a vibe coding tool. It looks exactly right. Morgan wants to share it with the team. What should Morgan check before sharing?",
       tags: ["Deployment check", "Pipeline thinking", "Sharing a prototype"],
       approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
