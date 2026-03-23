@@ -140,6 +140,7 @@ export interface ScenarioData {
   personaName?: string;
   personaRole?: string;
   personaIcon?: string;
+  personaColor?: string;
 }
 
 export interface ArticleData {
@@ -1224,7 +1225,8 @@ const L4T1_SLIDES: SlideData[] = [
     heading: "What is vibe coding?",
     tealWord: "vibe coding",
     eyebrow: "THE PARADIGM SHIFT",
-    body: "In February 2025, AI researcher Andrej Karpathy coined the term 'vibe coding' — the practice of building software by describing what you want in natural language and letting an AI tool generate the working implementation. You don't write code. You direct the AI, review what it produces, give feedback, and iterate until the output matches your intent.\n\nTools like Cursor, Bolt, Lovable, and Replit Agent can now generate working web applications, dashboards, and data tools from a well-written description in minutes. The result: software creation has moved from a specialist skill into the hands of any professional who can clearly articulate what they need.\n\nThis changes the economics of building entirely. The bottleneck was always technical skill. Vibe coding moves it to something harder to fake: knowing precisely what you want.",
+    visualId: "l4-vibe-coding",
+    body: "In February 2025, AI researcher Andrej Karpathy coined the term 'vibe coding' — the practice of building software by describing what you want in natural language and letting an AI tool generate the working implementation. You don't write code. You direct the AI, review what it produces, give feedback, and iterate.\n\nTools like Cursor, Bolt, Lovable, and Replit Agent now generate working web apps, dashboards, and data tools from a plain-language description in minutes. Building has moved from a specialist skill into the hands of any professional who can clearly articulate what they need.",
     pullQuote: "The hard part is no longer the build. It's being specific enough about what you want that the AI can build the right thing.",
   },
 
@@ -1235,7 +1237,8 @@ const L4T1_SLIDES: SlideData[] = [
     heading: "Most AI projects stall — not because of the tech.",
     tealWord: "stall",
     eyebrow: "THE REAL BOTTLENECK",
-    body: "Gartner's 2024 research predicts that 30% of generative AI projects will be abandoned after proof of concept. The reason is rarely technical failure.\n\nWhen organisations survey why their AI projects stalled, unclear business value, poor data quality, and misaligned expectations rank far above technology problems. The tools work. The problem is that builders couldn't articulate who the tool was for, what it needed to do, or what data it needed to run.\n\nThe bottleneck has shifted. The build is now cheap and fast. The brief is hard.",
+    visualId: "l4-ai-stall",
+    body: "Gartner's 2024 research predicts that 30% of generative AI projects will be abandoned after proof of concept. The reason is rarely technical failure.\n\nWhen organisations survey why AI projects stall, unclear business value, poor data quality, and misaligned expectations rank far above technology problems. The tools work. The problem is that builders couldn't articulate who the tool was for, what it needed to do, or what data it needed to run.",
     pullQuote: "The build takes hours. A project abandoned because the brief was wrong takes weeks — and the cost falls on the people who expected it to work.",
     sourceLink: "https://www.gartner.com/en/articles/gartner-top-10-strategic-technology-trends-for-2024",
     sourceText: "Gartner Top Strategic Technology Trends for 2024 — published October 2023",
@@ -1321,6 +1324,7 @@ const L4T1_SLIDES: SlideData[] = [
         personaName: "Sam",
         personaRole: "Product Manager",
         personaIcon: samImg,
+        personaColor: "#ED8936",
         scenario: "Sam's brief says 'give management visibility into project performance.' The user (a VP, checks Fridays) and data sources are confirmed. After launch, the VP doesn't know what to act on. Which component was under-defined?",
         options: [
           "Users — the VP's needs weren't understood well enough",
@@ -1338,6 +1342,7 @@ const L4T1_SLIDES: SlideData[] = [
         personaName: "Priya",
         personaRole: "Marketing Lead",
         personaIcon: priyaImg,
+        personaColor: "#805AD5",
         scenario: "Priya's team builds a tool surfacing 'key metrics from the sales pipeline for the sales team.' Purpose, features, and data are all confirmed. It launches — adoption is near zero within two weeks. Which component was most likely under-defined?",
         options: [
           "Features — the tool showed too many metrics",
@@ -1355,6 +1360,7 @@ const L4T1_SLIDES: SlideData[] = [
         personaName: "Jordan",
         personaRole: "Operations Analyst",
         personaIcon: jordanImg,
+        personaColor: "#2B6CB0",
         scenario: "Jordan's brief is thorough — purpose, users, and features are all well-defined. The build stalls on day three: the AI classification step can't run because historical ticket data exists only in PDFs with inconsistent structure. Which component should have caught this?",
         options: [
           "Features — the classification feature was too ambitious",
@@ -1402,20 +1408,20 @@ const L4T1_SLIDES: SlideData[] = [
       {
         frontLabel: "WEAK PURPOSE",
         frontBadge: "Under-defined",
-        frontPrompt: "Create a tool that gives the team visibility into customer feedback. What decisions should it enable? What does success look like? Flip to see a stronger version.",
+        frontPrompt: "Create a tool that gives the team visibility into customer feedback.",
         backLabel: "STRONG PURPOSE",
         backBadge: "Well-scoped",
-        backPrompt: "Give the Customer Success lead a weekly view of the top 5 recurring complaints, so they can prepare specific talking points for the Friday client review.",
-        backResponse: "Clear trigger (weekly), clear user (CS lead), clear output (top 5 complaints), clear use case (client review prep). Every feature decision follows naturally from this.",
+        backPrompt: "Give the Customer Success lead a weekly view of the top 5 recurring complaints — so they can prepare for the Friday client review.",
+        backResponse: "Clear user, output, timing, and use case. Every feature decision follows naturally.",
       },
       {
         frontLabel: "WEAK USERS",
         frontBadge: "Under-defined",
-        frontPrompt: "Users: the leadership team. Who exactly opens this tool, and when? What do they need to do with it? What do they already know? Flip to see a stronger version.",
+        frontPrompt: "Users: the leadership team.",
         backLabel: "STRONG USERS",
         backBadge: "Well-scoped",
-        backPrompt: "User: the COO. Checks the dashboard Monday mornings for 5 minutes before the weekly review. Non-technical — needs summaries, not charts. Needs to act, not just observe.",
-        backResponse: "This level of user detail changes everything: fewer data points, action-oriented language, summary-first layout, mobile-compatible format. 'Leadership team' could mean 12 different people with 12 different needs.",
+        backPrompt: "User: the COO. Checks Monday mornings for 5 minutes before the weekly review — needs summaries and recommended actions, not raw data.",
+        backResponse: "'The leadership team' could mean 12 different people. This one sentence makes every design decision answerable.",
       },
     ],
   },
@@ -1476,8 +1482,6 @@ const L4T1_SLIDES: SlideData[] = [
     section: "WHAT'S NEXT", type: "bridge",
     heading: "Your brief is ready. Now build it.",
     body: "You've defined purpose, users, features, and data sources. You've scored your brief against the readiness framework. The Dashboard Designer takes it from here — walk through the scoping tool, refine your components, and produce a specification ready to build from.",
-    ctaText: "Open the Dashboard Designer →",
-    ctaHref: "/app/level-4/app-designer",
     panelHeading: "What the Dashboard Designer does",
     panelItems: [
       "Guides you through each brief component step by step",
@@ -1580,6 +1584,563 @@ const L4T1_VIDEOS: VideoData[] = [
 ];
 
 /* ══════════════════════════════════════════════════════════════════
+   LEVEL 5, TOPIC 1 — Building Full-Stack AI Applications
+   ══════════════════════════════════════════════════════════════════ */
+
+const L5T1_SLIDES: SlideData[] = [
+
+  /* ── Slide 1 — Course Intro ── */
+  {
+    section: "THE BUILD PIPELINE", type: "courseIntro",
+    heading: "Building Full-Stack AI Applications",
+    subheading: "A dashboard shows. An application serves. This module teaches the five-stage pipeline that turns a product idea into something others can log into, use, and return to.",
+    levelNumber: 5,
+    topicIcon: "🏗️",
+    estimatedTime: "~22 min",
+    objectives: [
+      "🏗️ The architectural leap from Level 4 dashboards to Level 5 full applications",
+      "🔧 The five-stage build pipeline — and what each stage is actually responsible for",
+      "🔗 Where your Level 1–4 skills plug into a full-stack build",
+      "⚖️ How to read any product brief and identify which stages matter most",
+    ],
+  },
+
+  /* ── Slide 2 — The L4→L5 Jump (Beat 1 — Situation) ── */
+  {
+    section: "THE REALITY", type: "comparison",
+    takeaway: "The jump from dashboard to application is not a tool upgrade — it's an architectural shift",
+    heading: "A dashboard shows. An application serves.",
+    tealWord: "serves",
+    scenario: "Toggle between Level 4 and Level 5 to see what changes — and what that means for how you build.",
+    tabs: [
+      {
+        label: "Level 4 — A Dashboard",
+        prompt: "Something you view.\n\nYou open it, read it, close it. The data flows to you. The experience is identical for every person who opens it. There are no accounts, no memory, no roles. When you leave, nothing about you is stored.\n\nYou are a viewer.",
+        annotation: "The data comes to you. You are outside the product.",
+      },
+      {
+        label: "Level 5 — An Application",
+        prompt: "Something you inhabit.\n\nYou log in. The system knows who you are. Your history is saved. Your experience is different from everyone else's. Your role determines what you can see and do. When you return, the application remembers you.\n\nYou are a participant.",
+        annotation: "The product responds to you. You are inside it.",
+      },
+    ],
+  },
+
+  /* ── Slide 3 — What L5 Actually Means (Beat 1 — Situation) ── */
+  {
+    section: "THE REALITY", type: "rctf",
+    revealOnNext: true,
+    takeaway: "A Level 5 application has four characteristics that no dashboard has — each one requires a different stage in the build",
+    heading: "What 'application' actually means.",
+    tealWord: "actually means",
+    elements: [
+      {
+        key: "ACCOUNTS",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "🔑",
+        desc: "Each user logs in with their own identity. The system knows who is using it and stores their data separately from everyone else's.",
+        example: "A team member logs in and sees only their own submissions — not the whole team's",
+        whyItMatters: "Without this → everyone shares the same view and the same blank slate",
+      },
+      {
+        key: "PERSONALISATION",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "🎯",
+        desc: "What you see depends on who you are. Your data, your history, your progress — not the same view for everyone who opens the tool.",
+        example: "Returning users see their previous work; new users see a guided onboarding flow",
+        whyItMatters: "Without this → the application is a dashboard dressed up as a product",
+      },
+      {
+        key: "ROLES",
+        color: "#ED8936",
+        light: "#FFFBEB",
+        icon: "🏷️",
+        desc: "Different users have different permissions. An administrator manages the system. A regular user navigates it. The application enforces the difference.",
+        example: "An admin can delete entries and manage users; a standard user can only create and edit their own",
+        whyItMatters: "Without this → every user has access to everything, regardless of responsibility",
+      },
+      {
+        key: "DEPLOYMENT",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "🚀",
+        desc: "The application runs at a live URL that anyone can access, independently of your laptop. It operates when you are not there.",
+        example: "Team members access the tool from any device, on any network, at any time",
+        whyItMatters: "Without this → the product only exists on its creator's machine",
+      },
+    ],
+  },
+
+  /* ── Slide 4 — Where L5 Sits in the Framework (Beat 1 — Situation) ── */
+  {
+    section: "THE REALITY", type: "pyramid",
+    takeaway: "Every skill from Levels 1–4 feeds into a Level 5 build — the application is what they all become",
+    heading: "Level 5 is what all the other levels become.",
+    tealWord: "become",
+    body: "Each level of the OXYGY framework built a layer of the stack. Prompting. Agents. Workflows. Briefs and dashboards. At Level 5, those layers combine into a product that runs itself, serves others, and operates independently of its creator.\n\nThe jump to Level 5 is not about adding one more skill. It is about understanding how all the existing skills connect — and where each one belongs in the build.",
+    pullQuote: "You already know prompting, agents, workflows, and briefs. Level 5 is about knowing where each of those skills belongs in the pipeline.",
+  },
+
+  /* ── Slide 5 — The Tension (Beat 2 — Tension) ── */
+  {
+    section: "THE GAP", type: "tensionStatement",
+    takeaway: "A full AI product is five distinct jobs — and most builders try to do all five with one tool",
+    heading: "Five pieces. One decision.",
+    subheading: "Most builders grab the first tool they've heard of — and use it for everything.",
+    tealPhrase: "Five pieces",
+    footnote: "A prototyping tool is not a database. A vibe coding tool is not version control. A deployment platform is not a builder. Using the wrong tool for a stage produces the same result as skipping the stage entirely.",
+  },
+
+  /* ── Slide 6 — The Missing Mental Model (Beat 2 — Tension) ── */
+  {
+    section: "THE GAP", type: "branching",
+    takeaway: "Two builders, the same brief — what each one does next reveals the mental model they're working with",
+    heading: "Two responses to complexity.",
+    tealWord: "Two responses",
+    scenario: "You are handed a brief: 'Build an internal AI application that gives each team member a personalised weekly summary of their work activity, with a way to see how the team is trending.' It is more complex than anything you have built before. What do you do?",
+    branchingOptions: [
+      {
+        label: "Open a vibe coding tool and start building — figure it out as you go",
+        prompt: "Approach: Jump straight to the Logic stage. Start generating code, see what works, iterate from there.",
+        responseQuality: "partial",
+        response: "Something impressive by end of day — but without a brief, you won't know what 'personalised' means for this team. Without version control, any mistake requires a rebuild. Without a database plan, personalisation won't survive the first logout.",
+        reflection: "Speed at the start often means rework in the middle.",
+      },
+      {
+        label: "Write out the five stages and identify which are most critical for this brief",
+        prompt: "Approach: Read the brief for pipeline signals first. 'Personalised' and 'each team member' means Data is critical. Confirm the Logic tool has a Deploy path. Set up Version Control before writing a line of code.",
+        responseQuality: "strong",
+        response: "A 30-minute brief surfaces the load-bearing decision: personalised summaries need user accounts and stored history. You pick a vibe coding tool with a deployment path and set up a repository first. The build takes longer to start and less time to finish.",
+        reflection: "The pipeline is not a slower path — it prevents the most expensive mistake: building in the wrong order.",
+      },
+      {
+        label: "Look for an existing tool that does something similar — adapt rather than build",
+        prompt: "Approach: Search for existing solutions before committing to a custom build.",
+        responseQuality: "partial",
+        response: "A reasonable instinct — but without writing the brief first, you'll evaluate templates against a vague standard. Something close but wrong in a detail that matters: wrong metric, no team view, or can't be deployed inside your organisation.",
+        reflection: "Adapting is often the right call — but only after Prototype surfaces what the brief actually requires.",
+      },
+    ],
+  },
+
+  /* ── Slide 7 — The Five-Stage Pipeline (Beat 3 — Concept) ── */
+  {
+    section: "THE PIPELINE", type: "rctf",
+    revealOnNext: true,
+    takeaway: "Five stages, five types of work — each one building the foundation for the next",
+    heading: "The five-stage build pipeline.",
+    tealWord: "five-stage",
+    elements: [
+      {
+        key: "PROTOTYPE",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "📄",
+        desc: "Define and draft what you are building before a single line of code is written. This is where your brief, user flow, and feature list take shape — in plain language, through iteration.",
+        example: "A written description of the tool: who logs in, what they see, what it does for them",
+        whyItMatters: "Without this → you build the wrong thing quickly, then rebuild it slowly",
+      },
+      {
+        key: "VERSION CONTROL",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "📁",
+        desc: "Save, track, and restore your build as it evolves. Version control means you can try something, break it, and return to a known good state — without starting over.",
+        example: "A GitHub repository that holds every version of your application's code, with full history",
+        whyItMatters: "Without this → a single mistake can require a complete rebuild from scratch",
+      },
+      {
+        key: "LOGIC",
+        color: "#ED8936",
+        light: "#FFFBEB",
+        icon: "⚙️",
+        desc: "The actual build layer — where your description becomes a working application. This is the vibe coding stage: you direct an AI builder in plain language and it generates the implementation.",
+        example: "Directing an AI builder: 'Add a login page with email authentication and redirect to the dashboard'",
+        whyItMatters: "Without this → you have a description but no product. With the wrong tool → no version history, no deployment path",
+      },
+      {
+        key: "DATA",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "🗄️",
+        desc: "Where your application's information lives, is structured, and flows from. Every personalised experience, user account, and saved state depends on a database — not a spreadsheet, not a local file.",
+        example: "A database that stores user profiles, progress, and application state — readable by every session",
+        whyItMatters: "Without this → each user sees the same blank slate. Personalisation is impossible.",
+      },
+      {
+        key: "DEPLOY",
+        color: "#9F7AEA",
+        light: "#FAF5FF",
+        icon: "🚀",
+        desc: "Getting the finished product in front of the people who need it — at a URL they can visit, independently of your laptop. Deployment is what turns a build into a product.",
+        example: "Hosting on a platform so anyone with the link can use the application, on any device",
+        whyItMatters: "Without this → the application only runs on your machine. Nobody else can use it.",
+      },
+    ],
+  },
+
+  /* ── Slide 8 — Workplace Analogies (Beat 3 — Concept) ── */
+  {
+    section: "THE PIPELINE", type: "comparison",
+    takeaway: "Each pipeline stage has a familiar workplace equivalent — you already know how each one works",
+    heading: "You already know these tools. You just know them by different names.",
+    tealWord: "different names",
+    scenario: "Each of the five pipeline stages maps to a familiar workplace tool. The job is the same — only the context has changed.",
+    tabs: [
+      {
+        label: "Prototype → Word",
+        prompt: "Word is where you draft, iterate, and define in language. Prototyping your application is the same: write out what you're building, revise it, and get it specific enough to act on. You're not coding — you're authoring. The output of this stage is a document that answers: who logs in, what do they see, what does the application do for them.",
+        annotation: "The output of this stage is a document, not a product. That is the point.",
+      },
+      {
+        label: "Version Control → SharePoint",
+        prompt: "SharePoint keeps your team's files organised, versioned, and accessible. Version control — typically GitHub — does the same for your application's code. You can see every change, restore any previous version, and collaborate without overwriting each other's work. If SharePoint is where your documents live safely, GitHub is where your application lives safely.",
+        annotation: "Think of GitHub as SharePoint for code — same concept, different file type.",
+      },
+      {
+        label: "Logic → Contractor",
+        prompt: "A contractor builds what you describe. You don't lay the bricks — you direct the work. An AI builder is your contractor: you describe what you need in plain language, it generates working code. You manage the relationship and review the output. The contractor handles the technical execution. A good contractor needs a good brief — which is why Prototype comes first.",
+        annotation: "You are the client. The AI builder is the contractor. The brief is the spec.",
+      },
+      {
+        label: "Data → Excel",
+        prompt: "Excel is where your data lives, is structured, and is made queryable. A database serves the same function for a live application — but it scales, persists across sessions, and handles multiple users simultaneously. Your application reads from it and writes to it every time someone interacts with the product. If Excel is your personal data layer, a database is your shared, live one.",
+        annotation: "Same concept as a spreadsheet — just built to serve thousands of sessions at once.",
+      },
+      {
+        label: "Deploy → PowerPoint",
+        prompt: "PowerPoint is how you get your work in front of other people — polished, distributable, accessible without the source files. Deployment does the same for your application: it makes it accessible to anyone, on any device, without requiring access to your development environment. The presentation is how you share the deck. Deployment is how you share the product.",
+        annotation: "The presentation is the deployment. The deck is the product.",
+      },
+    ],
+  },
+
+  /* ── Slide 9 — Where L1–L4 Skills Plug In (Beat 3 — Concept) ── */
+  {
+    section: "THE PIPELINE", type: "rctf",
+    takeaway: "Every skill from Levels 1–4 has a specific home in the pipeline — nothing you have built so far is wasted",
+    heading: "Where your existing skills connect.",
+    tealWord: "existing skills",
+    elements: [
+      {
+        key: "L1 — PROMPTING",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "⚡",
+        desc: "Every AI action in your application runs on a prompt. The quality of your Level 1 skills determines the quality of every AI response the application produces.",
+        example: "Plugs into: Logic — the prompts that power every AI feature in the application",
+        whyItMatters: "A poorly structured prompt inside the application delivers poor results to every user, every time",
+      },
+      {
+        key: "L2 — AGENTS",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "🤖",
+        desc: "A Level 2 agent is a reusable AI behavior with defined inputs and outputs. In a full application, agents become named, callable components of the Logic layer.",
+        example: "Plugs into: Logic — the email responder, document classifier, or recommendation engine",
+        whyItMatters: "Without reusable agents, every AI feature must be rebuilt from scratch each time it is triggered",
+      },
+      {
+        key: "L3 — WORKFLOWS",
+        color: "#ED8936",
+        light: "#FFFBEB",
+        icon: "🗺️",
+        desc: "A Level 3 workflow is a multi-step automated process. In a full application, workflows handle the sequences — onboarding, form processing, report generation.",
+        example: "Plugs into: Logic (automation steps) and Data (where workflow inputs and outputs are stored)",
+        whyItMatters: "Without workflow design skills, multi-step processes become tangled, untestable chains",
+      },
+      {
+        key: "L4 — BRIEFS + DASHBOARDS",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "📋",
+        desc: "A Level 4 brief is the output of your Prototype stage. The dashboard you designed at Level 4 is already a deployed front end — it is a Level 5 component.",
+        example: "Plugs into: Prototype (the PRD) and Deploy (a dashboard is a deployed front end)",
+        whyItMatters: "A brief without clear users, features, and data sources is an incomplete Prototype stage",
+      },
+    ],
+  },
+
+  /* ── Slide 10 — What Breaks When You Skip a Stage (Beat 3 — Concept) ── */
+  {
+    section: "THE PIPELINE", type: "dragSort",
+    takeaway: "Each failure mode maps to a specific missing stage — recognising the pattern is what pipeline thinking gives you",
+    heading: "Match the failure to the missing stage.",
+    tealWord: "missing stage",
+    dragContext: "Each description below is a real failure from a real build. Drag it into the pipeline stage that was skipped or handled with the wrong tool.",
+    dragZones: [
+      { id: "prototype",       label: "PROTOTYPE",        color: "#667EEA", light: "#EBF4FF", icon: "📄" },
+      { id: "version-control", label: "VERSION CONTROL",  color: "#38B2AC", light: "#E6FFFA", icon: "📁" },
+      { id: "logic",           label: "LOGIC",            color: "#ED8936", light: "#FFFBEB", icon: "⚙️" },
+      { id: "data",            label: "DATA",             color: "#48BB78", light: "#F0FFF4", icon: "🗄️" },
+      { id: "deploy",          label: "DEPLOY",           color: "#9F7AEA", light: "#FAF5FF", icon: "🚀" },
+    ],
+    dragItems: [
+      { id: "i1", label: "Weeks of building — but users keep asking for features that were never part of the original idea", correctZone: "prototype" },
+      { id: "i2", label: "A change introduced Tuesday wiped out three working features — there is no way to roll back", correctZone: "version-control" },
+      { id: "i3", label: "The tool works perfectly locally — but the chosen builder has no option to publish to a live URL", correctZone: "logic" },
+      { id: "i4", label: "Users log out and all their history disappears — every session starts from a blank slate", correctZone: "data" },
+      { id: "i5", label: "The application is finished — but sharing it means emailing source files and hoping the recipient can run them", correctZone: "deploy" },
+    ],
+  },
+
+  /* ── Slide 11 — Contrast: Ad Hoc vs Pipeline (Beat 4 — Contrast) ── */
+  {
+    section: "SEE THE DIFFERENCE", type: "parallelDemo",
+    takeaway: "The same product brief produces a fragile local experiment or a scalable deployed application — depending on pipeline understanding",
+    heading: "Same idea. Completely different outcomes.",
+    tealWord: "Completely different",
+    approach1Prompt: "BRIEF: Build a tool that gives our team personalised reading recommendations based on their role and past activity.\n\nBUILD WITHOUT PIPELINE:\nOpened a vibe coding tool immediately. Built a working prototype in an afternoon — impressive demo. No version control. No database — recommendations regenerated fresh each session. No deployment — runs only on the builder's laptop. Shared via a screen recording.",
+    approach1OutputPreview: "Two weeks later: the builder changed laptops. The application was gone. The team never had access to a live version. The data never persisted. The demo worked. The product never existed.",
+    approach2PromptPreview: "BRIEF: Build a tool that gives our team personalised reading recommendations based on their role and past activity.\n\nBUILD WITH PIPELINE:\nWrote the brief first (Prototype). Created a GitHub repository before a single line of code (Version Control). Used a vibe coding tool connected to the repository (Logic). Connected a database to store user profiles and recommendation history (Data). Deployed to a hosting platform accessible via a URL (Deploy).",
+    approach2OutputPreview: "Two weeks later: the tool is running. Team members log in with their own accounts. Their history is saved. The builder can update it without disrupting users. The product exists independently of its creator's machine.",
+  },
+
+  /* ── Slide 12 — Situational Judgment (Beat 4 — Contrast) ── */
+  {
+    section: "SEE THE DIFFERENCE", type: "situationalJudgment",
+    takeaway: "Pipeline understanding changes your first move — before a single line of code is written",
+    heading: "Same brief. Different first move.",
+    tealWord: "Different first move",
+    scenarios: [
+      {
+        scenario: "You receive a brief: 'Build an internal tool where team members can log their weekly AI experiments and see what others are doing.' Your manager wants a demo next Friday. What is your first move?",
+        options: [
+          "Open a vibe coding tool and start building — a working demo by Friday is the goal",
+          "Write the brief: who logs in, what they submit, what they see, how data is stored",
+          "Find an existing template that does something similar and adapt it",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "A working demo by Friday is achievable — but without a brief, you risk building the wrong thing. What does 'log their weekly AI experiments' actually mean? What do people see when viewing others' entries? Without answers, the demo will need rebuilding after the first feedback session." },
+          { quality: "strong", text: "Writing the brief first takes an hour and saves three days of rebuilds. Who logs in? What exactly do they submit? What does the view of others' entries show? Answering these in a document before opening any builder ensures Friday's demo matches what was actually needed." },
+          { quality: "partial", text: "Adapting an existing tool is a reasonable shortcut — but only if you know what the tool actually needs to do. Without the brief, you will evaluate templates against a vague standard and likely pick one that is close but wrong in a detail that matters." },
+        ],
+      },
+      {
+        scenario: "You have built a working prototype in a vibe coding tool. It looks exactly right. You want to share it with the team. What do you check before sharing?",
+        options: [
+          "Whether the tool has a deployment option — or whether it only runs locally",
+          "Whether every feature in the brief has been implemented",
+          "Whether the design matches the original mockup exactly",
+        ],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "This is the right check. If your vibe coding tool only runs locally, sharing a link will fail. Before investing more time in features, confirm that the tool you are using has a deployment path to a live URL. If it does not, you need to know now — not after three more days of building." },
+          { quality: "partial", text: "Feature completeness matters — but it is a secondary check. The primary blocker is whether anyone else can access the tool at all. A simple, deployable version that matches the core brief is more valuable than a feature-complete version nobody can reach." },
+          { quality: "weak", text: "Design fidelity is the least urgent concern here. Getting the tool in front of the team is. A deployed application that looks 80% right is worth far more than a locally-running application that looks perfect." },
+        ],
+      },
+    ],
+  },
+
+  /* ── Slide 13 — Reading a Brief for Pipeline Signals (Beat 5 — Bridge) ── */
+  {
+    section: "IN PRACTICE", type: "contextBar",
+    takeaway: "Every brief contains six pipeline signals — reading them before you build tells you exactly where to focus first",
+    heading: "Six signals. Every brief has them.",
+    tealWord: "Six signals",
+    instruction: "Click each card to reveal what the signal tells you about the pipeline.",
+    elements: [
+      {
+        key: "WHO LOGS IN?",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        icon: "🔑",
+        desc: "If the brief describes individual accounts, personalised views, or different experiences per user — the Data stage is critical. Set up the database architecture before writing a line of Logic code.",
+        whyItMatters: "Without this check → you build the Logic layer before knowing what data structure it needs to read from",
+      },
+      {
+        key: "WHERE IS THE DATA?",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        icon: "🗄️",
+        desc: "If the brief references live data, external systems, or information that changes over time — the Data stage must be designed and connected before Logic begins.",
+        whyItMatters: "Without this check → you build a Logic layer that assumes data it cannot actually reach",
+      },
+      {
+        key: "WHO ELSE USES IT?",
+        color: "#9F7AEA",
+        light: "#FAF5FF",
+        icon: "🚀",
+        desc: "If the brief involves team access, a shared URL, or deployment to a specific environment — confirm your Logic tool has a viable Deploy path before you start building.",
+        whyItMatters: "Without this check → you invest weeks in a build that only runs on one machine",
+      },
+      {
+        key: "WILL IT CHANGE?",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        icon: "📁",
+        desc: "If the brief describes something that will evolve through feedback — Version Control is non-negotiable before iteration begins. Set up the repository first.",
+        whyItMatters: "Without this check → every iteration risks destroying previous working versions with no way back",
+      },
+      {
+        key: "WHAT DOES DONE LOOK LIKE?",
+        color: "#ED8936",
+        light: "#FFFBEB",
+        icon: "📄",
+        desc: "If the brief has no clear success metric or acceptance criteria — the Prototype stage is incomplete. A brief without a definition of success cannot guide a build to its end.",
+        whyItMatters: "Without this check → there is no shared standard for when to stop building and start shipping",
+      },
+      {
+        key: "DOES SOMETHING LIKE IT EXIST?",
+        color: "#FC8181",
+        light: "#FFF5F5",
+        icon: "🔍",
+        desc: "If a similar tool already exists — study it. It reveals which stages were hardest, what tradeoffs were made, and whether you can adapt rather than build from scratch.",
+        whyItMatters: "Without this check → you rebuild what already exists and inherit the same structural problems",
+      },
+    ],
+  },
+
+  /* ── Slide 14 — Quiz (Beat 5 — Bridge) ── */
+  {
+    section: "IN PRACTICE", type: "quiz",
+    takeaway: "Matching the failure mode to the missing stage is the core diagnostic skill of a pipeline builder",
+    heading: "Which pipeline stage is missing?",
+    quizEyebrow: "APPLY THE PIPELINE",
+    question: "A team built an AI application using a vibe coding tool. It generates personalised content for each user. It is deployed to a live URL. But every time a user logs back in, their history is gone and they start fresh. Which pipeline stage was not properly implemented?",
+    quizOptions: [
+      "Prototype — the brief was not specific enough about the personalisation requirement",
+      "Data — no database was connected to persist user history between sessions",
+      "Deploy — the application is not actually live, only appearing to be",
+      "Logic — the vibe coding tool generated incorrect personalisation code",
+    ],
+    correct: 1,
+    explanation: "This is a Data stage failure. The application is live (Deploy is working). The personalisation logic functions within a session (Logic is working). But without a database, nothing is stored between sessions. Each new session starts blank because there is nowhere for the history to live. Connecting a database from the beginning would have resolved this.",
+  },
+
+  /* ── Slide 15 — Module Summary (Beat 5 — Bridge) ── */
+  {
+    section: "WRAP UP", type: "moduleSummary",
+    takeaway: "You now have the five-stage pipeline to take any AI product brief from idea to deployed application",
+    heading: "The Five-Stage Build Pipeline",
+    elements: [
+      { key: "PROTOTYPE",       color: "#667EEA", light: "#EBF4FF", desc: "Define what you are building in language before you build it" },
+      { key: "VERSION CONTROL", color: "#38B2AC", light: "#E6FFFA", desc: "Save, track, and restore your build as it evolves" },
+      { key: "LOGIC",           color: "#ED8936", light: "#FFFBEB", desc: "Build with an AI tool — you direct it, it executes" },
+      { key: "DATA",            color: "#48BB78", light: "#F0FFF4", desc: "Store user accounts, history, and application state" },
+      { key: "DEPLOY",          color: "#9F7AEA", light: "#FAF5FF", desc: "Make it accessible to others at a live URL" },
+    ],
+    approaches: [
+      { icon: "📄", label: "Read before you build",       color: "#667EEA", light: "#EBF4FF", when: "Every brief contains pipeline signals. Find the Data requirements and Deploy constraints before you choose a Logic tool — not after." },
+      { icon: "🔗", label: "Stages build on each other",  color: "#38B2AC", light: "#E6FFFA", when: "Prototype informs Logic. Logic requires Version Control. Data enables personalisation. Deploy requires all four. The order is not optional." },
+      { icon: "🎯", label: "Match tool to stage",         color: "#ED8936", light: "#FFFBEB", when: "A vibe coding tool is not a database. A prototype is not a product. Use the right tool for each job — not the same tool for every job." },
+    ],
+  },
+
+  /* ── Slide 16 — Bridge to App Evaluator (Beat 5 — Bridge) ── */
+  {
+    section: "WHAT'S NEXT", type: "bridge",
+    heading: "Your pipeline is ready. Now walk through it.",
+    body: "You understand the five stages and where your existing skills connect. The App Evaluator takes you through the full pipeline step by step — scoping your build, identifying which stages are most critical for your specific brief, and producing a structured plan ready to execute.",
+    ctaText: "Open the App Evaluator →",
+    ctaHref: "/app/level-5/app-evaluator",
+    panelHeading: "What the App Evaluator does",
+    panelItems: [
+      "Guides you through each pipeline stage in order",
+      "Identifies which stages are most critical for your specific brief",
+      "Flags missing components before they become blockers",
+      "Produces a structured build plan ready to execute",
+    ],
+  },
+
+];
+
+const L5T1_ARTICLES: ArticleData[] = [
+  {
+    id: "a1",
+    title: "The State of AI in 2024: From Adoption to Application",
+    source: "McKinsey Global Institute",
+    readTime: "~12 min read",
+    desc: "McKinsey's annual global AI survey tracks how organisations are shifting from using off-the-shelf AI tools to building custom AI applications. The 2024 report identifies which capabilities are being built internally, what separates organisations that deploy successfully from those that stall, and why the architecture question — not the model question — is now the primary challenge.",
+    url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
+    reflection: "The report distinguishes between 'using AI' and 'building with AI.' Which pipeline stage do you think most organisations reach before stalling — and what does the report suggest is the cause?",
+  },
+  {
+    id: "a2",
+    title: "What Is Vibe Coding — and What Does It Change?",
+    source: "MIT Technology Review",
+    readTime: "~8 min read",
+    desc: "This article traces the emergence of 'vibe coding' — directing AI to generate working software through natural language — and examines what it changes about software development, who can now build, and what the new bottlenecks are. Directly relevant to the Logic stage of the build pipeline and why the Prototype stage has become more important, not less.",
+    url: "https://www.technologyreview.com/2025/01/13/1109793/the-golden-age-of-ai-coding-is-already-here/",
+    reflection: "The article argues that vibe coding lowers the barrier to building but raises the importance of clear intent. How does this map to the relationship between the Prototype stage and the Logic stage in the five-stage pipeline?",
+  },
+  {
+    id: "a3",
+    title: "Why AI Projects Fail Before They Are Built: The Architecture Problem",
+    source: "Harvard Business Review",
+    readTime: "~10 min read",
+    desc: "A recurring pattern in AI project failure: builders skip from idea to execution without addressing the structural questions — who stores what, where does it live, how does it scale. This HBR analysis examines why architectural decisions made in the first hour of a build determine whether the product survives contact with real users.",
+    url: "https://hbr.org/2023/04/ai-at-work-theres-a-trust-problem",
+    reflection: "The article focuses on the structural decisions that happen before the build begins. Which of the five pipeline stages does this most directly address — and which stage do most builders try to skip in order to get to the Logic stage faster?",
+  },
+];
+
+const L5T1_VIDEOS: VideoData[] = [
+  {
+    id: "v1",
+    title: "How to Build Full-Stack AI Apps — From Idea to Deployment",
+    channel: "Y Combinator",
+    duration: "22 min",
+    desc: "A practical walkthrough of the full build pipeline for AI-powered applications — from scoping and prototyping through version control, data architecture, and deployment. Covers the common mistakes founders and builders make at each stage and what a well-structured pipeline looks like in practice.",
+    url: "https://www.youtube.com/watch?v=XHmNXf8Gxrg",
+    quiz: [
+      {
+        q: "According to the video, what is the most common mistake builders make when starting an AI application?",
+        options: [
+          "Choosing the wrong AI model for the task",
+          "Starting the build before defining who the users are and what the application does for them",
+          "Spending too long on version control before beginning the build",
+        ],
+        correct: 1,
+      },
+    ],
+  },
+  {
+    id: "v2",
+    title: "Databases for Non-Engineers: What Every AI Builder Needs to Know",
+    channel: "Fireship",
+    duration: "14 min",
+    desc: "A clear, accessible explanation of what databases do, why they are non-negotiable for multi-user applications, and how to think about the Data stage of any full-stack build. Covers the difference between local storage and a real database, and why personalisation is impossible without persistent data.",
+    url: "https://www.youtube.com/watch?v=OqjJjpjDRLc",
+    quiz: [
+      {
+        q: "The video explains why local storage is insufficient for multi-user applications. What is the core reason?",
+        options: [
+          "Local storage is too slow for production applications",
+          "Local storage is tied to one device — it cannot be shared across users or sessions on different devices",
+          "Local storage does not support the JSON data format required by AI applications",
+        ],
+        correct: 1,
+      },
+    ],
+  },
+  {
+    id: "v3",
+    title: "GitHub for Beginners: Version Control in Plain English",
+    channel: "GitHub",
+    duration: "16 min",
+    desc: "GitHub's official introduction to version control — what it is, why every professional builder uses it, and how to use it without a software engineering background. Directly addresses the Version Control stage of the pipeline and explains why a restore point is the most underrated feature in any build.",
+    url: "https://www.youtube.com/watch?v=iv8rSLsi1xo",
+    quiz: [
+      {
+        q: "The video describes the core benefit of version control for non-engineers. Which of the following best captures it?",
+        options: [
+          "It makes your code run faster in production",
+          "It gives you a complete history of every change, so any mistake can be undone",
+          "It automatically fixes bugs in your application before they reach users",
+        ],
+        correct: 1,
+      },
+    ],
+  },
+];
+
+
+/* ══════════════════════════════════════════════════════════════════
    TOPIC CONTENT REGISTRY
    ══════════════════════════════════════════════════════════════════ */
 
@@ -1603,6 +2164,11 @@ export const TOPIC_CONTENT: Record<string, TopicContent> = {
     slides: L4T1_SLIDES,
     articles: L4T1_ARTICLES,
     videos: L4T1_VIDEOS,
+  },
+  "5-1": {
+    slides: L5T1_SLIDES,
+    articles: L5T1_ARTICLES,
+    videos: L5T1_VIDEOS,
   },
 };
 

@@ -1150,28 +1150,94 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { key: 'DATA SOURCES', color: '#48BB78', light: '#F0FFF4', icon: '🗄️', hint: 'What data the tool needs and whether it exists' },
         ];
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 10 }}>
-            <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 2 }}>THE BRIEF</div>
-            <div style={{ border: '1.5px solid #E2E8F0', borderRadius: 10, overflow: 'hidden', background: '#FFFFFF' }}>
-              <div style={{ background: '#1A202C', padding: fs ? '8px 14px' : '6px 12px' }}>
-                <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>PRODUCT REQUIREMENTS DOCUMENT</div>
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 8 }}>
+            <div style={{ fontSize: fs ? 10 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 2 }}>THE BRIEF</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, maxHeight: fs ? 280 : 220 }}>
               {prdComponents.map((comp, i) => {
                 const isActive = activeIdx !== undefined && i <= activeIdx;
                 const isCurrent = activeIdx === i;
                 return (
-                  <div key={comp.key} style={{ padding: fs ? '10px 14px' : '8px 12px', borderBottom: i < 3 ? '1px solid #E2E8F0' : 'none', background: isActive ? comp.light : '#FFFFFF', borderLeft: `4px solid ${isActive ? comp.color : '#E2E8F0'}`, transition: 'all 0.35s ease' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: fs ? 15 : 13, opacity: isActive ? 1 : 0.25, transition: 'opacity 0.35s ease' }}>{comp.icon}</span>
-                      <span style={{ fontSize: fs ? 11 : 10, fontWeight: 800, color: isActive ? comp.color : '#CBD5E0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, transition: 'color 0.35s ease' }}>{comp.key}</span>
-                    </div>
+                  <div key={comp.key} style={{
+                    borderRadius: 10, padding: fs ? '12px 14px' : '10px 12px',
+                    background: isActive ? comp.light : '#F7FAFC',
+                    border: `2px solid ${isActive ? comp.color : '#E2E8F0'}`,
+                    display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
+                    transition: 'all 0.35s ease', opacity: isActive ? 1 : 0.35,
+                  }}>
+                    <span style={{ fontSize: fs ? 22 : 18, marginBottom: 6, display: 'block', filter: isActive ? 'none' : 'grayscale(1)', transition: 'filter 0.35s ease' }}>{comp.icon}</span>
+                    <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: isActive ? comp.color : '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, lineHeight: 1.2, transition: 'color 0.35s ease' }}>{comp.key}</div>
                     {isCurrent && (
-                      <div style={{ fontSize: fs ? 10 : 9, color: comp.color, marginTop: 4, fontStyle: 'italic' as const, lineHeight: 1.4, opacity: 1, transition: 'opacity 0.3s ease' }}>{comp.hint}</div>
+                      <div style={{ fontSize: fs ? 10 : 9, color: comp.color, marginTop: 5, lineHeight: 1.4 }}>{comp.hint}</div>
                     )}
                   </div>
                 );
               })}
             </div>
+          </div>
+        );
+      }
+
+      case 'l4-vibe-coding': {
+        const steps = [
+          { label: 'DESCRIBE', icon: '💬', color: '#667EEA', light: '#EBF4FF', desc: 'Write what you want in plain language' },
+          { label: 'AI BUILDS', icon: '🤖', color: '#38B2AC', light: '#E6FFFA', desc: 'AI generates working code instantly' },
+          { label: 'REVIEW', icon: '👁️', color: '#ED8936', light: '#FFFBEB', desc: 'Check the output matches your intent' },
+          { label: 'ITERATE', icon: '🔄', color: '#9F7AEA', light: '#FAF5FF', desc: 'Give feedback and refine until right' },
+        ];
+        const tools = ['Cursor', 'Bolt', 'Lovable', 'Replit Agent'];
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 6 }}>
+            <div style={{ fontSize: fs ? 10 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 4 }}>THE WORKFLOW</div>
+            {steps.map((step, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+                {i < steps.length - 1 && (
+                  <div style={{ position: 'absolute', left: 15, top: 32, width: 2, height: 10, background: `linear-gradient(${step.color}, ${steps[i + 1].color})`, zIndex: 0 }} />
+                )}
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: step.light, border: `2px solid ${step.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 }}>
+                  <span style={{ fontSize: 14 }}>{step.icon}</span>
+                </div>
+                <div>
+                  <div style={{ fontSize: fs ? 10 : 9, fontWeight: 800, color: step.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{step.label}</div>
+                  <div style={{ fontSize: fs ? 12 : 11, color: '#4A5568', lineHeight: 1.4 }}>{step.desc}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: fs ? 9 : 8, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 5 }}>TOOLS</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+                {tools.map((t) => (
+                  <span key={t} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: '#F7FAFC', border: '1px solid #E2E8F0', color: '#718096', fontWeight: 600 }}>{t}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'l4-ai-stall': {
+        const reasons = [
+          { rank: 1, label: 'Unclear business value', color: '#FC8181', light: '#FFF5F5', tag: 'BRIEF GAP' },
+          { rank: 2, label: 'Poor data quality', color: '#F6AD55', light: '#FFFBEB', tag: 'DATA GAP' },
+          { rank: 3, label: 'Misaligned expectations', color: '#F6AD55', light: '#FFFBEB', tag: 'BRIEF GAP' },
+          { rank: 4, label: 'Technical failure', color: '#68D391', light: '#F0FFF4', tag: 'LEAST COMMON' },
+        ];
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', gap: 10 }}>
+            <div style={{ textAlign: 'center' as const, background: '#FFF5F5', border: '1.5px solid #FC8181', borderRadius: 12, padding: fs ? '14px 16px' : '10px 14px' }}>
+              <div style={{ fontSize: fs ? 48 : 40, fontWeight: 900, color: '#E53E3E', lineHeight: 1 }}>30%</div>
+              <div style={{ fontSize: fs ? 11 : 10, color: '#718096', marginTop: 4, lineHeight: 1.5 }}>of GenAI projects abandoned<br />after proof of concept</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', marginTop: 4, letterSpacing: '0.06em' }}>GARTNER 2024</div>
+            </div>
+            <div style={{ fontSize: fs ? 10 : 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>WHY PROJECTS STALL</div>
+            {reasons.map((r) => (
+              <div key={r.rank} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: r.light, border: `1.5px solid ${r.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: r.color }}>#{r.rank}</span>
+                </div>
+                <div style={{ flex: 1, fontSize: fs ? 12 : 11, color: '#4A5568', lineHeight: 1.3 }}>{r.label}</div>
+                <span style={{ fontSize: 8, fontWeight: 700, color: r.color, background: r.light, padding: '2px 6px', borderRadius: 8, whiteSpace: 'nowrap' as const, border: `1px solid ${r.color}` }}>{r.tag}</span>
+              </div>
+            ))}
           </div>
         );
       }
@@ -1747,13 +1813,21 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
       /* ── Pyramid (Slide 4 — two-column: text + pyramid stack) ── */
       case 'pyramid': {
+        // activeIdx: 0=Applications(L5), 1=Dashboards(L4), 2=Workflows(L3), 3=Agents(L2), 4=Prompting(L1)
+        const pyramidActiveIdx = 5 - moduleLevel;
+        const pyramidActiveFill   = ['#C3D0F5','#FBCEB1','#F7E8A4','#C3D0F5','#38B2AC'][pyramidActiveIdx] ?? '#38B2AC';
+        const pyramidActiveBorder = ['2px solid #2E3F8F','2px solid #8C3A1A','2px solid #C4A934','2px solid #5B6DC2','2px solid #2C9A94'][pyramidActiveIdx] ?? '2px solid #2C9A94';
+        const pyramidActiveColor  = ['#2E3F8F','#FFFFFF','#1A202C','#2E3F8F','#FFFFFF'][pyramidActiveIdx] ?? '#FFFFFF';
         const pyramidLayers = [
-          { label: 'Applications', width: '38%', fill: '#E2E8F0', border: '1px solid #CBD5E0', fontWeight: 600, fontSize: 13, color: '#4A5568' },
-          { label: 'Dashboards', width: '50%', fill: '#FBCEB1', border: '1px solid #E8A882', fontWeight: 600, fontSize: 13, color: '#4A5568' },
-          { label: 'Workflows', width: '65%', fill: '#F7E8A4', border: '1px solid #D4C070', fontWeight: 600, fontSize: 13, color: '#4A5568' },
-          { label: 'AI Agents', width: '82%', fill: '#C3D0F5', border: '1px solid #A0B4E8', fontWeight: 600, fontSize: 13, color: '#4A5568' },
-          { label: 'Prompting', width: '100%', fill: '#38B2AC', border: '2px solid #2C9A94', fontWeight: 800, fontSize: 15, color: '#FFFFFF', active: true },
-        ];
+          { label: 'Applications', width: '38%' },
+          { label: 'Dashboards',   width: '50%' },
+          { label: 'Workflows',    width: '65%' },
+          { label: 'AI Agents',    width: '82%' },
+          { label: 'Prompting',    width: '100%' },
+        ].map((layer, i) => {
+          const isActive = i === pyramidActiveIdx;
+          return { ...layer, fill: isActive ? pyramidActiveFill : '#F7FAFC', border: isActive ? pyramidActiveBorder : '1px solid #E2E8F0', fontWeight: isActive ? 800 : 600, fontSize: isActive ? 15 : 13, color: isActive ? pyramidActiveColor : '#718096', active: isActive };
+        });
         return (
           <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
@@ -3076,8 +3150,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 <div style={{
                   flex: 1, background: tc.annotBg, borderRadius: 10,
                   border: `1px solid ${tc.border}55`,
-                  padding: fs ? '14px 18px' : '10px 14px',
-                  fontSize: fs ? 14 : 13, color: '#4A5568', lineHeight: 1.7,
+                  padding: fs ? '18px 22px' : '14px 18px',
+                  fontSize: fs ? 19 : 17, color: '#4A5568', lineHeight: 1.9,
                   overflowY: 'auto', minHeight: 0,
                 }}>
                   <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, background: tc.badgeBg, color: tc.badgeText, borderRadius: 6, padding: '2px 8px', marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>Analysis</span>
@@ -3104,7 +3178,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       <div className="flip-card-face" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #FEB2B2', background: '#FFF5F5', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: '#FC8181', background: '#FED7D7', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.frontBadge}</span>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.frontLabel}</div>
-                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: fs ? '14px 16px' : '10px 12px', fontSize: fs ? 15 : 14, color: '#2D3748', lineHeight: 1.7, flex: 1 }}>
+                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: fs ? '18px 20px' : '14px 16px', fontSize: fs ? 22 : 19, color: '#2D3748', lineHeight: 1.9, flex: 1 }}>
                           {card.frontPrompt}
                         </div>
                         <div style={{ fontSize: 12, color: '#A0AEC0', textAlign: 'center', marginTop: 8 }}>Click to flip ↺</div>
@@ -3113,7 +3187,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       <div className="flip-card-face flip-card-back" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #9AE6B4', background: '#F0FFF4', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: '#48BB78', background: '#C6F6D5', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.backBadge}</span>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.backLabel}</div>
-                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #48BB78', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: 13, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', flex: 1, overflowY: 'auto' }}>
+                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #48BB78', borderRadius: '0 8px 8px 0', padding: fs ? '18px 20px' : '14px 16px', fontSize: fs ? 20 : 17, color: '#2D3748', lineHeight: 1.85, flex: 1, overflowY: 'auto' }}>
                           {(() => {
                             const isLong = card.backPrompt.length > 160;
                             const isExpanded = expandedSections[`flip-${i}`];
@@ -3125,7 +3199,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                             </button>
                           )}
                         </div>
-                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.5, marginTop: 8, padding: '8px 10px', background: '#E6FFFA', borderRadius: 6 }}>
+                        <div style={{ fontSize: fs ? 15 : 13, color: '#4A5568', lineHeight: 1.6, marginTop: 8, padding: '10px 12px', background: '#E6FFFA', borderRadius: 6 }}>
                           {card.backResponse}
                         </div>
                       </div>
@@ -3972,7 +4046,11 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
             color: i === activeScenarioIdx ? '#FFFFFF' : '#718096',
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
-            {sc.personaIcon && <img src={sc.personaIcon} alt={sc.personaName} style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />}
+            {sc.personaIcon && (
+              <div style={{ width: 18, height: 18, borderRadius: '50%', background: sc.personaColor || '#CBD5E0', overflow: 'hidden', flexShrink: 0 }}>
+                <img src={sc.personaIcon} alt={sc.personaName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            )}
             {sc.personaName ? `${sc.personaName}'s Task` : `Scenario ${i + 1}`}
           </button>
         ))}
@@ -3981,7 +4059,11 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
       {/* Persona header */}
       {scenario.personaName && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: '#F7FAFC', borderRadius: 10, border: '1px solid #E2E8F0', flexShrink: 0 }}>
-          {scenario.personaIcon && <img src={scenario.personaIcon} alt={scenario.personaName} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />}
+          {scenario.personaIcon && (
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: scenario.personaColor || '#CBD5E0', overflow: 'hidden', flexShrink: 0, border: `3px solid ${scenario.personaColor || '#CBD5E0'}`, boxShadow: `0 2px 8px ${scenario.personaColor || '#CBD5E0'}44` }}>
+              <img src={scenario.personaIcon} alt={scenario.personaName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{scenario.personaName}</div>
             <div style={{ fontSize: 11, color: '#718096' }}>{scenario.personaRole}</div>

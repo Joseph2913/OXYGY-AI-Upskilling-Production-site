@@ -315,6 +315,19 @@ For known sources, always include the source logo image at `/public/logos/`. Hei
 ### Pull-Quote Rule
 The pull-quote below a stat slide must answer the implicit question: *"So what does this mean for me?"* It should contain the key implication, not a rewording of the stat.
 
+### Visual Requirement — Mandatory for All Evidence and Concept Slides
+
+**Every `evidenceHero` and `concept` slide MUST include a visual element.** Pure-text slides are not permitted for these types.
+
+| Slide type | Required visual | How to add |
+|---|---|---|
+| `evidenceHero` | A `stats` entry with a `visualType` (e.g. `dotGrid`, `barComparison`, `adoptionGap`) | Add to the `stats` array |
+| `concept` | A right-panel diagram or chart via `visualId` | Add `visualId: 'xxx'` and create the case in `renderConceptVisual()` in `ELearningView.tsx` |
+
+**Rationale:** Text-only slides fail on two counts — they don't provide the visual processing channel that learners use to anchor abstract concepts, and they make the module feel like a document being read rather than a learning experience being had. Every factual claim and concept explanation should have a corresponding graphic that reflects or reinforces the text.
+
+**Pre-submit checklist item:** Before marking any `evidenceHero` or `concept` slide complete, verify it has either a `visualType` stat or a `visualId` panel. If no appropriate visual case exists in the renderer, create one — adding a new `case` to `renderConceptVisual()` is always preferable to shipping a text-only slide.
+
 ---
 
 ## 6. Writing Scenarios (Beat 4 Contrast Slides)
