@@ -2752,14 +2752,14 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 <div key={el.key} style={{ padding: fs ? '18px 20px' : '14px 16px', borderRadius: 12, border: `1.5px solid ${el.color}55`, background: el.light || `${el.color}08`, opacity: !(s as any).revealOnNext || i <= contextStep ? 1 : 0, transition: 'opacity 0.35s ease', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                      {el.icon && <span style={{ fontSize: fs ? 22 : 18 }}>{el.icon}</span>}
-                      <span style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: el.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{el.key}</span>
+                      {el.icon && <span style={{ fontSize: fs ? 24 : 18 }}>{el.icon}</span>}
+                      <span style={{ fontSize: fs ? 14 : 12, fontWeight: 800, color: el.color, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>{el.key}</span>
                     </div>
-                    <div style={{ fontSize: fs ? 16 : 13, color: '#2D3748', lineHeight: 1.6, marginBottom: 8 }}>{el.desc}</div>
-                    {el.example && <div style={{ fontSize: fs ? 14 : 12, color: '#718096', fontStyle: 'italic', lineHeight: 1.5, borderTop: `1px solid ${el.color}33`, paddingTop: 8, marginBottom: 6 }}>e.g. {el.example}</div>}
+                    <div style={{ fontSize: fs ? 18 : 14, color: '#2D3748', lineHeight: 1.6, marginBottom: 8 }}>{el.desc}</div>
+                    {el.example && <div style={{ fontSize: fs ? 16 : 13, color: '#718096', fontStyle: 'italic', lineHeight: 1.5, borderTop: `1px solid ${el.color}33`, paddingTop: 8, marginBottom: 6 }}>e.g. {el.example}</div>}
                   </div>
                   {el.whyItMatters && (
-                    <div style={{ fontSize: fs ? 13 : 11, fontWeight: 700, color: el.color, lineHeight: 1.4, padding: '5px 10px', background: '#FFFFFF', borderRadius: 6, border: `1px solid ${el.color}33`, marginTop: 'auto' }}>
+                    <div style={{ fontSize: fs ? 15 : 12, fontWeight: 700, color: el.color, lineHeight: 1.4, padding: '5px 10px', background: '#FFFFFF', borderRadius: 6, border: `1px solid ${el.color}33`, marginTop: 'auto' }}>
                       {el.whyItMatters}
                     </div>
                   )}
