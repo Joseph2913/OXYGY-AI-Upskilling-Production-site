@@ -2870,21 +2870,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           const newPlacements = { ...dragPlacements, [dragSortItemId]: zoneId };
           setDragPlacements(newPlacements);
           setDragSortItemId(null);
+          setDragChecked(false); // reset on each placement, like buildAPrompt
           // Auto-check when last item is placed
           const allPlacedNow = allItems.every(item => !!newPlacements[item.id]);
           if (allPlacedNow) {
-            const allCorrectNow = allItems.every(item => newPlacements[item.id] === item.correctZone);
-            setDragChecked(true);
-            if (!allCorrectNow) {
-              const corrected: Record<string, string> = {};
-              allItems.forEach(item => {
-                if (newPlacements[item.id] === item.correctZone) corrected[item.id] = item.correctZone;
-              });
-              setTimeout(() => { setDragPlacements(corrected); setDragChecked(false); }, 1400);
-            }
+            setTimeout(() => setDragChecked(true), 300);
           }
         };
         const handleReturnToPool = (itemId: string) => {
+          setDragChecked(false); // reset when item is returned, like buildAPrompt
           setDragPlacements(prev => { const next = { ...prev }; delete next[itemId]; return next; });
         };
 
@@ -3627,15 +3621,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   };
 
   const handleNextClick = () => {
-    // dragSort: if all placed but some wrong, show feedback then return wrong items to pool
+    // dragSort: if all placed but some wrong, show feedback — items stay in place for user to fix
     if (s.type === 'dragSort' && dragAllPlaced && !dragAllCorrect) {
       setDragChecked(true);
-      // Remove incorrectly placed items from their zones
-      const corrected: Record<string, string> = {};
-      s.dragItems?.forEach(item => {
-        if (dragPlacements[item.id] === item.correctZone) corrected[item.id] = item.correctZone;
-      });
-      setTimeout(() => { setDragPlacements(corrected); setDragChecked(false); }, 1200);
       triggerActivityWarning();
       return;
     }
