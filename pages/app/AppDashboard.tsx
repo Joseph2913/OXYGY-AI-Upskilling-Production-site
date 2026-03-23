@@ -72,7 +72,7 @@ function ProgressRing({
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={accentColor + '44'} strokeWidth={strokeWidth} />
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#38B2AC" strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={accentColor} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ fontSize: size > 60 ? 20 : 14, fontWeight: 800, color: '#1A202C', lineHeight: 1 }}>{displayPct}%</span>
@@ -313,12 +313,38 @@ const AppDashboard: React.FC = () => {
 
   const level = data.currentLevel;
   const topics = LEVEL_TOPICS[level] || [];
-  const totalTopics = topics.length;
+  const activeTopics = topics.filter(t => !t.comingSoon);
+  const totalTopics = activeTopics.length;
   const accent = LEVEL_ACCENT_COLORS[level];
   const accentDark = LEVEL_ACCENT_DARK_COLORS[level];
   const levelFull = LEVEL_FULL_NAMES[level];
-  const activeTopic = topics[data.activeTopicIndex];
-  const phaseNames: Record<number, string> = { 1: 'E-Learning', 2: 'Practise' };
+  const activeTopic = activeTopics[data.activeTopicIndex];
+  const phaseNames: Record<number, string> = { 1: 'E-Learning', 2: 'Toolkit', 3: 'Project' };
+
+  // Derive current-level phase completion (matches journey section logic)
+  const currentLevelProgress = data.levelProgress[level];
+  const eLearnDone = currentLevelProgress?.phasesCompleted?.[0] ?? false;
+  const toolKeyMap: Record<number, string> = { 1: 'prompt-playground', 2: 'agent-builder', 3: 'workflow-canvas', 4: 'dashboard-designer', 5: 'ai-app-evaluator' };
+  const currentLevelArtefacts = data.toolUsage[toolKeyMap[level]]?.artefactsCreated ?? 0;
+  const toolkitDone = currentLevelArtefacts > 0;
+  const projectDone = data.projectSubmissions[level]?.status === 'passed';
+  const phaseDoneCount = [eLearnDone, toolkitDone, projectDone].filter(Boolean).length;
+  const totalPhases = 3;
+
+  // Derive resume route based on current phase
+  const toolkitRoutes: Record<number, string> = {
+    1: '/app/toolkit/prompt-playground',
+    2: '/app/toolkit/agent-builder',
+    3: '/app/toolkit/workflow-canvas',
+    4: '/app/toolkit/dashboard-designer',
+    5: '/app/toolkit/ai-app-evaluator',
+  };
+  const getResumeRoute = () => {
+    const phase = data.currentPhase;
+    if (phase === 2) return toolkitRoutes[level] || '/app/toolkit';
+    if (phase === 3) return `/app/journey/project/${level}`;
+    return '/app/level?phase=1'; // default to e-learning
+  };
 
 
   const currentUserRank = data.leaderboard.findIndex(m => m.isCurrentUser) + 1;
@@ -447,6 +473,11 @@ const AppDashboard: React.FC = () => {
                   <span style={{ fontSize: 12, color: '#718096' }}>
                     Topic {data.activeTopicIndex + 1} of {totalTopics}
                   </span>
+                  {phaseNames[data.currentPhase] && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, background: accent + '33', padding: '2px 10px', borderRadius: 20 }}>
+                      {phaseNames[data.currentPhase]}
+                    </span>
+                  )}
                 </div>
 
                 {/* Title + description */}
@@ -474,9 +505,9 @@ const AppDashboard: React.FC = () => {
                   alignSelf: 'stretch',
                 }}
               >
-                <ProgressRing completed={data.completedTopics} total={data.totalTopics} accentColor={accent} size={110} strokeWidth={8} />
+                <ProgressRing completed={phaseDoneCount} total={totalPhases} accentColor={accent} size={110} strokeWidth={8} />
                 <button
-                  onClick={() => navigate('/app/level?phase=1')}
+                  onClick={() => navigate(getResumeRoute())}
                   style={{
                     background: '#1A202C',
                     color: '#FFFFFF',
@@ -700,16 +731,21 @@ const AppDashboard: React.FC = () => {
             </div>
 
             {/* Level rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
               {[1, 2, 3, 4, 5].map(lvl => {
                 const lvlAccent = LEVEL_ACCENT_COLORS[lvl];
                 const lvlAccentDark = LEVEL_ACCENT_DARK_COLORS[lvl];
+                const isAssigned = data.assignedLevels.has(lvl);
                 const depth = data.levelDepths[String(lvl)] ?? 'full';
-                const isSkipped = depth === 'skip';
+                const isNotReached = lvl > data.currentLevel;
+                const isNotInPlan = !isAssigned || depth === 'skip';
+                // A level is greyed out if it's not in the plan OR not yet reached
+                const isSkipped = isNotInPlan || isNotReached;
                 const progress = data.levelProgress[lvl];
                 const phasesCompleted = progress?.phasesCompleted?.filter(Boolean).length ?? 0;
 
-                const eLearnStatus = isSkipped ? 'n/a' : phasesCompleted >= 2 ? 'done' : phasesCompleted >= 1 ? 'progress' : 'not-started';
+                const eLearnDone = progress?.phasesCompleted?.[0] ?? false;
+                const eLearnStatus = isSkipped ? 'n/a' : eLearnDone ? 'done' : phasesCompleted >= 1 ? 'progress' : 'not-started';
 
                 const toolKeyMap: Record<number, string> = { 1: 'prompt-playground', 2: 'agent-builder', 3: 'workflow-canvas', 4: 'dashboard-designer', 5: 'ai-app-evaluator' };
                 const toolUsageKey = toolKeyMap[lvl];
@@ -778,7 +814,6 @@ const AppDashboard: React.FC = () => {
                 const isExpanded = expandedLevels.has(lvl);
 
                 const toggleLevel = () => {
-                  if (isSkipped) return;
                   setExpandedLevels(prev => {
                     const next = new Set(prev);
                     if (next.has(lvl)) next.delete(lvl); else next.add(lvl);
@@ -787,7 +822,7 @@ const AppDashboard: React.FC = () => {
                 };
 
                 return (
-                  <div key={lvl} style={{ borderBottom: lvl < 5 ? '1px solid #F0F4F8' : 'none', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div key={lvl} style={{ borderBottom: lvl < 5 ? '1px solid #F0F4F8' : 'none', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
                     {/* ── Collapsed level row — always visible ── */}
                     <div
                       onClick={toggleLevel}
@@ -796,13 +831,12 @@ const AppDashboard: React.FC = () => {
                         gridTemplateColumns: '36px 1fr auto 50px 22px',
                         gap: 8,
                         alignItems: 'center',
-                        padding: '0 10px',
-                        flex: 1,
-                        cursor: isSkipped ? 'default' : 'pointer',
+                        padding: '10px 10px',
+                        cursor: 'pointer',
                         borderRadius: 10,
                         transition: 'background 0.12s',
                       }}
-                      onMouseEnter={e => { if (!isSkipped) e.currentTarget.style.background = '#F7FAFC'; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#F7FAFC'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                     >
                       {/* Level badge */}
@@ -820,10 +854,11 @@ const AppDashboard: React.FC = () => {
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: isSkipped ? '#A0AEC0' : '#1A202C', whiteSpace: 'nowrap' }}>
                           {levelNames[lvl]}
-                          {isSkipped && <span style={{ fontSize: 12, color: '#CBD5E0', fontWeight: 400, marginLeft: 6 }}>Not assigned</span>}
+                          {isNotInPlan && <span style={{ fontSize: 11, color: '#CBD5E0', fontWeight: 400, marginLeft: 6 }}>Not part of your current learning plan</span>}
+                          {!isNotInPlan && isNotReached && <span style={{ fontSize: 11, color: '#CBD5E0', fontWeight: 400, marginLeft: 6 }}>Complete Level {lvl - 1} to unlock</span>}
                         </div>
-                        {!isSkipped && lvlTopics.length > 0 && (
-                          <div style={{ fontSize: 12, color: '#718096', marginTop: 2, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+                        {lvlTopics.length > 0 && (
+                          <div style={{ fontSize: 12, color: isSkipped ? '#CBD5E0' : '#718096', marginTop: 2, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
                             {lvlTopics.map(t => t.title).join(', ')}
                           </div>
                         )}
@@ -837,7 +872,7 @@ const AppDashboard: React.FC = () => {
                             <div style={{ width: 20, height: 20, borderRadius: 5, background: '#EAF3DE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <BookOpen size={11} color="#27500A" />
                             </div>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: phasesCompleted > 0 ? '#27500A' : '#CBD5E0' }}>{phasesCompleted}/2</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: eLearnDone ? '#27500A' : '#CBD5E0' }}>{eLearnDone ? '1' : '0'}/1</span>
                           </div>
                           <ChevronRight size={14} color="#CBD5E0" strokeWidth={2} style={{ flexShrink: 0 }} />
                           {/* Artefacts */}
@@ -856,7 +891,30 @@ const AppDashboard: React.FC = () => {
                             <span style={{ fontSize: 12, fontWeight: 700, color: (projectStatus === 'done' ? 1 : 0) > 0 ? '#3C3489' : '#CBD5E0' }}>{projectStatus === 'done' ? 1 : 0}/1</span>
                           </div>
                         </div>
-                      ) : <div />}
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', opacity: 0.4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#F7FAFC' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: 5, background: '#EDF2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <BookOpen size={11} color="#A0AEC0" />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#CBD5E0' }}>0/1</span>
+                          </div>
+                          <ChevronRight size={14} color="#E2E8F0" strokeWidth={2} style={{ flexShrink: 0 }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#F7FAFC' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: 5, background: '#EDF2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Zap size={11} color="#A0AEC0" />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#CBD5E0' }}>0</span>
+                          </div>
+                          <ChevronRight size={14} color="#E2E8F0" strokeWidth={2} style={{ flexShrink: 0 }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#F7FAFC' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: 5, background: '#EDF2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <FolderOpen size={11} color="#A0AEC0" />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#CBD5E0' }}>0/1</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Progress ring */}
                       {(() => {
@@ -879,17 +937,15 @@ const AppDashboard: React.FC = () => {
                       })()}
 
                       {/* Chevron */}
-                      {!isSkipped ? (
-                        <ChevronDown
-                          size={18}
-                          color="#A0AEC0"
-                          style={{ transition: 'transform 0.25s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        />
-                      ) : <div />}
+                      <ChevronDown
+                        size={18}
+                        color="#A0AEC0"
+                        style={{ transition: 'transform 0.25s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                      />
                     </div>
 
                     {/* ── Expanded topic detail ── */}
-                    {!isSkipped && (
+                    {(
                       <div style={{
                         maxHeight: isExpanded ? lvlTopics.length * 80 + 50 : 0,
                         overflow: 'hidden',
@@ -915,6 +971,7 @@ const AppDashboard: React.FC = () => {
                         {/* Topic rows */}
                         {lvlTopics.map((topic, tIdx) => {
                           const isSoon = !!(topic as any).comingSoon;
+                          const isGreyed = isSkipped || isSoon;
                           return (
                             <div
                               key={tIdx}
@@ -926,20 +983,20 @@ const AppDashboard: React.FC = () => {
                                 borderRadius: 8,
                                 padding: '5px 6px',
                                 marginLeft: 4,
-                                background: isSoon ? '#F7FAFC' : lvlAccent + '08',
+                                background: isGreyed ? '#F7FAFC' : lvlAccent + '08',
                                 marginBottom: tIdx < lvlTopics.length - 1 ? 4 : 8,
                                 transition: 'background 0.12s',
-                                opacity: isSoon ? 0.7 : 1,
+                                opacity: isGreyed ? 0.7 : 1,
                               }}
-                              onMouseEnter={e => { if (!isSoon) e.currentTarget.style.background = lvlAccent + '18'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = isSoon ? '#F7FAFC' : lvlAccent + '08'; }}
+                              onMouseEnter={e => { if (!isGreyed) e.currentTarget.style.background = lvlAccent + '18'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = isGreyed ? '#F7FAFC' : lvlAccent + '08'; }}
                             >
                               <div />
-                              <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 12, color: isSoon ? '#A0AEC0' : '#4A5568', fontWeight: 500 }}>
+                              <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 12, color: isGreyed ? '#A0AEC0' : '#4A5568', fontWeight: 500 }}>
                                 {topic.title}
                                 {isSoon && <span style={{ fontSize: 10, fontWeight: 600, color: '#CBD5E0', marginLeft: 8, fontStyle: 'italic' }}>Coming soon</span>}
                               </div>
-                              {isSoon ? (
+                              {isGreyed ? (
                                 <>
                                   <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
                                   <div />
@@ -981,7 +1038,7 @@ const AppDashboard: React.FC = () => {
             padding: '22px 22px 18px',
             display: 'flex',
             flexDirection: 'column',
-            alignSelf: 'flex-start',
+            alignSelf: 'stretch',
             position: 'sticky',
             top: 72,
           }}

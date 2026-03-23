@@ -49,6 +49,9 @@ Interactive multi-section website for Oxygy's AI Centre of Excellence. Showcases
 - Two-column splits: text ~45% + visual ~55%
 - Full-width teal CTA band with subtle watermark
 
+### Progress Rings & Indicators
+- Progress rings, bars, and accent indicators MUST always use the **level's accent color** (from `LEVEL_ACCENT_COLORS`), never hardcode teal (`#38B2AC`) or any other fixed color. The accent color is passed as a prop and must be used for both the active stroke and any highlighted states. This applies everywhere: dashboard hero ring, resume card ring, journey table rings, and any future progress indicators.
+
 ### Avoid
 - No purple gradients, glassmorphism, floating abstract shapes
 - No Inter/Roboto/Arial
@@ -257,6 +260,67 @@ This project experienced a critical RLS infinite recursion bug (2026-03-16) wher
 1. If a state value depends on an async context value, default to a safe/neutral state and let a `useEffect` set the correct value once loading completes.
 2. Any `useEffect` that sets a boolean to `true` based on a condition must also set it to `false` in the `else` branch — otherwise state can get stuck.
 3. Background refresh functions (e.g. `refreshLearningPlan()`) must NOT set loading flags that cause parent components to re-render with skeletons. Use a ref to track whether the initial load is done, and only show loading UI on the first call.
+
+## Topic Completion — Canonical Logic (CRITICAL)
+
+**Every piece of code that checks whether a topic is complete MUST use the 3-phase check exclusively.** This is non-negotiable.
+
+A topic is complete if and only if ALL three user-visible phases are done:
+1. **E-Learning**: `elearn_completed_at` is set in `topic_progress`
+2. **Toolkit**: artefact count > 0 for the level (from `getArtefactCountsByLevel`)
+3. **Project**: level's project submission has `status === 'passed'` (from `getAllProjectSubmissions`)
+
+**NEVER use `completed_at` as a completion signal** — it may be set prematurely in the database (e.g. from testing or legacy writes), causing the system to report 100% completion even when the project has not been submitted. The `completed_at` field is treated as a cache/write-through artefact only, never as the source of truth. If code ever reads `completed_at` to determine completion, it is a bug.
+
+**NEVER use `read_completed_at` or `practise_completed_at`** as proxies for toolkit/project completion. These are legacy DB timestamp fields that do not get set in the current 3-phase flow. Toolkit completion is determined by artefact count > 0 (from `getArtefactCountsByLevel`). Project completion is determined by project submission status === 'passed' (from `getAllProjectSubmissions`). The completion logic MUST match what the dashboard UI displays as 100%.
+
+Using the wrong fields causes:
+- Wrong current level (user stuck on a completed level)
+- Wrong completion percentages in progress rings
+- Levels incorrectly locked/greyed out
+- Leaderboard scores that don't match visible progress
+
+The canonical implementation lives in `hooks/useDashboardData.ts`. Any new code that checks topic completion — for level advancement, progress display, unlock gating, scoring, or any other purpose — must replicate this logic exactly.
+
+## Level Advancement & Unlock Logic (CRITICAL)
+
+When a user completes all active topics in a level (using the 3-phase check above), the following MUST happen immediately and consistently across ALL pages:
+
+### Auto-advance to next level
+1. The **current level** is always the first level where not all topics are complete. Derive it by iterating levels 1-5 and finding the first level NOT in the `completedLevelSet`.
+2. If the next level is assigned in the user's learning plan → its status MUST be `'active'`, giving full access to all phases (E-Learning, Toolkit, Project).
+3. If the next level is NOT assigned → show "Not part of your current learning plan" and grey it out.
+
+### Phase access within an active level — NO sequential locking
+Once a level's status is `'active'` (or `'completed'` or `'project-pending'`), ALL three phases — E-Learning, Toolkit, and Project — MUST be immediately accessible. There is NO sequential phase-locking within a level (i.e. do not require E-Learning to be done before Toolkit, or Toolkit before Project). Phases may show their current state (To do / Done) but must never show a lock icon or be unclickable for an accessible level.
+
+### Status promotion rule (CRITICAL — applies to `useJourneyData`)
+A level with zero progress rows in the DB would normally compute as `'not-started'`. If that level IS the current level (first level not in `completedLevelSet`) AND it is assigned in the user's learning plan, its status MUST be upgraded to `'active'`. Never leave the current assigned level in `'not-started'` — this causes the My Journey page to show all phases locked.
+
+### Where level status MUST be consistent
+- **Dashboard hero card**: shows current level number, name, and overall progress ring in the level's accent color
+- **Dashboard resume card**: shows next topic to work on with phase progress ring in the level's accent color
+- **Dashboard journey table**: all 5 levels visible; completed levels show 100%, current level active with all phases accessible, future unassigned levels greyed
+- **My Journey page (`AppJourney`)**: level cards show `status: 'completed'` for completed levels, `'active'` for the current level — never `'not-started'` for the current assigned level
+- **Toolkit page (`AppToolkit`)**: tools unlock when either (a) the level's own elearn is done, OR (b) all previous levels are complete (i.e. `prevLevelsComplete`)
+- **Current Level page (`AppCurrentLevel`)**: navigates to the correct current level automatically
+- **Cohort page**: scores and ranks derived from completed topics/levels using the same `completedLevelSet`
+
+### Progress ring color rule (CRITICAL)
+Every progress ring, progress bar, or circular indicator MUST use the **level's accent color** from `LEVEL_ACCENT_COLORS[level]`. NEVER hardcode `#38B2AC` (teal) or any other fixed color. The accent color MUST be passed as a prop and used for both the active stroke and any highlighted states. This applies to: dashboard hero ring, dashboard resume card ring, journey table rings, and any future progress indicators.
+
+### Rules for all hooks
+Every hook that derives level state (`useDashboardData`, `useJourneyData`, `useToolkitData`) MUST:
+1. Build a `completedLevelSet` using the canonical 3-phase topic completion check
+2. Derive `currentLevel` from `completedLevelSet` (first level NOT in the set)
+3. Never use `userProfile.currentLevel` as the source of truth — it may be stale. Always derive from live data and sync back to the profile if needed.
+4. In `useJourneyData`, promote `'not-started'` → `'active'` for the derived current level if it is assigned.
+
+### Legacy DB fields — DO NOT USE for completion gating
+- `read_completed_at` — legacy "Read" phase timestamp, not set in the 3-phase flow
+- `practise_completed_at` — legacy "Practise" phase timestamp, not reliably set
+- `watch_completed_at` — legacy "Watch" phase timestamp, not used in current flow
+- These fields may still be read for backward compatibility in `useLevelData.ts` (phase stepper UI), but NEVER for level advancement, unlock gating, or completion percentage calculations.
 
 ## Navigation & Scroll Behaviour — App Shell Rules
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { useOrg } from '../context/OrgContext';
+import { useTourMode } from '../context/TourModeContext';
 import {
   getAllTopicProgress,
   getArtefactCountsByLevel,
@@ -29,7 +30,6 @@ export interface LeaderboardMember {
   assessmentAvg: number;
   isCurrentUser: boolean;
   artefactCount: number;
-  insightCount: number;
   activeDays30: number;
 }
 
@@ -73,6 +73,8 @@ export interface DashboardData {
 
   lastActivityAt: Date | null;
   unlockedToolIds: string[];
+  assignedLevels: Set<number>;  // levels in the user's learning plan
+  completedLevelSet: Set<number>; // levels where all topics have completed_at
 }
 
 function getInitials(name: string): string {
@@ -92,7 +94,17 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isTourMode = useTourMode();
+
   useEffect(() => {
+    if (isTourMode) {
+      import('../data/tourDemoData').then(m => {
+        setData(m.DEMO_DASHBOARD_DATA);
+        setLoading(false);
+      });
+      return;
+    }
+
     if (!user || !userProfile) {
       setLoading(false);
       return;
@@ -120,15 +132,23 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       // Update streak from real activity data
       const streak = await updateStreak(user.id);
 
+      // ── Build project submission map early (needed for level completion fallback) ──
+      const projectSubMap = new Map<number, typeof projectSubRows[0]>();
+      for (const sub of projectSubRows) {
+        projectSubMap.set(sub.level, sub);
+      }
+
       // ── Derive per-level progress ──
       const levelProgress: Record<number, LevelProgress> = {};
       let overallCompletedTopics = 0;
       let overallTotalTopics = 0;
       let levelsCompleted = 0;
+      const completedLevelSet = new Set<number>();
 
       for (let lvl = 1; lvl <= 5; lvl++) {
         const topics = LEVEL_TOPICS[lvl] || [];
-        const totalTopics = topics.length;
+        const activeTopics = topics.filter(t => !t.comingSoon);
+        const totalTopics = activeTopics.length;
         overallTotalTopics += totalTopics;
 
         const progressForLevel = topicProgressRows.filter(r => r.level === lvl);
@@ -137,9 +157,24 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         const phasesCompleted: boolean[] = [false, false, false, false];
         let completedTopics = 0;
 
+        const levelProjectPassed = projectSubMap.get(lvl)?.status === 'passed';
+
+        // Toolkit completion for this level = artefact count > 0
+        const levelArtefactCount = artefactCounts[lvl] || 0;
+        const levelToolkitDone = levelArtefactCount > 0;
+
         topics.forEach(topic => {
           const row = progressMap.get(topic.id);
-          if (row?.completed_at) completedTopics++;
+          // A topic is complete ONLY when all 3 user-visible phases are done:
+          //   1. E-Learning: elearn_completed_at is set
+          //   2. Toolkit: artefact count > 0 for this level
+          //   3. Project: project submission status === 'passed'
+          // NEVER use completed_at alone — it may be set prematurely in the DB
+          // and would falsely mark a topic as done even when phases are incomplete.
+          // The 3-phase check is the single source of truth.
+          const eLearnDone = !!row?.elearn_completed_at;
+          const isTopicComplete = eLearnDone && levelToolkitDone && levelProjectPassed;
+          if (isTopicComplete) completedTopics++;
           if (row?.elearn_completed_at) phasesCompleted[0] = true;
           if (row?.read_completed_at) phasesCompleted[1] = true;
           if (row?.watch_completed_at) phasesCompleted[2] = true;
@@ -147,8 +182,8 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         });
 
         overallCompletedTopics += completedTopics;
-        const isLevelComplete = completedTopics === totalTopics && totalTopics > 0;
-        if (isLevelComplete) levelsCompleted++;
+        const isLevelComplete = completedTopics === activeTopics.length && activeTopics.length > 0;
+        if (isLevelComplete) { levelsCompleted++; completedLevelSet.add(lvl); }
 
         levelProgress[lvl] = {
           level: lvl,
@@ -157,13 +192,38 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         };
       }
 
-      // ── Derive current level topic state ──
-      const currentLevel = userProfile.currentLevel;
+      // ── Derive current level from progress (auto-advance) ──
+      // Uses completedLevelSet (broad completion check: completed_at OR all phases done
+      // OR elearn+toolkit done with project passed) to find the first incomplete level.
+      // IMPORTANT: This MUST use the same completion logic as the per-level loop above.
+      // Never use only `completed_at` here — topics can be complete via phase completion
+      // without having `completed_at` set in the database.
+      let derivedLevel = 5;
+      for (let lvl = 1; lvl <= 5; lvl++) {
+        if (!completedLevelSet.has(lvl)) {
+          derivedLevel = lvl;
+          break;
+        }
+      }
+      const currentLevel = derivedLevel;
+
+      // Sync DB if profile is behind
+      if (currentLevel !== userProfile.currentLevel) {
+        import('../lib/database').then(db => db.updateCurrentLevel(user.id, currentLevel));
+      }
+
       const currentLevelTopics = LEVEL_TOPICS[currentLevel] || [];
       const currentLevelProgress = topicProgressRows.filter(r => r.level === currentLevel);
+      const currentLevelProjectPassed = projectSubMap.get(currentLevel)?.status === 'passed';
+      const currentLevelToolkitDone = (artefactCounts[currentLevel] || 0) > 0;
 
-      const completedTopicsInCurrentLevel = currentLevelProgress.filter(r => r.completed_at).length;
-      const activeTopicRow = currentLevelProgress.find(r => !r.completed_at);
+      // Use the same 3-phase completion check as the per-level loop above.
+      // NEVER use completed_at — it may be stale/premature.
+      const isTopicRowComplete = (r: typeof topicProgressRows[0]) =>
+        !!r.elearn_completed_at && currentLevelToolkitDone && currentLevelProjectPassed;
+
+      const completedTopicsInCurrentLevel = currentLevelProgress.filter(isTopicRowComplete).length;
+      const activeTopicRow = currentLevelProgress.find(r => !isTopicRowComplete(r));
 
       // ── Derive tool usage from level_progress ──
       const toolUsage: Record<string, ToolUsage> = {};
@@ -201,11 +261,10 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           score: m.score,
           completionPct: m.completionPct,
           streakDays: m.streakDays,
-          useCasesIdentified: m.insightCount,
+          useCasesIdentified: 0,
           assessmentAvg: 0,
           isCurrentUser: m.isCurrentUser,
           artefactCount: m.artefactCount,
-          insightCount: m.insightCount,
           activeDays30: m.activeDays30,
         }));
         activeColleaguesCount = scoredMembers.length;
@@ -225,7 +284,6 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           assessmentAvg: 0,
           isCurrentUser: true,
           artefactCount: 0,
-          insightCount: 0,
           activeDays30: 0,
         }];
       }
@@ -239,12 +297,20 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       // ── Build level depths from learning plan ──
       const levelDepths: Record<string, LevelDepth> = learningPlanResult?.level_depths || {};
 
+      // Determine which levels are assigned from learning plan
+      const assignedLevelKeys = learningPlanResult?.plan?.levels
+        ? Object.keys(learningPlanResult.plan.levels)
+        : ['L1', 'L2', 'L3', 'L4', 'L5'];
+      const assignedLevels = new Set(assignedLevelKeys.map(k => parseInt(k.replace('L', ''), 10)));
+
+      const activeCurrentLevelTopics = currentLevelTopics.filter(t => !t.comingSoon);
+
       setData({
         currentLevel,
         completedTopics: completedTopicsInCurrentLevel,
-        totalTopics: currentLevelTopics.length,
+        totalTopics: activeCurrentLevelTopics.length,
         activeTopicIndex: activeTopicRow
-          ? currentLevelTopics.findIndex(t => t.id === activeTopicRow.topic_id)
+          ? activeCurrentLevelTopics.findIndex(t => t.id === activeTopicRow.topic_id)
           : 0,
         currentSlide: activeTopicRow?.current_slide ?? 0,
         totalSlides: 0, // derived per-topic in the component
@@ -269,6 +335,8 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
 
         lastActivityAt: new Date(),
         unlockedToolIds,
+        assignedLevels,
+        completedLevelSet,
       });
       setLoading(false);
       } catch (err) {
@@ -278,7 +346,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         setData({
           currentLevel,
           completedTopics: 0,
-          totalTopics: currentLevelTopics.length,
+          totalTopics: currentLevelTopics.filter(t => !t.comingSoon).length,
           activeTopicIndex: 0,
           currentSlide: 0,
           totalSlides: 0,
@@ -304,18 +372,19 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
             assessmentAvg: 0,
             isCurrentUser: true,
             artefactCount: 0,
-            insightCount: 0,
             activeDays30: 0,
           }],
           activeColleaguesCount: 0,
           sameLevelColleaguesCount: 0,
           lastActivityAt: new Date(),
           unlockedToolIds: [],
+          assignedLevels: new Set([1, 2, 3, 4, 5]),
+          completedLevelSet: new Set<number>(),
         });
         setLoading(false);
       }
     })();
-  }, [user, userProfile, orgId]);
+  }, [user, userProfile, orgId, isTourMode]);
 
   return { data, loading };
 }
