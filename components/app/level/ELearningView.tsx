@@ -2824,70 +2824,75 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         };
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 12 : 10, padding: fs ? '20px 28px' : '14px 20px', boxSizing: 'border-box' as const }}>
-            {/* Context */}
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 10 : 8, padding: fs ? '16px 24px' : '12px 16px', boxSizing: 'border-box' as const }}>
+            {/* Context bar */}
             {s.dragContext && (
               <div style={{ flexShrink: 0, fontSize: fs ? 13 : 12, color: '#718096', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '9px 14px' : '7px 12px', lineHeight: 1.5 }}>
                 {s.dragContext}
               </div>
             )}
 
-            {/* Drop zones */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: fs ? 10 : 8, flex: 1, minHeight: 0 }}>
-              {zones.map(zone => {
-                const zoneItems = allItems.filter(item => dragPlacements[item.id] === zone.id);
-                return (
-                  <div
-                    key={zone.id}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={e => handleZoneDrop(e, zone.id)}
-                    style={{
-                      background: zoneItems.length > 0 ? zone.light : '#FAFAFA',
-                      border: `2px dashed ${zone.color}55`,
-                      borderRadius: 12, padding: fs ? '14px 12px' : '10px 10px',
-                      display: 'flex', flexDirection: 'column', gap: 8,
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    {/* Zone header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <span style={{ fontSize: fs ? 18 : 15 }}>{zone.icon}</span>
-                      <span style={{ fontSize: fs ? 13 : 12, fontWeight: 800, color: zone.color, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{zone.label}</span>
-                    </div>
-                    {/* Placed items */}
-                    {zoneItems.length === 0 ? (
-                      <div style={{ fontSize: fs ? 13 : 12, color: '#CBD5E0', fontStyle: 'italic', textAlign: 'center' as const, marginTop: 12 }}>Drop here</div>
-                    ) : (
-                      zoneItems.map(item => itemCard(item, true))
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {/* Two-column body: source pool left, drop zones right */}
+            <div style={{ display: 'flex', gap: fs ? 14 : 10, flex: 1, minHeight: 0 }}>
 
-            {/* Source pool */}
-            {unplaced.length > 0 && (
-              <div style={{ flexShrink: 0, borderTop: '1px solid #E2E8F0', paddingTop: fs ? 10 : 8 }}>
-                <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                  Drag to sort — {unplaced.length} remaining
+              {/* LEFT — source pool */}
+              <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+                  Items to sort {unplaced.length > 0 && `— ${unplaced.length} remaining`}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flex: 1, overflowY: 'auto' }}>
                   {unplaced.map(item => itemCard(item, false))}
+                  {unplaced.length === 0 && (
+                    <div style={{ fontSize: fs ? 13 : 12, color: '#CBD5E0', fontStyle: 'italic', paddingTop: 8 }}>All items placed</div>
+                  )}
                 </div>
+                {/* Status */}
+                {unplaced.length === 0 && !dragAllCorrect && (
+                  <div style={{ flexShrink: 0, fontSize: fs ? 12 : 11, color: '#38B2AC', fontWeight: 600 }}>
+                    All placed — hit Next to check
+                  </div>
+                )}
+                {dragAllCorrect && (
+                  <div style={{ flexShrink: 0, fontSize: fs ? 12 : 11, color: '#276749', fontWeight: 700, background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 8, padding: '6px 10px' }}>
+                    ✓ All correct
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Status messages */}
-            {unplaced.length === 0 && !dragAllCorrect && (
-              <div style={{ flexShrink: 0, fontSize: fs ? 13 : 12, color: '#38B2AC', fontWeight: 600, textAlign: 'center' as const, padding: '5px 0' }}>
-                All placed — hit Next to check your answers
+              {/* RIGHT — drop zones stacked vertically */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: fs ? 8 : 6, minHeight: 0 }}>
+                {zones.map(zone => {
+                  const zoneItems = allItems.filter(item => dragPlacements[item.id] === zone.id);
+                  return (
+                    <div
+                      key={zone.id}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => handleZoneDrop(e, zone.id)}
+                      style={{
+                        flex: 1,
+                        background: zoneItems.length > 0 ? zone.light : '#FAFAFA',
+                        border: `2px dashed ${zone.color}55`,
+                        borderRadius: 12, padding: fs ? '10px 14px' : '8px 10px',
+                        display: 'flex', flexDirection: 'column', gap: 6,
+                        transition: 'background 0.15s', minHeight: 0,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: fs ? 16 : 14 }}>{zone.icon}</span>
+                        <span style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: zone.color, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{zone.label}</span>
+                      </div>
+                      {zoneItems.length === 0 ? (
+                        <div style={{ fontSize: fs ? 12 : 11, color: '#CBD5E0', fontStyle: 'italic' }}>Drop here</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflowY: 'auto' }}>
+                          {zoneItems.map(item => itemCard(item, true))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            )}
-            {dragAllCorrect && (
-              <div style={{ flexShrink: 0, fontSize: fs ? 13 : 12, color: '#276749', fontWeight: 700, textAlign: 'center' as const, background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 8, padding: '8px 0' }}>
-                ✓ All correct — you can continue
-              </div>
-            )}
+            </div>
           </div>
         );
       }
@@ -3061,9 +3066,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 <div style={{
                   flex: 1, background: tc.bg, border: `1.5px solid ${tc.border}`,
                   borderLeft: `4px solid ${tc.border}`, borderRadius: '0 10px 10px 0',
-                  padding: fs ? '16px 20px' : '12px 16px',
-                  fontSize: fs ? 14 : 13, color: '#2D3748', lineHeight: 1.75,
-                  fontStyle: 'italic', whiteSpace: 'pre-line', overflowY: 'auto', minHeight: 0,
+                  padding: fs ? '18px 22px' : '14px 18px',
+                  fontSize: fs ? 15 : 14, color: '#2D3748', lineHeight: 1.8,
+                  whiteSpace: 'pre-line', overflowY: 'auto', minHeight: 0,
                 }}>
                   {s.tabs![activeCompTab].prompt}
                 </div>
@@ -3099,7 +3104,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                       <div className="flip-card-face" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #FEB2B2', background: '#FFF5F5', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: '#FC8181', background: '#FED7D7', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.frontBadge}</span>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.frontLabel}</div>
-                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: 13, color: '#2D3748', lineHeight: 1.6, fontStyle: 'italic', flex: 1 }}>
+                        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: fs ? '14px 16px' : '10px 12px', fontSize: fs ? 15 : 14, color: '#2D3748', lineHeight: 1.7, flex: 1 }}>
                           {card.frontPrompt}
                         </div>
                         <div style={{ fontSize: 12, color: '#A0AEC0', textAlign: 'center', marginTop: 8 }}>Click to flip ↺</div>

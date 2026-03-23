@@ -944,11 +944,34 @@ Two-column layout with predict-first quiz.
 ### `dragSort`
 Classify drag-and-drop activity. Learner drags items from a source pool into labelled drop zones.
 
-**Layout (column, `height: 100%`, `padding: fs ? '20px 28px' : '14px 20px'`):**
-1. **Context bar** — scenario description. `fontSize: 13/12`, `#718096`, `#F7FAFC` bg, `#E2E8F0` border, `borderRadius: 8`, `padding: 9px 14px / 7px 12px`
-2. **Drop zones grid** — `gridTemplateColumns: 1fr 1fr 1fr`, `flex: 1, minHeight: 0`. Each zone: `2px dashed` border at `color55`, `borderRadius: 12`, `padding: 14px 12px / 10px 10px`. Zone header: icon `18/15px`, label `13/12px` bold uppercase in zone color
-3. **Source pool** — below zones, `borderTop: 1px solid #E2E8F0`. Label `11/10px` uppercase gray. Items `flexWrap: wrap`, `gap: 7`
-4. **Status bar** — replaces source pool when all items placed. "All placed" in teal; "All correct" in green with `#F0FFF4` bg
+**Layout (two-column, `height: 100%`):**
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Context bar (full width) — scenario description     │
+├──────────────────┬───────────────────────────────────┤
+│  LEFT 38%        │  RIGHT flex: 1                    │
+│  Source pool     │  Drop zones — stacked vertically  │
+│  "Items to sort" │  Each zone: flex: 1               │
+│  Items stacked   │  2px dashed border, zone color    │
+│  vertically      │  Placed items inside each zone    │
+│  Status below    │                                   │
+└──────────────────┴───────────────────────────────────┘
+```
+
+**Left column (source pool):**
+- `flex: 0 0 38%`
+- `"ITEMS TO SORT — N remaining"` eyebrow label (11/10px uppercase `#A0AEC0`)
+- Unplaced items stacked vertically in `flexDirection: column, gap: 7`
+- Status messages below items: teal "All placed — hit Next to check" / green "✓ All correct"
+
+**Right column (drop zones):**
+- `flex: 1`, `flexDirection: column`, `gap: 8/6`
+- Each zone: `flex: 1` (equal height), `2px dashed border` at `zone.color55`, `borderRadius: 12`
+- Zone header: icon + label (uppercase bold in zone color)
+- Placed items render inside the zone as stacked cards
+
+> **Layout rule — always two columns.** Source pool on the LEFT, drop zones on the RIGHT. Never reverse this. Never stack zones above items. The left-to-right flow mirrors the learner's cognitive task: pick from the left, place on the right.
 
 **Item cards:** `fontSize: 14/13`, `padding: 10px 14px / 8px 12px`, `borderRadius: 8`, `lineHeight: 1.4`, `cursor: grab`
 
@@ -1371,10 +1394,12 @@ This structure ensures every node type is introduced, explained, and tested befo
 |---|---|---|
 | `scenario` | ✅ | Top banner text (gradient bg) |
 | `tabs[].label` | ✅ | Tab button text |
-| `tabs[].prompt` | ✅ | Styled prompt box (italic, teal left border) |
-| `tabs[].annotation` | ✅ | Annotation below prompt in `#F7FAFC` |
+| `tabs[].prompt` | ✅ | Styled prompt box (15/14px, `lineHeight: 1.8`, colored left border) |
+| `tabs[].annotation` | ✅ | Annotation below prompt in tinted bg |
 | `heading` / `tealWord` | ✅ | In takeaway header and content |
 | `body` | ❌ Not rendered | |
+
+> **Prompt fill rule:** The prompt box uses `flex: 1` and takes roughly half the available content height. At `15px / lineHeight 1.8`, each line is ~27px. The box holds ~8 lines. If one tab has a very short prompt (e.g. one sentence for the "weak" version), the box will appear mostly empty. **Every tab's prompt must justify its space** — for the weak version, add the questions or design decisions the brief leaves unanswered. Do not rely on the annotation block to compensate for sparse prompt content.
 
 ### `situationalJudgment` — Rendered fields
 
@@ -1420,7 +1445,7 @@ This structure ensures every node type is introduced, explained, and tested befo
 | `cards[].backPrompt` | ✅ | Back text content |
 | `cards[].backResponse` | ✅ **Required** | Back explanation panel — omit = empty explanation box |
 
-> **Front card fill rule:** Front cards render at a fixed height. `frontPrompt` should be **100–200 characters** to fill the card face. A one-sentence prompt will appear sparse. Add a prompt cue or question to fill the space (e.g., "What questions does this leave unanswered?").
+> **Front card fill rule:** Front cards render at `fontSize: 15px` (fullscreen) / `14px` (inline), `lineHeight: 1.7`. The badge + label take ~50px; the "Click to flip" hint takes ~20px; the remaining height for the prompt box is ~130px. At 15px × 1.7 = 25.5px per line, this fits **5 lines**. `frontPrompt` must be **at least 5 lines / 140+ characters** to fill the card visually. A single short sentence will leave obvious empty space. Always include the weak statement itself PLUS a clarifying question or prompt (e.g., "Who exactly opens this tool? What do they need to do? What do they already know?").
 
 ---
 

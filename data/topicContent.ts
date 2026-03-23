@@ -1381,7 +1381,7 @@ const L4T1_SLIDES: SlideData[] = [
     tabs: [
       {
         label: "Under-defined Brief",
-        prompt: "Build a dashboard showing project status for leadership.",
+        prompt: "Build a dashboard showing project status for leadership.\n\nWhat does 'status' mean? Which projects? Which leader opens this — and when? What format do they need? What should they do after seeing it? What data is this pulling from?\n\nNone of these questions are answered. Every one of them will be decided by the AI tool or by the builder's assumption.",
         annotation: "Every design decision — what 'status' means, which projects, what format, which leader, what action they should take — gets made by the AI tool or the builder's assumption. Not by the actual user's need.",
       },
       {
