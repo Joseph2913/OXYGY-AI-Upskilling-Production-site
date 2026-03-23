@@ -2260,18 +2260,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
               {/* ── Feedback ── */}
               {predictSelected !== null && (
-                <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease', display: 'flex', flexDirection: 'column', gap: fs ? 14 : 10 }}>
+                <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease' }}>
                   <div style={{ background: isCorrect ? '#F0FFF4' : '#FFF5F5', border: `2px solid ${isCorrect ? '#68D391' : '#FC8181'}`, borderRadius: 12, padding: fs ? '18px 22px' : '14px 18px' }}>
-                    <div style={{ fontSize: fs ? 16 : 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 6 }}>{isCorrect ? '✅ That\'s the best fit!' : '❌ Not quite — here\'s why'}</div>
+                    <div style={{ fontSize: fs ? 16 : 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 6 }}>{isCorrect ? '✅ Correct!' : '❌ Not quite — here\'s why'}</div>
                     <p style={{ fontSize: fs ? 16 : 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.7, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
                   </div>
-                  {isCorrect && p.prompt && (
-                    <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: fs ? '18px 22px' : '14px 18px' }}>
-                      <div style={{ fontSize: fs ? 12 : 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
-                      <div style={{ fontSize: fs ? 16 : 13, color: '#2D3748', lineHeight: 1.7, marginBottom: 10, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
-                      <div style={{ fontSize: fs ? 15 : 12, color: '#4A5568', lineHeight: 1.6 }}><span style={{ color: p.color, fontWeight: 700 }}>Why: </span>{p.why}</div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
