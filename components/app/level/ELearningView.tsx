@@ -2877,24 +2877,38 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const handleZoneDrop = (e: React.DragEvent, zoneId: string) => {
           e.preventDefault();
           if (!dragSortItemId) return;
-          setDragPlacements(prev => ({ ...prev, [dragSortItemId]: zoneId }));
+          const newPlacements = { ...dragPlacements, [dragSortItemId]: zoneId };
+          setDragPlacements(newPlacements);
           setDragSortItemId(null);
+          // Auto-check when last item is placed
+          const allPlacedNow = allItems.every(item => !!newPlacements[item.id]);
+          if (allPlacedNow) {
+            const allCorrectNow = allItems.every(item => newPlacements[item.id] === item.correctZone);
+            setDragChecked(true);
+            if (!allCorrectNow) {
+              const corrected: Record<string, string> = {};
+              allItems.forEach(item => {
+                if (newPlacements[item.id] === item.correctZone) corrected[item.id] = item.correctZone;
+              });
+              setTimeout(() => { setDragPlacements(corrected); setDragChecked(false); }, 1400);
+            }
+          }
         };
         const handleReturnToPool = (itemId: string) => {
           setDragPlacements(prev => { const next = { ...prev }; delete next[itemId]; return next; });
         };
 
-        const itemCard = (item: { id: string; label: string; correctZone: string }, inZone?: boolean) => {
+        const itemChip = (item: { id: string; label: string; correctZone: string }, inZone?: boolean) => {
           const placed = !!dragPlacements[item.id];
           const zone = zones.find(z => z.id === dragPlacements[item.id]);
-          let bg = '#FFFFFF', border = '1.5px solid #E2E8F0', color = '#4A5568';
+          let bg = '#FFFFFF', border = '1.5px solid #CBD5E0', color = '#2D3748';
           if (dragChecked && placed) {
             const correct = dragPlacements[item.id] === item.correctZone;
             bg = correct ? '#F0FFF4' : '#FFF5F5';
             border = correct ? '1.5px solid #68D391' : '1.5px solid #FC8181';
             color = correct ? '#276749' : '#C53030';
           } else if (placed && zone) {
-            bg = zone.light; border = `1.5px solid ${zone.color}55`; color = '#1A202C';
+            bg = zone.light; border = `1.5px solid ${zone.color}66`; color = '#1A202C';
           }
           return (
             <div
@@ -2902,18 +2916,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               draggable
               onDragStart={() => handleItemDragStart(item.id)}
               onClick={inZone ? () => handleReturnToPool(item.id) : undefined}
-              title={inZone ? 'Click to return to pool' : 'Drag to a layer'}
+              title={inZone ? 'Click to return to pool' : 'Drag to a bucket'}
               style={{
-                background: bg, border, borderRadius: 8,
-                padding: fs ? '10px 14px' : '8px 12px',
-                fontSize: fs ? 17 : 14, color, fontWeight: 500, lineHeight: 1.4,
+                background: bg, border, borderRadius: 10,
+                padding: fs ? '9px 16px' : '6px 11px',
+                fontSize: fs ? 15 : 13, color, fontWeight: 600, lineHeight: 1.3,
                 cursor: 'grab', userSelect: 'none' as const,
-                display: 'flex', alignItems: 'center', gap: 7,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
                 transition: 'background 0.2s, border 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
               }}
             >
               {dragChecked && placed && (
-                <span style={{ fontSize: 14, flexShrink: 0 }}>
+                <span style={{ fontSize: fs ? 14 : 12, flexShrink: 0 }}>
                   {dragPlacements[item.id] === item.correctZone ? '✓' : '✗'}
                 </span>
               )}
@@ -2923,74 +2938,64 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         };
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 10 : 8, padding: fs ? '16px 24px' : '12px 16px', boxSizing: 'border-box' as const }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 14 : 8, padding: fs ? '18px 28px' : '10px 14px', boxSizing: 'border-box' as const }}>
             {/* Context bar */}
             {s.dragContext && (
-              <div style={{ flexShrink: 0, fontSize: fs ? 17 : 14, color: '#718096', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '9px 14px' : '7px 12px', lineHeight: 1.5 }}>
+              <div style={{ flexShrink: 0, fontSize: fs ? 15 : 13, color: '#718096', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '9px 16px' : '7px 12px', lineHeight: 1.5 }}>
                 {s.dragContext}
               </div>
             )}
 
-            {/* Two-column body: source pool left, drop zones right */}
-            <div style={{ display: 'flex', gap: fs ? 14 : 10, flex: 1, minHeight: 0 }}>
-
-              {/* LEFT — source pool */}
-              <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
-                  Items to sort {unplaced.length > 0 && `— ${unplaced.length} remaining`}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flex: 1, overflowY: 'auto' }}>
-                  {unplaced.map(item => itemCard(item, false))}
-                  {unplaced.length === 0 && (
-                    <div style={{ fontSize: fs ? 13 : 12, color: '#CBD5E0', fontStyle: 'italic', paddingTop: 8 }}>All items placed</div>
-                  )}
-                </div>
-                {/* Status */}
-                {unplaced.length === 0 && !dragAllCorrect && (
-                  <div style={{ flexShrink: 0, fontSize: fs ? 12 : 11, color: '#38B2AC', fontWeight: 600 }}>
-                    All placed — hit Next to check
-                  </div>
-                )}
-                {dragAllCorrect && (
-                  <div style={{ flexShrink: 0, fontSize: fs ? 12 : 11, color: '#276749', fontWeight: 700, background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 8, padding: '6px 10px' }}>
-                    ✓ All correct
+            {/* Chip pool — horizontal wrap row */}
+            <div style={{ flexShrink: 0 }}>
+              <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, marginBottom: fs ? 8 : 5 }}>
+                {unplaced.length > 0 ? `${unplaced.length} item${unplaced.length !== 1 ? 's' : ''} to sort` : dragAllCorrect ? '' : 'All items placed'}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: fs ? 8 : 6, minHeight: fs ? 42 : 32, alignContent: 'flex-start' as const }}>
+                {unplaced.map(item => itemChip(item, false))}
+                {unplaced.length === 0 && dragAllCorrect && (
+                  <div style={{ fontSize: fs ? 14 : 12, color: '#276749', fontWeight: 700, background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 8, padding: fs ? '8px 14px' : '5px 10px' }}>
+                    ✓ All correct — click Next to continue
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* RIGHT — drop zones stacked vertically */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: fs ? 8 : 6, minHeight: 0 }}>
-                {zones.map(zone => {
-                  const zoneItems = allItems.filter(item => dragPlacements[item.id] === zone.id);
-                  return (
-                    <div
-                      key={zone.id}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={e => handleZoneDrop(e, zone.id)}
-                      style={{
-                        flex: 1,
-                        background: zoneItems.length > 0 ? zone.light : '#FAFAFA',
-                        border: `2px dashed ${zone.color}55`,
-                        borderRadius: 12, padding: fs ? '10px 14px' : '8px 10px',
-                        display: 'flex', flexDirection: 'column', gap: 6,
-                        transition: 'background 0.15s', minHeight: 0,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        <span style={{ fontSize: fs ? 16 : 14 }}>{zone.icon}</span>
-                        <span style={{ fontSize: fs ? 12 : 11, fontWeight: 800, color: zone.color, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{zone.label}</span>
-                      </div>
-                      {zoneItems.length === 0 ? (
-                        <div style={{ fontSize: fs ? 12 : 11, color: '#CBD5E0', fontStyle: 'italic' }}>Drop here</div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflowY: 'auto' }}>
-                          {zoneItems.map(item => itemCard(item, true))}
-                        </div>
-                      )}
+            {/* Drop zones — equal columns, large */}
+            <div style={{ flex: 1, display: 'flex', gap: fs ? 14 : 8, minHeight: 0 }}>
+              {zones.map(zone => {
+                const zoneItems = allItems.filter(item => dragPlacements[item.id] === zone.id);
+                return (
+                  <div
+                    key={zone.id}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => handleZoneDrop(e, zone.id)}
+                    style={{
+                      flex: 1,
+                      background: zoneItems.length > 0 ? zone.light : '#FAFAFA',
+                      border: `2px dashed ${zone.color}66`,
+                      borderRadius: 16,
+                      padding: fs ? '18px 20px' : '10px 12px',
+                      display: 'flex', flexDirection: 'column', gap: fs ? 10 : 6,
+                      transition: 'background 0.15s', minHeight: 0,
+                    }}
+                  >
+                    {/* Zone header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: fs ? 8 : 5, flexShrink: 0 }}>
+                      <span style={{ fontSize: fs ? 24 : 16 }}>{zone.icon}</span>
+                      <span style={{ fontSize: fs ? 13 : 11, fontWeight: 800, color: zone.color, letterSpacing: '0.07em', textTransform: 'uppercase' as const }}>{zone.label}</span>
                     </div>
-                  );
-                })}
-              </div>
+                    {/* Zone items */}
+                    {zoneItems.length === 0 ? (
+                      <div style={{ fontSize: fs ? 13 : 11, color: '#CBD5E0', fontStyle: 'italic', paddingTop: 4 }}>Drop here</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: fs ? 8 : 5, flex: 1, overflowY: 'auto' as const }}>
+                        {zoneItems.map(item => itemChip(item, true))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -3617,9 +3622,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     (s.type === 'persona' && s.predictFirst) || s.type === 'situationalJudgment'
       ? '👆 Select an option before continuing'
       : s.type === 'dragSort' && !dragAllPlaced
-      ? '👆 Place all items before continuing'
+      ? '👆 Drag all items into a bucket to continue'
       : s.type === 'dragSort' && !dragAllCorrect
-      ? '↩ Some items are in the wrong layer — review and try again'
+      ? '↩ Some items landed in the wrong bucket — try again'
       : '👆 Try the activity before continuing';
 
   const triggerActivityWarning = () => {
