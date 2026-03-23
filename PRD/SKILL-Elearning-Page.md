@@ -419,7 +419,7 @@ The Next button is a multi-stage content reveal controller before it becomes a s
 
 | Slide Type | Next Behavior |
 |-----------|--------------|
-| `dragSort` | **Blocks** if any item in wrong zone — flashes red, returns incorrect items to pool after 1.2s |
+| `dragSort` | **Blocks** if any item in wrong zone — shows ✓/✗ feedback, items stay in place for user to fix |
 | `buildAPrompt` | **Blocks** if no chips placed |
 | `spotTheFlaw` | **Blocks** if nothing selected |
 | `quiz` | **Blocks** if nothing selected |
@@ -457,7 +457,7 @@ Animation: warningPop 2.5s ease forwards (auto-dismisses)
 Messages:
 - `situationalJudgment` or `persona` → `"👆 Select an option before continuing"`
 - `dragSort` (not all placed) → `"👆 Place all items before continuing"`
-- `dragSort` (all placed, some wrong) → `"↩ Some items are in the wrong layer — review and try again"`
+- `dragSort` (all placed, some wrong) → `"↩ Some items landed in the wrong bucket — try again"`
 - All other blocked types → `"👆 Try the activity before continuing"`
 
 ---
@@ -828,11 +828,21 @@ Option states: Default `1px solid C.border` / Selected `2px solid C.teal, C.teal
 ### `comparison`
 Tabbed scenario explorer.
 
-**Scenario banner:** `background: linear-gradient(#E6FFFA, #EBF8FF), border: 1.5px solid #38B2AC33`
+**Scenario banner:** `background: #F7FAFC, border: 1px solid #E2E8F0`
 
-**Tab bar:** Active tab `borderBottom: 3px solid #38B2AC`, teal text.
+**Tab bar:** Three pill buttons, each with its own palette (red/yellow/green). Active = solid border + coloured bg. Inactive = gray.
 
-**Prompt box:** `borderLeft: 3px solid #38B2AC`, italic. Annotation below in `#F7FAFC`.
+**Prompt block (upper ~44%):** Dark navy background (`#1A202C`) with light text (`#E2E8F0`), monospace font, and a coloured "Prompt" badge. Left border accent matches the active tab colour. This makes the prompt visually unmistakable as "what you type into the AI."
+
+**Analysis block (remaining height):** Soft coloured background (tab's annotBg), matching border, and a "Analysis" badge. Body text 14–16px `#4A5568`.
+
+**Badge spec (both blocks):**
+```jsx
+{ fontSize: 11, fontWeight: 700, background: tc.badgeBg, color: tc.badgeText,
+  borderRadius: 6, padding: '2px 8px', letterSpacing: '0.04em', textTransform: 'uppercase' }
+```
+
+**Rule:** The two sections must always look visually opposite — dark input vs light explanation. Never render both sections on a light background.
 
 Next behavior: steps through all tabs before advancing.
 
@@ -879,7 +889,15 @@ Activity gate: Blocked if no chips placed at all.
 ### `dragSort`
 Classify drag-and-drop. Learner drags items from source pool into labelled drop zones.
 
-Activity gate: Blocks if any item in wrong zone. Flashes red, returns incorrect items to pool after 1.2s.
+**Behaviour must match `buildAPrompt` exactly:**
+- Auto-checks when the last item is dropped (300ms delay)
+- ✓/✗ badge appears on each chip — correct stays green, wrong turns red
+- Wrong items **stay in their zone** — they do NOT snap back to the pool
+- User clicks a chip in a zone to return it to the pool, then re-drags to the correct bucket
+- `dragChecked` resets to `false` on every new drag/drop or return-to-pool action, so feedback refreshes cleanly on each attempt
+- If the user clicks Next with all placed but some wrong: ✓/✗ shown, items stay in place, activity warning fires
+
+Activity gate: Blocks until every item is in the correct zone.
 
 ---
 
