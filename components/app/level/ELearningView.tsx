@@ -3770,8 +3770,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
         {/* Content — design box zooms to fill available height on any screen */}
-        <div style={{ flex: 1, overflow: 'hidden', background: '#FFFFFF' }}>
+        <div style={{ flex: 1, overflow: 'hidden', background: '#FFFFFF', position: 'relative' }}>
           <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
             width: `${(100 / slideZoom).toFixed(2)}%`,
             height: fsInnerH,
             zoom: slideZoom,
@@ -3779,7 +3782,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             flexDirection: 'column',
           }}>
             {renderTakeaway()}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start', minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start', minHeight: 0 }}>
               {renderSlide()}
             </div>
             {s.sourceLink && (
