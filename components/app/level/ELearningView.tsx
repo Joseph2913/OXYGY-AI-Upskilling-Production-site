@@ -3777,7 +3777,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             left: 0,
             width: `${(100 / slideZoom).toFixed(2)}%`,
             height: fsInnerH,
-            zoom: slideZoom,
+            transform: `scale(${slideZoom})`,
+            transformOrigin: '0 0',
             display: 'flex',
             flexDirection: 'column',
           }}>
