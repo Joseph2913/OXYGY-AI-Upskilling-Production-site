@@ -1,207 +1,247 @@
-# SKILL: E-Learning Page — Oxygy AI Upskilling Site
+# SKILL: E-Learning Module — Oxygy AI Upskilling Site
 
 ## When to apply this skill
 
 Apply this skill in full whenever the user asks you to:
-- Create a new e-learning page for any level of the Oxygy AI Upskilling Framework
-- Add a new learning module, slide deck, or learning journey page to the site
-- Update or extend an existing e-learning page
-- Build any page that hosts slide-based learning content on this project
+- Create a new e-learning module for any level and topic of the Oxygy AI Upskilling Framework
+- Add a new topic, slide deck, or learning journey to the app
+- Update or extend an existing e-learning module
+- Build any slide-based learning content on this project
 
-Do NOT deviate from these specifications. Every e-learning page on this site must use this exact template. Brand consistency and structural consistency across levels is a core project requirement.
+**Before writing any code, read this skill in full.** Every e-learning module on this site must follow this exact template. Brand consistency and structural consistency across all levels is a non-negotiable project requirement.
 
----
-
-## ⚠️ CRITICAL: Dashboard-First Rule
-
-**All course content MUST be built inside the app dashboard view, NOT on the marketing site.**
-
-- Courses are accessed via: **My Journey → Level N → Review** (inside `/app/` routes)
-- The orchestrating component is `pages/app/AppCurrentLevel.tsx`
-- Phase views live in `components/app/level/` — `ELearningView.tsx`, `ReadView.tsx`, `WatchView.tsx`, `PractiseView.tsx`
-- All topic-specific content (slides, articles, videos) is stored in `data/topicContent.ts` using the `TOPIC_CONTENT["${level}-${topicId}"]` registry pattern
-- **Never** create standalone marketing-site pages (e.g. `pages/learn/level-*`) for course content
-- The marketing site (`MarketingSite.tsx`, hash-based routing) is for promotional/landing pages only
-- Phase views receive content via props from `AppCurrentLevel.tsx`, which looks it up via `getTopicContent(level, topicId)`
-
-### Navigation & Level Selection
-
-The "Review →" and "Continue →" buttons on the My Journey page (`pages/app/AppJourney.tsx`) and the Level Cards (`components/app/LevelCard.tsx`) navigate to `/app/level?level={N}`, where `{N}` is the level number (1–5).
-
-`AppCurrentLevel.tsx` reads the `?level=` query parameter to determine which level's content to display. If no `?level=` param is present, it falls back to `userProfile.currentLevel`.
-
-**This is essential because:**
-- Users who have completed earlier levels must still be able to access and review that content at any time
-- The mock data currently sets the user's progress to Level 5 — without the `?level=` param, every navigation would show Level 5 content
-- When building or testing course content for a specific level, navigate directly via `/app/level?level=1` (or whichever level you are working on)
-
-**Rules for any component that navigates to the level page:**
-- Always include `?level={levelNumber}` in the URL
-- Never navigate to bare `/app/level` without the level param — this causes the page to show the user's current active level, which may not be the intended one
-
-### Adding content for a new topic
-
-1. Add slide, article, and video data to `data/topicContent.ts` under a new key (e.g. `"2-1"` for Level 2, Topic 1)
-2. Add/update topic metadata in `data/levelTopics.ts`
-3. The existing `AppCurrentLevel.tsx` → phase view pipeline handles rendering automatically — no new pages or routes needed
-4. Test by navigating to `/app/level?level={N}` where `{N}` is the level number
+A **Topic Outline** document must be provided alongside this skill before authoring begins. The Topic Outline defines the topic title, learning objectives, slide-by-slide content plan, article URLs, and video URLs for the specific module being built. This skill defines *how* to build — the Topic Outline defines *what* to build.
 
 ---
 
-## 1. What You Are Building
+## ⚠️ CRITICAL: Production Architecture
 
-Each e-learning page is a **self-contained learning journey page** for one level of the Oxygy AI Upskilling Framework. It is not a standalone SCORM file — it is a native React page embedded within the main Oxygy website.
+**All course content MUST be built inside the app dashboard, NOT on the marketing site.**
 
-Every page has three zones stacked vertically:
+### Where content lives
+
+| Path | Purpose |
+|------|---------|
+| `/app/level?level=N` | URL for any level's content. Always include `?level=N` |
+| `pages/app/AppCurrentLevel.tsx` | Orchestrator — reads `?level=` param, loads topic content, passes to phase views |
+| `components/app/level/ELearningView.tsx` | The e-learning player — renders all slides |
+| `data/topicContent.ts` | All slide data, stored under key `"L-T"` (e.g. `"2-3"` = Level 2, Topic 3) |
+| `data/levelTopics.ts` | Topic metadata: level number, name, tagline, accent colors, topics array |
+
+### Adding a new topic — exact steps
+
+1. Add slide data to `data/topicContent.ts` under a new `"L-T"` key
+2. Add topic metadata to `data/levelTopics.ts`
+3. **No new pages or routes needed** — the existing pipeline handles rendering automatically
+4. Test at `/app/level?level=N`
+
+### Navigation rules
+
+- Every component that links to the level page **must** include `?level=N`
+- Never navigate to bare `/app/level` without the level param — this shows the user's current active level, not the intended one
+- Breadcrumb: `← Back to My Journey` — links to `/app/journey`
+- The Journey Strip is always visible below content, showing all phases with completion state
+
+### Level metadata structure (`levelTopics.ts`)
+
+```typescript
+{
+  level: number,             // 1–5
+  name: string,              // e.g. "Prompt Engineering"
+  tagline: string,           // short descriptor shown on level card
+  accentColor: string,       // e.g. "#A8F0E0"
+  accentDark: string,        // e.g. "#1A6B5F" — for text on accent bg
+  topics: [
+    {
+      id: string,            // e.g. "2-3" (level-topic)
+      title: string,
+      phases: 2,             // always 2: E-Learn + Practise
+    }
+  ]
+}
+```
+
+### Do NOT
+
+- Create standalone marketing-site pages (e.g. `pages/learn/level-*`) for course content
+- Build on the marketing site (`MarketingSite.tsx`) — that is for promotional/landing pages only
+- Hardcode level-specific routes — derive the practice tool URL from `courseIntro.levelNumber` in slide data
+
+---
+
+## 1. Page Structure
+
+Each e-learning page has three zones stacked vertically:
+
 1. **Page Hero** — level identity, title, description, metadata, progress summary
 2. **Active Phase Content** — the currently active learning activity (full width)
 3. **Journey Strip** — horizontal progress tracker showing all phases
 
-The page hosts up to three sequential learning phases:
-- **Phase 1: E-Learning** — an interactive slide deck (always first)
+The page hosts sequential learning phases:
+- **Phase 1: E-Learning** — interactive slide deck (always first)
 - **Phase 2: Read** — curated articles with reflection prompts
 - **Phase 3: Watch** — curated videos with knowledge check quizzes
-- **Handoff CTA** — redirects to the Prompt Playground or next activity (not hosted on this page)
+- **Handoff CTA** — redirects to the level's practice tool
 
-Phases unlock sequentially. Completing Phase 1 advances to Phase 2. Completing Phase 2 advances to Phase 3. Completing Phase 3 triggers the handoff CTA. The Journey Strip is always visible and shows completion state across all phases.
+Phases unlock sequentially. The Journey Strip is always visible.
 
 ---
 
 ## 2. Content Design Philosophy
 
-This section governs the pedagogical tone, narrative structure, and content authoring standards for every e-learning slide deck built with this skill. These principles apply to all levels and all topics.
-
 ### 2.1 Core Principles
 
 **Principle 1: Relevance Is Earned Through Evidence, Not Assumed Through Scenario.**
-The opening of every module must establish *why this topic matters* using objective, verifiable evidence — not by assuming the learner has had a negative experience. A compelling statistic about the learner's profession is as engaging as a personal scenario, often more so, because data is objective and non-judgmental. Relevance can be established through industry research, adoption metrics, output quality data, or observable demonstrations that reveal a gap the learner hadn't considered.
+The opening of every module must establish *why this topic matters* using objective, verifiable evidence — not by assuming the learner has had a negative experience. A compelling statistic is as engaging as a personal scenario, and more defensible because data is non-judgmental.
 
 **Principle 2: Gaps Are Opportunities, Not Failures.**
-Content must frame knowledge gaps as opportunities for growth, never as personal shortcomings. The learner is a capable professional who hasn't been shown this technique yet — not someone who has been doing things wrong. Across all content, avoid language that implies blame, shame, or inadequacy. The learner chose to take this module — respect that choice by treating them as someone investing in growth, not someone being corrected.
+Frame knowledge gaps as something most people haven't been shown yet — not something they've been getting wrong. The learner chose to take this module. Respect that.
 
 **Principle 3: Every Slide Earns Its Place.**
-No filler slides. Every slide must teach, test, or transition. If a slide doesn't change what the learner knows, believes, or can do, it doesn't belong in the deck.
+No filler slides. Every slide must teach, test, or transition. If a slide doesn't change what the learner knows, believes, or can do — it doesn't belong.
 
 **Principle 4: Show, Don't Lecture.**
-Wherever possible, demonstrate the concept through interactive elements, side-by-side comparisons, or worked examples rather than paragraphs of explanation. The learner should *see* the difference a technique makes, not just read about it.
+Wherever possible, demonstrate the concept through interactive elements, side-by-side comparisons, or worked examples. The learner should *see* the difference a technique makes, not just read about it.
 
-**Principle 5: Every Slide Has a Contrast Moment — But Never a Strawman.**
-The most effective teaching tool is contrast: showing what happens with and without a technique. However, **never position a single framework or technique as the universally correct approach.** When teaching a framework (e.g., the Prompt Blueprint / RCTF), present it as one effective tool in a broader toolkit, not the default answer for every situation. Before/after comparisons must show genuine attempts on both sides — the difference is in technique, not effort. Any decision framework or heuristic must acknowledge that the right approach depends on the situation: the task, the stakes, the time available, and whether the output needs to be repeatable. Prefer "effective technique" or "recommended approach for [specific situation]" over "best practice."
+**Principle 5: Frameworks Are Tools, Not Rules.**
+When teaching a framework, present it as one effective tool in a broader toolkit. Before/after comparisons must show genuine attempts on both sides — the difference is in technique, not effort. Prefer *"effective technique"* or *"recommended approach for [specific situation]"* over *"best practice."*
+
+---
 
 ### 2.2 Five-Beat Narrative Arc
 
-Every e-learning slide deck follows a five-beat story structure. The beats create narrative momentum — the learner should feel pulled forward, not lectured at.
+Every module follows this mandatory story structure. The beats create narrative momentum — the learner is pulled forward, not lectured at.
 
 **Beat 1 — SITUATION (Evidence-Led Opening)**
-Establish why this topic matters using real data, industry research, or verifiable metrics. The tone is opportunity and insight, not failure and frustration. The learner should feel "I didn't know that — tell me more," not "I've been doing this wrong."
+Establish why this topic matters using real data, industry research, or verifiable metrics. Tone: opportunity and insight, not failure and frustration. The learner should feel *"I didn't know that — tell me more,"* not *"I've been doing this wrong."*
 
-Acceptable Beat 1 openings:
-- Industry statistics that reveal a gap between adoption and skill (e.g., usage rates vs. training rates)
-- Research findings that quantify the impact of the skill being taught (e.g., output quality variance attributable to prompt structure)
-- Observable parallel demonstrations showing two approaches to the same task with visibly different results — framed as curiosity, not judgment
+Acceptable openings:
+- Industry statistics revealing a gap between adoption and skill
+- Research findings quantifying the impact of the skill being taught
+- Observable demonstrations showing two approaches with visibly different results — framed as curiosity, not judgment
 
-Unacceptable Beat 1 openings:
-- "You failed at this task" framings
-- Scenarios that assume the learner has had a negative experience
-- Dramatic or exaggerated frustration moments (e.g., "The AI gives you something an intern would be embarrassed to submit")
-- Any framing that positions the learner as having done something wrong
+Unacceptable openings:
+- Any framing that assumes the learner has had a negative experience
+- Dramatic frustration scenarios
+- Language implying the learner has been doing something wrong
+- Vague opener: *"AI is changing everything"*
+
+Slide types: `evidenceHero`, `chart`, `pyramid`, `tensionStatement`
 
 **Beat 2 — TENSION (The Knowledge Gap)**
-Name what's missing or unknown — not what's broken or wrong. The tension is a knowledge gap, not a performance failure. Frame the gap as something most people haven't been shown, not something they've been getting wrong. Replace language like "here's what's broken" with "here's what most people haven't been shown."
+Name what's missing — not what's broken. Frame the gap as something most people haven't been shown.
+
+Language to use: *"Here's what most people haven't been shown…"*
+Language to avoid: *"Here's what's broken"*, *"Here's what you've been doing wrong"*
+
+Slide types: `tensionStatement`, `gapDiagram`, `concept`
 
 **Beat 3 — CONCEPT (The Framework)**
-Introduce the core framework or technique. When presenting a structured framework, the same beat must also introduce the alternative approaches and the situational judgment for choosing between them. The learner should understand *when* to use this technique, not just *how*. Avoid implying that the framework is the only valid approach.
+Introduce the core framework or technique. The same beat must also introduce alternative approaches and the situational judgment for when to use each. The learner should understand *when* to use this technique, not just *how*.
+
+Never imply the framework being taught is the only valid approach.
+
+Slide types: `contextBar`, `rctf`, `toolkitOverview`, `approachIntro`, `concept`
 
 **Beat 4 — CONTRAST (Technique in Action)**
-Show the technique applied versus not applied. Frame the "before" state as "without this technique" rather than "the wrong way." The before state is neutral — it's simply what happens when the technique hasn't been applied yet. Both states should represent genuine attempts — the difference is in technique, not effort. Avoid strawmanning the before state with deliberately weak examples.
+Show the technique applied versus not applied.
+
+Critical rules:
+- Frame the "before" state as *"without this technique"* — never *"the wrong way"*
+- Both before and after states must represent genuine attempts — the difference is technique, not effort
+- Never strawman the before state with a deliberately weak example
+
+Slide types: `scenarioComparison`, `flipcard`, `parallelDemo`, `gapDiagram`
 
 **Beat 5 — BRIDGE (From Theory to Practice)**
-Connect the module's concepts to the learner's real work. Provide templates, decision aids, or next-step prompts that help the learner apply what they've learned immediately. This beat transitions into the Read and Watch phases.
+Connect the module's concepts to the learner's real work. Provide templates, decision aids, or exercises. This beat transitions into the Read and Watch phases.
+
+Slide types: `situationalJudgment`, `situationMatrix`, `templates`, `branching`, `spectrum`, `bridge`, `moduleSummary`
+
+---
 
 ### 2.3 Tool-Agnostic Framing
 
-All e-learning content must be tool-agnostic. Do not reference specific AI tools (ChatGPT, Claude, Copilot, Gemini) in scenario setups, prompt demonstrations, or teaching content. Instead, use neutral framing like "your AI tool," "the AI," or "any large language model."
+All e-learning content must be tool-agnostic. Never reference specific AI tools (ChatGPT, Claude, Copilot, Gemini) in scenario setups, prompt demonstrations, or teaching content.
 
-Rationale: Learners will be using different tools depending on their organisation's approved software. The skills taught (prompting, context engineering, workflow design) are transferable across all tools. Anchoring examples to a specific tool creates an unnecessary barrier for learners whose organisation uses a different one.
+Use instead: *"your AI tool"*, *"the AI"*, *"any large language model"*
 
 Exceptions:
-- Tool-specific features can be referenced in Beat 5 (Bridge) when pointing learners to specific practice activities
-- Tool-specific interface elements (e.g., "Projects" in Claude, "Custom GPTs" in ChatGPT) can be referenced in Levels 2+ where the learning objective is specifically about that tool's capabilities
-- The Prompt Playground and other Oxygy platform tools are not subject to this rule — they are internal tools, not third-party AI products
+- Tool-specific features can be referenced in Beat 5 (Bridge) when pointing to specific practice activities
+- Tool-specific capabilities can be referenced in Levels 2+ where the learning objective is specifically about that tool's feature set
+- Internal Oxygy platform tools (Prompt Playground, etc.) are not subject to this rule
+
+---
 
 ### 2.4 Audience Universality Rule
 
-Every scenario, example, prompt demonstration, and exercise must resonate across roles, functions, seniority levels, and organisational contexts. This is mandatory — not aspirational.
+Every scenario, example, prompt demonstration, and exercise must resonate across roles, functions, seniority levels, and organisational contexts. This is mandatory, not aspirational.
 
-- Scenarios must describe tasks that every knowledge worker performs: preparing for meetings, summarising information, drafting communications, synthesising inputs from multiple sources, structuring a recommendation, creating a first draft of a document, reviewing and improving existing content.
-- Never anchor a scenario to a specific function (e.g., "as a consultant preparing a client debrief" or "as an HR lead designing an onboarding programme") unless the exercise explicitly asks the learner to choose their own role.
-- Never name specific job titles in scenario setups. Use "you" and describe the task, not the role.
-- When parallel demonstrations are used (showing two approaches to the same task), the task itself must be one that any professional in any team could face.
-- Interactive exercises (branching scenarios, situational judgment, drag-and-drop) must use prompts and tasks drawn from universally recognisable professional situations — not function-specific workflows.
-- If a slide references an industry (e.g., pharma, professional services), it must be in a context that any professional in that industry would recognise, not a context specific to one department.
+Scenarios must describe tasks that every knowledge worker performs:
+- Preparing for a meeting
+- Summarising information
+- Drafting a communication
+- Structuring a recommendation
+- Creating a first draft of a document
+- Reviewing and improving existing content
+- Synthesising inputs from multiple sources
 
-This rule applies to: Beat 1 scenario setups, Beat 3 worked examples, Beat 4 contrast scenarios, Beat 5 interactive exercises, and any prompt text shown on screen.
+**Never:** anchor a scenario to a specific function, name specific job titles in scenario setups, or use tasks only one department would recognise.
+
+**Test before finalising:** *"Could this task be faced by at least 3 completely different job functions?"* If not, rewrite it.
+
+---
 
 ### 2.5 Slide Presentation Rules
 
-These rules govern how slide content is rendered and composed. They apply to every course across all levels.
-
-**Rule 1: Every course starts with a Course Intro slide (type: `courseIntro`).**
-This is always slide 0 / slide 1. It shows the topic title, level badge, estimated time, a brief description, and a "What You'll Learn" objectives list. It sets expectations before the learner sees any content. The intro slide uses a dark navy gradient background to visually distinguish it from content slides.
+**Rule 1: Every course starts with a `courseIntro` slide (always slide 0).**
+Shows topic title, level badge, estimated time, brief description, and "What You'll Learn" objectives list. Dark navy gradient background.
 
 **Rule 2: Evidence slides must fill the vertical space.**
-Stats should use large, attention-grabbing values (42px+ font size). Include source badges with recognisable logos/branding where possible (McKinsey, Deloitte, MIT, etc.). Add a bottom insight bar to eliminate empty space and reinforce the key takeaway. Stats cards should flex to fill available height.
+Stats use large attention-grabbing values (42px+ font). Include source badges. Add a bottom insight bar.
 
 **Rule 3: Fullscreen mode must be actively encouraged.**
-The inline player has limited vertical space. The fullscreen button must be visually prominent (glowing animation) with a tooltip on first load that says "View in full screen — Click here for the best learning experience." The tooltip auto-dismisses after 8 seconds or when the user enters fullscreen.
+The fullscreen button must be visually prominent (glowing animation) with a tooltip on first load: *"View in full screen — Click here for the best learning experience."* Auto-dismisses after 8 seconds or on fullscreen entry.
 
-**Rule 4: Examples should be shown by default, not hidden behind expand buttons.**
-On slides where examples are central to the learning (e.g., spectrum positions, prompt approaches), show the example text inline by default. Do not require a click to reveal examples. The user should see the full content immediately. Only use expand/collapse for supplementary context like "Why this matters for AI" explanations.
+**Rule 4: Examples should be shown by default, not hidden.**
+Show example text inline by default. Only use expand/collapse for supplementary context.
 
 **Rule 5: Framework components must explain WHY, not just WHAT.**
-When presenting framework elements (e.g., the six Prompt Blueprint components, modifier techniques), each component should have:
-- A definition (what it is)
-- An example (what it looks like in practice)
-- A "Why this matters for AI" explanation (available as a dropdown) that describes what changes in how the AI processes the request when this component is included
+Each framework element must include: definition + example + "Without this → [specific consequence]" impact statement.
 
 **Rule 6: Gap/contrast diagrams must include real example prompts.**
-When showing a gap between generic and specific approaches, include actual prompt text on both sides — not just abstract labels. The learner should see concrete before/after prompts to understand what "adding context" actually looks like in practice.
+Show actual prompt text on both sides — not abstract labels.
 
-**Rule 7: Modifier techniques must explain the reasoning benefit, not just the technique.**
-For each modifier (Chain of Thought, Few-Shot, Iterative Refinement, etc.), explain:
-- What it does (definition)
-- Why it matters (how it changes the AI's reasoning or output quality)
-- A detailed, realistic example
-The "why" should explain the practical benefit: Chain of Thought = visible reasoning trace for validation; Few-Shot = steers the AI's style/taste to match yours; Iterative = narrows the gap between output and intent through specific feedback.
+**Rule 7: Modifier techniques must explain the reasoning benefit.**
+For each modifier: definition + why it matters + detailed realistic example.
 
 ---
 
 ## 3. Brand & Visual Tokens
 
-These are the only values to use. Never introduce new colours, fonts, or spacing values not listed here.
+These are the only values to use. Never introduce new colours, fonts, or spacing values.
 
 ### Colours
 ```js
 const C = {
-  navy:          "#1A202C",  // headings, nav bg, primary text
-  navyMid:       "#2D3748",  // secondary headings, diagram elements
-  teal:          "#38B2AC",  // primary CTA, progress bar, active state, eyebrows
-  tealDark:      "#2C9A94",  // teal hover state
-  tealLight:     "#E6FFFA",  // teal tint backgrounds, active phase bg
-  mint:          "#A8F0E0",  // level badges, accent borders
-  border:        "#E2E8F0",  // all card borders, dividers (1px solid)
-  bg:            "#F7FAFC",  // page background, secondary panels
-  body:          "#4A5568",  // body copy
-  light:         "#718096",  // secondary body, captions
-  muted:         "#A0AEC0",  // placeholders, disabled, eyebrow labels
-  success:       "#48BB78",  // correct answer, completed state
-  successLight:  "#F0FFF4",  // correct answer bg
-  successBorder: "#9AE6B4",  // correct answer border
-  error:         "#FC8181",  // wrong answer
-  errorLight:    "#FFF5F5",  // wrong answer bg
-  errorBorder:   "#FEB2B2",  // wrong answer border
-
-  // RCTF element colours — used consistently across all levels
+  navy:          "#1A202C",
+  navyMid:       "#2D3748",
+  teal:          "#38B2AC",
+  tealDark:      "#2C9A94",
+  tealLight:     "#E6FFFA",
+  mint:          "#A8F0E0",
+  border:        "#E2E8F0",
+  bg:            "#F7FAFC",
+  body:          "#4A5568",
+  light:         "#718096",
+  muted:         "#A0AEC0",
+  success:       "#48BB78",
+  successLight:  "#F0FFF4",
+  successBorder: "#9AE6B4",
+  error:         "#FC8181",
+  errorLight:    "#FFF5F5",
+  errorBorder:   "#FEB2B2",
+  // RCTF element colours
   role:          "#667EEA",  roleLight:    "#EBF4FF",
   context:       "#38B2AC",  contextLight: "#E6FFFA",
   task:          "#ED8936",  taskLight:    "#FFFBEB",
@@ -209,20 +249,30 @@ const C = {
 };
 ```
 
+### Level Accent Colors
+
+| Level | accentColor | accentDark |
+|-------|-------------|------------|
+| L1 | `#38B2AC` (Teal) | `#2C9A94` |
+| L2 | `#C3D0F5` (Lavender) | `#5B6DC2` |
+| L3 | `#FBE8A6` (Pale Yellow) | `#C4A934` |
+| L4 | `#FBCEB1` (Soft Peach) | `#D97B4A` |
+| L5 | `#38B2AC` (Teal) | `#2C9A94` |
+
 ### Typography
 ```js
 const F = {
-  h: "'DM Sans', system-ui, sans-serif",       // all headings
-  b: "'Plus Jakarta Sans', system-ui, sans-serif", // all body, labels, buttons
+  h: "'DM Sans', system-ui, sans-serif",
+  b: "'Plus Jakarta Sans', system-ui, sans-serif",
 };
 ```
 
-Always load both from Google Fonts at the top of the component:
-```js
+Always load both from Google Fonts:
+```css
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 ```
 
-### Typography scale
+### Typography Scale
 | Element | Font | Size | Weight | Colour |
 |---|---|---|---|---|
 | Page h1 | DM Sans | 28px | 800 | navy |
@@ -237,8 +287,8 @@ Always load both from Google Fonts at the top of the component:
 | Prompt example | Plus Jakarta Sans | 13px | 400 italic | navyMid |
 | Tag / pill | Plus Jakarta Sans | 10–12px | 700 | — |
 
-### Teal heading accent
-Key words in h1/h2 headings get a teal underline. Never colour the text — only underline:
+### Teal Heading Accent
+Key words in headings get a teal underline. Never colour the text:
 ```jsx
 <span style={{
   textDecoration: "underline",
@@ -248,14 +298,16 @@ Key words in h1/h2 headings get a teal underline. Never colour the text — only
 }}>word</span>
 ```
 
+Underline the concept word — not the verb, not a filler word.
+
 ### Spacing
-Use multiples of 4px. Standard values: 4, 8, 12, 16, 20, 24, 28, 32, 40, 48.
+Use multiples of 4px: 4, 8, 12, 16, 20, 24, 28, 32, 40, 48.
 
 ---
 
 ## 4. Page Layout
 
-### Shell structure
+### Shell Structure
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Site Nav (52px, navy bg)                                │
@@ -265,27 +317,22 @@ Use multiples of 4px. Standard values: 4, 8, 12, 16, 20, 24, 28, 32, 40, 48.
 │  - Level badge + title + description + meta tags        │
 │  - Progress summary (right-aligned)                     │
 ├─────────────────────────────────────────────────────────┤
-│ Main Content (max-width 1100px, padding 32px 40px)      │
-│                                                         │
+│ Main Content (max-width 1100px, padding 0 40px)         │
 │  PhaseLabel                                             │
 │  Active Phase Content (full width)                      │
-│                                                         │
 │  Journey Strip (full width, always visible)             │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Max width
-All content: `maxWidth: 1100px, margin: "0 auto", padding: "0 40px"`.
-
-### Page Hero spec
-```jsx
+### Page Hero Spec
+```
 // Breadcrumb: Learning › Level N › [Topic Name]
 // Left column (flex: 1, minWidth 320):
-//   - Level badge: mint bg (#A8F0E0), teal text, pill shape, UPPERCASE
-//   - Eyebrow: "FOUNDATIONS & AWARENESS" (or relevant descriptor)
+//   - Level badge: mint bg (#A8F0E0), teal text, pill, UPPERCASE
+//   - Eyebrow descriptor
 //   - h1 with teal accent underline on key word
-//   - Description paragraph (14px, body colour, max 600px wide)
-//   - Meta tag row: duration, activity count, difficulty, context
+//   - Description paragraph (14px, body colour, max 600px)
+//   - Meta tag row: duration, activity count, difficulty
 //
 // Right column (minWidth 200, fixed):
 //   - "Journey Progress" label
@@ -294,27 +341,14 @@ All content: `maxWidth: 1100px, margin: "0 auto", padding: "0 40px"`.
 //   - Teal progress bar
 ```
 
-Meta tags use this pattern:
-```jsx
-<span style={{
-  padding: "5px 12px",
-  border: `1px solid ${C.border}`,
-  borderRadius: 20,
-  fontSize: 12,
-  color: C.body,
-  fontWeight: 600,
-  fontFamily: F.b,
-}}>Label</span>
-```
-
 ---
 
 ## 5. The E-Learning Player
 
-### Critical constraint: FIXED HEIGHT
-The player content area **must always be exactly 460px tall** with `overflowY: "auto"`. This never changes regardless of slide content length. The outer player card never resizes — slides scroll internally if needed. This is non-negotiable.
+### Critical Constraint: Fixed Height
+The player content area **must always be exactly 460px tall** with `overflowY: "auto"`. This never changes regardless of slide content length. The outer player card never resizes. Non-negotiable.
 
-### Player structure
+### Player Structure
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Top bar (navy, 44px)                                    │
@@ -326,285 +360,583 @@ The player content area **must always be exactly 460px tall** with `overflowY: "
 ├─────────────────────────────────────────────────────────┤
 │ CONTENT AREA — fixed 460px height, overflowY: auto      │
 │ padding: 36px 48px                                      │
-│ (slide content renders here)                            │
 ├─────────────────────────────────────────────────────────┤
 │ Nav bar (white, border-top, padding 14px 28px)          │
-│  Left: ← Previous (secondary button)                   │
-│  Centre: SECTION NAME (muted, uppercase)                │
-│  Right: Next → or Finish → (primary button)             │
+│  Left: ← Previous  Centre: SECTION NAME  Right: Next → │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Progress dots (in top bar)
-```jsx
-{SLIDES.map((_, i) => (
-  <div key={i}
-    onClick={() => goToSlide(i)}
-    style={{
-      width: i === currentSlide ? 22 : 8,
-      height: 8,
-      borderRadius: 4,
-      background: i === currentSlide ? C.teal
-                : visitedSlides.has(i) ? "#4A5568"
-                : "#2D3748",
-      cursor: "pointer",
-      transition: "all 250ms ease",
-    }}
-  />
-))}
+Nav bar inline: `[← Previous]` — `[dots · counter]` — `[⛶ fullscreen] [Next →]`
+Nav bar fullscreen: `[← Previous]` — `[dots · counter (centred)]` — `[Next →]`
+
+### Fullscreen vs Inline Differences
+| Element | Inline | Fullscreen |
+|---------|--------|-----------|
+| Slide padding | `14–18px` | `24–32px` |
+| Progress bar height | 2px | 3px |
+| Base font sizes | base | base + 2–4px |
+
+---
+
+## 6. Takeaway Header
+
+**Mandatory on every slide except `courseIntro` and `bridge`.**
+
+```
+SECTION NAME   10px, bold, uppercase, #2B4C7E, tracking 0.12em
+Takeaway text  18px (22px full), fontWeight 800, #1A202C, lineHeight 1.25
+
+padding: 10px 20px 8px (inline) / 16px 44px 12px (fullscreen)
+border-bottom: 1px solid #E2E8F0
+background: #FFFFFF
 ```
 
-### Navigation state
-- Previous disabled on slide 0
-- Final slide Next button reads "Finish E-Learning →" and advances to Read phase on click
-- `visitedSlides` is a `Set` tracking which slides have been viewed
-- Slide transitions reset `selectedAnswer` and `answered` state
+**Takeaway text** is a single declarative statement — what the learner carries forward. Not a question, not a heading. A statement.
 
-### Player card style
+**Standard section names** (always uppercase, 2–4 words, describe the narrative phase not the slide content):
+
+| Name | Used for |
+|------|---------|
+| `"THE REALITY"` | Opening evidence beats |
+| `"THE GAP"` | Tension beats |
+| `"WHAT IS [X]"` | Definition slides |
+| `"THE TECHNIQUE"` | Concept introduction |
+| `"THE ANATOMY"` | Structural breakdown |
+| `"IN PRACTICE"` | Judgment and application |
+| `"SEE THE DIFFERENCE"` | Contrast beats |
+| `"THE TOOLKIT"` | Framework overview |
+| `"WRAP UP"` | Summary |
+
+---
+
+## 7. Next Button — Intercept System
+
+The Next button is a multi-stage content reveal controller before it becomes a slide navigator. It never simply navigates until all in-slide steps are complete.
+
+**The Next button label is always "Next →" regardless of what it will reveal.**
+
+### Intercept Rules (evaluated in priority order)
+
+| Slide Type | Next Behavior |
+|-----------|--------------|
+| `dragSort` | **Blocks** if any item in wrong zone — flashes red, returns incorrect items to pool after 1.2s |
+| `buildAPrompt` | **Blocks** if no chips placed |
+| `spotTheFlaw` | **Blocks** if nothing selected |
+| `quiz` | **Blocks** if nothing selected |
+| `sjExercise` | **Blocks** if no answer |
+| `persona` (predictFirst) | **Blocks** if no option selected |
+| `situationalJudgment` | **Cycles** through scenarios (0 → N−1) before advancing |
+| `scenarioComparison` | First Next → second tab; second Next → advances |
+| `contextBar` | Each press reveals one card (step 0→6); at 6 → advances |
+| `comparison` | Steps through all tabs before advancing |
+| `flipcard` | Flips next unflipped card; all flipped → advances |
+| `approachIntro` | Flips next unflipped card; all flipped → advances |
+| `branching` | Expands next option in order; all expanded → advances |
+| `spectrum` | Steps through positions 0→1→2 before advancing |
+| Last slide | Shows Reflection screen instead of advancing |
+| All others | Advances immediately |
+
+### Next Button Spec
+```
+padding: 8px 20px  border-radius: 24px (pill)  minHeight: 40px
+font-size: 13px  font-weight: 600
+Normal: background #38B2AC, color #FFFFFF
+Last slide: background accentColor, color accentDark
+```
+
+Label: always `"Next →"` except last slide which reads `"Finish E-Learning →"`.
+
+### Activity Warning
+Shown above the Next button when blocked. Define `activityWarningMsg` once — never duplicate:
+```
+Background: #1A202C  Color: #FFFFFF  Font: 13px fontWeight 700
+Padding: 8px 16px  Border-radius: 10px
+Animation: warningPop 2.5s ease forwards (auto-dismisses)
+```
+
+Messages:
+- `situationalJudgment` or `persona` → `"👆 Select an option before continuing"`
+- `dragSort` (not all placed) → `"👆 Place all items before continuing"`
+- `dragSort` (all placed, some wrong) → `"↩ Some items are in the wrong layer — review and try again"`
+- All other blocked types → `"👆 Try the activity before continuing"`
+
+---
+
+## 8. No-Scroll Enforcement
+
+**Zero scroll inside any slide.** No `overflowY` on any element within the content area.
+
+Content not yet revealed must be in the DOM at full rendered size, hidden via `opacity: 0` — never `display: none` or conditional rendering. This locks card heights.
+
+```jsx
+// Correct
+<div style={{ opacity: revealed ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+  {detailContent}
+</div>
+
+// Wrong — causes layout shift
+{revealed && <div>{detailContent}</div>}
+```
+
+Layout rules to prevent overflow:
+- `flex: 1` on expanding regions
+- `flexShrink: 0` on fixed-height elements
+- `minHeight: 0` on flex children that need to shrink
+- Root slide div: `height: '100%', display: 'flex', flexDirection: 'column'`
+
+**Scroll exceptions (only two):** `situationMatrix` and `sjExercise` — these intentionally use `overflowY: auto` due to structural complexity.
+
+---
+
+## 9. State Reset on Slide Change
+
+All interactive state resets when `currentSlide` changes. Exception: `sjAnswers` persists so returning to a completed scenario shows the previous answer.
+
+```typescript
+// Reset on every slide change:
+sjScenarioIdx = 0
+quizSelected = null, quizAnswered = false
+spectrumPos = 0
+flippedCards = {}
+branchingSelected = null, branchingStep = 0
+copiedId = null
+activeCompTab = 0
+expandedSections = {}
+contextStep = 0
+scenarioTab = 'rushed'
+expandedMatrixRow = null
+placedComponents = {}
+draggedChip = null
+buildComplete = false, buildChecked = false
+predictSelected = null, predictRevealed = false, predictChecked = false
+flawSelected = null
+```
+
+---
+
+## 10. Reflection Screen
+
+Appears when Next is clicked on the last slide. Replaces the slide — does not navigate away.
+
+```
+Outer card: border 1.5px solid #CBD5E0, borderRadius 16
+Accent line (top): 3px solid accentColor
+"REFLECT" badge: #E6FFFA bg, #1A6B5F text, uppercase, 10px
+Heading: "Before you move on" — 20px fontWeight 800
+Subtext: "Take 60 seconds. Two questions — no right answers." — 13px #718096
+
+Textarea: rows 3, resize: none
+border: 1.5px solid #E2E8F0, borderRadius 10
+Focus: border-color turns #38B2AC
+```
+
+Navigation:
+- `← Back to slides` — left, plain text, `#A0AEC0`
+- `Continue to Practice →` — right, navy bg, white text, pill. Fires `onCompletePhase()`.
+
+**Practice tool routing by level** (derive from `courseIntro.levelNumber` — never hardcode):
+
+| Level | Route |
+|-------|-------|
+| L1 | `/app/toolkit/prompt-playground` |
+| L2 | `/app/toolkit` |
+| L3 | `/app/level-3/workflow-canvas` |
+| L4 | `/app/level-4/app-designer` |
+| L5 | `/app/level-5/app-evaluator` |
+
+---
+
+## 11. Source Citation Bar
+
+For any slide with external data, a citation strip renders at the very bottom of the slide area.
+
+```
+padding: 4px 20px (inline) / 4px 32px (fullscreen)
+border-top: 1px solid #EDF2F7  background: #FAFBFC
+"Source" label: 9px bold uppercase #A0AEC0
+Link: 9px #A0AEC0, underlined
+```
+
+Only renders when the slide data includes a `sourceLink` field.
+
+---
+
+## 12. All Slide Type Layouts
+
+Every slide must declare a `type` field. Use only these types — do not invent new ones without extending this skill document.
+
+---
+
+### `courseIntro`
+**isStretchType. No takeaway header.**
+
+Full-width single column. Do not add a right-side framework preview grid.
+
+- Level badge: `background: accentLight, color: accentDark`, pill, 10px bold uppercase. Text: `"LEVEL N · E-LEARNING"`
+- Hook headline: `fontSize: 28px` (full) / `22px` (inline), `fontWeight: 800`, `#1A202C`
+- Subheading: `fontSize: 14px/13px`, `fontWeight: 600`, level accent dark color, `maxWidth: 600`
+- Objectives list: eyebrow `"YOU'LL WALK AWAY WITH"` (9px uppercase `#A0AEC0`). Each item: emoji icon + text (14px/13px, `#2D3748`, `lineHeight: 1.6`, `fontWeight: 500`). 3–4 items starting with action verbs.
+- Start button: level accent color background, white text, `borderRadius: 24`
+
+Background gradients by level:
+- L1: `linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)`
+- L2: `linear-gradient(160deg, #FEFCE8 0%, #FEF9C3 50%, #F7FAFC 100%)`
+- L3: `linear-gradient(160deg, #FFFBEB 0%, #FEF3C7 50%, #F7FAFC 100%)`
+
+---
+
+### `evidenceHero`
+Two columns (48% text / 52% visual).
+
+**Left:** Body text — 15px, `#4A5568`, `lineHeight: 1.75`
+
+**Right:** Stat visual. Choose the visual that makes the number *feel* true:
+
+| `visualType` | When to use |
+|---|---|
+| *(default — large number card)* | Generic percentages with no relational meaning |
+| `dotGrid` | Percentages out of 100 — visceral human scale. 10×10 grid, active dots teal |
+| `barComparison` | Multipliers or ratios comparing two groups. Two vertical bars |
+| `adoptionGap` | Two stats showing a funnel drop |
+
+Set on the stat object: `stats: [{ value: "24%", label: "...", source: "McKinsey", visualType: "dotGrid" }]`
+
+**Bottom (full width):** Pull-quote bar.
+
+Every evidence slide must include a graphic — text-only layout is not acceptable.
+
+---
+
+### `chart`
+Two columns (1fr 1fr). Left: body text 16px. Right: eyebrow + 2–3 bar items (label + sublabel + percentage + bar, `height: 32px, borderRadius: 6`). Bottom: pull-quote bar.
+
+---
+
+### `pyramid`
+Two columns (1fr 1fr). Left: body text. Right: 4–6 stacked pyramid layers at increasing widths (38%→100%). Bottom/active layer uses `accentColor` with `"▸ You are here"`. Bottom: pull-quote bar.
+
+---
+
+### `tensionStatement`
+**isStretchType. Vertically and horizontally centered.**
+
+```
+padding: 32px 48px
+Heading: 30px (40px full), fontWeight 800, #1A202C, whiteSpace: nowrap
+Subheading: 20px (24px full), fontWeight 600, #1A202C
+Footnote: 13px #718096, maxWidth 520, centered
+```
+
+Headings must each fit on **one line**. Use `whiteSpace: "nowrap"`. If text is too long, shorten it — never allow wrapping.
+
+---
+
+### `concept`
+**With `visualId`:** Left 55% body text + pull-quote / Right 43% concept diagram panel (`background: #F7FAFC, border: 1px solid #E2E8F0, borderRadius: 12`).
+
+**Plain (no `visualId`):** Single column, wide padding. Body text 18–22px, `lineHeight: 1.75`, pull-quote below.
+
+Optional `eyebrow` field renders above the takeaway heading (e.g. `"WHEN TO USE ONE"`, `"THE LAYERS"`).
+
+Pull-quote style: `borderLeft: 4px solid #38B2AC, background: #E6FFFA`, 15px italic bold.
+
+---
+
+### `contextBar`
+3×2 grid, Next-button-reveal per card. **All 6 cards render at identical fixed height from the start.** Opacity controls visibility — never conditional rendering.
+
+**Unrevealed card:** `border: 2px solid #E2E8F0, background: #F7FAFC`, muted text, detail + impact badge `opacity: 0`, ▸ hint visible.
+
+**Revealed card:** colored border, `background: componentLight`, full color, detail + impact badge `opacity: 1, transition: opacity 0.3s ease`.
+
+**Impact badge** (always in DOM): `"Without this → [specific observable consequence]"` — must describe a real consequence, never *"the output quality drops."*
+
+Next behavior: each press reveals one card (contextStep 0→6). At 6 → advances.
+
+---
+
+### `rctf`
+Three modes:
+
+**Mode 1 — Static 3×2 grid:** All cards visible immediately. Grid fills available height (`flex: 1, minHeight: 0`). Each cell: KEY label + description + example + `whyItMatters` tag.
+
+**Mode 2 — Sequential reveal (`revealOnNext: true`):** Same grid, cards reveal one-by-one. Unrevealed `opacity: 0`, revealed `opacity: 1, transition: opacity 0.35s ease`.
+
+**Mode 3 — Two-column anatomy reveal (`revealOnNext: true` + `visualId`):** Left column shows concept diagram; right column reveals detail cards one-by-one. Diagram highlights the currently active element.
+
+Always use canonical RCTF colours: Role `#667EEA`, Context `#38B2AC`, Task `#ED8936`, Format `#48BB78`.
+
+---
+
+### `scenarioComparison`
+Toggle between two approaches to the same task.
+
+**Toggle:** Two-button pill switcher, `background: #EDF2F7`. Active tab colored (red-tinted or green-tinted). `"Toggle to compare ⇄"` label above.
+
+**Score pill (top-right):** `"X/N context elements"` — red bg for low, green for high.
+
+**Chat bubbles:** "You say" (right-aligned, dark bg, italic) / "They deliver" (left-aligned, white bg, colored border).
+
+Next behavior: First Next → second tab. Second Next → advances.
+
+---
+
+### `gapDiagram`
+Two-column before/after.
+
+**Left (red):** `background: #FFF5F5, border: 1px solid #FC818133`. Eyebrow `"LIMITED CONTEXT"`. White prompt box. Bullet list of what's missing.
+
+**Right (teal):** `background: #E6FFFA, border: 1px solid #38B2AC33`. Eyebrow `"RICH CONTEXT"`. Prompt uses RCTF color underlines on relevant phrases. Annotation legend (9px colored pills).
+
+**Bottom:** Insight bar (`#EBF8FF` bg, `#38B2AC33` border, 💡).
+
+---
+
+### `flipcard`
+Two side-by-side CSS 3D flip cards. Front = "without" state, Back = "with" state.
+
+**Front:** `background: #FFF5F5`, red badge + prompt box (red left border). `"Click to flip ↺"` hint (11px, muted).
+
+**Back:** `background: #F0FFF4`, green badge + prompt box (green left border) + response in `#E6FFFA` box.
+
+```css
+perspective: 1000px;
+transform-style: preserve-3d;
+transition: transform 0.5s ease;
+backface-visibility: hidden;
+```
+
+Next behavior: flips next unflipped card before advancing.
+
+---
+
+### `approachIntro`
+Three flip cards side by side.
+
+**Unflipped:** Large centered icon (56px), name (22px bold), tagline (15px), `"tap to explore ▸"`, `border: 2px solid #E2E8F0`.
+
+**Flipped:** Icon + name top-left, `"WHEN TO USE"` section, `"HOW IT WORKS"` section, connection card. Colored border + top stripe.
+
+Next behavior: flips next unflipped card before advancing.
+
+---
+
+### `parallelDemo`
+Two-column static comparison. No interaction.
+
+**Left:** `#FFF5F5` — `"APPROACH 1 — UNSTRUCTURED"` eyebrow (red uppercase)
+**Right:** `#E6FFFA` — `"APPROACH 2 — STRUCTURED"` eyebrow (teal uppercase)
+
+Both: inner white prompt box + output text. Optional centered italic footnote (12px).
+
+---
+
+### `persona` (predictFirst mechanic)
+Optional — use when the goal is to show how a real person applies the framework. `situationalJudgment` is preferred for judgment-building without persona scaffolding.
+
+Three stages on a single slide:
+
+**Stage 1 — Predict:** Persona hero card (80px avatar, name, role) + scenario + `"Which approach fits [name]'s situation?"` + option buttons.
+
+**Stage 2 — Selected:** Colored border on selected option. Feedback card appears. Wrong = red `"Not quite — here's why"`. Learner can re-select until correct.
+
+**Stage 3 — Revealed (correct):** Green `"That's the best fit!"` + approach detail card showing actual prompt (italic, truncated 180 chars) + `"Why:"` explanation.
+
+Activity gate: Blocked until an option is selected.
+
+---
+
+### `situationalJudgment`
+**The primary mechanism for judgment-building.** Every module should include at least one.
+
+**Persona tabs (top):** Active = navy bg white text. Inactive = `#F7FAFC` gray text.
+
+**Scenario card:** White, `borderRadius: 10`, `slideInRight 0.3s ease`. Font `18px` (full) / `16px` (inline), `fontWeight: 700`. **Must always be visually larger than option buttons.**
+
+**Three option buttons:** Side-by-side, equal width, **fixed height** (`90px` full / `75px` inline). Never grow when feedback reveals.
+
+Option label rule: For a simple binary decision, use **"Yes"** and **"No"** only — never add "Maybe" or "It depends."
+
+Option styling:
+- All unselected: colored background at low opacity (`{color}08`), matching border (`{color}33`) — never plain white
+- Strongest: `#F0FFF4` fill, `#68D391` border, `#276749` text
+- Selected-but-not-strongest: `#FFFBEB` fill, `#F6AD55` border, `#C05621` text
+
+**Feedback card:** Quality-coded bg. Eyebrow: `"STRONGEST CHOICE"` / `"COULD WORK"` / `"NOT THE BEST FIT"`. Uses `maxHeight` transition — must never push or resize option cards.
+
+Next behavior: cycles through all scenarios before advancing.
+
+---
+
+### `situationMatrix` *(Intentional scroll)*
+Three-column approach matrix.
+
+**Column headers:** Large icon, approach name (colored), tagline (`#718096`). `border: 2px solid {color}`, gradient bg.
+
+**"★ Best when" rows:** Colored cards (`background: ap.light`). Label + italic example.
+
+**"◐ Also works" rows:** Neutral gray cards (`background: #F7FAFC`). Label only.
+
+---
+
+### `moduleSummary`
+Two-section summary filling the frame.
+
+**Section 1 (framework grid):** White card, `border: 1.5px solid #E2E8F0`. 3×2 grid — component cards `background: componentLight`. Component name (17–19px fontWeight 900) + one-line description (13–15px). Descriptions must be shorter than the `contextBar` version — a single memorable phrase.
+
+**Section 2 (approaches):** 3 cards in a row. Each: `background: ap.light, borderTop: 3px solid {color}`. Icon + name + `"Use when:"` in bold accent color + specific condition text (not *"when you have time"* but *"when the output will be shared externally and tone matters"*).
+
+---
+
+### `bridge`
+**isStretchType. No takeaway header. Full bleed — no card border.**
+
+**Left 60%:** Solid teal `#38B2AC` bg. White heading (26–34px bold), white body (16–18px, 90% opacity), optional CTA button (white bg, teal text, pill).
+
+**Right 40%:** `#2C9A94` bg. Panel heading (16px bold white), bullet list (14px, 85% white opacity).
+
+CTA link must use a real internal route — never a hash fragment.
+
+---
+
+### `spectrum`
+Three-position interactive slider.
+
+**Track:** `height: 8px, background: linear-gradient(accentLight, accentColor), borderRadius: 4`
+
+**Position dots:** Active = 24px, filled teal, glow shadow. Inactive = 16px, white with teal border.
+
+**Content panel:** `borderLeft: 3px solid #38B2AC, borderRadius: 0 12px 12px 0, background: #F7FAFC`. Animates `fadeInUp 0.3s ease` on position change.
+
+Next behavior: steps through positions 0→1→2 before advancing.
+
+---
+
+### `quiz`
+Standard single MCQ with explicit Check Answer step.
+
+- Eyebrow: 10px teal uppercase, `letterSpacing: 0.12em`
+- Question: 16–18px bold `#1A202C`, `maxWidth: 560`
+- Options: `minHeight: 44`, circular letter badge (A/B/C/D)
+- `"Check Answer"` button: appears after selection, disappears after checking
+- Activity gate: Blocked until selection made
+
+Option states: Default `1px solid C.border` / Selected `2px solid C.teal, C.tealLight bg` / Correct `C.success` / Incorrect `C.error`.
+
+---
+
+### `comparison`
+Tabbed scenario explorer.
+
+**Scenario banner:** `background: linear-gradient(#E6FFFA, #EBF8FF), border: 1.5px solid #38B2AC33`
+
+**Tab bar:** Active tab `borderBottom: 3px solid #38B2AC`, teal text.
+
+**Prompt box:** `borderLeft: 3px solid #38B2AC`, italic. Annotation below in `#F7FAFC`.
+
+Next behavior: steps through all tabs before advancing.
+
+---
+
+### `branching`
+Stacked expandable option cards.
+
+**Scenario banner:** `background: linear-gradient(#EBF4FF, #E6FFFA)`
+
+**Options:** Full-width, stacked. Select = expands inline with quality-coded feedback. Quality: strong = green / partial = yellow (`#FFFBEB`) / weak = red.
+
+Next behavior: expands next option before advancing.
+
+---
+
+### `toolkitOverview`
+Three stacked cards with staggered `fadeInUp` animation (delay `i * 0.15s`).
+
+Each card: `border: 1px solid {color}33, background: {color}06, borderRadius: 14`. Left: icon in colored circle. Right: label (16px bold), desc (14px), `"When to use:"` in accent color.
+
+**Bottom connector bar:** centered text describing how the toolkit layers relate.
+
+---
+
+### `templates`
+2×2 grid of copyable prompt templates. Each card: white, `border: 1px solid #E2E8F0`. Header: name + tag pill + Copy button (right-aligned, never floated). Copy button turns green `"Copied ✓"` for 2000ms.
+
+---
+
+### `buildAPrompt`
+Two-column drag-and-drop prompt assembly.
+
+**Left 55%:** Task description + chip bank (Fisher-Yates shuffle on first render, order locked after). On completion: transforms to assembled prompt view.
+
+**Right 45%:** 6 labeled drop zones. Empty = colored label pill + dashed border. Filled = solid border. Check Answers button: disabled until all placed.
+
+Desktop: HTML5 drag and drop. Mobile: tap chip → tap slot.
+
+Activity gate: Blocked if no chips placed at all.
+
+---
+
+### `dragSort`
+Classify drag-and-drop. Learner drags items from source pool into labelled drop zones.
+
+Activity gate: Blocks if any item in wrong zone. Flashes red, returns incorrect items to pool after 1.2s.
+
+---
+
+### `spotTheFlaw`
+3×2 option grid. Learner identifies which option contains a flaw.
+
+Prompt display: `background: #F7FAFC, borderLeft: 3px solid accentColor`, italic 13px.
+
+On wrong: button turns red. On correct: button turns green with ✓. Feedback only on correct answer. Once solved, all buttons lock.
+
+Activity gate: Blocked if nothing selected.
+
+---
+
+### `personaCaseStudy`
+Two-column layout with predict-first quiz.
+
+**Left:** Persona header (80px avatar, name, role, tag pills) + scenario card.
+
+**Right:** Predict-first option buttons → on correct: `"HOW [NAME] ACTUALLY DOES IT"` card showing actual prompt (italic, truncated 180 chars) + `"Why:"` explanation in accent color.
+
+---
+
+### `sjExercise` *(Intentional scroll — older pattern)*
+Single-scenario judgment, stacked vertically.
+
+- Purpose banner: `background: linear-gradient(#2B4C7E, #38B2AC)`, white text
+- Scenario card: `background: linear-gradient(#EBF4FF, #E6FFFA)`
+- Options: stacked full-width
+- Feedback: green `#F0FFF4` for correct, amber `#FFFBEB` for wrong (never red)
+
+---
+
+## 13. Expandable Accordion Pattern
+
+Use when a slide contains long prompt examples, full AI output text, or multi-paragraph explanations that risk overflow within the 460px content area.
+
+**Default state:** Scannable preview — enough to understand the point without reading every word.
+**Expanded state:** Full content, with `"Show full prompt ▾"` / `"Show less ▴"` affordance.
+
+The slide must make its pedagogical point in the collapsed state. Expansion is for optional depth, not for hiding the lesson.
+
+Toggle style:
 ```jsx
 {
-  background: "#fff",
-  border: `1px solid ${C.border}`,
-  borderRadius: 16,
-  overflow: "hidden",
-  boxShadow: "0 2px 24px rgba(0,0,0,0.05)",
+  display: "inline-flex", alignItems: "center", gap: 4,
+  padding: "6px 12px", borderRadius: 6,
+  border: `1px solid ${C.border}`, background: C.bg,
+  fontSize: 12, fontWeight: 600, color: C.light, cursor: "pointer",
 }
 ```
 
 ---
 
-## 6. Slide Types
+## 14. Prompt Box — Universal Style
 
-Every slide must declare a `type` field. The following types are available. Use only these types — do not invent new ones without extending this skill document.
-
-### type: "title"
-The opening slide. Always slide index 0.
-
-Required fields: `heading`, `subheading`, `body`, `meta` (array of strings)
-
-Layout:
-- Eyebrow: "OXYGY AI UPSKILLING — LEVEL [N]"
-- h1 with teal accent on key word
-- Subheading (14px, light)
-- Meta pills row (bordered pills, inline-flex)
-- Body paragraph (14px, body colour, max 560px)
-
-### type: "concept"
-Two-column layout: text left, visual panel right.
-
-Required fields: `heading`, `body`, `pullQuote`, and optionally `visual` for the right panel.
-
-Layout:
-- Left (55%): eyebrow, h2, body paragraph, pull quote (teal left border, tealLight bg)
-- Right (45%): bordered panel (`bg: C.bg, border: 1px solid C.border, borderRadius: 12, padding: 20`) containing a diagram, comparison, or illustration relevant to the concept
-
-Pull quote style:
-```jsx
-{
-  borderLeft: "4px solid #38B2AC",
-  background: "#E6FFFA",
-  padding: "12px 16px",
-  borderRadius: "0 8px 8px 0",
-}
-```
-
-### type: "spectrum"
-Interactive slider with three positions. Used to show a spectrum of approaches.
-
-Required fields: `heading`, `body`, `positions` (array of 3: `{ label, desc, example }`)
-
-Layout:
-- Eyebrow + h2 + body paragraph
-- Spectrum track with gradient (mint → teal), three clickable handle dots at 0%, 50%, 100%
-- Position labels below track (click to switch)
-- Active technique panel: `bg: C.bg, borderLeft: "3px solid #38B2AC"`, showing the example for the selected position
-
-State: `spectrumPos` (0 | 1 | 2), default to 2 (rightmost / most structured)
-
-### type: "rctf"
-Four-element grid for the RCTF framework. Always uses the four canonical RCTF colours.
-
-Required fields: `heading`, `subheading`, `elements` (array of 4: `{ key, color, light, desc, example }`)
-
-Layout: 2×2 grid, gap 10px. Each card:
-- Colour pill (key name, colour bg, white text)
-- Description (12px, body colour)
-- Example prompt box (white bg, colour left border, italic text)
-
-Always use the canonical RCTF colours from the token set: Role = #667EEA, Context = #38B2AC, Task = #ED8936, Format = #48BB78.
-
-### type: "flipcard"
-Two side-by-side flip cards. Used for before/after comparisons.
-
-Required fields: `heading`, `instruction`, `cards` (array of 2: `{ frontLabel, frontBadge, frontPrompt, backLabel, backBadge, backPrompt, backResponse }`)
-
-Each card: 3D CSS flip on click. Front = "without" state, Back = "with" state.
-- Status badges: "WITHOUT X" (error colours) and "WITH X" (success colours)
-- Prompt text in `.prompt-box` style
-- "Click to flip ↺" hint at bottom of front face (11px, muted)
-- `perspective: 1000px` on wrapper, `transform-style: preserve-3d` on card
-- Both faces: `backface-visibility: hidden; -webkit-backface-visibility: hidden`
-
-### type: "dragdrop"
-Drag-and-drop categorisation exercise. Used to test RCTF element identification.
-
-Required fields: `heading`, `instruction`, `chips` (array: `{ id, text, correctZone }`), `zones` (array: `{ id, label, color }`)
-
-Behaviour:
-- Desktop: HTML5 drag and drop API
-- Mobile: tap-to-select chip, tap zone to place
-- "Check Answers" button enabled only when all chips placed
-- Correct: green border on zone. Incorrect: red border + correct label shown
-- "Reset" button to retry
-
-### type: "quiz"
-Knowledge check with a single multiple choice question.
-
-Required fields: `heading`, `question`, `options` (array of strings), `correct` (index), `explanation`
-
-Layout:
-- Eyebrow showing "PRACTICE — QUESTION X OF Y"
-- Question text (18px, DM Sans, max 560px)
-- Option cards (click to select, teal border when selected)
-- "Check Answer" button (appears after selection, primary style)
-- Feedback panel (success/error bg, correct/incorrect label + explanation)
-
-Option card states:
-```
-Default:   border: 1px solid C.border, bg: white
-Selected:  border: 2px solid C.teal, bg: C.tealLight
-Correct:   border: 2px solid C.success, bg: C.successLight
-Incorrect: border: 2px solid C.error, bg: C.errorLight
-```
-
-### type: "comparison"
-Three-tab comparison of the same scenario approached three different ways.
-
-Required fields: `heading`, `scenario`, `tabs` (array of 3: `{ label, prompt, annotation }`)
-
-Layout:
-- Scenario box (navy bg, white text, mint accent for bold)
-- Tab bar (border-bottom 2px C.border, active tab gets 3px teal bottom border)
-- Active panel fades in (opacity 0→1, 200ms)
-- Prompt in `.prompt-box` style with diff highlighting on tabs 2 and 3 (`bg: rgba(72,187,120,0.2), border-bottom: 2px solid C.success`)
-- Annotation below prompt (12px, muted, bg: C.bg, borderRadius: 4, padding: 8px 12px)
-
-### type: "branching"
-Scenario with three option cards, each revealing a simulated AI response after selection.
-
-Required fields: `heading`, `scenario`, `options` (array of 3: `{ label, prompt, responseQuality, response, reflection }`)
-
-responseQuality values: `"strong"` | `"partial"` | `"weak"` — controls the badge colour on the response panel.
-
-### type: "templates"
-A set of copyable prompt templates plus an optional template builder.
-
-Required fields: `heading`, `templates` (array: `{ id, name, tag, tagColor, template }`)
-
-Each template card:
-- Header: name + tag pill + copy button (right-aligned, never floated/absolute)
-- Body: prompt text in monospace-ish style, full width
-- Copy button: on click, copies text, changes to "Copied ✓" for 2000ms then reverts
-
-### type: "personaCaseStudy"
-Persona-framed sliding card carousel. Used to present prompting approaches or techniques through fictional character case studies. Each persona demonstrates one technique applied to a real professional task.
-
-Required fields: `heading`, `body`, `personas` (array of 3–4: `{ name, role, icon, color, task, technique, prompt, outcome }`)
-
-Layout:
-- Heading + body paragraph at top
-- Optional `pullQuote` (teal left border)
-- Persona tab bar: clickable tabs with icon + name, active tab uses the persona's colour
-- Active persona card (slides in from right with `slideInRight` CSS animation):
-  - Avatar icon + name + role + technique badge (top row)
-  - Task description (white box, bordered)
-  - Prompt in prompt-box style with persona's colour as left border
-  - Outcome in dark "Key Insight" card (animated pulse)
-
-This slide type is mandatory for presenting:
-- Prompting approaches (Brain Dump, Conversational, Structured) — one persona per approach
-- Modifier techniques (Chain of Thought, Few-Shot, Iterative Refinement) — one persona per modifier
-- Any concept that benefits from seeing a real professional applying the technique in context
-
-Persona authoring rules:
-- Each persona must have a distinct name, role, and icon
-- Tasks must be universally recognisable (not function-specific)
-- Prompts must be complete and realistic — not abbreviated
-- Outcomes must describe a concrete result, not a generic benefit
-- Never reuse the same persona across different slide types within one course
-
-### type: "approachMatrix"
-Interactive hover-to-reveal matrix grid. Used as a summary/reference slide showing which prompting approach fits which situation.
-
-Required fields: `heading`, `body`, `matrixData` (object: `{ situations: [{ label, icon }], approaches: string[], cells: [{ rating, tip }[][]] }`)
-
-`rating` values: `"best"` | `"ok"` | `"weak"` — controls the cell icon and colour.
-
-Layout:
-- Heading + body at top
-- Legend row: ★ Best fit, ◐ Can work, ○ Not ideal
-- Responsive table grid with hover tooltips on each cell
-- Cells show colour-coded rating icons; tooltip reveals the reasoning
-
-This slide type is mandatory when a course needs to summarise multiple approaches, techniques, or frameworks and when each one is situationally appropriate. Place it after the individual approach/technique slides as a synthesis reference.
-
-### type: "toolkitOverview"
-Three-item vertical card stack showing how different layers of the prompting toolkit relate to each other.
-
-Required fields: `heading`, `body`, `toolkitItems` (array of 3: `{ label, icon, color, desc, whenToUse, relationship }`)
-
-Layout:
-- Heading + body at top
-- Three vertical cards with staggered `fadeInUp` animation
-- Each card: icon (in coloured box) + label + description + "When to use" + relationship note
-- Bottom "insight pulse" connector bar showing the relationship formula
-
-This slide type is used to establish the conceptual framework before diving into each layer individually. Place it after the gap/tension slides and before the detailed technique slides.
-
-### Expandable Accordion Pattern
-
-A standing interaction pattern for any slide that contains content at risk of truncation or overflow within the 460px content area.
-
-**When to use:** When a slide contains long prompt examples, full AI output text, detailed annotations, or multi-paragraph explanations, the content must be presented in an expandable/collapsible format.
-
-**Default state:** A scannable preview — enough for the learner to understand the point without reading every word. This might be 2–3 lines of a prompt, the first sentence of an AI output, or a summary label.
-
-**Expanded state:** The full content, revealed on click. A clear visual affordance (chevron icon, "Show full prompt ▾" / "Show less ▴" label) must indicate expandability.
-
-Key rules:
-- This pattern serves two audiences: the fast scanner who wants to absorb the concept and move on, and the deep reader who wants to examine every detail.
-- Expandable sections must never be the *only* way to access critical teaching content. The slide must make its pedagogical point in the default (collapsed) state. Expansion is for optional depth, not for hiding the lesson.
-
-Slide types most likely to need this pattern:
-- `comparison` and `branching` slides where prompt text is long
-- Beat 4 contrast slides where before/after outputs are shown
-- Any slide showing a worked example with a full prompt + full output
-
-Accordion toggle style:
-```jsx
-{
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  padding: "6px 12px",
-  borderRadius: 6,
-  border: `1px solid ${C.border}`,
-  background: C.bg,
-  fontSize: 12,
-  fontWeight: 600,
-  color: C.light,
-  cursor: "pointer",
-  fontFamily: F.b,
-}
-```
-
-State: `expanded` (boolean), toggle on click. Content area uses `maxHeight` transition (0 → auto equivalent via measured height) with 200ms ease.
-
----
-
-## 7. Prompt Box — Universal Style
-
-Any time prompt text appears anywhere in the e-learning (slides, articles, video descriptions), use this style:
+Any time prompt text appears anywhere in the e-learning, use this style:
 ```jsx
 {
   background: "#F7FAFC",
@@ -613,243 +945,100 @@ Any time prompt text appears anywhere in the e-learning (slides, articles, video
   borderRadius: "0 8px 8px 0",
   padding: "12px 16px",
   fontSize: 13,
-  fontFamily: F.b,
   fontStyle: "italic",
   color: "#2D3748",
   lineHeight: 1.6,
   wordBreak: "break-word",
   overflowWrap: "break-word",
-  boxSizing: "border-box",
-  width: "100%",
 }
 ```
 
 ---
 
-## 8. Read Phase
+## 15. Read Phase
 
 ### Layout
 Two-column grid (`gridTemplateColumns: "1fr 1fr"`, gap 20px).
-Each article gets one card.
 
-### Article card structure
+### Article Card Structure
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Card Header (C.bg or C.successLight if done)            │
 │  - "Article N · read time · Source"                     │
 │  - Title (strikethrough + light colour when done)       │
-│  - ✓ checkmark (right-aligned, when done)               │
 ├─────────────────────────────────────────────────────────┤
 │ Card Body                                               │
 │  - Description paragraph                                │
 │  - "Read article ↗" link button                         │
-│  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─               │
 │  [shown after link clicked:]                            │
 │  - REFLECTION eyebrow                                   │
 │  - Reflection question (13px, navyMid)                  │
-│  - Textarea (min-height 80px, C.bg fill)                │
+│  - Textarea (min-height 80px)                           │
 │  - "Submit reflection →" button (disabled if empty)     │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Article card border/bg states
-- Default: `border: 1px solid C.border, bg: white`
-- Done: `header bg: C.successLight`
+Article is complete when reflection is submitted. Phase 2 is complete when all articles submitted.
 
-### Read article link button style
-```jsx
-{
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "8px 18px",
-  borderRadius: 24,
-  border: `1px solid ${C.teal}`,
-  color: C.teal,
-  fontSize: 13,
-  fontWeight: 600,
-  textDecoration: "none",
-  fontFamily: F.b,
-}
-```
-
-### Completion logic
-Article is complete when reflection is submitted (any non-empty text). Phase 2 is complete when all articles are submitted. Show "Continue to Watch →" button right-aligned below the grid.
-
-### Reflection questions
-Each article must have a distinct, thought-provoking reflection question relevant to its content. Not generic. Examples:
-- "In one sentence, what was the single most useful idea from this article for your day-to-day work?"
-- "Describe one situation from your own work where adding more context to a prompt could have improved the result."
+Reflection questions must be specific and non-generic. Examples:
+- *"In one sentence, what was the single most useful idea from this article for your day-to-day work?"*
+- *"Describe one situation from your own work where this technique would have changed the outcome."*
 
 ---
 
-## 9. Watch Phase
+## 16. Watch Phase
 
 ### Layout
 Single column, stacked cards with gap 24px.
 
-### Video card structure
+### Video Card Structure
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Card Header (C.bg or C.successLight if done)            │
 │  - Thumbnail placeholder (80×52px, navy bg, teal ▶)    │
 │  - "Video N · duration · Channel"                       │
-│  - Title (strikethrough + light colour when done)       │
-│  - ✓ checkmark (right-aligned, when done)               │
+│  - Title (strikethrough when done)                      │
 ├─────────────────────────────────────────────────────────┤
 │ Card Body                                               │
 │  - Description paragraph                                │
 │  - "▶ Watch video" button                               │
-│  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─               │
 │  [shown after watch clicked:]                           │
 │  - KNOWLEDGE CHECK eyebrow                              │
-│  - Q1: question + options + Check answer                │
-│  - Q2: question + options + Check answer                │
+│  - Q1 + Q2 (independent, each with its own Check)       │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Video knowledge check
-Two multiple choice questions per video. Each question is in its own bordered panel (`C.bg, border: 1px solid C.border, borderRadius: 10`). Questions use the same option card interaction pattern as the quiz slide type. Each question has its own "Check answer" button — questions are independent.
+Video complete when: (1) "Watch video" clicked AND (2) both knowledge check questions answered.
 
-### Video completion
-Video is marked complete when:
-1. "Watch video" has been clicked AND
-2. Both knowledge check questions have been answered (Check answer clicked on both)
-
-### Watch phase completion CTA
-When all videos are complete, show a full-width dark navy CTA banner:
-```jsx
-{
-  background: C.navy,
-  borderRadius: 16,
-  padding: "28px 32px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 24,
-  flexWrap: "wrap",
-}
-```
-Left: mint eyebrow "LEARNING JOURNEY COMPLETE", white h3, grey description.
-Right: teal primary button "Go to Prompt Playground →".
+When all videos complete: full-width dark navy CTA banner. Left: mint eyebrow + white h3 + grey desc. Right: teal primary button to next phase.
 
 ---
 
-## 10. Handoff CTA
+## 17. Journey Strip
 
-When the user clicks the final CTA in Watch phase, switch `activePhase` to `"practice"` and render:
-- Centred card (white bg, bordered, borderRadius 16, padding 48px)
-- Icon circle (tealLight bg, mint border, 64px)
-- "NEXT STEP" eyebrow
-- h2: "Prompt Playground"
-- Description paragraph
-- Teal CTA link button: "Open Prompt Playground →"
+Always rendered below active phase content, full content width.
 
-This page does not host the Prompt Playground itself — it links to it. The `href` will be the route to the Prompt Playground page on the site.
-
----
-
-## 11. Journey Strip
-
-Always rendered below the active phase content, at full content width.
-
-### Structure
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ "LEARNING JOURNEY — LEVEL N" eyebrow                           │
-│                                                                 │
-│ [E-Learning] › [Read] › [Watch] › [Practice]                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ "LEARNING JOURNEY — LEVEL N" eyebrow                        │
+│ [E-Learning] › [Read] › [Watch] › [Practice]                │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Phase tile spec
-Each phase is a clickable tile (except "Practice" which is external):
+Phase tile spec:
 ```jsx
 {
-  flex: 1,
-  padding: "14px 16px",
-  borderRadius: 10,
+  flex: 1, padding: "14px 16px", borderRadius: 10,
   border: active ? `2px solid ${C.teal}` : `1px solid ${C.border}`,
   background: active ? C.tealLight : done ? C.successLight : "#FAFAFA",
-  cursor: external ? "default" : "pointer",
-  transition: "all 200ms ease",
-  position: "relative",
 }
 ```
 
-Completed phase: teal checkmark badge (absolute, top-right, 20px circle, C.success bg).
-Phase title: strikethrough + C.light colour when done.
-Phase time: stays visible always.
-Phase description: 11px, muted.
-
-### Connector arrows between tiles
-```jsx
-<div style={{ display: "flex", alignItems: "center", padding: "0 8px", flexShrink: 0 }}>
-  <div style={{ height: 1, width: 16, background: done ? C.teal : C.border }} />
-  <span style={{ fontSize: 12, color: done ? C.teal : C.muted }}>›</span>
-</div>
-```
+Completed phase: teal checkmark badge (absolute top-right, 20px circle). Title: strikethrough + `C.light` when done. The Journey Strip is always rendered — even on the first phase.
 
 ---
 
-## 12. Reusable Components
-
-Always implement these as local components within the page file.
-
-### PhaseLabel
-```jsx
-function PhaseLabel({ label, time, done }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#48BB78" : "#ED8936" }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#A0AEC0", textTransform: "uppercase", letterSpacing: 1, fontFamily: F.b }}>
-          {done ? `${label} — Complete ✓` : `${label} — In Progress`}
-        </span>
-      </div>
-      <span style={{ fontSize: 12, color: "#A0AEC0", fontFamily: F.b }}>{time}</span>
-    </div>
-  );
-}
-```
-
-### Btn
-```jsx
-function Btn({ children, onClick, disabled, secondary }) {
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      padding: "10px 22px",
-      borderRadius: 24,
-      border: secondary ? `1px solid ${C.border}` : "none",
-      background: disabled ? C.muted : secondary ? "transparent" : C.teal,
-      color: disabled ? "#fff" : secondary ? C.navy : "#fff",
-      fontSize: 13, fontWeight: 600,
-      cursor: disabled ? "not-allowed" : "pointer",
-      fontFamily: F.b,
-      display: "flex", alignItems: "center", gap: 5,
-      transition: "all 150ms ease",
-    }}>{children}</button>
-  );
-}
-```
-
-### Eyebrow
-```jsx
-const Eyebrow = ({ t }) => (
-  <p style={{
-    fontSize: 10, fontWeight: 700, color: C.teal,
-    letterSpacing: 2, textTransform: "uppercase",
-    marginBottom: 8, fontFamily: F.b,
-  }}>{t}</p>
-);
-```
-
----
-
-## 13. State Architecture
-
-Use this state structure as a starting point for every e-learning page. Extend as needed for additional slide interactions.
+## 18. State Architecture
 
 ```jsx
 // Phase navigation
@@ -861,8 +1050,8 @@ const [slide, setSlide] = useState(0);
 const [visitedSlides, setVisitedSlides] = useState(new Set([0]));
 const [selectedAnswer, setSelectedAnswer] = useState(null);
 const [answered, setAnswered] = useState(false);
-const [spectrumPos, setSpectrumPos] = useState(2);      // for spectrum slides
-const [flippedCards, setFlippedCards] = useState({});   // for flipcard slides
+const [spectrumPos, setSpectrumPos] = useState(2);
+const [flippedCards, setFlippedCards] = useState({});
 
 // Read phase: { [articleId]: { clicked, reflectionText, submitted } }
 const [articleState, setArticleState] = useState({});
@@ -870,7 +1059,6 @@ const [articleState, setArticleState] = useState({});
 // Watch phase: { [videoId]: { clicked, quizAnswers: [null, null], quizChecked: [false, false] } }
 const [videoState, setVideoState] = useState({});
 
-// Completion helpers
 const markPhaseDone = (id) => setPhasesDone(prev => new Set([...prev, id]));
 const readDone = ARTICLES.every(a => articleState[a.id]?.submitted);
 const watchDone = VIDEOS.every(v => videoState[v.id]?.clicked && videoState[v.id]?.quizChecked?.every(Boolean));
@@ -878,195 +1066,276 @@ const watchDone = VIDEOS.every(v => videoState[v.id]?.clicked && videoState[v.id
 
 ---
 
-## 14. Content Data Structure
+## 19. Content Data Structure (topicContent.ts)
 
-When building a new level's e-learning page, provide all content as data arrays at the top of the file. The components read from this data — no content should be hardcoded inside component JSX.
+All slide content is stored in `data/topicContent.ts` under key `"L-T"`. Scaffold data arrays first — no content hardcoded inside component JSX.
 
 ### SLIDES array
-```js
+```typescript
 const SLIDES = [
   {
-    id: 1,                        // sequential integer
-    section: "FOUNDATIONS",       // UPPERCASE section name for top bar
-    type: "title",                // one of the types defined in Section 6
+    id: 1,
+    section: "THE REALITY",     // UPPERCASE section name
+    takeaway: "...",             // single declarative statement
+    type: "evidenceHero",        // one of the types defined in §12
     heading: "...",
-    subheading: "...",
     body: "...",
-    meta: ["X min", "Y slides", "Quiz included"],
+    stats: [{ value: "X%", label: "...", source: "McKinsey", visualType: "dotGrid" }],
+    pullQuote: "...",
+    sourceLink: "https://...",
   },
-  // ... more slides
 ];
 ```
 
 ### ARTICLES array
-```js
+```typescript
 const ARTICLES = [
   {
-    id: "a1",                     // unique string ID
+    id: "a1",
     title: "...",
     source: "Publication Name",
     readTime: "X min read",
-    desc: "...",                  // one paragraph description
+    desc: "...",
     url: "https://...",
-    reflection: "...",            // specific, non-generic reflection question
+    reflection: "...",   // specific, non-generic reflection question
   },
 ];
 ```
 
 ### VIDEOS array
-```js
+```typescript
 const VIDEOS = [
   {
     id: "v1",
     title: "...",
-    channel: "Oxygy Learning",
+    channel: "...",
     duration: "X min",
     desc: "...",
-    url: "https://...",           // YouTube or video URL
+    url: "https://...",
     quiz: [
-      {
-        q: "...",
-        options: ["...", "...", "...", "..."],
-        correct: 0,               // index of correct option
-      },
-      {
-        q: "...",
-        options: ["...", "...", "...", "..."],
-        correct: 2,
-      },
+      { q: "...", options: ["...", "...", "...", "..."], correct: 0 },
+      { q: "...", options: ["...", "...", "...", "..."], correct: 2 },
     ],
   },
 ];
 ```
 
 ### PHASES array
-```js
+```typescript
 const PHASES = [
   { id: "elearn",   label: "E-Learning", icon: "▶", time: "X–Y min", desc: "Interactive slide module" },
   { id: "read",     label: "Read",       icon: "◎", time: "~X min",  desc: "N articles + reflection" },
   { id: "watch",    label: "Watch",      icon: "▷", time: "~X min",  desc: "N videos + knowledge check" },
-  { id: "practice", label: "Practice",   icon: "◈", time: "X min",   desc: "Prompt Playground →", external: true },
+  { id: "practice", label: "Practice",   icon: "◈", time: "X min",   desc: "Practice tool →", external: true },
 ];
 ```
 
 ---
 
-## 15. Topic Authoring Guidance
+## 20. Content Authoring Rules
 
-These rules govern the *content* written for slides, articles, and video descriptions. They apply to every level and every topic.
+### Writing Evidence (Beat 1 Slides)
 
-### Tone and framing
+**Source requirements — evidence must come from:**
+- Consulting research: McKinsey, Deloitte, BCG, Accenture
+- Academic: MIT Sloan, Stanford, Harvard Business Review
+- Platform data: Microsoft/LinkedIn Workplace Reports, GitHub, Salesforce
+- Peer-reviewed research with named methodology
 
-- Frame gaps as opportunities, not failures. The learner is investing in growth — treat them accordingly.
-- Never use language that implies blame, shame, or inadequacy.
-- Avoid "best practice" — prefer "effective technique" or "recommended approach for [specific situation]."
-- When introducing a framework, always present the situational judgment for when to use it vs. alternatives.
+Unacceptable: undated reports, unnamed surveys, ranges without a specific number, blog posts without primary source.
 
-### Scenario and example requirements
+**Stat formatting rules:**
+- Use one specific number, not a range (*"62%"* not *"60–65%"*)
+- The stat should be surprising enough to stop the learner
+- The pull-quote must state the *implication* of the stat, not restate it
+- Include the source logo from `/public/logos/` (height 24px, max-width 120px, `objectFit: contain`)
 
-All scenarios and examples must pass the **audience universality test** defined in Section 2.4. In addition:
+### Writing Scenarios (Beat 4 Contrast Slides)
 
-- Scenarios should be professionally universal — recognisable to any knowledge worker regardless of role, function, or seniority.
-- Never anchor a scenario to a specific job title or department unless the exercise explicitly asks the learner to choose their own role.
-- Prompt demonstrations must use tasks any professional could face: summarising, drafting, structuring, reviewing, synthesising.
-- Before/after comparisons must use genuine attempts on both sides. Never strawman the "before" state.
+Both sides use the same task. The "before" state must be a plausible first attempt by a capable professional — not deliberately bad. The "after" state must be built using the framework just taught, with RCTF color underlines on added components.
 
-### Tool-agnostic content
+### Writing `courseIntro` Objectives
 
-Follow the tool-agnostic framing rules in Section 2.3. In particular:
-- Never reference specific AI tools (ChatGPT, Claude, Copilot, Gemini) in scenario setups or teaching content.
-- Use "your AI tool," "the AI," or "any large language model" instead.
-- Exceptions are listed in Section 2.3.
+Each objective must:
+- Start with an action verb
+- Describe an outcome the learner will *have*, not a topic that will be *covered*
+- Match the learning objectives in the Topic Outline exactly
+- Map to one of the five narrative beats
 
-### Content that should never appear in self-paced slides
+Every objective listed in `courseIntro` must be introduced in a concept slide and tested in a judgment or quiz slide before the module ends.
 
-- Walls of text without visual breaks (max 3 consecutive body paragraphs without an interactive or visual element)
-- Unattributed statistics or claims
-- References to specific AI tools in scenario setups (see Section 2.3 for exceptions)
-- Function-specific or role-specific scenarios that violate the audience universality rule (Section 2.4)
-- "One right answer" framing that positions a single technique as universally correct (see Principle 5 in Section 2.1)
+### Writing `contextBar` Cards
 
----
+Each component card must contain:
+1. **KEY** — component name in uppercase
+2. **Description** — 1–2 sentences explaining what this component is
+3. **Example** — short concrete example in practice (italic)
+4. **Impact badge** — `"Without this → [specific observable consequence]"` — must describe a real, observable consequence, not *"the output quality drops"*
 
-## 16. Quality Rules — Non-Negotiable
+### Writing `situationalJudgment` Scenarios
 
-These apply to every build. Check before considering the page complete.
+One situation, 3–4 sentences max. Universal professional task. No correct answer obvious without the framework. Introduces real constraints (time, audience, stakes, format).
 
-**No overlapping content.** The player shell is a fixed grid: `topBar (44px) + progressBar (3px) + contentArea (460px, scrollable) + navBar (~52px)`. Content never bleeds outside the content area.
+Three options always:
 
-**No layout shifts.** The player card height never changes between slides. If slide content is shorter, it sits at the top with empty space below. If it's longer, the content area scrolls.
+| Quality | Label | Characteristics |
+|---------|-------|----------------|
+| Strongest | `"STRONGEST CHOICE"` | Applies the framework correctly for this specific situation |
+| Partial | `"COULD WORK"` | Applies part of the technique but misses an important nuance |
+| Weakest | `"NOT THE BEST FIT"` | Misses the point or applies the wrong approach |
 
-**All cards use explicit padding.** Minimum `padding: 14px 16px` on all sides. Never 0 on any side.
+Feedback must explain *why* that choice is strongest/partial/weak **in this specific situation** — not just label it. Include 3–4 scenarios per `situationalJudgment` slide.
 
-**Equal height card grids use CSS Grid with `alignItems: "stretch"`.** Never Flexbox for equal-height columns.
+### Writing `moduleSummary`
 
-**All text containers have `wordBreak: "break-word"` and `overflowWrap: "break-word"`.**
+Component descriptions: shorter than the `contextBar` version — a single memorable phrase, not a full explanation.
 
-**Borders are always `1px solid #E2E8F0`** on cards and panels. Never omit.
+`"Use when:"` conditions must be specific and actionable — not *"when you have time"* but *"when the output will be shared externally and tone consistency matters."*
 
-**Prompt text is never rendered as bare body copy.** Always use the prompt box style from Section 7.
+### Writing Reflection Questions
 
-**Button minimum width: 100px.** Buttons never collapse to icon-only on desktop.
+Two questions per module, written fresh each time. Never reuse across modules.
 
-**Touch targets minimum height: 44px** on all interactive elements.
+- **Question 1** — prompts application to immediate real work
+- **Question 2** — prompts further exploration or curiosity
+- Neither should feel like an assessment
 
-**The journey strip is always rendered** — even when on the first phase. It shows the learner what's coming.
+Q1 examples: *"What's one thing from this module you'll try in your next piece of work?"*
+Q2 examples: *"Where in your work do you think this technique would have the biggest impact?"*
 
-**No emoji in professional UI.** Phase icons use geometric unicode characters (▶ ◎ ▷ ◈ ◉ ◇), not emoji.
+### Tone & Voice
 
-**Google Fonts must be loaded** via `@import` in the `<style>` tag at the top of every component. Never fall back to system fonts as the primary choice.
+| Avoid | Use instead |
+|-------|------------|
+| "Best practice" | "Effective technique" / "Recommended approach for [situation]" |
+| "You've been doing this wrong" | "Here's what most people haven't been shown" |
+| "Always do X" | "For [specific situation], X tends to work best" |
+| Named AI tools | "your AI tool" / "any large language model" |
+| Specific job titles | "you" + description of task |
 
-**Vertical composition must be balanced across the full 460px content area.** No slide should feel top-heavy with content clustered in the upper half and empty space below.
-- **Header zone (top ~20%, max ~80–90px):** Section eyebrow, slide heading, teal-underlined key phrase. Keep compact.
-- **Primary content zone (middle ~60%):** Core teaching content — frameworks, diagrams, comparisons, interactive elements. Vertically centred or evenly distributed, not pushed to the top.
-- **Supporting content zone (bottom ~20%):** Pull quotes, footnotes, "continue" prompts, contextual links. Anchors the bottom of the slide.
-- If a slide's content naturally occupies less than 460px, distribute it with balanced vertical spacing rather than top-aligning everything with empty space below.
-- Minimum 16px between heading and body text. Minimum 20–24px between body text and primary visual content.
+**Eyebrow labels:** ALL CAPS, 1–3 words, descriptive of what follows — not decorative.
 
-**Dense content must use the expandable accordion pattern** (defined in Section 6). Long prompt examples, full AI outputs, and multi-paragraph explanations must be collapsible. The slide's pedagogical point must be clear in the collapsed state — expansion is for optional depth.
+### What Must Never Appear
 
-**Tension/statement slides must render headings on a single line.** When a slide's purpose is to deliver a single impactful statement (e.g., type `tensionStatement`), the heading and subheading must each fit on one line. Use `whiteSpace: "nowrap"` and ensure the text is short enough for the content area width. If the text is too long, shorten it — never allow it to wrap to a second line. The single-line constraint creates visual impact and prevents the statement from reading like a paragraph.
-
-**Key Insight cards must use the animated pulse style.** Whenever a slide includes a "Key Insight" or summary callout, it must use the dark gradient background (`linear-gradient(135deg, #1A3A38, #1A202C)`), teal border (`1px solid #38B2AC44`), enlarged padding (`14px 20px`), and the `insightPulse` CSS animation. The "KEY INSIGHT" label is always 10px, uppercase, teal, with `0.1em` letter-spacing. This creates a visually distinct, attention-drawing card that anchors the bottom of the slide.
-
-**Evidence slides must include source logos.** When stats reference a known source (McKinsey, Deloitte, MIT Sloan, etc.), include the actual logo image from `/public/logos/` using an `<img>` tag (height 24px, max-width 120px, `objectFit: contain`). Each stat card should also include a short description (1–2 sentences) explaining what the stat means in the context of the topic, not just the raw number and label.
-
-**Content must be vertically distributed, not top-heavy.** Use `display: flex`, `flexDirection: column`, `justifyContent: space-between` on the slide container to ensure content fills the vertical space. Headers stay compact at top, primary content fills the middle, and insight/summary cards anchor the bottom. This rule applies to all slide types, not just evidence slides.
-
-**Gap/contrast diagrams must annotate prompts with RCTF colours.** When showing a "rich context" prompt alongside a "limited context" prompt, the rich prompt must visually underline each component using the canonical RCTF colour (Role = #667EEA, Context = #38B2AC, Task = #ED8936, Format = #48BB78, Steps = #9F7AEA, Checks = #F6AD55). Include a colour legend below the prompt showing which component maps to which colour.
-
-**Bridge slides must use working internal routes.** The CTA link on bridge slides must always use a real internal route (e.g., `/app/toolkit/prompt-playground`), never a hash fragment like `#playground`. Verify the route exists in the app's route configuration before using it.
-
-**Situational judgment slides must support multi-step navigation.** When a `situationalJudgment` slide contains multiple scenarios, clicking the "Next" button must advance to the next scenario within the slide (not to the next slide) until all scenarios are exhausted. Include a progress indicator showing "Scenario X of Y" at the bottom of the slide. The slide advances to the next slide only after the final scenario.
-
-**RCTF slides must show all content without dropdowns.** Each RCTF element card must display the description, example, and "Why this matters" explanation inline — never behind a dropdown or expand button. Use a 3×2 grid layout (not 2×2) to fit all six elements with compact sizing. Include an icon per element for visual distinction.
-
----
-
-## 17. File Location & Naming
-
-New e-learning pages live in the site's route structure at:
-```
-/src/pages/learn/level-[N]-[topic-slug].jsx
-```
-
-Example: `/src/pages/learn/level-1-prompt-engineering.jsx`
-
-Each page is a single self-contained `.jsx` file. All data, components, and styles live in that one file. No separate CSS files, no imported sub-components from other files (except global site components like the Nav).
+| Banned content | Reason |
+|---------------|--------|
+| Walls of text (3+ paragraphs without visual or interactive break) | Kills engagement |
+| Unattributed statistics or claims | Credibility |
+| Named AI tools in scenario setups | Tool-agnostic rule |
+| Function-specific job titles in scenarios | Audience universality rule |
+| "One right answer" framing | Contradicts Principle 5 |
+| Colored heading text | Design standard — teal underline only |
+| Center-aligned body text | Brand standard — left-align always |
+| Strawmanned "before" states in contrasts | Pedagogical integrity |
+| Mocking or shame-adjacent language | Learner respect |
 
 ---
 
-## 18. How to Use This Skill — Quick Reference
+## 21. Slide Sequencing Guide
 
-When asked to build a new e-learning page:
+A typical module follows this pattern. The arc is mandatory — exact slide count is flexible.
 
-1. **Read this SKILL.md in full before writing any code.**
-2. Ask the user for (or check project context for): level number, level name, slide content, article URLs + reflection questions, video URLs + quiz questions.
-3. Scaffold the data arrays first (SLIDES, ARTICLES, VIDEOS, PHASES).
-4. Build the page shell (Nav, Hero, phase switching logic, Journey Strip).
-5. Build or reuse the SlideContent renderer, Read phase, and Watch phase.
-6. Wire up state and phase progression logic.
-7. Validate against Section 16 quality rules and Section 15 topic authoring guidance before presenting output.
-8. Output a single `.jsx` file at the correct path.
+**Total slides:** 10–16 per module. Never fewer than 8 (arc cannot be completed), rarely more than 18 (engagement drops).
 
-Do not ask the user to choose a layout, colour scheme, or component style. These are defined here. Your only creative input is the content itself — not the design.
+| Position | Slide Type(s) | Section Name | Beat |
+|----------|--------------|-------------|------|
+| 1 | `courseIntro` | — | Setup |
+| 2–3 | `evidenceHero`, `chart` or `pyramid` | `"THE REALITY"` | Beat 1 |
+| 4 | `tensionStatement` or `gapDiagram` | `"THE GAP"` | Beat 2 |
+| 5 | `concept` (plain-language definition) | `"WHAT IS [X]"` | Beat 3 |
+| 6 | `concept` (decision criteria / when to use) | `"THE TECHNIQUE"` | Beat 3 |
+| 7–8 | `rctf`, `contextBar`, or `toolkitOverview` | `"THE ANATOMY"` | Beat 3 |
+| 9–10 | `approachIntro`, `spectrum`, or `comparison` | `"IN PRACTICE"` | Beat 3/5 |
+| 11–12 | `scenarioComparison`, `parallelDemo`, or `flipcard` | `"SEE THE DIFFERENCE"` | Beat 4 |
+| 13–14 | `situationalJudgment` | `"IN PRACTICE"` | Beat 5 |
+| 15 | `moduleSummary` or `bridge` | `"WRAP UP"` | Bridge |
+
+**Critical rule — Definition before judgment:** Slide 5 MUST be a plain-language definition of the core concept. Learners must be shown *what something is* before they are asked to judge *when to use it*. Never place a `situationalJudgment` or decision criteria slide before the concept has been defined.
+
+---
+
+## 22. Quality Checklist
+
+Check every item before considering a module complete.
+
+### Architecture
+- [ ] Slide data added to `data/topicContent.ts` under the correct `"L-T"` key
+- [ ] Topic metadata added to `data/levelTopics.ts`
+- [ ] No new pages or routes created — existing pipeline handles rendering
+- [ ] All links to the level page include `?level=N`
+- [ ] Practice tool route derived from `courseIntro.levelNumber` — never hardcoded
+
+### Learning Objective Alignment
+- [ ] `courseIntro` objectives match the Topic Outline exactly
+- [ ] Every objective is introduced in at least one concept slide before it is tested
+- [ ] Every `situationalJudgment` and `quiz` slide maps to a specific learning objective
+- [ ] `moduleSummary` reflects the module's actual learning objectives
+
+### Test What You Teach
+- [ ] A plain-language definition slide appears before any decision criteria or judgment slides
+- [ ] For every `situationalJudgment`: identify which earlier slide taught the concept being tested
+- [ ] For every `quiz`: the correct answer was stated or demonstrated earlier in the module
+- [ ] "When to use" concept slides appear *before* anatomy/framework slides
+
+### Evidence
+- [ ] Every evidence slide has a graphic — text-only layout is not acceptable
+- [ ] Every stat has a named, reputable source
+- [ ] No stat uses a range — a specific number is cited
+- [ ] The pull-quote states the implication, not a restatement
+- [ ] Source logos included at `/public/logos/` for named sources
+- [ ] `visualType` set on each stat
+
+### Scenarios
+- [ ] Every scenario recognisable to at least 3 different job functions
+- [ ] No job titles in scenario setups
+- [ ] No named AI tools in scenarios or prompt demonstrations
+- [ ] The "before" state is a genuine attempt, not a strawman
+
+### Framework
+- [ ] Every framework component has: definition + example + impact of omission
+- [ ] The module presents situational judgment for when to use the framework vs alternatives
+- [ ] No slide implies the framework is always the correct approach
+
+### Interactive Slides
+- [ ] Situational judgment options genuinely ambiguous without the framework
+- [ ] Predict-first options all plausible before outcome revealed
+- [ ] Feedback for every option explains *why*, not just *what*
+
+### Player & Layout
+- [ ] No scroll inside any slide (except `situationMatrix` and `sjExercise`)
+- [ ] Unrevealed content uses `opacity: 0`, never `display: none`
+- [ ] No layout shifts between slides
+- [ ] All cards have explicit padding (minimum `14px 16px` on all sides)
+- [ ] Tension/statement slides render headings on a single line (`whiteSpace: "nowrap"`)
+- [ ] Key Insight cards use the animated pulse style
+- [ ] Bridge slides use real internal routes — never hash fragments
+- [ ] Vertical composition balanced: no top-heavy slides with empty space below
+
+### Tone & Language
+- [ ] No language implies blame, shame, or inadequacy
+- [ ] No "best practice" language — all framing is situational
+- [ ] All heading key words use teal underline — no colored text
+- [ ] No named AI tools in teaching content
+
+### Reflection
+- [ ] Both reflection questions are fresh (not reused from another module)
+- [ ] Question 1 prompts application to immediate real work
+- [ ] Question 2 prompts exploration or curiosity
+
+---
+
+## 23. Quick Reference — How to Use This Skill
+
+When asked to build a new e-learning module:
+
+1. **Read this skill in full before writing any code.**
+2. **Obtain the Topic Outline** — topic title, learning objectives, slide-by-slide content plan, article URLs, video URLs for the specific module being built.
+3. Determine the correct `"L-T"` key (e.g. `"3-2"` for Level 3, Topic 2).
+4. Scaffold the data arrays first (`SLIDES`, `ARTICLES`, `VIDEOS`, `PHASES`) in `data/topicContent.ts`.
+5. Add topic metadata to `data/levelTopics.ts`.
+6. Test at `/app/level?level=N` — no new pages or routes needed.
+7. Validate against the §22 Quality Checklist and §20 Content Authoring Rules before presenting output.
+
+**Do not ask the user to choose a layout, colour scheme, or component style.** These are defined here. Your only creative input is the content — not the design.
+
+**Do not create standalone marketing pages, Vercel serverless functions, or any files in the `api/` directory.** All course content lives in the app dashboard via the existing player pipeline.
