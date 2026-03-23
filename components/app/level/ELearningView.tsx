@@ -1071,32 +1071,35 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { icon: '🎨', text: 'Output needs to vary by situation' },
           { icon: '⏱️', text: "The investment isn't worth it (yet)" },
         ];
+        const emojiSz = _fs ? 18 : 16;
+        const labelSz = _fs ? 14 : 13;
+        const itemSz  = _fs ? 15 : 14;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', justifyContent: 'center' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1, minHeight: 0 }}>
               {/* Build an agent */}
               <div style={{ background: '#F0FFF4', border: '1.5px solid #68D39155', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontSize: 15 }}>✅</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#276749', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Build an agent</span>
+                  <span style={{ fontSize: emojiSz }}>✅</span>
+                  <span style={{ fontSize: labelSz, fontWeight: 800, color: '#276749', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Build an agent</span>
                 </div>
                 {buildWhen.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#FFFFFF', borderRadius: 8, padding: '8px 10px', border: '1px solid #68D39133' }}>
-                    <span style={{ fontSize: 15, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
-                    <span style={{ fontSize: 12, color: '#276749', lineHeight: 1.45, fontWeight: 500 }}>{item.text}</span>
+                    <span style={{ fontSize: emojiSz, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
+                    <span style={{ fontSize: itemSz, color: '#276749', lineHeight: 1.5, fontWeight: 500 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
               {/* Just prompt */}
               <div style={{ background: '#FFFBEB', border: '1.5px solid #F6AD5555', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontSize: 15 }}>💬</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#C05621', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Just prompt</span>
+                  <span style={{ fontSize: emojiSz }}>💬</span>
+                  <span style={{ fontSize: labelSz, fontWeight: 800, color: '#C05621', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Just prompt</span>
                 </div>
                 {promptWhen.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#FFFFFF', borderRadius: 8, padding: '8px 10px', border: '1px solid #F6AD5533' }}>
-                    <span style={{ fontSize: 15, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
-                    <span style={{ fontSize: 12, color: '#C05621', lineHeight: 1.45, fontWeight: 500 }}>{item.text}</span>
+                    <span style={{ fontSize: emojiSz, flexShrink: 0, lineHeight: 1.3 }}>{item.icon}</span>
+                    <span style={{ fontSize: itemSz, color: '#C05621', lineHeight: 1.5, fontWeight: 500 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
