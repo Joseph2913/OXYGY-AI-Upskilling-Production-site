@@ -484,14 +484,6 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 }) => {
   const totalSlides = slides.length;
   const moduleLevel = slides.find(s => s.type === 'courseIntro')?.levelNumber ?? 1;
-  const PRACTICE_URLS: Record<number, string> = {
-    1: '/app/toolkit/prompt-playground',
-    2: '/app/toolkit',
-    3: '/app/level-3/workflow-canvas',
-    4: '/app/level-4/app-designer',
-    5: '/app/level-5/app-evaluator',
-  };
-  const practiceUrl = PRACTICE_URLS[moduleLevel] ?? '/app/toolkit';
   const voiceover = useVoiceover();
   const [autoNarration, setAutoNarration] = useState<boolean>(() => {
     try { return localStorage.getItem('oxygy_auto_narration') !== 'false'; } catch { return true; }
@@ -505,6 +497,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   }, []);
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([currentSlide]));
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [winH, setWinH] = useState(typeof window !== 'undefined' ? window.innerHeight : 900);
   const [showFsTooltip, setShowFsTooltip] = useState(true);
   const [sjScenarioIdx, setSjScenarioIdx] = useState(0);
   /* L2 interactive slide state */
@@ -547,10 +540,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [showActivityWarning, setShowActivityWarning] = useState(false);
   const activityWarningTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  // reflection screen state
+  // completion screen state
   const [showReflection, setShowReflection] = useState(false);
-  const [reflectionA, setReflectionA] = useState('');
-  const [reflectionB, setReflectionB] = useState('');
 
   useEffect(() => { injectGlowStyle(); }, []);
   useEffect(() => { setVisitedSlides((prev) => new Set(prev).add(currentSlide)); }, [currentSlide]);
@@ -605,12 +596,29 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Track window height so fullscreen zoom updates on resize / monitor change
+  useEffect(() => {
+    const handler = () => setWinH(window.innerHeight);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   const goToSlide = useCallback((i: number) => { if (i >= 1 && i <= totalSlides) onSlideChange(i); }, [totalSlides, onSlideChange]);
   const isLastSlide = currentSlide === totalSlides;
   const s = slides[Math.min(currentSlide, totalSlides) - 1];
   if (!s) return null;
 
   const fs = isFullscreen;
+
+  // Dynamic zoom: in fullscreen, scale slide content to fill any screen height.
+  // Reference baseline: 900px viewport (progress 3px + nav ~77px = 80px overhead).
+  // On larger screens slideZoom > 1, everything scales proportionally.
+  const FS_NAV_H = 80;
+  const FS_DESIGN_H = 820; // = 900 - FS_NAV_H
+  const fsAvailH = winH - FS_NAV_H;
+  const slideZoom = isFullscreen ? Math.max(1, Math.min(2, fsAvailH / FS_DESIGN_H)) : 1;
+  // Inner div height: the CSS size before zoom is applied (zoom × innerH = fsAvailH)
+  const fsInnerH = isFullscreen ? Math.round(fsAvailH / slideZoom) : 0;
 
   /* ════════════════════════════════════════════════════
      CONCEPT VISUAL PANELS (L2)
@@ -2039,9 +2047,20 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
         const handleDrop = (slotKey: string) => {
           if (!draggedChip) return;
-          setPlacedComponents(prev => ({ ...prev, [slotKey]: draggedChip }));
+          const newPlacements = { ...placedComponents, [slotKey]: draggedChip };
+          setPlacedComponents(newPlacements);
           setDraggedChip(null);
           setBuildChecked(false);
+          // Auto-check when last chip is placed
+          const allPlacedNow = comps.every((c: any) => !!newPlacements[c.key]);
+          if (allPlacedNow) {
+            setTimeout(() => {
+              setBuildChecked(true);
+              if (comps.every((c: any) => newPlacements[c.key] === c.key)) {
+                setTimeout(() => setBuildComplete(true), 700);
+              }
+            }, 300);
+          }
         };
 
         const unplacedComps = (shuffledBuildKeys.length > 0
@@ -2050,7 +2069,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         ).filter((c: any) => !placedChipKeys.includes(c.key));
 
         return (
-          <div style={{ padding: fs ? '14px 16px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', gap: 10, boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '18px 28px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 12 : 10, boxSizing: 'border-box' as const }}>
             {/* Instruction banner */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               {buildComplete ? (
@@ -2068,13 +2087,13 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
             {/* Task — full width so chips and buckets start at same height */}
             {!buildComplete && (
-              <div style={{ flexShrink: 0, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 12px' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginRight: 8 }}>THE TASK</span>
-                <span style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55 }}>{s.buildTask}</span>
+              <div style={{ flexShrink: 0, background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '10px 16px' : '7px 12px' }}>
+                <span style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginRight: 8 }}>THE TASK</span>
+                <span style={{ fontSize: fs ? 16 : 13, color: '#4A5568', lineHeight: 1.6 }}>{s.buildTask}</span>
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: fs ? 16 : 12, flex: 1, minHeight: 0 }}>
               {/* Left — chip bank, or assembled prompt when done */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, overflowY: 'auto' }}>
                 {buildComplete ? (
@@ -2089,47 +2108,39 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-                        {isTouch ? 'TAP A CARD, THEN TAP A SLOT →' : 'DRAG EACH CARD INTO A SLOT →'}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        {unplacedComps.map((c: any) => {
-                          const snippet = c.chipText || (c.filledText.length > 60 ? c.filledText.slice(0, 60) + '…' : c.filledText);
-                          const isSelected = draggedChip === c.key;
-                          return isTouch ? (
-                            <button
-                              key={c.key}
-                              onClick={() => setDraggedChip(isSelected ? null : c.key)}
-                              style={{ textAlign: 'left' as const, background: isSelected ? '#2D3748' : '#EDF2F7', border: `1.5px solid ${isSelected ? '#2D3748' : '#CBD5E0'}`, borderRadius: 8, padding: '9px 12px', cursor: 'pointer', userSelect: 'none' as const, outline: isSelected ? '2px solid #4A5568' : 'none', transition: 'all 150ms ease' }}
-                            >
-                              <span style={{ fontSize: 12, color: isSelected ? '#fff' : '#2D3748', lineHeight: 1.5 }}>{snippet}</span>
-                            </button>
-                          ) : (
-                            <div
-                              key={c.key}
-                              draggable
-                              onDragStart={() => setDraggedChip(c.key)}
-                              onDragEnd={() => setDraggedChip(null)}
-                              style={{ background: '#EDF2F7', border: '1.5px solid #CBD5E0', borderRadius: 8, padding: '9px 12px', cursor: 'grab', userSelect: 'none' as const, opacity: isSelected ? 0.4 : 1, transition: 'opacity 150ms ease' }}
-                            >
-                              <span style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.5 }}>{snippet}</span>
-                            </div>
-                          );
-                        })}
-                        {unplacedComps.length === 0 && !buildComplete && (
-                          <span style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>All chips placed — check your answers →</span>
-                        )}
-                      </div>
-                    </div>
-                  </>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: fs ? 8 : 6 }}>
+                    {unplacedComps.map((c: any) => {
+                      const snippet = c.chipText || (c.filledText.length > 60 ? c.filledText.slice(0, 60) + '…' : c.filledText);
+                      const isSelected = draggedChip === c.key;
+                      return isTouch ? (
+                        <button
+                          key={c.key}
+                          onClick={() => setDraggedChip(isSelected ? null : c.key)}
+                          style={{ textAlign: 'left' as const, background: isSelected ? '#2D3748' : '#EDF2F7', border: `1.5px solid ${isSelected ? '#2D3748' : '#CBD5E0'}`, borderRadius: 10, padding: fs ? '12px 16px' : '9px 12px', cursor: 'pointer', userSelect: 'none' as const, outline: isSelected ? '2px solid #4A5568' : 'none', transition: 'all 150ms ease' }}
+                        >
+                          <span style={{ fontSize: fs ? 14 : 12, color: isSelected ? '#fff' : '#2D3748', lineHeight: 1.5 }}>{snippet}</span>
+                        </button>
+                      ) : (
+                        <div
+                          key={c.key}
+                          draggable
+                          onDragStart={() => setDraggedChip(c.key)}
+                          onDragEnd={() => setDraggedChip(null)}
+                          style={{ background: '#EDF2F7', border: '1.5px solid #CBD5E0', borderRadius: 10, padding: fs ? '12px 16px' : '9px 12px', cursor: 'grab', userSelect: 'none' as const, opacity: isSelected ? 0.4 : 1, transition: 'opacity 150ms ease' }}
+                        >
+                          <span style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.5 }}>{snippet}</span>
+                        </div>
+                      );
+                    })}
+                    {unplacedComps.length === 0 && !buildComplete && (
+                      <span style={{ fontSize: fs ? 13 : 11, color: '#A0AEC0', fontStyle: 'italic' }}>All placed — checking…</span>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Right — drop zones (buckets larger than chips) + check button */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0 }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', minHeight: 0 }}>
+              {/* Right — drop zones (buckets) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: fs ? 8 : 6, minHeight: 0, overflowY: 'auto' }}>
                 {comps.map((c: any) => {
                   const placedChipKey = placedComponents[c.key];
                   const placedComp = placedChipKey ? comps.find((comp: any) => comp.key === placedChipKey) : null;
@@ -2149,9 +2160,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                           setBuildChecked(false);
                         }
                       }}
-                      style={{ border: isPlaced ? `1.5px solid ${c.color}` : `1.5px dashed ${isDragTarget ? c.color : c.color + '55'}`, background: isPlaced ? c.light : isDragTarget ? c.color + '0A' : '#FAFAFA', borderRadius: 10, padding: '10px 14px', minHeight: 56, display: 'flex', alignItems: 'center', gap: 8, transition: 'all 150ms ease' }}
+                      style={{ border: isPlaced ? `1.5px solid ${c.color}` : `1.5px dashed ${isDragTarget ? c.color : c.color + '55'}`, background: isPlaced ? c.light : isDragTarget ? c.color + '0A' : '#FAFAFA', borderRadius: 12, padding: fs ? '14px 18px' : '10px 14px', minHeight: fs ? 72 : 54, display: 'flex', alignItems: 'center', gap: 10, transition: 'all 150ms ease' }}
                     >
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', background: c.color, padding: '2px 8px', borderRadius: 10, flexShrink: 0 }}>{c.key}</span>
+                      <span style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#FFFFFF', background: c.color, padding: fs ? '3px 10px' : '2px 8px', borderRadius: 10, flexShrink: 0 }}>{c.key}</span>
                       {isPlaced && placedComp ? (
                         <span
                           draggable={!buildComplete}
@@ -2161,36 +2172,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                             setPlacedComponents(prev => { const n = { ...prev }; delete n[c.key]; return n; });
                             setBuildChecked(false);
                           }}
-                          style={{ fontSize: 12, color: '#2D3748', lineHeight: 1.5, flex: 1, cursor: !buildComplete ? 'grab' : 'default' }}
+                          style={{ fontSize: fs ? 14 : 12, color: '#2D3748', lineHeight: 1.5, flex: 1, cursor: !buildComplete ? 'grab' : 'default' }}
                         >
                           {placedComp.chipText || (placedComp.filledText.length > 50 ? placedComp.filledText.slice(0, 50) + '…' : placedComp.filledText)}
                         </span>
                       ) : (
-                        <span style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic', lineHeight: 1.5, flex: 1 }}>{c.dropHint}</span>
+                        <span style={{ fontSize: fs ? 13 : 12, color: '#A0AEC0', fontStyle: 'italic', lineHeight: 1.5, flex: 1 }}>{c.dropHint}</span>
                       )}
                       {buildChecked && isPlaced && (
-                        <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? '#48BB78' : '#FC8181', flexShrink: 0 }}>{isCorrect ? '✓' : '✗'}</span>
+                        <span style={{ fontSize: fs ? 18 : 16, fontWeight: 700, color: isCorrect ? '#48BB78' : '#FC8181', flexShrink: 0 }}>{isCorrect ? '✓' : '✗'}</span>
                       )}
                     </div>
                   );
                 })}
-                </div>
-                {!buildComplete && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 2 }}>
-                    <button
-                      onClick={() => {
-                        setBuildChecked(true);
-                        if (comps.every((comp: any) => placedComponents[comp.key] === comp.key)) {
-                          setTimeout(() => setBuildComplete(true), 600);
-                        }
-                      }}
-                      disabled={!allPlaced}
-                      style={{ padding: '8px 20px', borderRadius: 24, fontSize: 13, fontWeight: 700, border: 'none', cursor: allPlaced ? 'pointer' : 'default', background: allPlaced ? '#1A202C' : '#E2E8F0', color: allPlaced ? '#FFFFFF' : '#A0AEC0', transition: 'all 0.15s ease' }}
-                    >
-                      Check Answers
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -2207,51 +2201,51 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           const opts = s.predictOptions || ['Brain Dump', 'Conversational', 'Blueprint'];
           const isCorrect = predictSelected === s.predictCorrect;
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: fs ? '20px 24px' : '12px 14px', overflowY: 'auto', boxSizing: 'border-box' as const, gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: fs ? '24px 36px' : '12px 14px', overflowY: 'auto', boxSizing: 'border-box' as const, gap: fs ? 20 : 12 }}>
 
               {/* ── Persona hero card ── */}
               <div style={{ borderRadius: 14, overflow: 'hidden', border: `2px solid ${p.color}33`, flexShrink: 0 }}>
-                <div style={{ background: `linear-gradient(135deg, ${p.color}22 0%, ${p.color}0A 100%)`, borderBottom: `2px solid ${p.color}22`, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 80, height: 80, borderRadius: '50%', background: p.color, overflow: 'hidden', flexShrink: 0, border: `3px solid ${p.color}`, boxShadow: `0 4px 16px ${p.color}44` }}>
+                <div style={{ background: `linear-gradient(135deg, ${p.color}22 0%, ${p.color}0A 100%)`, borderBottom: `2px solid ${p.color}22`, padding: fs ? '20px 28px' : '16px 20px', display: 'flex', alignItems: 'center', gap: fs ? 20 : 16 }}>
+                  <div style={{ width: fs ? 100 : 80, height: fs ? 100 : 80, borderRadius: '50%', background: p.color, overflow: 'hidden', flexShrink: 0, border: `3px solid ${p.color}`, boxShadow: `0 4px 16px ${p.color}44` }}>
                     {p.iconPath
                       ? <img src={p.iconPath} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: '#fff' }}>{p.initial}</span>
+                      : <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fs ? 36 : 28, fontWeight: 800, color: '#fff' }}>{p.initial}</span>
                     }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', lineHeight: 1.1, marginBottom: 3 }}>{p.name}</div>
-                    <div style={{ fontSize: 14, color: '#4A5568', fontWeight: 500, marginBottom: 8 }}>{p.role}</div>
+                    <div style={{ fontSize: fs ? 26 : 20, fontWeight: 800, color: '#1A202C', lineHeight: 1.1, marginBottom: 4 }}>{p.name}</div>
+                    <div style={{ fontSize: fs ? 17 : 14, color: '#4A5568', fontWeight: 500, marginBottom: 10 }}>{p.role}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
                       {(p.tags || []).map((t, i) => (
-                        <span key={i} style={{ fontSize: 11, color: p.color, background: `${p.color}18`, border: `1px solid ${p.color}44`, borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>{t}</span>
+                        <span key={i} style={{ fontSize: fs ? 13 : 11, color: p.color, background: `${p.color}18`, border: `1px solid ${p.color}44`, borderRadius: 20, padding: fs ? '4px 14px' : '3px 10px', fontWeight: 600 }}>{t}</span>
                       ))}
                     </div>
                   </div>
                 </div>
-                <div style={{ padding: '12px 20px', background: '#fff' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: p.color, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 5 }}>THEIR SITUATION</div>
-                  <div style={{ fontSize: 14, color: '#2D3748', lineHeight: 1.65, fontWeight: 500 }}>{p.scenario ?? p.approachDef.split('. ')[0] + '.'}</div>
+                <div style={{ padding: fs ? '16px 28px' : '12px 20px', background: '#fff' }}>
+                  <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: p.color, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>THEIR SITUATION</div>
+                  <div style={{ fontSize: fs ? 17 : 14, color: '#2D3748', lineHeight: 1.7, fontWeight: 500 }}>{p.scenario ?? p.approachDef.split('. ')[0] + '.'}</div>
                 </div>
               </div>
 
               {/* ── Question ── */}
               <div style={{ flexShrink: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#1A202C', marginBottom: 6 }}>
+                <div style={{ fontSize: fs ? 20 : 16, fontWeight: 800, color: '#1A202C', marginBottom: 8 }}>
                   {(s as any).predictQuestion ?? `Which approach fits ${p.name}'s situation?`}
                 </div>
                 {predictSelected === null && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EBF8FF', border: '1px solid #BEE3F8', borderRadius: 8, padding: '5px 12px', marginBottom: 10 }}>
-                    <span style={{ fontSize: 13 }}>👇</span>
-                    <span style={{ fontSize: 12, color: '#2B6CB0', fontWeight: 600 }}>Pick one to see the answer</span>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EBF8FF', border: '1px solid #BEE3F8', borderRadius: 8, padding: '5px 12px', marginBottom: 12 }}>
+                    <span style={{ fontSize: fs ? 15 : 13 }}>👇</span>
+                    <span style={{ fontSize: fs ? 14 : 12, color: '#2B6CB0', fontWeight: 600 }}>Pick one to see the answer</span>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 10 }}>
+                <div style={{ display: 'flex', gap: fs ? 12 : 8, flexWrap: 'wrap' as const, marginBottom: fs ? 14 : 10 }}>
                   {opts.map((opt, i) => {
                     const isSelected = predictSelected === i;
                     const hasSelected = predictSelected !== null;
                     return (
                       <div key={i} onClick={() => { if (!isCorrect) setPredictSelected(i); }} style={{
-                        flex: '1 1 120px', padding: '12px 16px', borderRadius: 12, textAlign: 'center' as const, fontSize: 14, fontWeight: 700, cursor: isCorrect ? 'default' : 'pointer', transition: 'all 150ms ease',
+                        flex: '1 1 120px', padding: fs ? '16px 20px' : '12px 16px', borderRadius: 12, textAlign: 'center' as const, fontSize: fs ? 17 : 14, fontWeight: 700, cursor: isCorrect ? 'default' : 'pointer', transition: 'all 150ms ease',
                         border: (isCorrect && isSelected) ? '2px solid #38A169' : (hasSelected && isSelected && !isCorrect) ? '2px solid #E53E3E' : '1.5px solid #E2E8F0',
                         background: (isCorrect && isSelected) ? '#F0FFF4' : (hasSelected && isSelected && !isCorrect) ? '#FFF5F5' : '#FAFAFA',
                         color: (isCorrect && isSelected) ? '#276749' : (hasSelected && isSelected && !isCorrect) ? '#9B2C2C' : '#4A5568',
@@ -2266,16 +2260,16 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
               {/* ── Feedback ── */}
               {predictSelected !== null && (
-                <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ background: isCorrect ? '#F0FFF4' : '#FFF5F5', border: `2px solid ${isCorrect ? '#68D391' : '#FC8181'}`, borderRadius: 12, padding: '14px 18px' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 5 }}>{isCorrect ? '✅ That\'s the best fit!' : '❌ Not quite — here\'s why'}</div>
-                    <p style={{ fontSize: 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.65, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
+                <div key={predictSelected} style={{ animation: 'fadeInUp 0.25s ease', display: 'flex', flexDirection: 'column', gap: fs ? 14 : 10 }}>
+                  <div style={{ background: isCorrect ? '#F0FFF4' : '#FFF5F5', border: `2px solid ${isCorrect ? '#68D391' : '#FC8181'}`, borderRadius: 12, padding: fs ? '18px 22px' : '14px 18px' }}>
+                    <div style={{ fontSize: fs ? 16 : 13, fontWeight: 800, color: isCorrect ? '#276749' : '#9B2C2C', marginBottom: 6 }}>{isCorrect ? '✅ That\'s the best fit!' : '❌ Not quite — here\'s why'}</div>
+                    <p style={{ fontSize: fs ? 16 : 13, color: isCorrect ? '#276749' : '#9B2C2C', lineHeight: 1.7, margin: 0 }}>{s.predictFeedback?.[predictSelected]}</p>
                   </div>
                   {isCorrect && p.prompt && (
-                    <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: '14px 18px' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
-                      <div style={{ fontSize: 13, color: '#2D3748', lineHeight: 1.65, marginBottom: 8, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
-                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}><span style={{ color: p.color, fontWeight: 700 }}>Why: </span>{p.why}</div>
+                    <div style={{ background: `${p.color}0D`, border: `1.5px solid ${p.color}44`, borderRadius: 12, padding: fs ? '18px 22px' : '14px 18px' }}>
+                      <div style={{ fontSize: fs ? 12 : 11, fontWeight: 700, color: p.color, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>HOW {p.name.toUpperCase()} ACTUALLY DOES IT</div>
+                      <div style={{ fontSize: fs ? 16 : 13, color: '#2D3748', lineHeight: 1.7, marginBottom: 10, fontStyle: 'italic' }}>"{p.prompt.length > 180 ? p.prompt.slice(0, 180) + '…' : p.prompt}"</div>
+                      <div style={{ fontSize: fs ? 15 : 12, color: '#4A5568', lineHeight: 1.6 }}><span style={{ color: p.color, fontWeight: 700 }}>Why: </span>{p.why}</div>
                     </div>
                   )}
                 </div>
@@ -2286,48 +2280,48 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
         const toggleExpand = (id: string) => setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
         return (
-          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
+          <div style={{ padding: fs ? '24px 36px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: fs ? 28 : 20, flex: 1, minHeight: 0 }}>
               {/* Left — context panel */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: p.color, overflow: 'hidden', flexShrink: 0, border: `2px solid ${p.color}66` }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: fs ? 12 : 8, overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: fs ? 14 : 10 }}>
+                  <div style={{ width: fs ? 72 : 56, height: fs ? 72 : 56, borderRadius: '50%', background: p.color, overflow: 'hidden', flexShrink: 0, border: `2px solid ${p.color}66` }}>
                     {p.iconPath
                     ? <img src={p.iconPath} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff' }}>{p.initial}</span>
+                    : <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fs ? 24 : 18, fontWeight: 800, color: '#fff' }}>{p.initial}</span>
                   }
                   </div>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#1A202C' }}>{p.name}</div>
-                    <div style={{ fontSize: 13, color: '#718096' }}>{p.role}</div>
+                    <div style={{ fontSize: fs ? 22 : 16, fontWeight: 800, color: '#1A202C' }}>{p.name}</div>
+                    <div style={{ fontSize: fs ? 15 : 13, color: '#718096' }}>{p.role}</div>
                   </div>
                 </div>
-                <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 700, color: '#FFFFFF', background: p.color, padding: '4px 12px', borderRadius: 16 }}>{p.approach}</span>
+                <span style={{ alignSelf: 'flex-start', fontSize: fs ? 13 : 11, fontWeight: 700, color: '#FFFFFF', background: p.color, padding: fs ? '5px 16px' : '4px 12px', borderRadius: 16 }}>{p.approach}</span>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {p.tags.map((tag, i) => <span key={i} style={{ fontSize: 10, color: '#A0AEC0', border: '1px solid #E2E8F0', borderRadius: 8, padding: '2px 8px' }}>{tag}</span>)}
+                  {p.tags.map((tag, i) => <span key={i} style={{ fontSize: fs ? 12 : 10, color: '#A0AEC0', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '3px 10px' : '2px 8px' }}>{tag}</span>)}
                 </div>
-                <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}>
-                  <ExpandableText text={p.approachDef} maxLen={130} id={`persona-def-${p.name}`} expanded={!!expandedSections[`persona-def-${p.name}`]} onToggle={toggleExpand} />
+                <div style={{ fontSize: fs ? 16 : 12, color: '#4A5568', lineHeight: 1.65 }}>
+                  <ExpandableText text={p.approachDef} maxLen={fs ? 220 : 130} id={`persona-def-${p.name}`} expanded={!!expandedSections[`persona-def-${p.name}`]} onToggle={toggleExpand} />
                 </div>
-                <div style={{ borderLeft: '3px solid #38B2AC', paddingLeft: 10, fontSize: 12, color: '#718096', fontStyle: 'italic' }}>Best for: {p.bestFor}</div>
+                <div style={{ borderLeft: '3px solid #38B2AC', paddingLeft: 10, fontSize: fs ? 15 : 12, color: '#718096', fontStyle: 'italic' }}>Best for: {p.bestFor}</div>
                 {p.modifier && (
-                  <div style={{ background: '#FFFFFF', borderLeft: `3px solid ${p.color}`, padding: '8px 12px', borderRadius: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: p.color }}>+ {p.modifier}</div>
-                    {p.modDef && <div style={{ fontSize: 11, color: '#718096' }}>{p.modDef}</div>}
+                  <div style={{ background: '#FFFFFF', borderLeft: `3px solid ${p.color}`, padding: fs ? '10px 14px' : '8px 12px', borderRadius: 8 }}>
+                    <div style={{ fontSize: fs ? 14 : 11, fontWeight: 700, color: p.color }}>+ {p.modifier}</div>
+                    {p.modDef && <div style={{ fontSize: fs ? 13 : 11, color: '#718096' }}>{p.modDef}</div>}
                   </div>
                 )}
               </div>
               {/* Right — prompt + output */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: fs ? 14 : 10, overflowY: 'auto' }}>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>EXAMPLE PROMPT</div>
-                  <div style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderLeft: `3px solid ${p.color}`, borderRadius: '0 8px 8px 0', padding: '12px 16px', fontSize: 13, fontStyle: 'italic', color: '#2D3748', lineHeight: 1.6 }}>
-                    <ExpandableText text={p.prompt} maxLen={180} id={`persona-prompt-${p.name}`} expanded={!!expandedSections[`persona-prompt-${p.name}`]} onToggle={toggleExpand} />
+                  <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: fs ? 6 : 4 }}>EXAMPLE PROMPT</div>
+                  <div style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderLeft: `3px solid ${p.color}`, borderRadius: '0 8px 8px 0', padding: fs ? '16px 20px' : '12px 16px', fontSize: fs ? 16 : 13, fontStyle: 'italic', color: '#2D3748', lineHeight: 1.65 }}>
+                    <ExpandableText text={p.prompt} maxLen={fs ? 280 : 180} id={`persona-prompt-${p.name}`} expanded={!!expandedSections[`persona-prompt-${p.name}`]} onToggle={toggleExpand} />
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>AI OUTPUT</div>
-                  <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#2D3748', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: fs ? 11 : 10, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: fs ? 6 : 4 }}>AI OUTPUT</div>
+                  <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '14px 18px' : '10px 12px', fontSize: fs ? 15 : 12, color: '#2D3748', lineHeight: 1.65 }}>
                     <ExpandableText text={p.output} maxLen={200} id={`persona-output-${p.name}`} expanded={!!expandedSections[`persona-output-${p.name}`]} onToggle={toggleExpand} />
                   </div>
                 </div>
@@ -2941,7 +2935,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 14 : 8, padding: fs ? '18px 28px' : '10px 14px', boxSizing: 'border-box' as const }}>
             {/* Context bar */}
             {s.dragContext && (
-              <div style={{ flexShrink: 0, fontSize: fs ? 15 : 13, color: '#718096', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '9px 16px' : '7px 12px', lineHeight: 1.5 }}>
+              <div style={{ flexShrink: 0, fontSize: fs ? 16 : 14, color: '#4A5568', background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: fs ? '10px 16px' : '7px 12px', lineHeight: 1.6 }}>
                 {s.dragContext}
               </div>
             )}
@@ -3417,24 +3411,24 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const OPTION_COLORS = ['#667EEA', '#38B2AC', '#ED8936', '#48BB78', '#9F7AEA', '#F6AD55'];
         const OPTION_LIGHTS = ['#EBF4FF', '#E6FFFA', '#FFFBEB', '#F0FFF4', '#FAF5FF', '#FFFAF0'];
         return (
-          <div style={{ padding: fs ? '20px 24px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: 14, boxSizing: 'border-box' as const }}>
-            {/* Prompt box — fixed height, not flex-1 */}
-            <div style={{ background: '#EDF2F7', border: '2px solid #CBD5E0', borderLeft: '4px solid #38B2AC', borderRadius: 12, padding: fs ? '14px 20px' : '12px 16px', flexShrink: 0, overflowY: 'auto', maxHeight: fs ? 220 : 180 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>The Prompt</div>
-              <div style={{ fontSize: fs ? 18 : 16, color: '#2D3748', lineHeight: 1.7, whiteSpace: 'pre-line', fontStyle: 'italic' }}>
+          <div style={{ padding: fs ? '24px 36px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', gap: fs ? 20 : 14, boxSizing: 'border-box' as const }}>
+            {/* Prompt box — grows to fill space */}
+            <div style={{ background: '#EDF2F7', border: '2px solid #CBD5E0', borderLeft: '4px solid #38B2AC', borderRadius: 12, padding: fs ? '18px 24px' : '12px 16px', flex: fs ? 1 : '0 0 auto', overflowY: 'auto', maxHeight: fs ? undefined : 180 }}>
+              <div style={{ fontSize: fs ? 11 : 9, fontWeight: 700, color: '#38B2AC', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>The Prompt</div>
+              <div style={{ fontSize: fs ? 19 : 16, color: '#2D3748', lineHeight: 1.75, whiteSpace: 'pre-line', fontStyle: 'italic' }}>
                 {s.buildTask?.replace(/^Here's the prompt to analyse:\n\n/, '')}
               </div>
             </div>
 
             {/* Question */}
             <div style={{ flexShrink: 0 }}>
-              <p style={{ fontSize: fs ? 17 : 15, fontWeight: 700, color: '#1A202C', margin: 0, lineHeight: 1.4 }}>
+              <p style={{ fontSize: fs ? 20 : 15, fontWeight: 700, color: '#1A202C', margin: 0, lineHeight: 1.4 }}>
                 Which Blueprint element is missing?
               </p>
             </div>
 
-            {/* Option buttons — 3×2 grid, fixed height rows */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: 'auto auto', gap: fs ? 10 : 8, flexShrink: 0 }}>
+            {/* Option buttons — 3×2 grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: 'auto auto', gap: fs ? 14 : 8, flexShrink: 0 }}>
               {flawOptions.map((opt, i) => {
                 const isCorrect = i === flawCorrect;
                 const isSelected = flawSelected === i;
@@ -3444,8 +3438,8 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 else if (wasWrong) { bg = '#FED7D7'; border = '#E53E3E'; color = '#C53030'; }
                 return (
                   <button key={opt} onClick={() => !flawSolved && setFlawSelected(i)} style={{
-                    padding: fs ? '14px 10px' : '11px 8px', borderRadius: 10,
-                    fontSize: fs ? 15 : 13, fontWeight: 700,
+                    padding: fs ? '20px 12px' : '11px 8px', borderRadius: 10,
+                    fontSize: fs ? 18 : 13, fontWeight: 700,
                     background: bg, border: `2px solid ${border}`, color,
                     cursor: flawSolved ? 'default' : 'pointer',
                     transition: 'all 0.15s', fontFamily: 'inherit',
@@ -3775,20 +3769,28 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         <div style={{ height: 3, background: '#EDF2F7', flexShrink: 0 }}>
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
-        {/* Content */}
-        <div style={{ flex: 1, position: 'relative', background: '#FFFFFF', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {renderTakeaway()}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
-            {renderSlide()}
-          </div>
-          {s.sourceLink && (
-            <div style={{ flexShrink: 0, padding: '4px 32px', borderTop: '1px solid #EDF2F7', background: '#FAFBFC', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Source</span>
-              <a href={s.sourceLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 9, color: '#A0AEC0', textDecoration: 'underline', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {s.sourceText || s.sourceLink}
-              </a>
+        {/* Content — design box zooms to fill available height on any screen */}
+        <div style={{ flex: 1, overflow: 'hidden', background: '#FFFFFF' }}>
+          <div style={{
+            width: `${(100 / slideZoom).toFixed(2)}%`,
+            height: fsInnerH,
+            zoom: slideZoom,
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {renderTakeaway()}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start', minHeight: 0, overflow: 'hidden' }}>
+              {renderSlide()}
             </div>
-          )}
+            {s.sourceLink && (
+              <div style={{ flexShrink: 0, padding: '4px 32px', borderTop: '1px solid #EDF2F7', background: '#FAFBFC', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: '#A0AEC0', letterSpacing: '0.08em', textTransform: 'uppercase' as const, flexShrink: 0 }}>Source</span>
+                <a href={s.sourceLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 9, color: '#A0AEC0', textDecoration: 'underline', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.sourceText || s.sourceLink}
+                </a>
+              </div>
+            )}
+          </div>
         </div>
         {/* Unified control panel */}
         <div style={{ borderTop: '1px solid #EDF2F7', background: '#FFFFFF', flexShrink: 0 }}>
@@ -3837,63 +3839,36 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     );
   }
 
-  /* ── Reflection screen ── */
+  /* ── Completion screen ── */
   if (showReflection) {
     return (
       <div style={{ background: '#FFFFFF', border: '1.5px solid #CBD5E0', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
         <div style={{ height: 3, background: accentColor }} />
-        <div style={{ padding: '36px 40px' }}>
-          <div style={{ display: 'inline-block', background: '#E6FFFA', borderRadius: 16, padding: '3px 12px', fontSize: 10, fontWeight: 700, color: '#1A6B5F', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
-            REFLECT
+        <div style={{ padding: '48px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          {/* Checkmark circle */}
+          <div style={{ width: 60, height: 60, borderRadius: '50%', background: `${accentColor}22`, border: `2px solid ${accentColor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
-            Before you move on
+          <div style={{ display: 'inline-block', background: `${accentColor}22`, borderRadius: 20, padding: '4px 14px', fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 14 }}>
+            E-Learning Complete
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 10px', lineHeight: 1.2 }}>
+            Module finished.
           </h2>
-          <p style={{ fontSize: 13, color: '#718096', margin: '0 0 28px', lineHeight: 1.6 }}>
-            Take 60 seconds. Two questions — no right answers.
+          <p style={{ fontSize: 14, color: '#718096', margin: '0 0 32px', lineHeight: 1.7, maxWidth: 360 }}>
+            You've completed this e-learning module. Apply what you've learned on a real task using the toolkit.
           </p>
-          {/* Q1 */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 8 }}>
-              What's one thing from this module you'll try in your next piece of work?
-            </label>
-            <textarea
-              value={reflectionA}
-              onChange={(e) => setReflectionA(e.target.value)}
-              placeholder="e.g. I'll try using the Blueprint structure for my next stakeholder update…"
-              rows={3}
-              style={{ width: '100%', resize: 'none', border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#1A202C', lineHeight: 1.6, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', background: '#FAFBFC' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#38B2AC'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; }}
-            />
-          </div>
-          {/* Q2 */}
-          <div style={{ marginBottom: 28 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 8 }}>
-              Is there anything from this module you'd like to explore further?
-            </label>
-            <textarea
-              value={reflectionB}
-              onChange={(e) => setReflectionB(e.target.value)}
-              placeholder="e.g. I want to understand more about how to use conversational prompting for…"
-              rows={3}
-              style={{ width: '100%', resize: 'none', border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#1A202C', lineHeight: 1.6, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', background: '#FAFBFC' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#38B2AC'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; }}
-            />
-          </div>
-          {/* Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button onClick={() => setShowReflection(false)} style={{ background: 'none', border: 'none', fontSize: 13, color: '#A0AEC0', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-              ← Back to slides
-            </button>
-            <button
-              onClick={() => { onCompletePhase(); window.location.href = practiceUrl; }}
-              style={{ padding: '10px 28px', borderRadius: 24, border: 'none', background: '#1A202C', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
-            >
-              Continue to Practice →
-            </button>
-          </div>
+          <button
+            onClick={() => onCompletePhase()}
+            style={{ padding: '12px 32px', borderRadius: 24, border: 'none', background: accentColor, color: '#1A202C', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Done
+          </button>
+          <button onClick={() => setShowReflection(false)} style={{ background: 'none', border: 'none', fontSize: 13, color: '#A0AEC0', cursor: 'pointer', padding: 0, fontFamily: 'inherit', marginTop: 14 }}>
+            ← Back to slides
+          </button>
         </div>
       </div>
     );
