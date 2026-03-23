@@ -77,8 +77,8 @@ export interface SlideData {
   /* Comparison slide fields */
   scenario?: string;
   tabs?: Array<{ label: string; prompt: string; annotation: string }>;
-  /* Flipcard slide fields */
-  cards?: Array<{ frontLabel: string; frontBadge: string; frontPrompt: string; backLabel: string; backBadge: string; backPrompt: string; backResponse: string }>;
+  /* Flipcard slide fields — 2-card variant uses frontLabel/frontBadge/frontPrompt/backLabel/backBadge/backPrompt/backResponse; 4-card 2×2 variant uses icon/label/tagline/description/consequence */
+  cards?: Array<{ frontLabel?: string; frontBadge?: string; frontPrompt?: string; backLabel?: string; backBadge?: string; backPrompt?: string; backResponse?: string; icon?: string; label?: string; tagline?: string; description?: string; consequence?: string }>;
   /* Branching slide fields */
   branchingOptions?: Array<{ label: string; prompt: string; responseQuality: string; response: string; reflection: string }>;
   /* Templates slide fields */
@@ -1628,47 +1628,39 @@ const L5T1_SLIDES: SlideData[] = [
 
   /* ── Slide 3 — What L5 Actually Means (Beat 1 — Situation) ── */
   {
-    section: "THE REALITY", type: "rctf",
-    revealOnNext: true,
+    section: "THE REALITY", type: "flipcard",
     takeaway: "A Level 5 application has four characteristics that no dashboard has — each one requires a different stage in the build",
     heading: "What 'application' actually means.",
     tealWord: "actually means",
-    elements: [
+    instruction: "Click each card to reveal what it means — and what breaks without it.",
+    cards: [
       {
-        key: "ACCOUNTS",
-        color: "#667EEA",
-        light: "#EBF4FF",
         icon: "🔑",
-        desc: "Each user logs in with their own identity. The system knows who is using it and stores their data separately from everyone else's.",
-        example: "A team member logs in and sees only their own submissions — not the whole team's",
-        whyItMatters: "Without this → everyone shares the same view and the same blank slate",
+        label: "ACCOUNTS",
+        tagline: "Each person has their own identity inside the system.",
+        description: "Each user logs in with their own identity. The system knows who is using it and stores their data separately from everyone else's.",
+        consequence: "Without this → everyone shares the same view and the same blank slate.",
       },
       {
-        key: "PERSONALISATION",
-        color: "#38B2AC",
-        light: "#E6FFFA",
         icon: "🎯",
-        desc: "What you see depends on who you are. Your data, your history, your progress — not the same view for everyone who opens the tool.",
-        example: "Returning users see their previous work; new users see a guided onboarding flow",
-        whyItMatters: "Without this → the application is a dashboard dressed up as a product",
+        label: "PERSONALISATION",
+        tagline: "What you see depends on who you are.",
+        description: "Your data, your history, your progress — not the same view for everyone who opens the tool. Returning users see their work; new users see onboarding.",
+        consequence: "Without this → the application is a dashboard dressed up as a product.",
       },
       {
-        key: "ROLES",
-        color: "#ED8936",
-        light: "#FFFBEB",
         icon: "🏷️",
-        desc: "Different users have different permissions. An administrator manages the system. A regular user navigates it. The application enforces the difference.",
-        example: "An admin can delete entries and manage users; a standard user can only create and edit their own",
-        whyItMatters: "Without this → every user has access to everything, regardless of responsibility",
+        label: "ROLES",
+        tagline: "Different people can do different things.",
+        description: "Administrators manage the system. Regular users navigate it. The application enforces the difference — not just by convention, but by design.",
+        consequence: "Without this → every user has access to everything, regardless of responsibility.",
       },
       {
-        key: "DEPLOYMENT",
-        color: "#48BB78",
-        light: "#F0FFF4",
         icon: "🚀",
-        desc: "The application runs at a live URL that anyone can access, independently of your laptop. It operates when you are not there.",
-        example: "Team members access the tool from any device, on any network, at any time",
-        whyItMatters: "Without this → the product only exists on its creator's machine",
+        label: "DEPLOYMENT",
+        tagline: "It runs when you're not there.",
+        description: "The application lives at a URL anyone can visit — on any device, any network, any time. It operates independently of its creator's laptop.",
+        consequence: "Without this → the product only exists on its creator's machine.",
       },
     ],
   },
@@ -1695,32 +1687,38 @@ const L5T1_SLIDES: SlideData[] = [
 
   /* ── Slide 6 — The Missing Mental Model (Beat 2 — Tension) ── */
   {
-    section: "THE GAP", type: "branching",
+    section: "THE GAP", type: "situationalJudgment",
     takeaway: "Two builders, the same brief — what each one does next reveals the mental model they're working with",
     heading: "Two responses to complexity.",
     tealWord: "Two responses",
-    scenario: "You are handed a brief: 'Build an internal AI application that gives each team member a personalised weekly summary of their work activity, with a way to see how the team is trending.' It is more complex than anything you have built before. What do you do?",
-    branchingOptions: [
+    scenarios: [
       {
-        label: "Open a vibe coding tool and start building — figure it out as you go",
-        prompt: "Approach: Jump straight to the Logic stage. Start generating code, see what works, iterate from there.",
-        responseQuality: "partial",
-        response: "Something impressive by end of day — but without a brief, you won't know what 'personalised' means for this team. Without version control, any mistake requires a rebuild. Without a database plan, personalisation won't survive the first logout.",
-        reflection: "Speed at the start often means rework in the middle.",
+        personaName: "Builder A",
+        personaRole: "Jumps straight to Logic",
+        scenario: "Given a complex brief — build a personalised team summary app with individual accounts and a trending view — Builder A opens a vibe coding tool immediately and starts generating code. What is the most likely outcome?",
+        options: [
+          "Impressive demo by end of day — the right move when the brief is clear enough.",
+          "Rework. The brief contained signals Logic alone can't solve — skipping the pipeline means discovering that late.",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "A demo is possible — but 'personalised' means each user needs stored data. Without a Data stage plan, personalisation breaks at the first logout." },
+          { quality: "strong",  text: "Speed at Logic often means discovering hard problems mid-build. Without Version Control, one mistake requires a full rebuild. The pipeline prevents the most expensive rework." },
+        ],
       },
       {
-        label: "Write out the five stages and identify which are most critical for this brief",
-        prompt: "Approach: Read the brief for pipeline signals first. 'Personalised' and 'each team member' means Data is critical. Confirm the Logic tool has a Deploy path. Set up Version Control before writing a line of code.",
-        responseQuality: "strong",
-        response: "A 30-minute brief surfaces the load-bearing decision: personalised summaries need user accounts and stored history. You pick a vibe coding tool with a deployment path and set up a repository first. The build takes longer to start and less time to finish.",
-        reflection: "The pipeline is not a slower path — it prevents the most expensive mistake: building in the wrong order.",
-      },
-      {
-        label: "Look for an existing tool that does something similar — adapt rather than build",
-        prompt: "Approach: Search for existing solutions before committing to a custom build.",
-        responseQuality: "partial",
-        response: "A reasonable instinct — but without writing the brief first, you'll evaluate templates against a vague standard. Something close but wrong in a detail that matters: wrong metric, no team view, or can't be deployed inside your organisation.",
-        reflection: "Adapting is often the right call — but only after Prototype surfaces what the brief actually requires.",
+        personaName: "Builder B",
+        personaRole: "Reads the brief for pipeline signals",
+        scenario: "Builder B pauses before opening any tool. They read the brief and flag 'personalised' and 'each team member' as signals that Data is load-bearing. They set up Version Control before writing a line of code. What does this approach change?",
+        options: [
+          "Not much — the pipeline is just process overhead. The code still needs to be written.",
+          "The build takes longer to start and less time to finish — critical decisions are made before they become blockers.",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "The pipeline is not overhead — it is the sequence that prevents the most expensive mistake: building in the wrong order with the wrong tool." },
+          { quality: "strong",  text: "Correct. Reading the brief for pipeline signals means tool selection is informed. A vibe coding tool with a deployment path is chosen before coding starts." },
+        ],
       },
     ],
   },

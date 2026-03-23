@@ -1818,6 +1818,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const pyramidActiveFill   = ['#C3D0F5','#FBCEB1','#F7E8A4','#C3D0F5','#38B2AC'][pyramidActiveIdx] ?? '#38B2AC';
         const pyramidActiveBorder = ['2px solid #2E3F8F','2px solid #8C3A1A','2px solid #C4A934','2px solid #5B6DC2','2px solid #2C9A94'][pyramidActiveIdx] ?? '2px solid #2C9A94';
         const pyramidActiveColor  = ['#2E3F8F','#FFFFFF','#1A202C','#2E3F8F','#FFFFFF'][pyramidActiveIdx] ?? '#FFFFFF';
+        const pyramidBaseFills   = ['#C3D0F5', '#FBCEB1', '#E6FFFA', '#FEFCE8', '#D4FAF0'];
+        const pyramidBaseBorders = ['#A0B4E8', '#E8A882', '#7DD4CC', '#D4C070', '#7DD4CC'];
+        const pyramidBaseColors  = ['#2E3F8F', '#8C3A1A', '#1A7A76', '#8A6A00', '#1A6B5F'];
         const pyramidLayers = [
           { label: 'Applications', width: '38%' },
           { label: 'Dashboards',   width: '50%' },
@@ -1826,7 +1829,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           { label: 'Prompting',    width: '100%' },
         ].map((layer, i) => {
           const isActive = i === pyramidActiveIdx;
-          return { ...layer, fill: isActive ? pyramidActiveFill : '#F7FAFC', border: isActive ? pyramidActiveBorder : '1px solid #E2E8F0', fontWeight: isActive ? 800 : 600, fontSize: isActive ? 15 : 13, color: isActive ? pyramidActiveColor : '#718096', active: isActive };
+          return {
+            ...layer,
+            fill:       isActive ? pyramidActiveFill                    : pyramidBaseFills[i],
+            border:     isActive ? pyramidActiveBorder                  : `1px solid ${pyramidBaseBorders[i]}`,
+            fontWeight: isActive ? 800 : 600,
+            fontSize:   isActive ? 15  : 13,
+            color:      isActive ? pyramidActiveColor                   : pyramidBaseColors[i],
+            active:     isActive,
+          };
         });
         return (
           <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
@@ -3163,8 +3174,70 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         );
       }
 
-      /* ── Flipcard (two side-by-side flip cards) ── */
-      case 'flipcard':
+      /* ── Flipcard (two side-by-side flip cards, or 2×2 grid for 4 cards) ── */
+      case 'flipcard': {
+        const cardCount = s.cards?.length ?? 0;
+        /* ── 2×2 grid variant (exactly 4 cards) ── */
+        if (cardCount === 4) {
+          const cardPalette = [
+            { accent: '#667EEA', light: '#EBF4FF', border: '#C3BFFE', badgeBg: '#E0E7FF', badgeText: '#4338CA' },
+            { accent: '#38B2AC', light: '#E6FFFA', border: '#81E6D9', badgeBg: '#CCFBF1', badgeText: '#0F766E' },
+            { accent: '#ED8936', light: '#FFFBEB', border: '#FBD38D', badgeBg: '#FEF3C7', badgeText: '#92400E' },
+            { accent: '#48BB78', light: '#F0FFF4', border: '#9AE6B4', badgeBg: '#DCFCE7', badgeText: '#166534' },
+          ];
+          return (
+            <div style={{ padding: fs ? '22px 28px' : '14px 18px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {s.instruction && <p style={{ fontSize: fs ? 13 : 11, color: '#718096', lineHeight: 1.5, margin: '0 0 10px', textAlign: 'center' }}>{s.instruction}</p>}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: fs ? 14 : 10, flex: 1 }}>
+                {s.cards?.map((card, i) => {
+                  const pal = cardPalette[i] ?? cardPalette[0];
+                  const isFlipped = flippedCards[i] || false;
+                  return (
+                    <div key={i} onClick={() => setFlippedCards(prev => ({ ...prev, [i]: !prev[i] }))}
+                      style={{ perspective: 1000, cursor: 'pointer' }}>
+                      <div className={`flip-card-inner${isFlipped ? ' flipped' : ''}`}
+                        style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        {/* Front */}
+                        <div className="flip-card-face" style={{
+                          position: 'absolute', inset: 0, borderRadius: 14,
+                          border: `1.5px solid ${pal.border}`, background: pal.light,
+                          padding: fs ? '18px 20px' : '12px 14px',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          textAlign: 'center', gap: 6,
+                        }}>
+                          <div style={{ fontSize: fs ? 36 : 28 }}>{card.icon}</div>
+                          <div style={{ fontSize: fs ? 15 : 13, fontWeight: 800, color: pal.accent, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>{card.label}</div>
+                          <div style={{ fontSize: fs ? 13 : 11, color: '#4A5568', lineHeight: 1.5, maxWidth: 200 }}>{card.tagline}</div>
+                          <div style={{ fontSize: 11, color: pal.accent, marginTop: 4, opacity: 0.8 }}>Click to flip ↺</div>
+                        </div>
+                        {/* Back */}
+                        <div className="flip-card-face flip-card-back" style={{
+                          position: 'absolute', inset: 0, borderRadius: 14,
+                          border: `1.5px solid ${pal.border}`, background: '#FFFFFF',
+                          padding: fs ? '16px 20px' : '10px 14px',
+                          display: 'flex', flexDirection: 'column', gap: 8,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: fs ? 22 : 18 }}>{card.icon}</span>
+                            <span style={{ fontSize: fs ? 13 : 11, fontWeight: 800, color: pal.accent, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>{card.label}</span>
+                          </div>
+                          <div style={{ fontSize: fs ? 13 : 11, color: '#2D3748', lineHeight: 1.6, flex: 1, overflowY: 'auto' }}>{card.description}</div>
+                          {card.consequence && (
+                            <div style={{
+                              fontSize: fs ? 12 : 10, color: pal.badgeText, background: pal.badgeBg,
+                              borderRadius: 8, padding: '6px 10px', lineHeight: 1.5,
+                            }}>{card.consequence}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+        /* ── Standard 2-card variant ── */
         return (
           <div style={{ padding: fs ? '28px 32px' : '18px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.instruction && <p style={{ fontSize: fs ? 14 : 12, color: '#718096', lineHeight: 1.5, margin: '0 0 14px' }}>{s.instruction}</p>}
@@ -3210,6 +3283,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             </div>
           </div>
         );
+      }
 
       /* ── Branching (scenario with 3 option cards) ── */
       case 'branching':
