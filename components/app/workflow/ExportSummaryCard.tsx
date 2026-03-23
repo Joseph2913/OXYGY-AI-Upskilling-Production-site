@@ -248,7 +248,7 @@ const ExportSummaryCard: React.FC<ExportSummaryCardProps> = ({
   const statPills = [
     `${stepCount} steps`,
     complexity,
-    `Est. ${estimatedBuildTime} to build`,
+    `Est. ${estimatedBuildTime} (assumes prerequisites are set up)`,
   ];
 
   // Extract step detail from markdown for expandable steps
@@ -358,7 +358,125 @@ const ExportSummaryCard: React.FC<ExportSummaryCardProps> = ({
         ))}
       </div>
 
-      {/* ── SECTION 1: Steps (clickable/expandable) ── */}
+      {/* ── SECTION 1: What you'll need (credential cards) ── */}
+      {credentials.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: '#1A202C',
+              margin: '0 0 12px 0',
+              fontFamily: FONT_FAMILY,
+            }}
+          >
+            What you'll need first
+          </h3>
+          <p
+            style={{
+              fontSize: 13,
+              color: '#718096',
+              lineHeight: 1.6,
+              margin: '0 0 12px 0',
+              fontFamily: FONT_FAMILY,
+            }}
+          >
+            Set up these accounts, credentials, and access before you begin building. The steps below will reference these prerequisites by name.
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: 10,
+            }}
+          >
+            {credentials.map((cred, i) => (
+              <div
+                key={i}
+                style={{
+                  background: '#F7FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#E6FFFA',
+                      border: '1px solid #38B2AC44',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: '#38B2AC',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: '#1A202C',
+                      fontFamily: FONT_FAMILY,
+                    }}
+                  >
+                    {cred.what}
+                  </span>
+                </div>
+                {cred.why && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: '#4A5568',
+                      lineHeight: 1.5,
+                      marginBottom: 6,
+                      fontFamily: FONT_FAMILY,
+                    }}
+                  >
+                    {cred.why}
+                  </div>
+                )}
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#718096',
+                    lineHeight: 1.5,
+                    fontFamily: FONT_FAMILY,
+                  }}
+                >
+                  {cred.whereToFind}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#A0AEC0',
+                    marginTop: 6,
+                    fontFamily: FONT_FAMILY,
+                  }}
+                >
+                  Referenced in: {cred.usedIn}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2: Steps (clickable/expandable) ── */}
       <div style={{ marginBottom: 28 }}>
         <h3
           style={{
@@ -438,87 +556,6 @@ const ExportSummaryCard: React.FC<ExportSummaryCardProps> = ({
           })}
         </div>
       </div>
-
-      {/* ── SECTION 2: What you'll need (credential cards) ── */}
-      {credentials.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <h3
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: '#1A202C',
-              margin: '0 0 12px 0',
-              fontFamily: FONT_FAMILY,
-            }}
-          >
-            What you'll need
-          </h3>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 10,
-            }}
-          >
-            {credentials.map((cred, i) => (
-              <div
-                key={i}
-                style={{
-                  background: '#F7FAFC',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: 12,
-                  padding: '14px 16px',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: '#1A202C',
-                    marginBottom: 4,
-                    fontFamily: FONT_FAMILY,
-                  }}
-                >
-                  {cred.what}
-                </div>
-                {cred.why && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: '#4A5568',
-                      lineHeight: 1.5,
-                      marginBottom: 6,
-                      fontFamily: FONT_FAMILY,
-                    }}
-                  >
-                    {cred.why}
-                  </div>
-                )}
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#718096',
-                    lineHeight: 1.5,
-                    fontFamily: FONT_FAMILY,
-                  }}
-                >
-                  {cred.whereToFind}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: '#A0AEC0',
-                    marginTop: 6,
-                    fontFamily: FONT_FAMILY,
-                  }}
-                >
-                  Used in: {cred.usedIn}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── SECTION 3: Test checklist ── */}
       {testChecklist.length > 0 && (

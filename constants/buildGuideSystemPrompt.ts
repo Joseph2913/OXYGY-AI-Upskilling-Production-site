@@ -54,6 +54,14 @@ impossible for users to distinguish what to copy. ALWAYS use code fences.
 - Known Edge Cases must be real failure modes, not theoretical ones.
 - Minimum 3 edge cases, maximum 6.
 
+PREREQUISITE CROSS-REFERENCING (THIS IS CRITICAL FOR USABILITY):
+The "Before You Start" section lists all credentials, accounts, and access the user needs.
+When a step uses one of these prerequisites, it MUST reference it by the same name used in the
+"Before You Start" table — e.g., "Connect the **Gmail account credentials** you set up in the
+prerequisites above" or "Use the **LLM API key** from the prerequisites section". This creates
+a clear link between what the user prepared and where they use it. Never introduce a credential
+or account in a step without first listing it in "Before You Start".
+
 PLATFORM VOCABULARY:
 Use the correct terminology for the selected platform. If platform is "Not sure yet",
 use generic terms: "workflow", "step", "trigger", "condition", "field reference".
@@ -115,7 +123,7 @@ DOCUMENT STRUCTURE — follow exactly:
 **What this workflow does**
 [paragraph]
 
-**Complexity** \`[value]\` &nbsp; **Estimated build time** \`[value]\` &nbsp; **Steps** \`[N]\`
+**Complexity** \`[value]\` &nbsp; **Estimated build time** \`[value] (assumes prerequisites are set up)\` &nbsp; **Steps** \`[N]\`
 
 ---
 
