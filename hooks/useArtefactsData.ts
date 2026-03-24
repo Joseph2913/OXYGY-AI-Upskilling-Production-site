@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTourMode } from '../context/TourModeContext';
 import {
   getArtefacts as dbGetArtefacts,
   getArtefactContent as dbGetArtefactContent,
@@ -135,12 +136,21 @@ function toArtefact(db: DbArtefact): Artefact {
 
 export function useArtefactsData() {
   const { user } = useAuth();
+  const isTourMode = useTourMode();
   const [artefacts, setArtefacts] = useState<Artefact[]>([]);
   const [loading, setLoading] = useState(true);
   const contentCache = useRef<Record<string, ArtefactContent>>({});
 
   // Load all artefacts on mount
   useEffect(() => {
+    if (isTourMode) {
+      import('../data/tourDemoData').then(m => {
+        setArtefacts(m.DEMO_ARTEFACTS);
+        setLoading(false);
+      });
+      return;
+    }
+
     if (!user) {
       setArtefacts([]);
       setLoading(false);
@@ -159,7 +169,7 @@ export function useArtefactsData() {
 
     load();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, isTourMode]);
 
   // Load content for a single artefact
   const loadContent = useCallback(async (id: string): Promise<ArtefactContent | null> => {

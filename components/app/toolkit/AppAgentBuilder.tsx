@@ -15,7 +15,8 @@ import type { AgentDesignResult, AgentReadinessCriteria, AccountabilityCheck, Ag
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -601,6 +602,11 @@ const AppAgentBuilder: React.FC = () => {
       if (!hasTrackedUsage && user) {
         upsertToolUsed(user.id, 2);
         setHasTrackedUsage(true);
+      }
+      // Mark toolkit phase complete
+      if (user) {
+        const mapping = TOOL_TOPIC_MAPPING['agent-builder'];
+        if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
       }
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }

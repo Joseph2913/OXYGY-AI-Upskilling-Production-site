@@ -420,6 +420,8 @@ const AppJourney: React.FC = () => {
       workshopAttended: false,
       projectCompleted: false,
       projectSubmission: null,
+      isAssigned: true,
+      topicPhases: [],
     })),
     completedLevelsCount: 0,
   };
@@ -732,6 +734,7 @@ const AppJourney: React.FC = () => {
                   forceExpand={expandedFromOverview === level.levelNumber}
                   hasLearningPlan={!!planData}
                   isFocused={level.levelNumber === currentLevel.levelNumber}
+                  isAssigned={isAssigned}
                 />
               </div>
               {/* Vertical connector between levels */}

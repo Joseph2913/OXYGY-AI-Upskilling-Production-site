@@ -102,6 +102,9 @@ const ArtefactCard: React.FC<Props> = ({
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
+        minHeight: 180,
+        minWidth: 0,
+        overflow: 'hidden',
         transform: hovered && !isSelected ? 'translateY(-2px)' : 'none',
         boxShadow: isSelected
           ? `0 0 0 2px ${accent}66`
@@ -189,6 +192,7 @@ const ArtefactCard: React.FC<Props> = ({
               fontSize: 14, fontWeight: 700, color: '#1A202C',
               overflow: 'hidden', textOverflow: 'ellipsis',
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              wordBreak: 'break-word' as const,
               position: 'relative',
             }}
           >
@@ -215,6 +219,8 @@ const ArtefactCard: React.FC<Props> = ({
           fontSize: 12, color: '#718096', lineHeight: 1.5,
           overflow: 'hidden', textOverflow: 'ellipsis',
           display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+          wordBreak: 'break-word' as const,
+          flex: 1,
         }}
       >
         {artefact.preview || `${TYPE_LABELS[artefact.type]} artefact`}

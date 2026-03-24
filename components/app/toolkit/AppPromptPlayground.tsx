@@ -11,8 +11,10 @@ import {
 } from '../../../data/playground-content';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
+import { useTourMode } from '../../../context/TourModeContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -79,8 +81,19 @@ const AppPromptPlayground: React.FC = () => {
   const [isRefineLoading, setIsRefineLoading] = useState(false);
   const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
 
+  const isTourMode = useTourMode();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+
+  /* ── Tour mode: pre-populate with demo result ── */
+  useEffect(() => {
+    if (!isTourMode) return;
+    import('../../../data/tourDemoData').then(m => {
+      setUserInput('Draft a weekly status update email for my cross-functional project team');
+      setResult(m.DEMO_PLAYGROUND_RESULT);
+      setVisibleBlocks(20); // show all blocks immediately
+    });
+  }, [isTourMode]);
 
   /* ── Derived step state ── */
   const step1Done = result !== null || isLoading;
@@ -224,6 +237,11 @@ const AppPromptPlayground: React.FC = () => {
       if (!hasTrackedUsage && user) {
         upsertToolUsed(user.id, 1);
         setHasTrackedUsage(true);
+      }
+      // Mark toolkit phase complete
+      if (user) {
+        const mapping = TOOL_TOPIC_MAPPING['prompt-playground'];
+        if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
       }
       setTimeout(() => {
         outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

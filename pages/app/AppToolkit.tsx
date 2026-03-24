@@ -131,11 +131,6 @@ const TOOL_QUALITY_GUIDE: Record<string, {
   },
 };
 
-function getToolState(_tool: Tool, _currentLevel: number): 'unlocked' | 'locked' {
-  // All tools unlocked by default
-  return 'unlocked';
-}
-
 /* ── Skeleton for loading ── */
 const Skeleton: React.FC<{ height: number }> = ({ height }) => (
   <div style={{
@@ -208,7 +203,7 @@ const AppToolkit: React.FC = () => {
 
   const levels = [1, 2, 3, 4, 5];
   const primaryTools = levels.map(lvl => getPrimaryTool(lvl)).filter(Boolean) as Tool[];
-  const unlockedCount = primaryTools.filter(t => getToolState(t, currentLevel) === 'unlocked').length;
+  const unlockedCount = tkData ? tkData.levelStats.filter(s => s.unlocked).length : 0;
   const currentMeta = LEVEL_META.find(m => m.number === currentLevel)!;
 
   // Banner
@@ -269,11 +264,6 @@ const AppToolkit: React.FC = () => {
         </div>
 
         {/* ═══ Scoring Overview (collapsible) ═══ */}
-        {/* NOTE TO DEVELOPER: The scoring values below reflect the current formula in
-            lib/database.ts (leaderboard scoring) and hooks/useToolkitData.ts (toolkit points).
-            Please update this card whenever the scoring logic changes. Note: there is currently
-            a discrepancy — the leaderboard uses 25 pts per artefact, but useToolkitData.ts uses
-            30 pts per artefact. Align these before showing exact values to users. */}
         <div style={{
           maxHeight: showScoring ? 300 : 0,
           opacity: showScoring ? 1 : 0,
@@ -293,17 +283,17 @@ const AppToolkit: React.FC = () => {
                   How Points Work
                 </div>
                 <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6 }}>
-                  Every artefact you create in a toolkit tool earns points that count toward your cohort leaderboard ranking. The quality and completeness of your input directly affects your score — a well-structured brief produces a stronger artefact and earns more points.
+                  Points are earned by completing e-learning modules, using toolkit tools, and submitting projects. Project scores scale with the quality grade your submission receives — stronger projects earn more. Your cohort leaderboard ranking reflects the depth of your engagement, not just how often you log in.
                 </div>
               </div>
               {/* Right — scoring breakdown pills */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
                 {[
-                  { label: 'Per artefact created', value: '25 pts', color: '#38B2AC', bg: '#E6FFFA' },
-                  { label: 'Per learning phase completed', value: '4 pts', color: '#8B5CF6', bg: '#F5F3FF' },
-                  { label: 'Per insight saved', value: '30 pts', color: '#F6AD55', bg: '#FFFBEB' },
-                  { label: 'Per streak day (max 14)', value: '5 pts', color: '#ED8936', bg: '#FFF5EB' },
-                  { label: 'Per active day, last 30', value: '2 pts', color: '#718096', bg: '#F7FAFC' },
+                  { label: 'Per project completed (C–S tier)', value: '30–50 pts', color: '#D97706', bg: '#FEF3C7' },
+                  { label: 'Per e-learning module completed', value: '25 pts', color: '#8B5CF6', bg: '#F5F3FF' },
+                  { label: 'Per toolkit artefact created', value: '10 pts', color: '#38B2AC', bg: '#E6FFFA' },
+                  { label: 'Per streak day (max 14)', value: '2 pts', color: '#ED8936', bg: '#FFF5EB' },
+                  { label: 'Per active day, last 30', value: '1 pt', color: '#718096', bg: '#F7FAFC' },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <span style={{ fontSize: 11, color: '#718096' }}>{item.label}</span>
@@ -432,14 +422,61 @@ const AppToolkit: React.FC = () => {
           const tool = getPrimaryTool(lvl);
           if (!tool) return null;
           const meta = LEVEL_META.find(m => m.number === lvl)!;
-          const state = getToolState(tool, currentLevel);
-          const isLocked = state === 'locked';
-          const isAccessible = state === 'unlocked';
+          const stats = tkData.levelStats.find(s => s.levelNumber === lvl);
+          const isNotAssigned = stats ? !stats.isAssigned : false;
+          const isLocked = stats ? !stats.unlocked && !isNotAssigned : false;
+          const isAccessible = stats ? stats.unlocked : false;
+          const toolkitCompleted = stats?.toolkitCompleted ?? false;
           const accent = meta.accentColor;
           const accentDark = meta.accentDark;
           const guide = TOOL_GUIDE[tool.id];
           const isExpanded = expandedTools.has(tool.id);
-          const stats = tkData.levelStats.find(s => s.levelNumber === lvl);
+
+          // Not-applicable state: level not in learning plan
+          if (isNotAssigned) {
+            return (
+              <div
+                key={lvl}
+                style={{
+                  borderRadius: 14,
+                  border: '1px solid #E2E8F0',
+                  background: '#FAFAFA',
+                  padding: '20px 24px',
+                  opacity: 0.55,
+                  animation: `tkFadeSlideUp 0.3s ease ${60 + idx * 60}ms both`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: '#F0F0F0', fontSize: 26, opacity: 0.5,
+                  }}>
+                    {tool.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>
+                      Level {lvl} · {meta.shortName}
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: '#A0AEC0', marginBottom: 4 }}>{tool.name}</div>
+                    <div style={{ fontSize: 12, color: '#A0AEC0', lineHeight: 1.5 }}>{tool.description}</div>
+                  </div>
+                </div>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontSize: 11, fontWeight: 600, color: '#A0AEC0',
+                  background: '#F7FAFC', border: '1px solid #E2E8F0',
+                  borderRadius: 20, padding: '4px 10px', marginTop: 12,
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="5" stroke="#CBD5E0" strokeWidth="1.5"/>
+                    <line x1="3" y1="3" x2="9" y2="9" stroke="#CBD5E0" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  Not part of your current learning plan
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div
@@ -480,7 +517,12 @@ const AppToolkit: React.FC = () => {
                       <span style={{ fontSize: 10, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
                         Level {lvl} · {meta.shortName}
                       </span>
-                      {isAccessible && (
+                      {isAccessible && toolkitCompleted && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: accentDark, background: `${accent}20`, border: `1px solid ${accent}66`, borderRadius: 10, padding: '1px 8px' }}>
+                          ✓ Completed
+                        </span>
+                      )}
+                      {isAccessible && !toolkitCompleted && (
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#276749', background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 10, padding: '1px 8px' }}>
                           Unlocked
                         </span>
@@ -667,6 +709,19 @@ const AppToolkit: React.FC = () => {
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Lock banner — shown when E-Learning not complete */}
+              {isLocked && (
+                <div style={{
+                  background: '#1A202C', padding: '10px 16px',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <Lock size={12} color="#A0AEC0" />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#A0AEC0' }}>
+                    Complete the E-Learning for Level {lvl} to unlock
+                  </span>
                 </div>
               )}
             </div>

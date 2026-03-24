@@ -12,7 +12,8 @@ export interface Topic {
   estimatedMinutes: number;
   icon: string;
   phases: TopicPhase[];
-  comingSoon?: boolean;
+  toolkitToolId: string;       // matches tool `id` in toolkitData.ts, e.g. 'prompt-playground'
+  toolkitToolPath: string;     // internal route, e.g. '/app/toolkit/prompt-playground'
 }
 
 export const LEVEL_TOPICS: Record<number, Topic[]> = {
@@ -21,17 +22,14 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
       id: 1, title: "Prompt Engineering", subtitle: "From brain dumps to structured, repeatable prompts",
       description: "Learn the Prompt Blueprint framework — Role, Context, Task, Format, Steps, Checks — plus the prompting spectrum and modifier techniques. Build the skill to choose the right approach for every task.",
       estimatedMinutes: 45, icon: "⚡",
+      toolkitToolId: 'prompt-playground',
+      toolkitToolPath: '/app/toolkit/prompt-playground',
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "13-slide interactive module covering the Prompt Blueprint, RCTF framework, context layers, and the prompting spectrum." },
-        { icon: "◈", label: "Practice", detail: "Build, test, and refine prompts using the Prompt Playground." },
+        { icon: "⚙", label: "Toolkit", detail: "Build, test, and refine prompts using the Prompt Playground." },
+        { icon: "◈", label: "Project", detail: "Apply the Prompt Blueprint to a real task from your own work and submit your prompt for review." },
       ],
-    },
-    {
-      id: 2, title: "Context Engineering", subtitle: "Coming soon",
-      description: "Coming soon — master the art of giving AI the right context at the right time.",
-      estimatedMinutes: 0, icon: "🧠", comingSoon: true,
-      phases: [],
     },
   ],
   2: [
@@ -39,17 +37,14 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
       id: 1, title: "From Prompts to Reusable Tools", subtitle: "From one-off prompts to reusable AI agents",
       description: "Learn when and how to turn a prompt into a permanent, shareable tool — an AI agent with defined inputs, defined behaviour, and structured outputs that runs the same way every time, for anyone on your team.",
       estimatedMinutes: 50, icon: "🤖",
+      toolkitToolId: 'agent-builder',
+      toolkitToolPath: '/app/toolkit/agent-builder',
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "14-slide interactive module covering the Level 2 shift, three-layer agent model, accountability by design, and team deployment." },
-        { icon: "◈", label: "Practice", detail: "Design your first Level 2 agent using the Agent Builder." },
+        { icon: "⚙", label: "Toolkit", detail: "Design your first Level 2 agent using the Agent Builder." },
+        { icon: "◈", label: "Project", detail: "Deploy your agent to a teammate and document the outcome." },
       ],
-    },
-    {
-      id: 2, title: "Multi-Agent Orchestration", subtitle: "Coming soon",
-      description: "Coming soon — coordinate multiple AI agents to solve complex, multi-step problems.",
-      estimatedMinutes: 0, icon: "🔗", comingSoon: true,
-      phases: [],
     },
   ],
   3: [
@@ -57,17 +52,14 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
       id: 1, title: "Mapping AI Workflows", subtitle: "Triggers, AI steps, and accountable outputs",
       description: "How to deconstruct a business process into triggers, AI steps, and outputs. The logic of agent chaining, handoff points, human-in-the-loop governance, and multi-step automation.",
       estimatedMinutes: 50, icon: "🗺️",
+      toolkitToolId: 'workflow-canvas',
+      toolkitToolPath: '/app/toolkit/workflow-canvas',
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "Interactive module on workflow decomposition, trigger design, agent chaining, and governance checkpoints." },
-        { icon: "◈", label: "Practice", detail: "Map and build a multi-step workflow using the Workflow Designer." },
+        { icon: "⚙", label: "Toolkit", detail: "Map and build a multi-step workflow using the Workflow Canvas." },
+        { icon: "◈", label: "Project", detail: "Implement one step of your workflow in Make, Zapier, or n8n and document the result." },
       ],
-    },
-    {
-      id: 2, title: "Process Mining with AI", subtitle: "Coming soon",
-      description: "Coming soon — use AI to discover, analyse, and optimise existing business processes.",
-      estimatedMinutes: 0, icon: "⛏️", comingSoon: true,
-      phases: [],
     },
   ],
   4: [
@@ -75,35 +67,29 @@ export const LEVEL_TOPICS: Record<number, Topic[]> = {
       id: 1, title: "Scoping Your AI Tool", subtitle: "From idea to brief — the PRD framework",
       description: "The barrier to building has moved from 'can you code?' to 'can you clearly define what you want?' Learn the four-component brief framework — Purpose, Users, Features, and Data Sources — and how to score your brief before you build.",
       estimatedMinutes: 50, icon: "📋",
+      toolkitToolId: 'dashboard-designer',
+      toolkitToolPath: '/app/toolkit/dashboard-designer',
 
       phases: [
         { icon: "▶", label: "E-Learning", detail: "13-slide interactive module covering the vibe coding paradigm, PRD framework, brief contrast cases, and the Brief Readiness Framework." },
-        { icon: "◈", label: "Practice", detail: "Define and score your own AI tool brief using the Dashboard Designer." },
+        { icon: "⚙", label: "Toolkit", detail: "Define and scope your AI tool brief using the Dashboard Designer." },
+        { icon: "◈", label: "Project", detail: "Submit your completed dashboard brief and mockup for review." },
       ],
-    },
-    {
-      id: 2, title: "Real-Time Data Pipelines", subtitle: "Coming soon",
-      description: "Coming soon — connect live data sources to AI-powered dashboards that update in real time.",
-      estimatedMinutes: 0, icon: "📡", comingSoon: true,
-      phases: [],
     },
   ],
   5: [
     {
-      id: 1, title: "Building Full-Stack AI Applications", subtitle: "The five-stage pipeline, end to end",
-      description: "The jump from a dashboard to a full AI application requires more than a new tool — it requires a mental model. Learn the five-stage build pipeline (Prototype → Version Control → Logic → Data → Deploy), where your Level 1–4 skills plug in, and how to read any product brief for the stages that matter most.",
+      id: 1, title: "Building Full-Stack AI Applications", subtitle: "The complete picture, end to end",
+      description: "How workflows, front-ends, individual accounts, and personalised experiences combine into a complete AI application. A worked example using the OXYGY platform as a Level 5 case study.",
       estimatedMinutes: 55, icon: "🏗️",
+      toolkitToolId: 'ai-app-evaluator',
+      toolkitToolPath: '/app/toolkit/ai-app-evaluator',
 
       phases: [
-        { icon: "▶", label: "E-Learning", detail: "16-slide interactive module covering the L4→L5 architectural leap, the five-stage build pipeline, workplace analogies for each stage, and how to read a brief for pipeline signals." },
-        { icon: "◈", label: "Practice", detail: "Walk through all five pipeline stages using the App Evaluator." },
+        { icon: "▶", label: "E-Learning", detail: "Interactive module deconstructing the OXYGY platform: personalisation, roles, memory, and full-stack architecture." },
+        { icon: "⚙", label: "Toolkit", detail: "Evaluate a full-stack AI application using the App Evaluator." },
+        { icon: "◈", label: "Project", detail: "Present your application design and architecture for review." },
       ],
-    },
-    {
-      id: 2, title: "AI Product Strategy", subtitle: "Coming soon",
-      description: "Coming soon — learn to evaluate, position, and scale AI products for real-world impact.",
-      estimatedMinutes: 0, icon: "🎯", comingSoon: true,
-      phases: [],
     },
   ],
 };

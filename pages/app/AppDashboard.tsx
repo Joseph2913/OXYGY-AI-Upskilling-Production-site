@@ -313,12 +313,11 @@ const AppDashboard: React.FC = () => {
 
   const level = data.currentLevel;
   const topics = LEVEL_TOPICS[level] || [];
-  const activeTopics = topics.filter(t => !t.comingSoon);
-  const totalTopics = activeTopics.length;
+  const totalTopics = topics.length;
   const accent = LEVEL_ACCENT_COLORS[level];
   const accentDark = LEVEL_ACCENT_DARK_COLORS[level];
   const levelFull = LEVEL_FULL_NAMES[level];
-  const activeTopic = activeTopics[data.activeTopicIndex];
+  const activeTopic = topics[data.activeTopicIndex];
   const phaseNames: Record<number, string> = { 1: 'E-Learning', 2: 'Toolkit', 3: 'Project' };
 
   // Derive current-level phase completion (matches journey section logic)
@@ -471,7 +470,7 @@ const AppDashboard: React.FC = () => {
                     LEVEL {level}
                   </span>
                   <span style={{ fontSize: 12, color: '#718096' }}>
-                    Topic {data.activeTopicIndex + 1} of {totalTopics}
+                    {activeTopic?.title}
                   </span>
                   {phaseNames[data.currentPhase] && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, background: accent + '33', padding: '2px 10px', borderRadius: 20 }}>
@@ -857,9 +856,9 @@ const AppDashboard: React.FC = () => {
                           {isNotInPlan && <span style={{ fontSize: 11, color: '#CBD5E0', fontWeight: 400, marginLeft: 6 }}>Not part of your current learning plan</span>}
                           {!isNotInPlan && isNotReached && <span style={{ fontSize: 11, color: '#CBD5E0', fontWeight: 400, marginLeft: 6 }}>Complete Level {lvl - 1} to unlock</span>}
                         </div>
-                        {lvlTopics.length > 0 && (
-                          <div style={{ fontSize: 12, color: isSkipped ? '#CBD5E0' : '#718096', marginTop: 2, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
-                            {lvlTopics.map(t => t.title).join(', ')}
+                        {lvlTopics[0] && (
+                          <div style={{ fontSize: 12, color: isSkipped ? '#CBD5E0' : '#718096', marginTop: 2, lineHeight: 1.4 }}>
+                            {lvlTopics[0].title}
                           </div>
                         )}
                       </div>
@@ -947,7 +946,7 @@ const AppDashboard: React.FC = () => {
                     {/* ── Expanded topic detail ── */}
                     {(
                       <div style={{
-                        maxHeight: isExpanded ? lvlTopics.length * 80 + 50 : 0,
+                        maxHeight: isExpanded ? 130 : 0,
                         overflow: 'hidden',
                         transition: 'max-height 0.3s ease',
                       }}>
@@ -968,58 +967,52 @@ const AppDashboard: React.FC = () => {
                           <div style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Project</div>
                         </div>
 
-                        {/* Topic rows */}
-                        {lvlTopics.map((topic, tIdx) => {
-                          const isSoon = !!(topic as any).comingSoon;
-                          const isGreyed = isSkipped || isSoon;
-                          return (
-                            <div
-                              key={tIdx}
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: '36px 1fr 96px 16px 96px 16px 96px',
-                                gap: 4,
-                                alignItems: 'center',
-                                borderRadius: 8,
-                                padding: '5px 6px',
-                                marginLeft: 4,
-                                background: isGreyed ? '#F7FAFC' : lvlAccent + '08',
-                                marginBottom: tIdx < lvlTopics.length - 1 ? 4 : 8,
-                                transition: 'background 0.12s',
-                                opacity: isGreyed ? 0.7 : 1,
-                              }}
-                              onMouseEnter={e => { if (!isGreyed) e.currentTarget.style.background = lvlAccent + '18'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = isGreyed ? '#F7FAFC' : lvlAccent + '08'; }}
-                            >
-                              <div />
-                              <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 12, color: isGreyed ? '#A0AEC0' : '#4A5568', fontWeight: 500 }}>
-                                {topic.title}
-                                {isSoon && <span style={{ fontSize: 10, fontWeight: 600, color: '#CBD5E0', marginLeft: 8, fontStyle: 'italic' }}>Coming soon</span>}
-                              </div>
-                              {isGreyed ? (
-                                <>
-                                  <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
-                                  <div />
-                                  <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
-                                  <div />
-                                  <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
-                                </>
-                              ) : (
-                                <>
-                                  <StatusPill status={eLearnStatus} onClick={() => navigate(`/app/level?level=${lvl}`)} tooltip={eLearnTooltips[lvl]} />
-                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <ChevronRight size={14} color={lvlAccent} strokeWidth={2.5} />
-                                  </div>
-                                  <StatusPill status={toolkitStatus} onClick={() => navigate(toolkitRouteMap[lvl])} tooltip={toolkitTooltips[lvl]} />
-                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <ChevronRight size={14} color={lvlAccent} strokeWidth={2.5} />
-                                  </div>
-                                  <StatusPill status={projectStatus} onClick={() => navigate(`/app/journey/project/${lvl}`)} tooltip={projectTooltips[lvl]} />
-                                </>
-                              )}
+                        {/* Single topic row */}
+                        {lvlTopics[0] && (
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '36px 1fr 96px 16px 96px 16px 96px',
+                              gap: 4,
+                              alignItems: 'center',
+                              borderRadius: 8,
+                              padding: '5px 6px',
+                              marginLeft: 4,
+                              background: isSkipped ? '#F7FAFC' : lvlAccent + '08',
+                              marginBottom: 8,
+                              transition: 'background 0.12s',
+                              opacity: isSkipped ? 0.7 : 1,
+                            }}
+                            onMouseEnter={e => { if (!isSkipped) e.currentTarget.style.background = lvlAccent + '18'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = isSkipped ? '#F7FAFC' : lvlAccent + '08'; }}
+                          >
+                            <div />
+                            <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 12, color: isSkipped ? '#A0AEC0' : '#4A5568', fontWeight: 500 }}>
+                              {lvlTopics[0].title}
                             </div>
-                          );
-                        })}
+                            {isSkipped ? (
+                              <>
+                                <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
+                                <div />
+                                <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
+                                <div />
+                                <div style={{ textAlign: 'center', fontSize: 10, color: '#CBD5E0', fontStyle: 'italic' }}>—</div>
+                              </>
+                            ) : (
+                              <>
+                                <StatusPill status={eLearnStatus} onClick={() => navigate(`/app/level?level=${lvl}`)} tooltip={eLearnTooltips[lvl]} />
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <ChevronRight size={14} color={lvlAccent} strokeWidth={2.5} />
+                                </div>
+                                <StatusPill status={toolkitStatus} onClick={() => navigate(toolkitRouteMap[lvl])} tooltip={toolkitTooltips[lvl]} />
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <ChevronRight size={14} color={lvlAccent} strokeWidth={2.5} />
+                                </div>
+                                <StatusPill status={projectStatus} onClick={() => navigate(`/app/journey/project/${lvl}`)} tooltip={projectTooltips[lvl]} />
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

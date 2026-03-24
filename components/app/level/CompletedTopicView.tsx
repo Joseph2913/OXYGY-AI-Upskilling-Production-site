@@ -7,9 +7,7 @@ interface CompletedTopicViewProps {
   completedDate: Date;
   accentColor: string;
   accentDark: string;
-  hasNextTopic: boolean;
   onReviewELearning: () => void;
-  onNextTopic: () => void;
 }
 
 const CompletedTopicView: React.FC<CompletedTopicViewProps> = ({
@@ -17,9 +15,7 @@ const CompletedTopicView: React.FC<CompletedTopicViewProps> = ({
   completedDate,
   accentColor,
   accentDark,
-  hasNextTopic,
   onReviewELearning,
-  onNextTopic,
 }) => {
   const dateStr = completedDate.toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -114,32 +110,6 @@ const CompletedTopicView: React.FC<CompletedTopicViewProps> = ({
           Review E-Learning →
         </button>
 
-        {hasNextTopic && (
-          <button
-            onClick={onNextTopic}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = accentDark;
-              (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = accentColor;
-              (e.currentTarget as HTMLElement).style.color = accentDark;
-            }}
-            style={{
-              background: accentColor,
-              color: accentDark,
-              border: 'none',
-              borderRadius: 24,
-              padding: '10px 22px',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Next topic →
-          </button>
-        )}
       </div>
     </div>
   );

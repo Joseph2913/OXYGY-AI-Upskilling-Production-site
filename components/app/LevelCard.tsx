@@ -17,12 +17,14 @@ interface LevelCardProps {
   forceExpand?: boolean;
   hasLearningPlan?: boolean;
   isFocused?: boolean;
+  isAssigned?: boolean;
 }
 
 /* ── Phase step data with tooltips ── */
 const PHASE_STEPS = [
   { label: 'E-Learning', shortLabel: 'E-Learn', icon: <Play size={11} /> },
-  { label: 'Practise', shortLabel: 'Practise', icon: <PenTool size={11} /> },
+  { label: 'Toolkit',    shortLabel: 'Toolkit',  icon: <Wrench size={11} /> },
+  { label: 'Project',    shortLabel: 'Project',  icon: <FolderKanban size={11} /> },
 ];
 
 /* ── Tooltip CSS (injected once) ── */
@@ -74,13 +76,16 @@ const PhaseStepperWithTooltips: React.FC<{
   isCompleted: boolean;
   isActive: boolean;
   currentPhase: number;
-  phaseDetails: { label: string; detail: string }[];
+  phaseDetails: { label: string; detail: string; done: boolean }[];
 }> = ({ accent, accentDark, isCompleted, isActive, currentPhase, phaseDetails }) => (
   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, position: 'relative' }}>
     {PHASE_STEPS.map((step, i) => {
       const phaseNum = i + 1;
-      const isDone = isCompleted || (isActive && phaseNum < currentPhase);
+      const isDone = isCompleted || (isActive && phaseNum < currentPhase) || phaseDetails[i]?.done;
       const isCurrent = isActive && phaseNum === currentPhase;
+      const isLocked =
+        (i === 1 && !phaseDetails[0]?.done) ||  // Toolkit locked until E-Learning done
+        (i === 2 && !phaseDetails[1]?.done);    // Project locked until Toolkit done
       const detail = phaseDetails[i]?.detail || '';
       return (
         <React.Fragment key={step.label}>
@@ -100,9 +105,12 @@ const PhaseStepperWithTooltips: React.FC<{
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               background: isDone ? accent : isCurrent ? '#FFFFFF' : '#F7FAFC',
               border: isDone ? 'none' : isCurrent ? `2.5px solid ${accent}` : '1.5px solid #E2E8F0',
+              opacity: isLocked ? 0.4 : 1,
               transition: 'all 0.2s ease',
             }}>
-              {isDone ? (
+              {isLocked ? (
+                <Lock size={8} />
+              ) : isDone ? (
                 <Check size={12} strokeWidth={3} color={accentDark} />
               ) : isCurrent ? (
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: accent }} />
@@ -164,7 +172,7 @@ const STATUS_BADGE_STYLES: Record<string, { bg: string; color: string; border: s
 /* ════════════════════════════════════════════════
    MAIN LEVEL CARD
    ════════════════════════════════════════════════ */
-export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable, planDepth, planTime, forceExpand, hasLearningPlan, isFocused }) => {
+export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectTitle, deliverable, planDepth, planTime, forceExpand, hasLearningPlan, isFocused, isAssigned = true }) => {
   const navigate = useNavigate();
   // Two-tier expansion: mid = phase chips visible, full = detailed expanded view
   const [showPhases, setShowPhases] = useState(!!isFocused);
@@ -180,6 +188,58 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
     if (isFocused) setShowPhases(true);
   }, [isFocused]);
   const meta = LEVEL_META.find(m => m.number === level.levelNumber)!;
+
+  // Not-applicable state: level not in learning plan
+  if (!isAssigned) {
+    return (
+      <div style={{
+        background: '#FAFAFA',
+        borderRadius: 14,
+        border: '1px solid #E2E8F0',
+        padding: '16px 20px',
+        opacity: 0.55,
+        position: 'relative',
+        animation: `journeyFadeSlideUp 0.3s ease ${animDelay}ms both`,
+      }}>
+        {/* Level badge + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{
+            background: meta.accentColor + '40',
+            color: meta.accentDark,
+            fontSize: 9, fontWeight: 700,
+            padding: '2px 8px', borderRadius: 20,
+            textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+          }}>Level {level.levelNumber}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{meta.name}</span>
+        </div>
+
+        {/* Phase strip — show structure but greyed */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          {['E-Learning', 'Toolkit', 'Project'].map((label) => (
+            <span key={label} style={{
+              fontSize: 10, fontWeight: 600, color: '#A0AEC0',
+              background: '#F7FAFC', border: '1px solid #E2E8F0',
+              borderRadius: 20, padding: '3px 10px',
+            }}>{label}</span>
+          ))}
+        </div>
+
+        {/* Not applicable badge */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          fontSize: 11, fontWeight: 600, color: '#A0AEC0',
+          background: '#F7FAFC', border: '1px solid #E2E8F0',
+          borderRadius: 20, padding: '4px 10px',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="5" stroke="#CBD5E0" strokeWidth="1.5"/>
+            <line x1="3" y1="3" x2="9" y2="9" stroke="#CBD5E0" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          Not part of your current learning plan
+        </div>
+      </div>
+    );
+  }
   const marketingData = LEVELS.find(l => l.id === level.levelNumber);
   const accent = meta.accentColor;
   const accentDark = meta.accentDark;
@@ -190,7 +250,8 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   const isCompleted = level.status === 'completed';
   const isActive = level.status === 'active';
   const isProjectPending = level.status === 'project-pending';
-  const isAccessible = true; // All levels accessible
+  // A level is accessible if the user has started it (active, completed, or project-pending)
+  const isAccessible = isCompleted || isActive || isProjectPending;
 
   const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
@@ -299,18 +360,18 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
       <div style={{ padding: '10px 20px 0', paddingLeft: 70 }}>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
           {(() => {
-            const phasesTotal = topic?.phases?.length ?? 2;
-            const phasesDone = isCompleted ? phasesTotal : isActive ? Math.max(0, level.currentPhase - 1) : 0;
-            const eLearnDone = isCompleted || phasesDone >= phasesTotal;
-            const eLearnInProgress = !eLearnDone && phasesDone > 0;
-            const eLearnLabel = eLearnDone ? 'Done' : eLearnInProgress ? `${phasesDone}/${phasesTotal}` : 'To do';
+            // Use topicPhases from useJourneyData for accurate status
+            const tp = level.topicPhases?.[0]; // first (active) topic
+            const eLearnDone = isCompleted || !!tp?.elearnDone;
+            const eLearnInProgress = !eLearnDone && (isActive && level.currentPhase === 1);
+            const eLearnLabel = eLearnDone ? 'Done' : eLearnInProgress ? 'In progress' : 'To do';
             const eLearnBadge = eLearnDone
               ? { bg: '#F0FFF4', color: '#276749', border: '1px solid #C6F6D5' }
               : eLearnInProgress
               ? { bg: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }
               : { bg: '#F7FAFC', color: '#A0AEC0', border: '1px solid #E2E8F0' };
 
-            const toolkitDone = level.toolUsed;
+            const toolkitDone = isCompleted || !!tp?.toolkitDone || level.toolUsed;
             const toolkitLabel = toolkitDone ? 'Done' : 'To do';
             const toolkitBadge = toolkitDone
               ? { bg: '#F0FFF4', color: '#276749', border: '1px solid #C6F6D5' }
@@ -339,12 +400,13 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               flex: 1, minWidth: 0,
               padding: '10px 12px', borderRadius: 8,
               background: '#F7FAFC', border: '1px solid #E2E8F0',
-              cursor: 'pointer',
+              cursor: isAccessible ? 'pointer' : 'default',
               transition: 'border-color 0.15s, background 0.15s',
               display: 'flex', alignItems: 'center', gap: 10,
+              opacity: isAccessible ? 1 : 0.7,
             };
 
-            const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.background = `${accent}08`; };
+            const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { if (isAccessible) { e.currentTarget.style.borderColor = accent; e.currentTarget.style.background = `${accent}08`; } };
             const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F7FAFC'; };
 
             const connector = (
@@ -360,7 +422,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
 
             return (
               <>
-                <div style={chipStyle} onClick={() => navigate(`/app/level?level=${level.levelNumber}`)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={chipStyle} onClick={isAccessible ? () => navigate(`/app/level?level=${level.levelNumber}`) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <BookOpen size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -369,14 +431,19 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.elearn}</div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                    Open <ArrowRight size={11} />
-                  </span>
+                  {isAccessible && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                      Open <ArrowRight size={11} />
+                    </span>
+                  )}
+                  {!isAccessible && (
+                    <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
+                  )}
                 </div>
 
                 {connector}
 
-                <div style={chipStyle} onClick={() => primaryTool && navigate(primaryTool.route)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={chipStyle} onClick={isAccessible && primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <Wrench size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -385,14 +452,19 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.toolkit}</div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                    Open <ArrowRight size={11} />
-                  </span>
+                  {isAccessible && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                      Open <ArrowRight size={11} />
+                    </span>
+                  )}
+                  {!isAccessible && (
+                    <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
+                  )}
                 </div>
 
                 {connector}
 
-                <div style={chipStyle} onClick={() => navigate('/app/journey/project/' + level.levelNumber)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={chipStyle} onClick={isAccessible ? () => navigate('/app/journey/project/' + level.levelNumber) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <FolderKanban size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -401,9 +473,14 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.project}</div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                    Open <ArrowRight size={11} />
-                  </span>
+                  {isAccessible && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                      Open <ArrowRight size={11} />
+                    </span>
+                  )}
+                  {!isAccessible && (
+                    <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
+                  )}
                 </div>
               </>
             );

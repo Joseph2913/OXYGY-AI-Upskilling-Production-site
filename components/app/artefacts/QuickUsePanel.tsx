@@ -32,17 +32,35 @@ const TYPE_LABELS: Record<ArtefactType, string> = {
 
 const TOOL_NAMES: Record<ArtefactType, string> = {
   prompt: 'Prompt Playground', agent: 'Agent Builder', workflow: 'Workflow Canvas',
-  dashboard: 'Dashboard Designer', app_spec: 'App Builder',
-  build_guide: 'Various', prd: 'Dashboard Designer', pathway: 'Learning Coach',
+  dashboard: 'Dashboard Designer', app_spec: 'App Evaluator',
+  build_guide: '', prd: 'Dashboard Designer', pathway: 'Learning Coach',
   project_proof: 'Project Proof',
 };
 
 const TOOL_ROUTES: Record<ArtefactType, string> = {
   prompt: '/app/toolkit/prompt-playground', agent: '/app/toolkit/agent-builder',
   workflow: '/app/toolkit/workflow-canvas', dashboard: '/app/toolkit/dashboard-designer',
-  app_spec: '/app/toolkit/app-builder', build_guide: '', prd: '/app/toolkit/dashboard-designer',
+  app_spec: '/app/toolkit/ai-app-evaluator', build_guide: '', prd: '/app/toolkit/dashboard-designer',
   pathway: '', project_proof: '',
 };
+
+/* Build guides are created by different tools depending on level */
+const BUILD_GUIDE_TOOL: Record<number, { name: string; route: string }> = {
+  2: { name: 'Agent Builder', route: '/app/toolkit/agent-builder' },
+  3: { name: 'Workflow Canvas', route: '/app/toolkit/workflow-canvas' },
+  4: { name: 'Dashboard Designer', route: '/app/toolkit/dashboard-designer' },
+  5: { name: 'App Evaluator', route: '/app/toolkit/ai-app-evaluator' },
+};
+
+function getToolRoute(type: ArtefactType, level: number): string {
+  if (type === 'build_guide') return BUILD_GUIDE_TOOL[level]?.route || '';
+  return TOOL_ROUTES[type] || '';
+}
+
+function getToolName(type: ArtefactType, level: number): string {
+  if (type === 'build_guide') return BUILD_GUIDE_TOOL[level]?.name || '';
+  return TOOL_NAMES[type] || '';
+}
 
 function getCopyText(content: ArtefactContent, type: ArtefactType): string {
   switch (type) {
@@ -289,11 +307,12 @@ const QuickUsePanel: React.FC<Props> = ({
               View Project Proof
               <ExternalLink size={13} />
             </button>
-          ) : TOOL_ROUTES[artefact.type] ? (
+          ) : getToolRoute(artefact.type, artefact.level) ? (
             <button
               onClick={() => {
-                if (!content || !TOOL_ROUTES[artefact.type]) return;
-                navigate(TOOL_ROUTES[artefact.type], {
+                const route = getToolRoute(artefact.type, artefact.level);
+                if (!content || !route) return;
+                navigate(route, {
                   state: {
                     sourceArtefactId: artefact.id,
                     sourceArtefactContent: content,
@@ -309,7 +328,7 @@ const QuickUsePanel: React.FC<Props> = ({
                 opacity: content ? 1 : 0.5,
               }}
             >
-              Launch in {TOOL_NAMES[artefact.type]}
+              Launch in {getToolName(artefact.type, artefact.level)}
               <ExternalLink size={13} />
             </button>
           ) : null}

@@ -4,11 +4,11 @@ import { useAppContext } from '../../context/AppContext';
 import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { LEVEL_TOPICS, LEVEL_META } from '../../data/levelTopics';
 import { getTopicContent } from '../../data/topicContent';
-import { useLevelData, TOTAL_PHASES } from '../../hooks/useLevelData';
+import { ALL_TOOLS } from '../../data/toolkitData';
+import { useLevelData, TOTAL_PHASES, isToolkitUnlocked, isProjectUnlocked } from '../../hooks/useLevelData';
 import TopicHeader from '../../components/app/level/TopicHeader';
 import ELearningView from '../../components/app/level/ELearningView';
 import CompletedTopicView from '../../components/app/level/CompletedTopicView';
-import TopicCompletionOverlay from '../../components/app/level/TopicCompletionOverlay';
 import LevelCompletionView from '../../components/app/level/LevelCompletionView';
 
 
@@ -27,14 +27,12 @@ const AppCurrentLevel: React.FC = () => {
   const levelName = levelMeta?.name ?? 'Fundamentals';
   const topics = LEVEL_TOPICS[currentLevel] || [];
 
-  const { levelData, loading, advanceSlide, completePhase, completeTopic } =
+  const { levelData, loading, advanceSlide, completePhase, completeTopic, markToolkitComplete } =
     useLevelData(currentLevel);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [viewingPhase, setViewingPhase] = useState<number | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
-  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
   const [showLevelCompletion, setShowLevelCompletion] = useState(false);
-  const [contentVisible, setContentVisible] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Determine which topic to show: URL param > active topic
@@ -47,14 +45,7 @@ const AppCurrentLevel: React.FC = () => {
         setSelectedTopicId(paramId);
       }
     } else {
-      // Skip comingSoon topics — they have no content
-      const activeTopic = topics.find(t => t.id === levelData.activeTopicId);
-      if (activeTopic?.comingSoon) {
-        const fallback = topics.find(t => !t.comingSoon);
-        setSelectedTopicId(fallback?.id ?? levelData.activeTopicId);
-      } else {
-        setSelectedTopicId(levelData.activeTopicId);
-      }
+      setSelectedTopicId(levelData.activeTopicId);
     }
     // If ?phase=1 is present, jump straight into e-learning review
     const phaseParam = searchParams.get('phase');
@@ -68,20 +59,6 @@ const AppCurrentLevel: React.FC = () => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, []);
 
-  const switchToTopic = useCallback(
-    (topicId: number) => {
-      setContentVisible(false);
-      setViewingPhase(null);
-      setIsReviewMode(false);
-      setTimeout(() => {
-        setSelectedTopicId(topicId);
-        scrollToTop();
-        setContentVisible(true);
-      }, 100);
-    },
-    [scrollToTop],
-  );
-
   const handlePhaseClick = useCallback(
     (phase: number) => {
       setViewingPhase(phase);
@@ -94,7 +71,7 @@ const AppCurrentLevel: React.FC = () => {
   const handleCompletePhase = useCallback(
     (topicId: number) => {
       completePhase(topicId);
-      setViewingPhase(2); // explicitly show practice section
+      setViewingPhase(2); // explicitly show toolkit section
       scrollToTop();
     },
     [completePhase, scrollToTop],
@@ -103,39 +80,10 @@ const AppCurrentLevel: React.FC = () => {
   const handleCompleteTopic = useCallback(
     (topicId: number) => {
       completeTopic(topicId);
-
-      const allComplete =
-        levelData?.topicProgress.every((tp) =>
-          tp.topicId === topicId ? true : !!tp.completedAt,
-        ) ?? false;
-
-      if (allComplete) {
-        setShowLevelCompletion(true);
-      } else {
-        setShowCompletionOverlay(true);
-      }
+      setShowLevelCompletion(true);
     },
-    [completeTopic, levelData],
+    [completeTopic],
   );
-
-  const nextTopicTitle = useCallback(
-    (currentTopicId: number): string => {
-      const idx = topics.findIndex((t) => t.id === currentTopicId);
-      if (idx >= 0 && idx < topics.length - 1) return topics[idx + 1].title;
-      return '';
-    },
-    [topics],
-  );
-
-  const handleOverlayComplete = useCallback(() => {
-    setShowCompletionOverlay(false);
-    if (selectedTopicId !== null) {
-      const idx = topics.findIndex((t) => t.id === selectedTopicId);
-      if (idx >= 0 && idx < topics.length - 1) {
-        switchToTopic(topics[idx + 1].id);
-      }
-    }
-  }, [selectedTopicId, topics, switchToTopic]);
 
   const handleContinueToNextLevel = useCallback(() => {
     const nextLevel = Math.min(currentLevel + 1, 5);
@@ -175,7 +123,9 @@ const AppCurrentLevel: React.FC = () => {
   const topicIndex = topics.findIndex((t) => t.id === selectedTopicId);
   const isCompleted = !!selectedProgress.completedAt;
   const displayPhase = viewingPhase ?? selectedProgress.phase;
-  const completedPhases = isCompleted ? TOTAL_PHASES : selectedProgress.phase - 1;
+  const completedPhases = isCompleted
+    ? TOTAL_PHASES
+    : selectedProgress.phaseCompletions.filter(Boolean).length;
 
   // Look up topic-specific content (slides, articles, videos)
   const topicContent = getTopicContent(currentLevel, selectedTopicId);
@@ -203,16 +153,10 @@ const AppCurrentLevel: React.FC = () => {
           completedDate={selectedProgress.completedAt!}
           accentColor={accentColor}
           accentDark={accentDark}
-          hasNextTopic={topicIndex < topics.length - 1}
           onReviewELearning={() => {
             setViewingPhase(1);
             setIsReviewMode(true);
             scrollToTop();
-          }}
-          onNextTopic={() => {
-            if (topicIndex < topics.length - 1) {
-              switchToTopic(topics[topicIndex + 1].id);
-            }
           }}
         />
       );
@@ -250,29 +194,74 @@ const AppCurrentLevel: React.FC = () => {
 
         {displayPhase === 2 && (
           <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 24 }}>
-            {/* Practice card */}
             <div style={{ maxWidth: 520, width: '100%', background: '#FFFFFF', border: `1.5px solid ${accentColor}44`, borderRadius: 16, padding: '32px 28px', textAlign: 'center' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${accentColor}18`, border: `2px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 16px' }}>✍️</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>PRACTISE</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', marginBottom: 10 }}>Apply it on a real task</div>
+
+              {/* Phase heading */}
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${accentColor}18`, border: `2px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 16px' }}>⚙️</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentDark, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>TOOLKIT — PHASE 2</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', marginBottom: 10 }}>
+                {selectedTopic.toolkitToolId
+                  ? `Use the ${ALL_TOOLS.find(t => t.id === selectedTopic.toolkitToolId)?.name ?? 'toolkit'}`
+                  : 'Apply it with the toolkit'}
+              </div>
               <div style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, marginBottom: 24 }}>
-                Open the Prompt Playground and use what you've learned — pick a real task from your work, choose the right approach, and build your prompt.
+                {selectedTopic.phases[1]?.detail ?? 'Open the toolkit and work through all steps to complete this phase.'}
+              </div>
+
+              {/* Completion state */}
+              {selectedProgress.phaseCompletions[1] ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#276749', fontWeight: 600 }}>
+                    ✓ Toolkit phase complete — Project unlocked
+                  </div>
+                  <button
+                    onClick={() => { setViewingPhase(3); scrollToTop(); }}
+                    style={{ background: accentColor, color: '#FFFFFF', border: 'none', borderRadius: 24, padding: '13px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Continue to Project →
+                  </button>
+                </div>
+              ) : (
+                <a
+                  href={selectedTopic.toolkitToolPath}
+                  style={{ display: 'block', background: accentColor, color: '#FFFFFF', fontSize: 14, fontWeight: 700, padding: '13px 28px', borderRadius: 24, textDecoration: 'none' }}
+                >
+                  Open {ALL_TOOLS.find(t => t.id === selectedTopic.toolkitToolId)?.name ?? 'Toolkit'} →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {displayPhase === 3 && (
+          <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 24 }}>
+            <div style={{ maxWidth: 520, width: '100%', background: '#FFFFFF', border: `1.5px solid ${accentColor}44`, borderRadius: 16, padding: '32px 28px', textAlign: 'center' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${accentColor}18`, border: `2px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 16px' }}>◈</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentDark, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>PROJECT — PHASE 3</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', marginBottom: 10 }}>Apply it to a real challenge</div>
+              <div style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, marginBottom: 24 }}>
+                {selectedTopic.phases[2]?.detail ?? 'Complete and submit your project to finish this topic.'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <a
-                  href="/app/toolkit/prompt-playground"
-                  style={{ display: 'block', background: accentColor, color: '#FFFFFF', fontSize: 14, fontWeight: 700, padding: '13px 28px', borderRadius: 24, textDecoration: 'none', transition: 'opacity 0.15s' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                  href="/app/projects"
+                  style={{ display: 'block', background: accentColor, color: '#FFFFFF', fontSize: 14, fontWeight: 700, padding: '13px 28px', borderRadius: 24, textDecoration: 'none' }}
                 >
-                  Open Prompt Playground →
+                  Go to My Projects →
                 </a>
-                <button
-                  onClick={() => handleCompleteTopic(selectedTopicId)}
-                  style={{ background: 'none', border: `1px solid #E2E8F0`, borderRadius: 24, padding: '11px 28px', fontSize: 13, fontWeight: 600, color: '#718096', cursor: 'pointer' }}
-                >
-                  Mark as complete
-                </button>
+                {!selectedProgress.phaseCompletions[2] && (
+                  <button
+                    onClick={() => handleCompleteTopic(selectedTopicId)}
+                    style={{ background: 'none', border: '1px solid #E2E8F0', borderRadius: 24, padding: '11px 28px', fontSize: 13, fontWeight: 600, color: '#718096', cursor: 'pointer' }}
+                  >
+                    Mark topic as complete
+                  </button>
+                )}
+                {selectedProgress.phaseCompletions[2] && (
+                  <div style={{ background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#276749', fontWeight: 600 }}>
+                    ✓ Project complete — topic finished
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -295,8 +284,7 @@ const AppCurrentLevel: React.FC = () => {
       <div
         style={{
           padding: '28px 36px 48px',
-          opacity: contentVisible ? 1 : 0,
-          transition: 'opacity 0.15s ease',
+          opacity: 1,
         }}
       >
         {/* Back to My Journey breadcrumb */}
@@ -331,6 +319,9 @@ const AppCurrentLevel: React.FC = () => {
             accentDark={accentDark}
             showPhaseTabs={showPhaseStrip}
             onPhaseClick={handlePhaseClick}
+            phaseCompletions={selectedProgress.phaseCompletions}
+            toolkitUnlocked={isToolkitUnlocked(selectedProgress)}
+            projectUnlocked={isProjectUnlocked(selectedProgress)}
           />
         )}
 
@@ -338,14 +329,6 @@ const AppCurrentLevel: React.FC = () => {
         {renderContent()}
       </div>
 
-      {/* Topic completion overlay */}
-      {showCompletionOverlay && selectedTopicId !== null && (
-        <TopicCompletionOverlay
-          levelNumber={currentLevel}
-          nextTopicTitle={nextTopicTitle(selectedTopicId)}
-          onComplete={handleOverlayComplete}
-        />
-      )}
     </div>
   );
 };

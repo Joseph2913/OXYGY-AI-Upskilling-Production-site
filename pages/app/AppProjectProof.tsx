@@ -15,6 +15,7 @@ import type { ReviewData } from '../../components/app/journey/project/ReviewScor
 import { ReviewProcessing } from '../../components/app/journey/project/ReviewProcessing';
 import { LEVEL_META } from '../../data/levelTopics';
 import type { LocalScreenshot } from '../../components/app/journey/project/ScreenshotUploader';
+import { useTourMode } from '../../context/TourModeContext';
 
 const FONT = "'DM Sans', sans-serif";
 
@@ -151,6 +152,139 @@ const StepConnector: React.FC<{ accentColor: string }> = ({ accentColor }) => (
   </div>
 );
 
+/* ── Tour demo data ── */
+const DEMO_REVIEW: ReviewData = {
+  dimensions: [
+    {
+      id: 'brief_alignment',
+      name: 'Brief Alignment',
+      status: 'strong',
+      feedback: 'Your submission directly addresses the project brief. You\'ve applied prompt engineering to a real business problem — quarterly stakeholder briefings — and the connection to Level 1 fundamentals is clear and consistent throughout.',
+    },
+    {
+      id: 'evidence_quality',
+      name: 'Evidence Quality',
+      status: 'strong',
+      feedback: 'Excellent evidence of application. You\'ve included specific before/after examples, time savings with concrete numbers, and colleague feedback. This is precisely what an A-tier submission looks like — concrete, not abstract.',
+    },
+    {
+      id: 'reflection_depth',
+      name: 'Reflection Depth',
+      status: 'developing',
+      feedback: 'Your reflection shows good awareness of what worked, but could go deeper on challenge and iteration. What was the hardest part of getting the prompt right? What does that tell you about prompt engineering as a skill? Addressing this would push you to S-tier.',
+    },
+    {
+      id: 'impact',
+      name: 'Impact',
+      status: 'strong',
+      feedback: 'Clear, quantifiable impact: ~3 hours saved per week and improved stakeholder satisfaction. You\'ve also described team-level adoption beyond your own workflow — this kind of initiative is exactly what distinguishes A-tier submissions.',
+    },
+  ],
+  overallPassed: true,
+  summary: 'This is a strong A-tier submission. You\'ve applied Level 1 fundamentals to a genuine business problem, evidenced clear and measurable impact, and reflected thoughtfully on your experience. The main area to strengthen is reflection depth — particularly around the challenges and iteration process — which would push this into S-tier territory.',
+  encouragement: 'Excellent work. Your structured approach to stakeholder briefings demonstrates real mastery of core prompt engineering. Keep building on this as you move into Level 2.',
+};
+
+/* ── Demo view rendered when the product tour is active ── */
+const DemoProjectView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const meta = LEVEL_META.find(m => m.number === 1)!;
+  const ACCENT = meta.accentColor;
+  const ACCENT_DARK = meta.accentDark;
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <div style={{ padding: '28px 36px', minHeight: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @keyframes ppFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes dimFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {/* Back */}
+      <div style={{ marginBottom: 16, animation: 'ppFadeIn 0.3s ease 0ms both' }}>
+        <span onClick={onBack} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#4A5568'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#718096'; }}
+        ><ArrowLeft size={14} /> Back to My Journey</span>
+      </div>
+
+      {/* Title */}
+      <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', letterSpacing: '-0.4px', margin: 0, marginBottom: 6, animation: 'ppFadeIn 0.3s ease 40ms both' }}>
+        Level 1 Project Proof
+      </h1>
+      <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, margin: 0, marginBottom: 24, animation: 'ppFadeIn 0.3s ease 60ms both' }}>
+        Demonstrate how you've applied AI prompting to your real work. Reflect on a specific situation, describe what you did, and show the impact it had — this is your proof of applied learning at the Fundamentals level.
+      </p>
+
+      {/* Project Brief */}
+      <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', borderLeft: `4px solid ${ACCENT_DARK}`, padding: '24px 28px', marginBottom: 20, animation: 'ppFadeIn 0.3s ease 80ms both' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT_DARK, textTransform: 'uppercase', letterSpacing: '0.08em' }}>LEVEL 1 — {meta.name}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', marginTop: 8 }}>AI-Powered Stakeholder Briefings</div>
+        <div style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.6, marginTop: 8 }}>
+          Use prompt engineering to transform how you communicate with stakeholders. Build structured prompts that help you draft, refine, and personalise briefing documents faster and at higher quality.
+        </div>
+        <div style={{ marginTop: 14, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <FileText size={14} color={ACCENT_DARK} style={{ marginTop: 2, flexShrink: 0 }} />
+          <div><span style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>Deliverable: </span><span style={{ fontSize: 13, color: '#4A5568' }}>A written reflection (200–400 words) describing how you applied prompt engineering to a real task, with evidence of impact.</span></div>
+        </div>
+      </div>
+
+      {/* Step 1 — Submission (collapsed/done) */}
+      <div style={{ background: '#FFFFFF', borderRadius: 16, border: `1px solid ${ACCENT}88`, padding: '16px 24px', marginBottom: 12, animation: 'ppFadeIn 0.3s ease 100ms both' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Check size={14} color="#fff" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>Step 1 — Your Submission</div>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: ACCENT_DARK, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Check size={13} /> Done
+          </div>
+        </div>
+        {/* Submission summary */}
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F7FAFC' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Your Reflection</div>
+          <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.7, margin: 0 }}>
+            I applied prompt engineering to our quarterly stakeholder briefing process. Previously, drafting each briefing took 3–4 hours of writing, editing, and reformatting. I built a structured prompt template using role-priming, explicit context-setting, and chain-of-thought instructions — asking the model to first outline key themes, then draft each section with a specific tone for each audience. The output quality improved immediately: briefs became more consistent, stakeholder-appropriate, and required far less editing. I rolled it out to two colleagues who reported similar time savings. The most important learning was that the more specific and structured my prompt, the better the output — vague instructions produced vague results.
+          </p>
+          <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+            {[
+              { label: 'Scope', value: 'Team-level adoption' },
+              { label: 'Impact', value: '~3 hrs saved per week' },
+              { label: 'Tool', value: 'Claude (claude.ai)' },
+            ].map(item => (
+              <span key={item.label} style={{ fontSize: 11, background: `${ACCENT}11`, border: `1px solid ${ACCENT}33`, borderRadius: 6, padding: '3px 10px', color: ACCENT_DARK, fontWeight: 600 }}>
+                {item.label}: {item.value}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Step connector */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0' }}>
+        <div style={{ width: 3, height: 20, borderRadius: 2, background: `repeating-linear-gradient(to bottom, ${ACCENT} 0px, ${ACCENT} 4px, transparent 4px, transparent 8px)` }} />
+        <div style={{ width: 26, height: 26, borderRadius: '50%', background: `${ACCENT}20`, border: `2px solid ${ACCENT}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+          <ArrowDown size={13} color={ACCENT} />
+        </div>
+      </div>
+
+      {/* Step 2 — Review Scorecard */}
+      <div style={{ marginTop: 8, animation: 'ppFadeIn 0.3s ease 200ms both' }}>
+        <ReviewScorecard
+          review={DEMO_REVIEW}
+          reviewedAt={Date.now()}
+          accentColor={ACCENT}
+          accentDark={ACCENT_DARK}
+          showResubmit={false}
+          isConfirmed={confirmed}
+          onConfirmSubmission={() => setConfirmed(true)}
+        />
+      </div>
+    </div>
+  );
+};
+
 /* ── Main page ── */
 
 const AppProjectProof: React.FC = () => {
@@ -158,6 +292,7 @@ const AppProjectProof: React.FC = () => {
   const navigate = useNavigate();
   const { hasLearningPlan, userProfile } = useAppContext();
   const { user } = useAuth();
+  const isTourMode = useTourMode();
   const levelNum = parseInt(levelParam || '', 10);
   const outputRef = useRef<HTMLDivElement>(null);
 
@@ -473,6 +608,11 @@ const AppProjectProof: React.FC = () => {
 
   // Step 2 is locked until Step 1 has been submitted at least once
   const step2Locked = !isReviewing && !reviewData && !reviewError;
+
+  // Tour mode — show static demo, skip all Supabase
+  if (isTourMode) {
+    return <DemoProjectView onBack={() => navigate('/app/journey')} />;
+  }
 
   // Guards
   if (loading) {

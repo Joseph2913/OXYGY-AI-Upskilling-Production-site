@@ -128,6 +128,7 @@ export interface SlideData {
   voiceover?: {
     setup: string;       // audio file path (e.g. "/audio/l1t1-s01-setup.mp3"), plays on slide load
     reveal?: string;     // only on predictFirst persona slides — plays after prediction submitted
+    reveals?: string[];  // progressive-reveal slides — one clip per reveal step (plays on each "Next" click)
   };
 }
 
@@ -198,8 +199,8 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Adoption has surged.",
     tealWord: "surged",
     body: "AI tools are no longer experimental. They're embedded in the daily workflows of most knowledge workers — across every function, every level, every industry.",
-    stats: [{ value: "75%", valueColour: "#38B2AC", label: "of knowledge workers now use AI at work", source: "Microsoft & LinkedIn", desc: "2024 Work Trend Index" }],
-    pullQuote: "75% of your colleagues, clients, and competitors. The tools are already in the room.",
+    stats: [{ value: "75%", valueColour: "#1A6B5F", label: "of knowledge workers now use AI at work", source: "Microsoft & LinkedIn", desc: "2024 Work Trend Index", visualType: "dotGrid" }],
+    pullQuote: "75% of knowledge workers now use AI at work — Microsoft & LinkedIn, 2024 Work Trend Index",
     sourceLink: "https://www.microsoft.com/en-us/worklab/work-trend-index/ai-at-work-is-here-now-comes-the-hard-part",
     sourceText: "Microsoft & LinkedIn: 2024 Work Trend Index \u2014 survey of 31,000 people across 31 countries (May 2024)",
     voiceover: {
@@ -213,7 +214,7 @@ const L1T1_SLIDES: SlideData[] = [
     heading: "Same tools. Very different results.",
     tealWord: "Very different",
     body: "Same tool. Same AI. Up to 9× more output — just from knowing how to use it.\n\nThe difference between +14% and +126% isn't the technology. It's the skill of the person using it.",
-    pullQuote: "The bar keeps moving. Being an AI user isn't enough — being a skilled one is what creates the gap.",
+    pullQuote: "Up to 9x more output from the same AI tool — the gap isn't access, it's skill. — NN/g meta-analysis of Brynjolfsson, Li & Raymond (2023); Noy & Zhang (2023); GitHub Copilot Research (2022)",
     sourceLink: "https://www.nngroup.com/articles/ai-tools-productivity-gains/",
     sourceText: "NN/G meta-analysis (2023) of: Brynjolfsson, Li & Raymond (NBER/Stanford/MIT, 2023); Noy & Zhang (MIT, 2023); GitHub Copilot Research (GitHub, 2022)",
     voiceover: {
@@ -549,38 +550,40 @@ const L2T1_SLIDES: SlideData[] = [
       "Design an agent using the three-layer model (Input, Processing, Output)",
       "Build in accountability so your outputs can be trusted and verified",
     ],
+    voiceover: { setup: "/audio/l2t1-s01-setup.mp3" },
   },
 
   /* ── Slide 2 — Evidence: The rework problem ── */
   {
-    section: "THE STANDARDISATION GAP", type: "evidenceHero",
+    section: "THE REALITY", type: "evidenceHero",
     takeaway: "When everyone uses AI differently, the team pays for it in rework and inconsistency",
     heading: "Everyone's using AI differently.",
     tealWord: "differently",
     body: "Teams across every function are using AI — but almost always individually and ad hoc. Each person runs their own version of the same task, producing outputs that look different, feel different, and can't be compared or built on.\n\nThe result? Rework. Inconsistency. Knowledge that lives with one person and disappears when they're out of office.",
     stats: [{
       value: "19%",
-      valueColour: "#38B2AC",
+      valueColour: "#C4A934",
       label: "of the average knowledge worker's week is spent recreating information that already exists somewhere in their organisation",
       source: "McKinsey Global Institute",
       desc: "Global knowledge worker productivity study",
       visualType: "weekBlocks",
     }],
-    pullQuote: "The gap isn't between teams using AI and those that aren't. It's between teams where AI produces the same result and teams where it doesn't.",
+    pullQuote: "19% of the average knowledge worker's week is spent recreating information that already exists somewhere in their organisation — McKinsey Global Institute, The Social Economy",
     sourceLink: "https://www.mckinsey.com/industries/technology-media-and-telecommunications/our-insights/the-social-economy",
     sourceText: "McKinsey Global Institute — The Social Economy: Unlocking Value and Productivity Through Social Technologies",
+    voiceover: { setup: "/audio/l2t1-s02-setup.mp3" },
   },
 
   /* ── Slide 3 — Evidence: One agent. Compounding returns. ── */
   {
-    section: "THE STANDARDISATION GAP", type: "evidenceHero",
+    section: "THE REALITY", type: "evidenceHero",
     takeaway: "A single well-built agent delivers compounding returns — every run, for every person who uses it",
     heading: "One agent. Compounding returns.",
     tealWord: "Compounding",
     body: "A prompt runs once. A well-designed agent runs every time — for anyone. The effort of building one good agent pays back on every subsequent run, multiplied across everyone on your team who does the same task.\n\nThis is why standardisation changes the economics. You're not saving time once. You're saving it hundreds of times.",
     stats: [{
       value: "2.4×",
-      valueColour: "#38B2AC",
+      valueColour: "#C4A934",
       label: "more value created when AI tools are standardised and shared across a team vs. used individually",
       source: "McKinsey Global Survey 2024",
       desc: "Survey of 1,363 participants across industries",
@@ -589,6 +592,7 @@ const L2T1_SLIDES: SlideData[] = [
     pullQuote: "A prompt runs once. An agent runs every time — for anyone.",
     sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
     sourceText: "McKinsey Global Survey on AI, 2024",
+    voiceover: { setup: "/audio/l2t1-s03-setup.mp3" },
   },
 
   /* ── Slide 4 — Tension Statement ── */
@@ -600,6 +604,7 @@ const L2T1_SLIDES: SlideData[] = [
     tealPhrase: "only works when you're there",
     body: "Level 1 gave you a prompt that gets results. But that prompt lives in your session history — it doesn't run when you're away, it doesn't reach your colleagues, and it produces slightly different output each time someone else tries it.",
     footnote: "Level 1 unlock → a prompt that gets results. Level 2 unlock → a standardised tool anyone on the team can run, any time, and get the same output.",
+    voiceover: { setup: "/audio/l2t1-s04-setup.mp3" },
   },
 
   /* ── Slide 5 — What is an AI agent? ── */
@@ -612,6 +617,7 @@ const L2T1_SLIDES: SlideData[] = [
     body: "A prompt is a one-time request — you write it, run it, and it disappears. An agent is a configured AI tool — you design it once, and it runs the same way every time, for anyone on your team.\n\nThe key difference isn't intelligence. It's permanence. An agent remembers its purpose, its rules, and its output format — so you don't have to explain it again every session.",
     pullQuote: "A prompt is a conversation. An agent is a colleague.",
     visualId: "l2-agent-vs-prompt",
+    voiceover: { setup: "/audio/l2t1-s05-setup.mp3" },
   },
 
   /* ── Slide 6 — When does a prompt become an agent? ── */
@@ -624,69 +630,50 @@ const L2T1_SLIDES: SlideData[] = [
     body: "Not every prompt should become an agent. The investment makes sense when three conditions are true: the task repeats on a regular pattern, the output needs to look the same every time, and more than one person on your team needs to run it.\n\nWhen all three apply, a well-crafted prompt has earned its promotion.",
     pullQuote: "An agent is a prompt that earned a permanent address.",
     visualId: "l2-agent-decision",
+    voiceover: { setup: "/audio/l2t1-s06-setup.mp3" },
   },
 
-  /* ── Slide 6a — Maya: Agent or prompt? ── */
+  /* ── Slide 6 — Situational Judgment: Agent or prompt? ── */
   {
-    section: "WHEN TO BUILD ONE", type: "persona",
-    takeaway: "Apply the agent decision test to real tasks",
-    heading: "Maya — Operations Manager",
-    predictFirst: true,
-    predictQuestion: "Agent or one-off prompt for Maya's task?",
-    predictOptions: ["Build a reusable agent", "Just write a good prompt"],
-    predictCorrect: 0,
-    predictFeedback: [
-      "Correct. Daily frequency, consistency gap across two people, and a structured output that matters downstream — all three agent conditions are met. This is exactly the kind of task worth standardising.",
-      "A prompt would work, but it disappears after each session. With daily frequency and two people producing inconsistent outputs, an agent would standardise the result once and run the same way every time.",
+    section: "WHEN TO BUILD ONE", type: "situationalJudgment",
+    takeaway: "Apply the agent decision test to real tasks from three different roles",
+    heading: "Agent or prompt?",
+    scenarios: [
+      {
+        personaName: "Maya",
+        personaRole: "Operations Manager",
+        scenario: "Maya starts every morning by reading 20+ internal emails and manually summarising the key actions for her team. She does this every single day, and her colleague does the same — but their summaries look completely different.",
+        options: ["Build a reusable agent", "Just write a good prompt"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Correct. Daily frequency, consistency gap across two people, and a structured output that matters downstream — all three agent conditions are met. This is exactly the kind of task worth standardising." },
+          { quality: "weak", text: "A prompt would work, but it disappears after each session. With daily frequency and two people producing inconsistent outputs, an agent would standardise the result once and run the same way every time." },
+        ],
+      },
+      {
+        personaName: "James",
+        personaRole: "Senior Strategy Consultant",
+        scenario: "James's manager has asked for a one-time competitor landscape report ahead of a client pitch next week. Different competitors, different client framing — the context changes completely each time this type of analysis comes up.",
+        options: ["Build a reusable agent", "Just write a good prompt"],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Building an agent adds complexity without value here. The analysis is one-time and highly context-dependent — the effort of standardising inputs and outputs won't pay off for a single use." },
+          { quality: "strong", text: "Right. One-time, context-dependent tasks are prompt territory. A well-crafted Level 1 prompt is the right tool. Save the agent investment for tasks that repeat." },
+        ],
+      },
+      {
+        personaName: "Priya",
+        personaRole: "Risk & Compliance Lead",
+        scenario: "Priya's team produces a risk summary for six stakeholder groups every quarter. Each uses the same structure and the same source data — just different audience framing. Three people on her team produce these independently, with inconsistent results.",
+        options: ["Build a reusable agent", "Just write a good prompt"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Strong agent case. Quarterly cadence, same structure across six outputs, and three people producing inconsistent results — standardising this as an agent delivers consistent quality every quarter with no extra effort." },
+          { quality: "weak", text: "A prompt alone won't solve the inconsistency across three people. This task repeats on a schedule and follows a fixed structure — the conditions for an agent are all there." },
+        ],
+      },
     ],
-    personaData: {
-      name: "Maya", initial: "M", role: "Operations Manager", color: "#38B2AC", iconPath: aishaImg,
-      scenario: "Maya starts every morning by reading 20+ internal emails and manually summarising the key actions for her team. She does this every single day, and her colleague does the same — but their summaries look completely different.",
-      tags: ["Daily task", "Team consistency", "Structured output"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 6b — James: Agent or prompt? ── */
-  {
-    section: "WHEN TO BUILD ONE", type: "persona",
-    takeaway: "Apply the agent decision test to real tasks",
-    heading: "James — Senior Strategy Consultant",
-    predictFirst: true,
-    predictQuestion: "Agent or one-off prompt for James's task?",
-    predictOptions: ["Build a reusable agent", "Just write a good prompt"],
-    predictCorrect: 1,
-    predictFeedback: [
-      "Building an agent adds complexity without value here. The analysis is one-time and highly context-dependent — the effort of standardising inputs and outputs won't pay off for a single use.",
-      "Right. One-time, context-dependent tasks are prompt territory. A well-crafted Level 1 prompt is the right tool. Save the agent investment for tasks that repeat.",
-    ],
-    personaData: {
-      name: "James", initial: "J", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: marcusImg,
-      scenario: "James's manager has asked for a one-time competitor landscape report ahead of a client pitch next week. Different competitors, different client framing — the context changes completely each time this type of analysis comes up.",
-      tags: ["One-time task", "Context-dependent", "Strategic analysis"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 6c — Priya: Agent or prompt? ── */
-  {
-    section: "WHEN TO BUILD ONE", type: "persona",
-    takeaway: "Apply the agent decision test to real tasks",
-    heading: "Priya — Risk & Compliance Lead",
-    predictFirst: true,
-    predictQuestion: "Agent or one-off prompt for Priya's task?",
-    predictOptions: ["Build a reusable agent", "Just write a good prompt"],
-    predictCorrect: 0,
-    predictFeedback: [
-      "Strong agent case. Quarterly cadence, same structure across six outputs, and three people producing inconsistent results — standardising this as an agent delivers consistent quality every quarter with no extra effort.",
-      "A prompt alone won't solve the inconsistency across three people. This task repeats on a schedule and follows a fixed structure — the conditions for an agent are all there.",
-    ],
-    personaData: {
-      name: "Priya", initial: "P", role: "Risk & Compliance Lead", color: "#805AD5", iconPath: priyaImg,
-      scenario: "Priya's team produces a risk summary for six stakeholder groups every quarter. Each uses the same structure and the same source data — just different audience framing. Three people on her team produce these independently, with inconsistent results.",
-      tags: ["Quarterly cadence", "Multiple outputs", "Team consistency"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
+    voiceover: { setup: "/audio/l2t1-s07-setup.mp3" },
   },
 
   /* ── Slide 7 — The Three-Layer Model (concept with visual) ── */
@@ -699,6 +686,7 @@ const L2T1_SLIDES: SlideData[] = [
     body: "A Level 2 agent isn't just a better prompt. It's a structured system with three distinct layers:\n\n— What goes in (Input)\n— How the AI behaves (Processing)\n— What comes out (Output)\n\nDesigning all three makes the agent reusable, consistent, and shareable.",
     pullQuote: "The system prompt is the Prompt Blueprint from Level 1 — promoted to permanent instructions.",
     visualId: "l2-three-layers",
+    voiceover: { setup: "/audio/l2t1-s08-setup.mp3" },
   },
 
   /* ── Slide 8 — Three Layers Deep Dive (rctf, revealOnNext) ── */
@@ -738,6 +726,13 @@ const L2T1_SLIDES: SlideData[] = [
         whyItMatters: "Structured output = comparable, shareable results",
       },
     ],
+    voiceover: {
+      setup: "/audio/l2t1-s09-setup.mp3",
+      reveals: [
+        "/audio/l2t1-s09-reveal1.mp3",
+        "/audio/l2t1-s09-reveal2.mp3",
+      ],
+    },
   },
 
   /* ── Slide 9 — Sort the Layers (drag-and-drop activity) ── */
@@ -762,6 +757,7 @@ const L2T1_SLIDES: SlideData[] = [
       { id: "d7", label: "JSON schema with fixed output fields",    correctZone: "output" },
       { id: "d8", label: "Status: on track / at risk / blocked",   correctZone: "output" },
     ],
+    voiceover: { setup: "/audio/l2t1-s10-setup.mp3" },
   },
 
   /* ── Slide 10 — Custom GPTs: Real-world implementation ── */
@@ -774,52 +770,136 @@ const L2T1_SLIDES: SlideData[] = [
     body: "OpenAI's Custom GPTs are a no-code implementation of the three-layer agent model — available inside ChatGPT without any coding. Each field in the builder maps directly to one of the three layers you just learned.\n\nThe Instructions field is your system prompt (Processing layer). The Knowledge section is where you upload context files the agent draws from (Input enrichment). Conversation starters define how your team begins each interaction — building the input interface on your behalf.\n\nOnce built, a Custom GPT can be shared with your team via a link — making it one of the fastest routes from concept to deployed agent.",
     pullQuote: "Every field in the Custom GPT builder is one of the three layers.",
     visualId: "l2-custom-gpt",
+    voiceover: { setup: "/audio/l2t1-s11-setup.mp3" },
   },
 
-  /* ── Slide 10 — Comparison: Same task, three approaches ── */
+  /* ── Slide 11 — Claude Skills: Anthropic's implementation ── */
+  {
+    section: "IN THE REAL WORLD", type: "concept",
+    takeaway: "Claude Skills are portable instruction sets you write once and call from any conversation — no separate interface required",
+    heading: "Claude Skills: instructions that follow you.",
+    tealWord: "follow you",
+    eyebrow: "PLATFORM EXAMPLE",
+    body: "Anthropic's Claude takes a different approach to agents. Instead of building a standalone tool, you write a Skill — a markdown file containing your system prompt, rules, output format, and any context the model needs. When you need that behaviour, you call the skill from any conversation.\n\nThe critical difference: with a Custom GPT, your team navigates to a separate tool. With a Claude Skill, the instructions come to the conversation. The same skill works in the chat interface, in Claude Code, or through the API — your agent logic isn't locked to one product surface.\n\nThis maps directly to the three-layer model: the skill file defines Processing (instructions and rules), Input (what the user provides and expected format), and Output (structured response format). Because it's a plain markdown file, anyone on the team can read, edit, or version-control it.",
+    pullQuote: "With Custom GPTs, you go to the agent. With Claude Skills, the agent comes to you.",
+    visualId: "l2-claude-skills",
+    voiceover: { setup: "/audio/l2t1-s12-setup.mp3" },
+  },
+
+  /* ── Slide 12 — Google Gems: Google's implementation ── */
+  {
+    section: "IN THE REAL WORLD", type: "concept",
+    takeaway: "Google Gems embed your agent directly inside the tools your team already works in — Docs, Sheets, Gmail, and the Gemini side panel",
+    heading: "Google Gems: agents inside your workflow.",
+    tealWord: "inside your workflow",
+    eyebrow: "PLATFORM EXAMPLE",
+    body: "Google's Gemini offers Gems — custom AI experts you build by writing a name, instructions, and uploading knowledge files. The setup mirrors the three-layer model: instructions define Processing, uploaded files enrich Input, and you specify how the Gem should respond (Output).\n\nWhat makes Gems unique is where they live. The same Gem appears in the Gemini web app, the mobile app, and — critically — the Gemini side panel inside Google Docs, Sheets, Slides, and Gmail. Your agent sits next to the document you're working on, not in a separate tab.\n\nSharing is native to Google's ecosystem: share a Gem the same way you'd share a Drive file. Google also recommends structuring instructions around four areas: Persona, Task, Context, and Format — which maps directly to the Prompt Blueprint you learned in Level 1.",
+    pullQuote: "Custom GPTs are separate tools. Claude Skills are portable files. Gems live inside the apps you already use.",
+    visualId: "l2-google-gems",
+    voiceover: { setup: "/audio/l2t1-s13-setup.mp3" },
+  },
+
+  /* ── Slide 13 — Comparison: Same task, three approaches (chat interface) ── */
   {
     section: "IN PRACTICE", type: "comparison",
     takeaway: "The difference between a prompt and an agent is structure at every layer",
     heading: "The same task, three approaches.",
     tealWord: "three approaches",
+    visualId: "l2-chat-comparison",
     scenario: "Your team needs a structured weekly status update from meeting notes, email threads, and project tracker entries.",
     tabs: [
       {
         label: "Ad-hoc prompt",
         prompt: "Summarise these notes into a status update for my team.",
-        annotation: "No defined input. No behaviour instructions. No output structure. Works once — but the result looks different every time and from every person.",
+        response: "Vague, unstructured summary — no statuses, no sources, no next actions. Different format every time.",
+        annotation: "No Role, no Context, no Task instructions, no Format — none of the Prompt Blueprint components from Level 1 are present. The AI guesses at what you want, uses vague language ('seems to be going well'), cites no sources, and gives a different structure every time. If a colleague ran this same prompt tomorrow, they'd get a completely different result.",
+        layers: [],
       },
       {
-        label: "Layer 2 added",
+        label: "Processing added",
         prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify current status (on track / at risk / blocked), summarise key updates in 2–3 sentences, and list next actions with owners.",
-        annotation: "The role and task are now defined. The AI knows what to do and how to reason — but the output is still free-form text. Format varies run to run.",
+        response: "Categorised statuses (On Track / At Risk) with next actions and owners — but no fixed format, no sources cited, and structure varies between runs.",
+        annotation: "The Role and Task from the Level 1 Prompt Blueprint are now defined — the AI knows it's a 'project status analyst' and has clear instructions on what to do. The output is better: statuses are categorised, next actions have owners. But there's no defined output format, no source citations, and no confidence scoring. Two people running this prompt will get the same quality of thinking — but different structures each time.",
+        layers: [
+          { label: "ROLE", color: "#667EEA", start: 0, end: 38 },
+          { label: "TASK", color: "#38B2AC", start: 40, end: 100 },
+        ],
       },
       {
         label: "Full three-layer agent",
-        prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify status, summarise updates, list next actions with owners. Cite each conclusion to a specific source. Score confidence 0–1, flag anything below 0.7. Output as JSON: { project_name, status, summary, key_updates[], next_actions[], confidence_score, evidence_sources[] }.",
-        annotation: "Structured, consistent, verifiable. Every run produces the same format — comparable week over week, shareable across the team, with accountability built in by design.",
+        prompt: "You are a project status analyst. I will provide meeting notes, email excerpts, and tracker data. For each project: identify status, summarise updates, list next actions with owners. Cite each conclusion to a specific source. Score confidence 0–1, flag anything below 0.7. Use this output template: { project_name, status, summary, key_updates[], next_actions[], confidence_score, evidence_sources[] }.",
+        response: "Identical structured fields every run: project name, status, summary, key updates, next actions, confidence score (0–1), and cited evidence sources — comparable week over week and verifiable by anyone.",
+        annotation: "All three layers of the agent model are now active. Role and Task define behaviour (Processing). Accountability checks require source citations and confidence scores — the AI can't make unsupported claims. The output template locks the structure so every run produces identical fields: comparable week over week, shareable across the team, and verifiable by anyone reviewing the output. This is the Level 2 shift: from a one-time conversation to a permanent, standardised tool.",
+        layers: [
+          { label: "ROLE", color: "#667EEA", start: 0, end: 38 },
+          { label: "TASK", color: "#38B2AC", start: 40, end: 155 },
+          { label: "CHECKS", color: "#ED8936", start: 156, end: 230 },
+          { label: "OUTPUT", color: "#48BB78", start: 231, end: 400 },
+        ],
       },
     ],
+    voiceover: { setup: "/audio/l2t1-s14-setup.mp3" },
   },
 
-  /* ── Slide 10 — Module Summary ── */
+  /* ── Slide 15 — Module Summary ── */
   {
     section: "WHAT YOU'VE LEARNED", type: "moduleSummary",
     takeaway: "You now have a framework for building agents that run consistently for anyone on your team",
-    heading: "What you've learned",
-    panelHeading: "The Three-Layer Agent Model",
-    body: "Three layers that define what goes in, how the AI behaves, and what comes out.",
-    subheading: "When to build an agent",
-    elements: [
-      { key: "INPUT",      color: "#667EEA", light: "#EBF4FF", desc: "Define what goes in — data source, format, required fields" },
-      { key: "PROCESSING", color: "#38B2AC", light: "#E6FFFA", desc: "The system prompt — role, task, steps, and accountability rules" },
-      { key: "OUTPUT",     color: "#48BB78", light: "#F0FFF4", desc: "Structured format — consistent fields, JSON schema, verifiable" },
+    heading: "Your five key takeaways",
+    visualId: "l2-summary",
+    summaryCards: [
+      {
+        number: 1,
+        label: "THE PROBLEM",
+        title: "19% lost to rework",
+        desc: "When everyone prompts differently, the team pays in rework.",
+        icon: "⚠️",
+        color: "#E53E3E",
+        light: "#FFF5F5",
+        visual: "calendar",
+      },
+      {
+        number: 2,
+        label: "WHEN TO ACT",
+        title: "Build an agent when...",
+        desc: "Three conditions must be true.",
+        icon: "🎯",
+        color: "#667EEA",
+        light: "#EBF4FF",
+        visual: "equation",
+      },
+      {
+        number: 3,
+        label: "THE FRAMEWORK",
+        title: "Three-Layer Model",
+        desc: "Design all three and the agent runs the same way for everyone.",
+        icon: "🏗️",
+        color: "#C4A934",
+        light: "#FEFCE8",
+        visual: "layers",
+      },
+      {
+        number: 4,
+        label: "THE QUALITY BAR",
+        title: "Accountability built in",
+        desc: "Enforced on every run automatically.",
+        icon: "🛡️",
+        color: "#38B2AC",
+        light: "#E6FFFA",
+        visual: "checklist",
+      },
+      {
+        number: 5,
+        label: "WHERE TO BUILD",
+        title: "Three platforms",
+        desc: "Same three-layer model, three ways to deploy.",
+        icon: "🔧",
+        color: "#48BB78",
+        light: "#F0FFF4",
+        visual: "platforms",
+      },
     ],
-    approaches: [
-      { icon: "🔁", label: "Repeat pattern", color: "#667EEA", light: "#EBF4FF", when: "Same task runs repeatedly — the standardisation investment pays off" },
-      { icon: "✅", label: "Consistent output", color: "#38B2AC", light: "#E6FFFA", when: "Output must follow the same structure every time — for you or your team" },
-      { icon: "🛡️", label: "Accountability built in", color: "#48BB78", light: "#F0FFF4", when: "Stakes require sources, confidence scores, and anomaly flagging by design" },
-    ],
+    voiceover: { setup: "/audio/l2t1-s15-setup.mp3" },
   },
 ];
 
@@ -867,6 +947,7 @@ const L3T1_SLIDES: SlideData[] = [
       "🔁 How to translate a familiar professional process into a mapped, node-based workflow",
       "⚠️ Where handoffs between steps create risk or opportunity — and how to design for both",
     ],
+    voiceover: { setup: "/audio/l3t1-s01-setup.mp3" },
   },
 
   /* ── Slide 2 — The Process Gap Is Real ── */
@@ -877,9 +958,10 @@ const L3T1_SLIDES: SlideData[] = [
     tealWord: "task-to-workflow gap",
     body: "Professionals are using AI tools — but mostly for isolated, one-off tasks. The organisations seeing 3× to 4× productivity gains aren't using AI more often. They're chaining it across connected, multi-step workflows.",
     stats: [{ value: "24%", valueColour: "#38B2AC", label: "of organisations have moved beyond individual AI tasks to coordinated workflow automation", source: "McKinsey", desc: "Global Survey on AI, 2024", visualType: "dotGrid" }],
-    pullQuote: "The frontier isn't a better prompt. It's a process that runs itself.",
+    pullQuote: "24% of organisations have moved beyond individual AI tasks to coordinated workflow automation — McKinsey, Global Survey on AI, 2024",
     sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
     sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
+    voiceover: { setup: "/audio/l3t1-s02-setup.mp3" },
   },
 
   /* ── Slide 3 — The Performance Gap ── */
@@ -890,9 +972,10 @@ const L3T1_SLIDES: SlideData[] = [
     tealWord: "widening",
     body: "Organisations in the top quartile for AI productivity aren't using better models — they're using AI differently. McKinsey's 2024 global survey found that high performers are 3.4× more likely to have embedded AI across connected, multi-step workflows rather than deploying it as a single-purpose tool. The difference is process design, not model access.",
     stats: [{ value: "3.4×", valueColour: "#38B2AC", label: "more likely to integrate AI across enterprise-wide workflows vs. using it as a standalone tool", source: "McKinsey", desc: "The State of AI: Global Survey, 2024", visualType: "performanceGap" }],
-    pullQuote: "The competitive gap isn't between companies using AI and those that aren't. It's between those who chain it and those who silo it.",
+    pullQuote: "Top AI performers are 3.4x more likely to integrate AI across enterprise-wide workflows vs. using it as a standalone tool — McKinsey, The State of AI: Global Survey, 2024",
     sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
     sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
+    voiceover: { setup: "/audio/l3t1-s03-setup.mp3" },
   },
 
   /* ── Slide 4 — Adoption vs. Integration ── */
@@ -903,9 +986,10 @@ const L3T1_SLIDES: SlideData[] = [
     tealWord: "Integration is rare",
     body: "Three in four knowledge workers now use AI at work. But the vast majority use it as a personal assistant — one prompt at a time, disconnected from the next step. Productivity gains stay individual and non-transferable. Workflows are what turn personal AI use into team capability that compounds.",
     stats: [{ value: "75%", valueColour: "#38B2AC", label: "of knowledge workers use AI tools at work", source: "Microsoft", desc: "Work Trend Index, 2024", visualType: "adoptionGap" }],
-    pullQuote: "Personal productivity doesn't scale. Workflow design does.",
+    pullQuote: "75% of knowledge workers use AI tools at work, but most use them as one-off assistants, not as parts of a designed process — Microsoft, Work Trend Index, 2024",
     sourceLink: "https://www.microsoft.com/en-us/worklab/work-trend-index",
     sourceText: "Microsoft Work Trend Index Annual Report (2024) — survey of 31,000 people across 31 countries",
+    voiceover: { setup: "/audio/l3t1-s04-setup.mp3" },
   },
 
   /* ── Slide 5 — You've Built Agents. They Still Need You to Trigger Them ── */
@@ -917,6 +1001,7 @@ const L3T1_SLIDES: SlideData[] = [
     tealPhrase: "still needs someone to press go",
     body: "At Level 2, you turned your best prompts into reusable tools — agents that run the same way for anyone on your team. But an agent doesn't run until someone triggers it. The next gap is building processes that start themselves, chain across steps, and deliver outputs without a human in the middle.",
     footnote: "Level 2 unlock → a standardised agent shareable with the team. Level 3 unlock → background automation that removes the human from the loop — triggered by events, not by people.",
+    voiceover: { setup: "/audio/l3t1-s05-setup.mp3" },
   },
 
   /* ── Slide 6 — What is an AI workflow? ── */
@@ -929,6 +1014,7 @@ const L3T1_SLIDES: SlideData[] = [
     body: "At Level 2, you built agents — individual AI tools that handle one task reliably. At Level 3, you connect those agents into a workflow: a sequence of steps triggered by an event, passing outputs between stages, applying conditions, and routing results to the right place.\n\nAn agent handles a task. A workflow handles a process.",
     pullQuote: "Agents are the building blocks. Workflows are the architecture.",
     visualId: "l3-workflow-vs-agent",
+    voiceover: { setup: "/audio/l3t1-s06-setup.mp3" },
   },
 
   /* ── Slide 7 — When Does a Workflow Make Sense? ── */
@@ -941,69 +1027,50 @@ const L3T1_SLIDES: SlideData[] = [
     body: "The test is simple: if this task ran a hundred times, would the right output look broadly the same each time?",
     pullQuote: "Automate the repetitive. Keep the judgment.",
     visualId: "l3-workflow-decision",
+    voiceover: { setup: "/audio/l3t1-s07-setup.mp3" },
   },
 
-  /* ── Slide 7a — Lena: Workflow or not? ── */
+  /* ── Slide 7 — Workflow or Not? (Activity) ── */
   {
-    section: "THE TECHNIQUE", type: "persona",
-    takeaway: "Apply the workflow decision test to real tasks",
-    heading: "Lena — HR Manager",
-    predictFirst: true,
-    predictQuestion: "Should Lena build a workflow?",
-    predictOptions: ["Yes", "No"],
-    predictCorrect: 0,
-    predictFeedback: [
-      "Exactly right. The trigger is clear (new hire confirmed), the steps are fixed, and the output is always the same set of actions. Personalisation — name, start date — is just data the workflow receives. This is a textbook workflow candidate.",
-      "A workflow doesn't remove the personal touch — it ensures it happens consistently. The steps Lena does manually are identical every time. A workflow handles the repetitive parts and frees Lena's attention for the genuinely personal moments.",
+    section: "THE TECHNIQUE", type: "situationalJudgment",
+    takeaway: "Apply the workflow decision test to real tasks from three different roles",
+    heading: "Workflow or not?",
+    scenarios: [
+      {
+        personaName: "Lena",
+        personaRole: "HR Manager",
+        scenario: "Every time a new employee joins, Lena manually sends a welcome email, shares an onboarding document pack, creates a system account request, and schedules a Day 1 check-in. The steps are always the same — the only variable is the employee's name and start date. Should Lena build a workflow?",
+        options: ["Yes", "No"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Exactly right. The trigger is clear (new hire confirmed), the steps are fixed, and the output is always the same set of actions. Personalisation — name, start date — is just data the workflow receives. This is a textbook workflow candidate." },
+          { quality: "weak", text: "A workflow doesn't remove the personal touch — it ensures it happens consistently. The steps Lena does manually are identical every time. A workflow handles the repetitive parts and frees Lena's attention for the genuinely personal moments." },
+        ],
+      },
+      {
+        personaName: "Ravi",
+        personaRole: "Senior Strategy Consultant",
+        scenario: "A client has escalated a complaint about a project that went over budget. Ravi needs to review six months of project history, understand the client relationship context, and decide whether to offer a partial refund, a discount on future work, or simply a detailed explanation. Should Ravi build a workflow?",
+        options: ["Yes", "No"],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Consistency matters for routine complaints, but this case requires Ravi to weigh context that changes significantly from client to client. A workflow would force a structured response onto a situation that needs genuine judgment." },
+          { quality: "strong", text: "Correct. The decision depends on relationship history, risk appetite, and strategic context — none of which can be reliably encoded as rules. Ravi should handle this as a one-off, with AI as a thinking tool if helpful, not as an automated step." },
+        ],
+      },
+      {
+        personaName: "Diane",
+        personaRole: "Marketing Manager",
+        scenario: "Diane's team receives inbound press enquiries by email. Each one needs to be categorised (media, analyst, or blogger), checked against a media list, and either forwarded to the PR lead or logged as low priority. The volume is two to three per day and the routing logic is always the same. Should Diane build a workflow?",
+        options: ["Yes", "No"],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "Right. The trigger is clear (email arrives), the logic is rule-based (media list check + category routing), and the output is always the same type of action. Volume is low but the process is perfectly suited to a workflow." },
+          { quality: "weak", text: "Low volume doesn't disqualify a workflow — even two to three requests a day adds up to 600–900 per year. Consistent categorisation and routing at that scale is worth automating." },
+        ],
+      },
     ],
-    personaData: {
-      name: "Lena", initial: "L", role: "HR Manager", color: "#38B2AC", iconPath: priyaImg,
-      scenario: "Every time a new employee joins, Lena manually sends a welcome email, shares an onboarding document pack, creates a system account request, and schedules a Day 1 check-in. The steps are always the same — the only variable is the employee's name and start date.",
-      tags: ["Fixed steps", "Repeating trigger", "Onboarding"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 7b — Ravi: Workflow or not? ── */
-  {
-    section: "THE TECHNIQUE", type: "persona",
-    takeaway: "Apply the workflow decision test to real tasks",
-    heading: "Ravi — Senior Strategy Consultant",
-    predictFirst: true,
-    predictQuestion: "Should Ravi build a workflow?",
-    predictOptions: ["Yes", "No"],
-    predictCorrect: 1,
-    predictFeedback: [
-      "Consistency matters for routine complaints, but this case requires Ravi to weigh context that changes significantly from client to client. A workflow would force a structured response onto a situation that needs genuine judgment.",
-      "Correct. The decision depends on relationship history, risk appetite, and strategic context — none of which can be reliably encoded as rules. Ravi should handle this as a one-off, with AI as a thinking tool if helpful, not as an automated step.",
-    ],
-    personaData: {
-      name: "Ravi", initial: "R", role: "Senior Strategy Consultant", color: "#667EEA", iconPath: jordanImg,
-      scenario: "A client has escalated a complaint about a project that went over budget. Ravi needs to review six months of project history, understand the client relationship context, and decide whether to offer a partial refund, a discount on future work, or simply a detailed explanation.",
-      tags: ["Contextual judgment", "Client escalation", "One-off decision"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 7c — Diane: Workflow or not? ── */
-  {
-    section: "THE TECHNIQUE", type: "persona",
-    takeaway: "Apply the workflow decision test to real tasks",
-    heading: "Diane — Marketing Manager",
-    predictFirst: true,
-    predictQuestion: "Should Diane build a workflow?",
-    predictOptions: ["Yes", "No"],
-    predictCorrect: 0,
-    predictFeedback: [
-      "Right. The trigger is clear (email arrives), the logic is rule-based (media list check + category routing), and the output is always the same type of action. Volume is low but the process is perfectly suited to a workflow.",
-      "Low volume doesn't disqualify a workflow — even two to three requests a day adds up to 600–900 per year. Consistent categorisation and routing at that scale is worth automating.",
-    ],
-    personaData: {
-      name: "Diane", initial: "D", role: "Marketing Manager", color: "#ED8936", iconPath: aishaImg,
-      scenario: "Diane's team receives inbound press enquiries by email. Each one needs to be categorised (media, analyst, or blogger), checked against a media list, and either forwarded to the PR lead or logged as low priority. The volume is two to three per day and the routing logic is always the same.",
-      tags: ["Rule-based routing", "Daily volume", "Consistent logic"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
+    voiceover: { setup: "/audio/l3t1-s08-setup.mp3" },
   },
 
   /* ── Slide 8 — The Anatomy of an AI Workflow ── */
@@ -1015,6 +1082,7 @@ const L3T1_SLIDES: SlideData[] = [
     body: "At Level 2, you applied the three-layer model to a single agent — input, processing, output. At Level 3, the same structure scales up. Now the Input layer captures what triggers an entire process. The Processing layer chains multiple AI steps, conditions, and transformations together. The Output layer routes results to the right destination — or surfaces them for human review.\n\nThe difference isn't the shape. It's the scope.",
     pullQuote: "Without defined triggers and outputs, your AI workflow is just a series of prompts waiting for someone to remember them.",
     visualId: "l3-workflow-anatomy",
+    voiceover: { setup: "/audio/l3t1-s09-setup.mp3" },
   },
 
   /* ── Slide 9 — The Three Layers (reveal) ── */
@@ -1055,6 +1123,13 @@ const L3T1_SLIDES: SlideData[] = [
         whyItMatters: "Every workflow ends with something delivered",
       },
     ],
+    voiceover: {
+      setup: "/audio/l3t1-s10-setup.mp3",
+      reveals: [
+        "/audio/l3t1-s10-reveal1.mp3",
+        "/audio/l3t1-s10-reveal2.mp3",
+      ],
+    },
   },
 
   /* ── Slide 10 — The Six Node Types ── */
@@ -1073,6 +1148,16 @@ const L3T1_SLIDES: SlideData[] = [
       { key: "HANDOFF",    color: "#9F7AEA", light: "#FAF5FF", desc: "Passes work to a human or another system.",                      example: "Manager review / CRM update / Slack notification",        whyItMatters: "Human oversight and cross-system action" },
       { key: "OUTPUT",     color: "#F6AD55", light: "#FFFAF0", desc: "The final result — a document, a decision, a message.",          example: "Drafted report / Approved response / Updated record",     whyItMatters: "The thing the workflow exists to produce" },
     ],
+    voiceover: {
+      setup: "/audio/l3t1-s11-setup.mp3",
+      reveals: [
+        "/audio/l3t1-s11-reveal1.mp3",
+        "/audio/l3t1-s11-reveal2.mp3",
+        "/audio/l3t1-s11-reveal3.mp3",
+        "/audio/l3t1-s11-reveal4.mp3",
+        "/audio/l3t1-s11-reveal5.mp3",
+      ],
+    },
   },
 
   /* ── Slide 11 — See It in Action: Example Workflow ── */
@@ -1084,6 +1169,7 @@ const L3T1_SLIDES: SlideData[] = [
     body: "Here's a complete example: an expense claim workflow.\n\nWhen a new expense email arrives, the workflow triggers automatically. The Processing Layer extracts the claim data, checks if it exceeds the approval threshold, and formats a summary. The Output Layer routes large claims to a manager for review — and sends everything else straight to the finance system.\n\nThis is the three-layer structure in practice: a trigger starts it, processing handles the logic, and the output delivers the result.",
     pullQuote: "Every step has a purpose. Nothing runs on memory.",
     visualId: "l3-example-workflow",
+    voiceover: { setup: "/audio/l3t1-s12-setup.mp3" },
   },
 
   /* ── Slide 12 — Handoffs: Where Risk and Opportunity Meet ── */
@@ -1095,104 +1181,127 @@ const L3T1_SLIDES: SlideData[] = [
     eyebrow: "LEARNING OBJECTIVE 3",
     body: "A handoff is any point where work passes from one step to the next — between AI nodes, from AI to a human, or from your workflow to another system.\n\nHandoffs create risk when they're implicit. If a step assumes the previous one completed correctly — but there's no check — errors travel silently downstream. By the time someone notices, the damage is already done.\n\nHandoffs create opportunity when they're explicit. A deliberate handoff to a human reviewer catches errors before they matter. A handoff to another system triggers the next part of a larger process. A conditional handoff routes high-stakes cases for approval while letting routine ones through automatically.\n\nThe goal isn't to minimise handoffs — it's to design each one with intent.",
     pullQuote: "An undesigned handoff is just a gap waiting to cause a problem.",
+    visualId: "l3-handoff-flow",
+    voiceover: { setup: "/audio/l3t1-s13-setup.mp3" },
   },
 
-  /* ── Slide 13 — Apply It: Situational Judgment (Alex) ── */
+  /* ── Slide 13 — Apply It: Situational Judgment ── */
   {
-    section: "IN PRACTICE", type: "persona",
+    section: "IN PRACTICE", type: "situationalJudgment",
     takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
-    heading: "Alex — Marketing Coordinator",
-    predictFirst: true,
-    predictQuestion: "Which layer does Alex's formatting step belong to?",
-    predictOptions: [
-      "Input Layer — it's working with data that arrived in the email",
-      "Processing Layer — it transforms the extracted content into a new structure",
-      "Output Layer — it produces the final document the client will receive",
+    heading: "Apply It: Workflow Design Decisions",
+    scenarios: [
+      {
+        personaName: "Alex",
+        personaRole: "Marketing Coordinator",
+        scenario: "Alex is mapping a workflow. A client brief arrives by email → the AI extracts key themes → the AI formats the content into a standard template → the final document is emailed to the client. She's unsure where each step sits. Which layer does the formatting step belong to?",
+        options: [
+          "Input Layer — it's working with data that arrived in the email",
+          "Processing Layer — it transforms the extracted content into a new structure",
+          "Output Layer — it produces the final document the client will receive",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "The Input Layer captures the trigger and incoming data — in this case, the email arriving. Formatting happens after that data has already been received and processed. It belongs in the middle layer." },
+          { quality: "strong", text: "Correct. Formatting is a Processing Layer step — it takes extracted content and reshapes it into a new structure. The Processing Layer handles all AI work, logic, and transformation between what arrives and what gets delivered." },
+          { quality: "partial", text: "The Output Layer is where the final document is delivered — the email to the client. But formatting it is the step before that. Transformation belongs in the Processing Layer; delivery belongs in the Output Layer." },
+        ],
+      },
+      {
+        personaName: "Nia",
+        personaRole: "Operations Analyst",
+        scenario: "Nia is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
+        options: [
+          "AI ACTION — the AI reads and interprets the text",
+          "CONDITION — it evaluates a result and routes the workflow based on a rule",
+          "TRANSFORM — it reformats the feedback into a structured record",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Nia is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does." },
+          { quality: "strong", text: "Exactly. A CONDITION node evaluates the outcome of the previous step — here, the sentiment classification — and routes the workflow down different paths based on a rule. It's what makes a workflow adaptive rather than linear." },
+          { quality: "weak", text: "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Nia's step isn't reshaping data; it's making a routing decision. That's a CONDITION." },
+        ],
+      },
+      {
+        personaName: "Tom",
+        personaRole: "HR Coordinator",
+        scenario: "Tom's AI workflow drafts interview invitation emails for incoming job applications. It's been running accurately in testing. He wants to remove the human review step to speed things up. What's the right call?",
+        options: [
+          "Remove it — the AI is accurate and the extra step slows the process down",
+          "Keep a quick human check before sending — candidate emails carry reputational risk",
+          "Replace the human review with a second AI pass to check for errors",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "weak", text: "Testing accuracy doesn't guarantee production accuracy. A single wrong name, role, or tone in a candidate email can damage trust and the employer brand. The cost of a 30-second review is far lower than the cost of a mistake." },
+          { quality: "strong", text: "This is good handoff design. A lightweight human review on high-stakes outputs is worth keeping — at least until you have weeks of consistent real-world results. Design the handoff as a feature, not a bottleneck." },
+          { quality: "partial", text: "A second AI pass catches some errors, but AI can't reliably catch its own mistakes — especially issues of tone, context, or candidate-specific details. A human handoff is more reliable for this type of output." },
+        ],
+      },
     ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "The Input Layer captures the trigger and incoming data — in this case, the email arriving. Formatting happens after that data has already been received and processed. It belongs in the middle layer.",
-      "Correct. Formatting is a Processing Layer step — it takes extracted content and reshapes it into a new structure. The Processing Layer handles all AI work, logic, and transformation between what arrives and what gets delivered.",
-      "The Output Layer is where the final document is delivered — the email to the client. But formatting it is the step before that. Transformation belongs in the Processing Layer; delivery belongs in the Output Layer.",
-    ],
-    personaData: {
-      name: "Alex", initial: "A", role: "Marketing Coordinator", color: "#38B2AC", iconPath: samImg,
-      scenario: "Alex is mapping a workflow. A client brief arrives by email → the AI extracts key themes → the AI formats the content into a standard template → the final document is emailed to the client. She's unsure where each step sits. Which layer does the formatting step belong to?",
-      tags: ["Three-layer model", "Processing Layer", "Workflow mapping"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
+    voiceover: { setup: "/audio/l3t1-s14-setup.mp3" },
   },
 
-  /* ── Slide 13b — Apply It: Situational Judgment (Nia) ── */
+  /* ── Slide 14 — Module Summary (5-Card Takeaway) ── */
   {
-    section: "IN PRACTICE", type: "persona",
-    takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
-    heading: "Nia — Operations Analyst",
-    predictFirst: true,
-    predictQuestion: "Which node type fits Nia's routing step?",
-    predictOptions: [
-      "AI ACTION — the AI reads and interprets the text",
-      "CONDITION — it evaluates a result and routes the workflow based on a rule",
-      "TRANSFORM — it reformats the feedback into a structured record",
-    ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "An AI ACTION is what reads and interprets the text — that's the step before this one. The step Nia is designing takes the AI's result and makes a routing decision based on it. That's what a CONDITION node does.",
-      "Exactly. A CONDITION node evaluates the outcome of the previous step — here, the sentiment classification — and routes the workflow down different paths based on a rule. It's what makes a workflow adaptive rather than linear.",
-      "A TRANSFORM reformats or restructures data — for example, converting raw text into a structured record. Nia's step isn't reshaping data; it's making a routing decision. That's a CONDITION.",
-    ],
-    personaData: {
-      name: "Nia", initial: "N", role: "Operations Analyst", color: "#667EEA", iconPath: aishaImg,
-      scenario: "Nia is building a workflow that processes client feedback forms. She needs a step that reads the feedback text and decides whether to route it to the service team (negative sentiment) or log it automatically (positive/neutral). Which node type fits this step?",
-      tags: ["Node types", "CONDITION", "Routing logic"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 13c — Apply It: Situational Judgment (Tom) ── */
-  {
-    section: "IN PRACTICE", type: "persona",
-    takeaway: "Apply the three-layer model, node types, and handoff design to real workflow decisions",
-    heading: "Tom — HR Coordinator",
-    predictFirst: true,
-    predictQuestion: "Should Tom remove the human review from his workflow?",
-    predictOptions: [
-      "Remove it — the AI is accurate and the extra step slows the process down",
-      "Keep a quick human check before sending — candidate emails carry reputational risk",
-      "Replace the human review with a second AI pass to check for errors",
-    ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "Testing accuracy doesn't guarantee production accuracy. A single wrong name, role, or tone in a candidate email can damage trust and the employer brand. The cost of a 30-second review is far lower than the cost of a mistake.",
-      "This is good handoff design. A lightweight human review on high-stakes outputs is worth keeping — at least until you have weeks of consistent real-world results. Design the handoff as a feature, not a bottleneck.",
-      "A second AI pass catches some errors, but AI can't reliably catch its own mistakes — especially issues of tone, context, or candidate-specific details. A human handoff is more reliable for this type of output.",
-    ],
-    personaData: {
-      name: "Tom", initial: "T", role: "HR Coordinator", color: "#ED8936", iconPath: marcusImg,
-      scenario: "Tom's AI workflow drafts interview invitation emails for incoming job applications. It's been running accurately in testing. He wants to remove the human review step to speed things up. What's the right call?",
-      tags: ["Handoff design", "Human review", "High-stakes outputs"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 14 — Module Summary ── */
-  {
-    section: "WRAP UP", type: "moduleSummary",
+    section: "WHAT YOU'VE LEARNED", type: "moduleSummary",
     takeaway: "You now have a complete framework for mapping any multi-step AI workflow",
-    heading: "Workflow Design: Your Framework",
-    elements: [
-      { key: "TRIGGER",   color: "#667EEA", light: "#EBF4FF", desc: "What starts the workflow" },
-      { key: "AI ACTION", color: "#38B2AC", light: "#E6FFFA", desc: "Where AI generates value" },
-      { key: "TRANSFORM", color: "#ED8936", light: "#FFFBEB", desc: "Connects outputs to next inputs" },
-      { key: "CONDITION", color: "#48BB78", light: "#F0FFF4", desc: "Routes based on logic" },
-      { key: "HANDOFF",   color: "#9F7AEA", light: "#FAF5FF", desc: "Human oversight + system action" },
-      { key: "OUTPUT",    color: "#F6AD55", light: "#FFFAF0", desc: "The workflow's final result" },
+    heading: "Your five key takeaways",
+    visualId: "l3-summary",
+    summaryCards: [
+      {
+        number: 1,
+        label: "THE PROBLEM",
+        title: "Most AI stays siloed",
+        desc: "75% use AI as one-off assistants — not as parts of a designed process.",
+        icon: "⚠️",
+        color: "#1A7A76",
+        light: "#E6FFFA",
+        visual: "items",
+      },
+      {
+        number: 2,
+        label: "WHEN TO ACT",
+        title: "Use a workflow when...",
+        desc: "Three conditions signal a task is ready for automation.",
+        icon: "🎯",
+        color: "#1A7A76",
+        light: "#E6FFFA",
+        visual: "equation",
+      },
+      {
+        number: 3,
+        label: "THE FRAMEWORK",
+        title: "Three-Layer Model",
+        desc: "Input, Processing, Output — the structure that scales from agent to workflow.",
+        icon: "🏗️",
+        color: "#1A7A76",
+        light: "#E6FFFA",
+        visual: "layers",
+      },
+      {
+        number: 4,
+        label: "THE QUALITY BAR",
+        title: "Design every handoff",
+        desc: "Implicit handoffs cause errors — explicit ones create checkpoints.",
+        icon: "🛡️",
+        color: "#1A7A76",
+        light: "#E6FFFA",
+        visual: "checklist",
+      },
+      {
+        number: 5,
+        label: "WHERE TO BUILD",
+        title: "Map with six nodes",
+        desc: "Trigger, AI Action, Transform, Condition, Handoff, Output — every step is one of six.",
+        icon: "🔧",
+        color: "#1A7A76",
+        light: "#E6FFFA",
+        visual: "nodes",
+      },
     ],
-    approaches: [
-      { icon: "🗺️", label: "Three-Layer Model",  color: "#38B2AC", light: "#E6FFFA", when: "Every workflow has an Input layer (trigger + data), a Processing layer (AI work + logic), and an Output layer (delivery + handoff)" },
-      { icon: "🔧", label: "Process → Nodes",     color: "#667EEA", light: "#EBF4FF", when: "Map any process by asking: what triggers this step, what does it do, and what does it hand off to next?" },
-      { icon: "⚠️", label: "Design Handoffs",      color: "#9F7AEA", light: "#FAF5FF", when: "Every handoff is a risk or opportunity — implicit handoffs cause errors; explicit handoffs create quality control points" },
-    ],
+    voiceover: { setup: "/audio/l3t1-s15-setup.mp3" },
   },
 
 ];
@@ -1266,6 +1375,7 @@ const L4T1_SLIDES: SlideData[] = [
       "⚖️ How to tell a well-scoped AI tool from an under-defined idea",
       "✅ A scoring framework to pressure-test any brief before you build",
     ],
+    voiceover: { setup: "/audio/l4t1-s01-setup.mp3" },
   },
 
   /* ── Slide 2 — The New Building Paradigm ── */
@@ -1276,9 +1386,10 @@ const L4T1_SLIDES: SlideData[] = [
     tealWord: "build",
     body: "A new paradigm has arrived: describe what you want in plain language, and an AI tool builds it. No traditional coding required. 'Vibe coding' — the practice of directing AI to generate working software through natural language — has moved AI tool creation into the hands of any knowledge worker.\n\nIn two years, generative AI has moved from experimental to embedded in the majority of organisations. The barrier to creating AI-powered tools has never been lower.",
     stats: [{ value: "65%", valueColour: "#8C3A1A", label: "of organizations now regularly use generative AI — up from 33% just two years earlier", source: "McKinsey", desc: "State of AI Global Survey, 2024", visualType: "dotGrid" }],
-    pullQuote: "When building is this accessible, the constraint shifts. The question is no longer 'can you code?' — it's 'can you clearly define what you want?'",
+    pullQuote: "65% of organizations now regularly use generative AI — up from 33% just two years earlier — McKinsey, State of AI Global Survey, 2024",
     sourceLink: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai",
     sourceText: "McKinsey Global Survey on AI (2024) — survey of 1,363 participants across industries and geographies",
+    voiceover: { setup: "/audio/l4t1-s02-setup.mp3" },
   },
 
   /* ── Slide 3 — What Is Vibe Coding? ── */
@@ -1291,6 +1402,7 @@ const L4T1_SLIDES: SlideData[] = [
     visualId: "l4-vibe-coding",
     body: "In February 2025, AI researcher Andrej Karpathy coined the term 'vibe coding' — the practice of building software by describing what you want in natural language and letting an AI tool generate the working implementation. You don't write code. You direct the AI, review what it produces, give feedback, and iterate.\n\nTools like Cursor, Bolt, Lovable, and Replit Agent now generate working web apps, dashboards, and data tools from a plain-language description in minutes. Building has moved from a specialist skill into the hands of any professional who can clearly articulate what they need.",
     pullQuote: "The hard part is no longer the build. It's being specific enough about what you want that the AI can build the right thing.",
+    voiceover: { setup: "/audio/l4t1-s03-setup.mp3" },
   },
 
   /* ── Slide 4 — Most AI Projects Don't Make It ── */
@@ -1305,6 +1417,7 @@ const L4T1_SLIDES: SlideData[] = [
     pullQuote: "The build takes hours. A project abandoned because the brief was wrong takes weeks — and the cost falls on the people who expected it to work.",
     sourceLink: "https://www.gartner.com/en/articles/gartner-top-10-strategic-technology-trends-for-2024",
     sourceText: "Gartner Top Strategic Technology Trends for 2024 — published October 2023",
+    voiceover: { setup: "/audio/l4t1-s04-setup.mp3" },
   },
 
   /* ── Slide 4 — The Workflow Runs. Nobody Sees It ── */
@@ -1316,6 +1429,7 @@ const L4T1_SLIDES: SlideData[] = [
     tealPhrase: "nobody sees it",
     body: "At Level 3, you built workflows that run themselves — triggered by events, chained across steps, delivering outputs without anyone pressing go. But those outputs land somewhere: a log file, a spreadsheet, a database row. The people who need to act on them still have to go looking.",
     footnote: "Level 3 unlock → background automation with no human in the loop. Level 4 unlock → a designed front end that surfaces the right output to the right person at the right time.",
+    voiceover: { setup: "/audio/l4t1-s05-setup.mp3" },
   },
 
   /* ── Slide 5 — What is a PRD? ── */
@@ -1327,6 +1441,7 @@ const L4T1_SLIDES: SlideData[] = [
     eyebrow: "THE DEFINITION",
     body: "A Product Requirements Document — or PRD — is a written definition of the tool you intend to build, created before a single line of code is written or a single prompt is submitted to an AI builder.\n\nIt answers four questions: What problem does this solve? Who will use it? What should it do? What data does it need?\n\nIt's not a specification for engineers — it's a clarity tool for the builder. In an era where AI can build almost anything you describe, the PRD is how you make sure you describe the right thing.",
     pullQuote: "A PRD isn't bureaucracy. It's the shortest path between an idea and a working tool.",
+    voiceover: { setup: "/audio/l4t1-s06-setup.mp3" },
   },
 
   /* ── Slide 6 — The Four Components ── */
@@ -1375,84 +1490,78 @@ const L4T1_SLIDES: SlideData[] = [
         whyItMatters: "Without this → the tool gets built and then discovers the data it needs doesn't exist",
       },
     ],
-  },
-
-  /* ── Slide 7 — Spot the Missing Component: Sam ── */
-  {
-    section: "THE TECHNIQUE", type: "persona",
-    takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
-    heading: "Sam — Product Manager",
-    predictFirst: true,
-    predictQuestion: "Which PRD component did Sam leave under-defined?",
-    predictOptions: [
-      "Users — the VP's needs weren't understood well enough",
-      "Purpose — 'visibility' doesn't define what decisions this should enable",
-      "Data Sources — the data doesn't match what the VP needs",
-    ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "The user is partially defined — we know who opens the tool. But 'visibility' as a purpose leaves no clear outcome. Without defining what decision the VP should make after using it, there's no way to know if the tool is working.",
-      "Exactly. 'Visibility' isn't a purpose — it's a vague gesture toward one. A strong purpose defines the outcome: what decision the user should be able to make, and what action they should take. Without that, every design decision gets made by default.",
-      "The data sources may be appropriate — the issue is we don't know what 'appropriate' looks like because success criteria were never defined. The gap is in purpose, not data.",
-    ],
-    personaData: {
-      name: "Sam", initial: "S", role: "Product Manager", color: "#ED8936", iconPath: samImg,
-      scenario: "Sam's brief says 'give management visibility into project performance.' The user (a VP, checks Fridays) and data sources are confirmed. After launch, the VP doesn't know what to act on. Which component was under-defined?",
-      tags: ["PRD components", "Purpose definition", "Brief review"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
+    voiceover: {
+      setup: "/audio/l4t1-s07-setup.mp3",
+      reveals: [
+        "/audio/l4t1-s07-reveal1.mp3",
+        "/audio/l4t1-s07-reveal2.mp3",
+        "/audio/l4t1-s07-reveal3.mp3",
+      ],
     },
   },
 
-  /* ── Slide 7b — Spot the Missing Component: Priya ── */
+  /* ── Slide 7 — Spot the Missing Component (Activity) ── */
   {
-    section: "THE TECHNIQUE", type: "persona",
+    section: "THE TECHNIQUE", type: "situationalJudgment",
     takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
-    heading: "Priya — Marketing Lead",
-    predictFirst: true,
-    predictQuestion: "Which PRD component caused Priya's tool to fail?",
-    predictOptions: [
-      "Features — the tool showed too many metrics",
-      "Users — the brief named the team, not the person who opens it and why",
-      "Purpose — success criteria weren't tied to a specific outcome",
+    heading: "Which component is under-defined?",
+    scenarios: [
+      {
+        personaName: "Sam",
+        personaRole: "Product Manager",
+        personaIcon: samImg,
+        personaColor: "#ED8936",
+        scenario: "Sam's brief says 'give management visibility into project performance.' The user (a VP, checks Fridays) and data sources are confirmed. After launch, the VP doesn't know what to act on. Which component was under-defined?",
+        options: [
+          "Users — the VP's needs weren't understood well enough",
+          "Purpose — 'visibility' doesn't define what decisions this should enable",
+          "Data Sources — the data doesn't match what the VP needs",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "The user is partially defined — we know who opens the tool. But 'visibility' as a purpose leaves no clear outcome. Without defining what decision the VP should make after using it, there's no way to know if the tool is working." },
+          { quality: "strong", text: "Exactly. 'Visibility' isn't a purpose — it's a vague gesture toward one. A strong purpose defines the outcome: what decision the user should be able to make, and what action they should take. Without that, every design decision gets made by default." },
+          { quality: "weak", text: "The data sources may be appropriate — the issue is we don't know what 'appropriate' looks like because success criteria were never defined. The gap is in purpose, not data." },
+        ],
+      },
+      {
+        personaName: "Priya",
+        personaRole: "Marketing Lead",
+        personaIcon: priyaImg,
+        personaColor: "#805AD5",
+        scenario: "Priya's team builds a tool surfacing 'key metrics from the sales pipeline for the sales team.' Purpose, features, and data are all confirmed. It launches — adoption is near zero within two weeks. Which component was most likely under-defined?",
+        options: [
+          "Features — the tool showed too many metrics",
+          "Users — the brief named the team, not the person who opens it and why",
+          "Purpose — success criteria weren't tied to a specific outcome",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "Feature overload is a symptom — but it's caused by not knowing who the actual user is. When you design for 'the sales team,' you design for everyone — which means designing for no one." },
+          { quality: "strong", text: "Right. 'The sales team' is not a user. A user is a specific person with a specific need at a specific moment. Is it the rep reviewing their pipeline before a call? The manager preparing the Monday forecast? Each needs something different." },
+          { quality: "weak", text: "The purpose was described as clear. But even a well-defined purpose produces the wrong tool if you're building for a team instead of a person. The user definition was too broad to make any design decision." },
+        ],
+      },
+      {
+        personaName: "Jordan",
+        personaRole: "Operations Analyst",
+        personaIcon: jordanImg,
+        personaColor: "#2B6CB0",
+        scenario: "Jordan's brief is thorough — purpose, users, and features are all well-defined. The build stalls on day three: the AI classification step can't run because historical ticket data exists only in PDFs with inconsistent structure. Which component should have caught this?",
+        options: [
+          "Features — the classification feature was too ambitious",
+          "Purpose — success criteria assumed data quality that wasn't there",
+          "Data Sources — this needed to be validated before building started",
+        ],
+        strongestChoice: 2,
+        feedback: [
+          { quality: "partial", text: "The feature may need revision — but the root issue is that the data dependency wasn't evaluated before building. Even a simple classification step fails without accessible, structured data. That's a data sources problem." },
+          { quality: "weak", text: "The purpose is well-defined. The issue is that the data required to fulfil it was never evaluated for accessibility or quality. A thorough data sources review would have surfaced this on day one, not day three." },
+          { quality: "strong", text: "Exactly. The data sources component isn't just 'what data do we need?' — it's 'does it exist, is it accessible, and is it usable?' PDFs with inconsistent formatting aren't a usable data source for classification without significant preprocessing." },
+        ],
+      },
     ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "Feature overload is a symptom — but it's caused by not knowing who the actual user is. When you design for 'the sales team,' you design for everyone — which means designing for no one.",
-      "Right. 'The sales team' is not a user. A user is a specific person with a specific need at a specific moment. Is it the rep reviewing their pipeline before a call? The manager preparing the Monday forecast? Each needs something different.",
-      "The purpose was described as clear. But even a well-defined purpose produces the wrong tool if you're building for a team instead of a person. The user definition was too broad to make any design decision.",
-    ],
-    personaData: {
-      name: "Priya", initial: "P", role: "Marketing Lead", color: "#805AD5", iconPath: priyaImg,
-      scenario: "Priya's team builds a tool surfacing 'key metrics from the sales pipeline for the sales team.' Purpose, features, and data are all confirmed. It launches — adoption is near zero within two weeks. Which component was most likely under-defined?",
-      tags: ["User definition", "PRD components", "Adoption failure"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 7c — Spot the Missing Component: Jordan ── */
-  {
-    section: "THE TECHNIQUE", type: "persona",
-    takeaway: "Every failing brief has a missing or vague component — learn to identify which one",
-    heading: "Jordan — Operations Analyst",
-    predictFirst: true,
-    predictQuestion: "Which component should have caught Jordan's data problem?",
-    predictOptions: [
-      "Features — the classification feature was too ambitious",
-      "Purpose — success criteria assumed data quality that wasn't there",
-      "Data Sources — this needed to be validated before building started",
-    ],
-    predictCorrect: 2,
-    predictFeedback: [
-      "The feature may need revision — but the root issue is that the data dependency wasn't evaluated before building. Even a simple classification step fails without accessible, structured data. That's a data sources problem.",
-      "The purpose is well-defined. The issue is that the data required to fulfil it was never evaluated for accessibility or quality. A thorough data sources review would have surfaced this on day one, not day three.",
-      "Exactly. The data sources component isn't just 'what data do we need?' — it's 'does it exist, is it accessible, and is it usable?' PDFs with inconsistent formatting aren't a usable data source for classification without significant preprocessing.",
-    ],
-    personaData: {
-      name: "Jordan", initial: "J", role: "Operations Analyst", color: "#2B6CB0", iconPath: jordanImg,
-      scenario: "Jordan's brief is thorough — purpose, users, and features are all well-defined. The build stalls on day three: the AI classification step can't run because historical ticket data exists only in PDFs with inconsistent structure. Which component should have caught this?",
-      tags: ["Data Sources", "PRD validation", "Build failure"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
+    voiceover: { setup: "/audio/l4t1-s08-setup.mp3" },
   },
 
   /* ── Slide 8 — Weak vs. Strong Brief ── */
@@ -1474,6 +1583,7 @@ const L4T1_SLIDES: SlideData[] = [
         annotation: "Every design decision is now answerable: format (summary-first, mobile-friendly), content (at-risk projects only), language (non-technical, action-oriented), timing (available by Monday 8am).",
       },
     ],
+    voiceover: { setup: "/audio/l4t1-s09-setup.mp3" },
   },
 
   /* ── Slide 9 — Flipcard: Strong vs. Weak Components ── */
@@ -1502,6 +1612,7 @@ const L4T1_SLIDES: SlideData[] = [
         backResponse: "'The leadership team' could mean 12 different people. This one sentence makes every design decision answerable.",
       },
     ],
+    voiceover: { setup: "/audio/l4t1-s10-setup.mp3" },
   },
 
   /* ── Slide 10 — Apply the Brief Readiness Framework (Drag & Drop) ── */
@@ -1524,6 +1635,7 @@ const L4T1_SLIDES: SlideData[] = [
       { id: "i5", label: "Show sales metrics somehow to help the team hit their numbers.", correctZone: "not-ready" },
       { id: "i6", label: "Input: project status updates from the team. Output: some kind of risk view so the manager can prepare for the weekly review.", correctZone: "partial" },
     ],
+    voiceover: { setup: "/audio/l4t1-s11-setup.mp3" },
   },
 
   /* ── Slide 11 — The Brief Readiness Framework ── */
@@ -1535,6 +1647,7 @@ const L4T1_SLIDES: SlideData[] = [
     eyebrow: "YOUR PRE-BUILD CHECKPOINT",
     body: "Before you open any AI builder tool, score your brief on each of the four components:\n\n3 — Specific: clear enough to make a design decision from it\n2 — Partial: defined, but some decisions still need more detail\n1 — Vague: something is there, but not specific enough to act on\n0 — Missing: not addressed at all\n\nA brief scoring 10 or above (out of 12) is ready to build from. Below 8, identify your lowest-scoring component and define it further before starting. Any 0 is a blocker — do not build until it has at least a 1.",
     pullQuote: "A brief that scores 10 takes 20 minutes to write. The rebuild it prevents takes weeks.",
+    voiceover: { setup: "/audio/l4t1-s12-setup.mp3" },
   },
 
   /* ── Slide 12 — Module Summary ── */
@@ -1553,6 +1666,7 @@ const L4T1_SLIDES: SlideData[] = [
       { icon: "✅", label: "Score before you start",  color: "#38B2AC", light: "#E6FFFA", when: "Use the Brief Readiness Framework. Any component scoring 0 or 1 needs more definition before you proceed." },
       { icon: "🎯", label: "Define users precisely",  color: "#ED8936", light: "#FFFBEB", when: "The more specific your user definition, the fewer design decisions get made by default. A team is not a user. A person with a specific task is." },
     ],
+    voiceover: { setup: "/audio/l4t1-s13-setup.mp3" },
   },
 
   /* ── Slide 13 — Bridge to Dashboard Designer ── */
@@ -1567,6 +1681,7 @@ const L4T1_SLIDES: SlideData[] = [
       "Scores your brief on the Brief Readiness Framework",
       "Produces a shareable specification document",
     ],
+    voiceover: { setup: "/audio/l4t1-s14-setup.mp3" },
   },
 
 ];
@@ -1681,9 +1796,31 @@ const L5T1_SLIDES: SlideData[] = [
       "🔗 Where your Level 1–4 skills plug into a full-stack build",
       "⚖️ How to read any product brief and identify which stages matter most",
     ],
+    voiceover: { setup: "/audio/l5t1-s01-setup.mp3" },
   },
 
-  /* ── Slide 2 — The L4→L5 Jump (Beat 1 — Situation) ── */
+  /* ── Slide 2 — The Reality: Prototype-to-Production Gap ── */
+  {
+    section: "THE REALITY", type: "evidenceHero",
+    takeaway: "Most AI projects never make it past the prototype — only a fraction become products that others can actually use",
+    heading: "Everyone's prototyping. Almost nobody's shipping.",
+    tealWord: "shipping",
+    body: "AI tools have made it trivially easy to build a prototype in an afternoon. But the gap between 'it works on my laptop' and 'other people can log in and use it' is where most projects stall.\n\nThe build pipeline that turns an idea into a deployed product has five distinct stages — and most builders skip straight to the middle.",
+    stats: [{
+      value: "90%",
+      valueColour: "#2E3F8F",
+      label: "of AI proofs of concept never make it to production deployment",
+      source: "Gartner",
+      desc: "AI in the Enterprise Survey, 2024",
+      visualType: "dotGrid",
+    }],
+    pullQuote: "90% of AI proofs of concept never make it to production deployment — Gartner, AI in the Enterprise Survey, 2024",
+    sourceLink: "https://www.gartner.com/en/newsroom/press-releases/2024-ai-deployment",
+    sourceText: "Gartner — AI in the Enterprise: From Proof of Concept to Production (2024)",
+    voiceover: undefined,
+  },
+
+  /* ── Slide 3 — The L4→L5 Jump (Beat 1 — Situation) ── */
   {
     section: "THE REALITY", type: "comparison",
     takeaway: "The jump from dashboard to application is not a tool upgrade — it's an architectural shift",
@@ -1702,6 +1839,7 @@ const L5T1_SLIDES: SlideData[] = [
         annotation: "The product responds to you. You are inside it.",
       },
     ],
+    voiceover: { setup: "/audio/l5t1-s02-setup.mp3" },
   },
 
   /* ── Slide 3 — What L5 Actually Means (Beat 1 — Situation) ── */
@@ -1741,6 +1879,7 @@ const L5T1_SLIDES: SlideData[] = [
         consequence: "Without this → the product only exists on its creator's machine.",
       },
     ],
+    voiceover: { setup: "/audio/l5t1-s03-setup.mp3" },
   },
 
   /* ── Slide 4 — Where L5 Sits in the Framework (Beat 1 — Situation) ── */
@@ -1751,6 +1890,7 @@ const L5T1_SLIDES: SlideData[] = [
     tealWord: "become",
     body: "Each level of the OXYGY framework built a layer of the stack. Prompting. Agents. Workflows. Briefs and dashboards. At Level 5, those layers combine into a product that runs itself, serves others, and operates independently of its creator.\n\nThe jump to Level 5 is not about adding one more skill. It is about understanding how all the existing skills connect — and where each one belongs in the build.",
     pullQuote: "You already know prompting, agents, workflows, and briefs. Level 5 is about knowing where each of those skills belongs in the pipeline.",
+    voiceover: { setup: "/audio/l5t1-s04-setup.mp3" },
   },
 
   /* ── Slide 5 — The Tension (Beat 2 — Tension) ── */
@@ -1761,54 +1901,46 @@ const L5T1_SLIDES: SlideData[] = [
     subheading: "Most builders grab the first tool they've heard of — and use it for everything.",
     tealPhrase: "Five pieces",
     footnote: "A prototyping tool is not a database. A vibe coding tool is not version control. A deployment platform is not a builder. Using the wrong tool for a stage produces the same result as skipping the stage entirely.",
+    voiceover: { setup: "/audio/l5t1-s05-setup.mp3" },
   },
 
-  /* ── Slide 6 — The Missing Mental Model: Builder A ── */
+  /* ── Slide 6 — The Missing Mental Model (Beat 2 — Tension) ── */
   {
-    section: "THE GAP", type: "persona",
+    section: "THE GAP", type: "situationalJudgment",
     takeaway: "Two builders, the same brief — what each one does next reveals the mental model they're working with",
-    heading: "Builder A — Jumps straight to Logic",
-    predictFirst: true,
-    predictQuestion: "What's the most likely outcome for Builder A?",
-    predictOptions: [
-      "Impressive demo by end of day — the right move when the brief is clear enough.",
-      "Rework. The brief contained signals Logic alone can't solve — skipping the pipeline means discovering that late.",
+    heading: "Two responses to complexity.",
+    tealWord: "Two responses",
+    scenarios: [
+      {
+        personaName: "Builder A",
+        personaRole: "Jumps straight to Logic",
+        scenario: "Given a complex brief — build a personalised team summary app with individual accounts and a trending view — Builder A opens a vibe coding tool immediately and starts generating code. What is the most likely outcome?",
+        options: [
+          "Impressive demo by end of day — the right move when the brief is clear enough.",
+          "Rework. The brief contained signals Logic alone can't solve — skipping the pipeline means discovering that late.",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "A demo is possible — but 'personalised' means each user needs stored data. Without a Data stage plan, personalisation breaks at the first logout." },
+          { quality: "strong",  text: "Speed at Logic often means discovering hard problems mid-build. Without Version Control, one mistake requires a full rebuild. The pipeline prevents the most expensive rework." },
+        ],
+      },
+      {
+        personaName: "Builder B",
+        personaRole: "Reads the brief for pipeline signals",
+        scenario: "Builder B pauses before opening any tool. They read the brief and flag 'personalised' and 'each team member' as signals that Data is load-bearing. They set up Version Control before writing a line of code. What does this approach change?",
+        options: [
+          "Not much — the pipeline is just process overhead. The code still needs to be written.",
+          "The build takes longer to start and less time to finish — critical decisions are made before they become blockers.",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "The pipeline is not overhead — it is the sequence that prevents the most expensive mistake: building in the wrong order with the wrong tool." },
+          { quality: "strong",  text: "Correct. Reading the brief for pipeline signals means tool selection is informed. A vibe coding tool with a deployment path is chosen before coding starts." },
+        ],
+      },
     ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "A demo is possible — but 'personalised' means each user needs stored data. Without a Data stage plan, personalisation breaks at the first logout.",
-      "Speed at Logic often means discovering hard problems mid-build. Without Version Control, one mistake requires a full rebuild. The pipeline prevents the most expensive rework.",
-    ],
-    personaData: {
-      name: "Builder A", initial: "A", role: "Jumps straight to Logic", color: "#E53E3E", iconPath: aishaImg,
-      scenario: "Given a complex brief — build a personalised team summary app with individual accounts and a trending view — Builder A opens a vibe coding tool immediately and starts generating code. What is the most likely outcome?",
-      tags: ["Pipeline thinking", "Logic-first", "Build order"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 6b — The Missing Mental Model: Builder B ── */
-  {
-    section: "THE GAP", type: "persona",
-    takeaway: "Two builders, the same brief — what each one does next reveals the mental model they're working with",
-    heading: "Builder B — Reads the brief for pipeline signals",
-    predictFirst: true,
-    predictQuestion: "What does Builder B's approach change?",
-    predictOptions: [
-      "Not much — the pipeline is just process overhead. The code still needs to be written.",
-      "The build takes longer to start and less time to finish — critical decisions are made before they become blockers.",
-    ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "The pipeline is not overhead — it is the sequence that prevents the most expensive mistake: building in the wrong order with the wrong tool.",
-      "Correct. Reading the brief for pipeline signals means tool selection is informed. A vibe coding tool with a deployment path is chosen before coding starts.",
-    ],
-    personaData: {
-      name: "Builder B", initial: "B", role: "Reads the brief for pipeline signals", color: "#38B2AC", iconPath: marcusImg,
-      scenario: "Builder B pauses before opening any tool. They read the brief and flag 'personalised' and 'each team member' as signals that Data is load-bearing. They set up Version Control before writing a line of code. What does this approach change?",
-      tags: ["Pipeline signals", "Version Control", "Build order"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
+    voiceover: { setup: "/audio/l5t1-s06-setup.mp3" },
   },
 
   /* ── Slide 7 — The Five-Stage Pipeline (Beat 3 — Concept) ── */
@@ -1865,6 +1997,15 @@ const L5T1_SLIDES: SlideData[] = [
         whyItMatters: "Without this → the application only runs on your machine. Nobody else can use it.",
       },
     ],
+    voiceover: {
+      setup: "/audio/l5t1-s07-setup.mp3",
+      reveals: [
+        "/audio/l5t1-s07-reveal1.mp3",
+        "/audio/l5t1-s07-reveal2.mp3",
+        "/audio/l5t1-s07-reveal3.mp3",
+        "/audio/l5t1-s07-reveal4.mp3",
+      ],
+    },
   },
 
   /* ── Slide 8 — Workplace Analogies (Beat 3 — Concept) ── */
@@ -1901,6 +2042,7 @@ const L5T1_SLIDES: SlideData[] = [
         annotation: "The presentation is the deployment. The deck is the product.",
       },
     ],
+    voiceover: { setup: "/audio/l5t1-s08-setup.mp3" },
   },
 
   /* ── Slide 9 — Where L1–L4 Skills Plug In (Beat 3 — Concept) ── */
@@ -1947,6 +2089,7 @@ const L5T1_SLIDES: SlideData[] = [
         whyItMatters: "A brief without clear users, features, and data sources is an incomplete Prototype stage",
       },
     ],
+    voiceover: { setup: "/audio/l5t1-s09-setup.mp3" },
   },
 
   /* ── Slide 10 — What Breaks When You Skip a Stage (Beat 3 — Concept) ── */
@@ -1970,6 +2113,7 @@ const L5T1_SLIDES: SlideData[] = [
       { id: "i4", label: "Users log out and all their history disappears — every session starts from a blank slate", correctZone: "data" },
       { id: "i5", label: "The application is finished — but sharing it means emailing source files and hoping the recipient can run them", correctZone: "deploy" },
     ],
+    voiceover: { setup: "/audio/l5t1-s10-setup.mp3" },
   },
 
   /* ── Slide 11 — Contrast: Ad Hoc vs Pipeline (Beat 4 — Contrast) ── */
@@ -1982,58 +2126,46 @@ const L5T1_SLIDES: SlideData[] = [
     approach1OutputPreview: "Two weeks later: the builder changed laptops. The application was gone. The team never had access to a live version. The data never persisted. The demo worked. The product never existed.",
     approach2PromptPreview: "BRIEF: Build a tool that gives our team personalised reading recommendations based on their role and past activity.\n\nBUILD WITH PIPELINE:\nWrote the brief first (Prototype). Created a GitHub repository before a single line of code (Version Control). Used a vibe coding tool connected to the repository (Logic). Connected a database to store user profiles and recommendation history (Data). Deployed to a hosting platform accessible via a URL (Deploy).",
     approach2OutputPreview: "Two weeks later: the tool is running. Team members log in with their own accounts. Their history is saved. The builder can update it without disrupting users. The product exists independently of its creator's machine.",
+    voiceover: { setup: "/audio/l5t1-s11-setup.mp3" },
   },
 
-  /* ── Slide 12 — Situational Judgment: Alex ── */
+  /* ── Slide 12 — Situational Judgment (Beat 4 — Contrast) ── */
   {
-    section: "SEE THE DIFFERENCE", type: "persona",
+    section: "SEE THE DIFFERENCE", type: "situationalJudgment",
     takeaway: "Pipeline understanding changes your first move — before a single line of code is written",
-    heading: "Alex — Team Lead",
-    predictFirst: true,
-    predictQuestion: "What's Alex's first move with this brief?",
-    predictOptions: [
-      "Open a vibe coding tool and start building — a working demo by Friday is the goal",
-      "Write the brief: who logs in, what they submit, what they see, how data is stored",
-      "Find an existing template that does something similar and adapt it",
+    heading: "Same brief. Different first move.",
+    tealWord: "Different first move",
+    scenarios: [
+      {
+        scenario: "You receive a brief: 'Build an internal tool where team members can log their weekly AI experiments and see what others are doing.' Your manager wants a demo next Friday. What is your first move?",
+        options: [
+          "Open a vibe coding tool and start building — a working demo by Friday is the goal",
+          "Write the brief: who logs in, what they submit, what they see, how data is stored",
+          "Find an existing template that does something similar and adapt it",
+        ],
+        strongestChoice: 1,
+        feedback: [
+          { quality: "partial", text: "A working demo by Friday is achievable — but without a brief, you risk building the wrong thing. What does 'log their weekly AI experiments' actually mean? What do people see when viewing others' entries? Without answers, the demo will need rebuilding after the first feedback session." },
+          { quality: "strong", text: "Writing the brief first takes an hour and saves three days of rebuilds. Who logs in? What exactly do they submit? What does the view of others' entries show? Answering these in a document before opening any builder ensures Friday's demo matches what was actually needed." },
+          { quality: "partial", text: "Adapting an existing tool is a reasonable shortcut — but only if you know what the tool actually needs to do. Without the brief, you will evaluate templates against a vague standard and likely pick one that is close but wrong in a detail that matters." },
+        ],
+      },
+      {
+        scenario: "You have built a working prototype in a vibe coding tool. It looks exactly right. You want to share it with the team. What do you check before sharing?",
+        options: [
+          "Whether the tool has a deployment option — or whether it only runs locally",
+          "Whether every feature in the brief has been implemented",
+          "Whether the design matches the original mockup exactly",
+        ],
+        strongestChoice: 0,
+        feedback: [
+          { quality: "strong", text: "This is the right check. If your vibe coding tool only runs locally, sharing a link will fail. Before investing more time in features, confirm that the tool you are using has a deployment path to a live URL. If it does not, you need to know now — not after three more days of building." },
+          { quality: "partial", text: "Feature completeness matters — but it is a secondary check. The primary blocker is whether anyone else can access the tool at all. A simple, deployable version that matches the core brief is more valuable than a feature-complete version nobody can reach." },
+          { quality: "weak", text: "Design fidelity is the least urgent concern here. Getting the tool in front of the team is. A deployed application that looks 80% right is worth far more than a locally-running application that looks perfect." },
+        ],
+      },
     ],
-    predictCorrect: 1,
-    predictFeedback: [
-      "A working demo by Friday is achievable — but without a brief, you risk building the wrong thing. What does 'log their weekly AI experiments' actually mean? What do people see when viewing others' entries? Without answers, the demo will need rebuilding after the first feedback session.",
-      "Writing the brief first takes an hour and saves three days of rebuilds. Who logs in? What exactly do they submit? What does the view of others' entries show? Answering these in a document before opening any builder ensures Friday's demo matches what was actually needed.",
-      "Adapting an existing tool is a reasonable shortcut — but only if you know what the tool actually needs to do. Without the brief, you will evaluate templates against a vague standard and likely pick one that is close but wrong in a detail that matters.",
-    ],
-    personaData: {
-      name: "Alex", initial: "A", role: "Team Lead", color: "#667EEA", iconPath: jordanImg,
-      scenario: "Alex receives a brief: 'Build an internal tool where team members can log their weekly AI experiments and see what others are doing.' The manager wants a demo next Friday. What is Alex's first move?",
-      tags: ["Brief-first", "Pipeline thinking", "Demo planning"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
-  },
-
-  /* ── Slide 12b — Situational Judgment: Morgan ── */
-  {
-    section: "SEE THE DIFFERENCE", type: "persona",
-    takeaway: "Pipeline understanding changes your first move — before a single line of code is written",
-    heading: "Morgan — Product Builder",
-    predictFirst: true,
-    predictQuestion: "What should Morgan check before sharing the prototype?",
-    predictOptions: [
-      "Whether the tool has a deployment option — or whether it only runs locally",
-      "Whether every feature in the brief has been implemented",
-      "Whether the design matches the original mockup exactly",
-    ],
-    predictCorrect: 0,
-    predictFeedback: [
-      "This is the right check. If the vibe coding tool only runs locally, sharing a link will fail. Before investing more time in features, confirm that the tool has a deployment path to a live URL. If it does not, Morgan needs to know now — not after three more days of building.",
-      "Feature completeness matters — but it is a secondary check. The primary blocker is whether anyone else can access the tool at all. A simple, deployable version that matches the core brief is more valuable than a feature-complete version nobody can reach.",
-      "Design fidelity is the least urgent concern here. Getting the tool in front of the team is. A deployed application that looks 80% right is worth far more than a locally-running application that looks perfect.",
-    ],
-    personaData: {
-      name: "Morgan", initial: "M", role: "Product Builder", color: "#48BB78", iconPath: samImg,
-      scenario: "Morgan has built a working prototype in a vibe coding tool. It looks exactly right. Morgan wants to share it with the team. What should Morgan check before sharing?",
-      tags: ["Deployment check", "Pipeline thinking", "Sharing a prototype"],
-      approach: null, approachDef: null, bestFor: null, prompt: null, output: null, why: null, modifier: null, modDef: null,
-    },
+    voiceover: { setup: "/audio/l5t1-s12-setup.mp3" },
   },
 
   /* ── Slide 13 — Reading a Brief for Pipeline Signals (Beat 5 — Bridge) ── */
@@ -2093,6 +2225,7 @@ const L5T1_SLIDES: SlideData[] = [
         whyItMatters: "Without this check → you rebuild what already exists and inherit the same structural problems",
       },
     ],
+    voiceover: { setup: "/audio/l5t1-s13-setup.mp3" },
   },
 
   /* ── Slide 14 — Quiz (Beat 5 — Bridge) ── */
@@ -2110,6 +2243,7 @@ const L5T1_SLIDES: SlideData[] = [
     ],
     correct: 1,
     explanation: "This is a Data stage failure. The application is live (Deploy is working). The personalisation logic functions within a session (Logic is working). But without a database, nothing is stored between sessions. Each new session starts blank because there is nowhere for the history to live. Connecting a database from the beginning would have resolved this.",
+    voiceover: { setup: "/audio/l5t1-s14-setup.mp3" },
   },
 
   /* ── Slide 15 — Module Summary (Beat 5 — Bridge) ── */
@@ -2129,6 +2263,7 @@ const L5T1_SLIDES: SlideData[] = [
       { icon: "🔗", label: "Stages build on each other",  color: "#38B2AC", light: "#E6FFFA", when: "Prototype informs Logic. Logic requires Version Control. Data enables personalisation. Deploy requires all four. The order is not optional." },
       { icon: "🎯", label: "Match tool to stage",         color: "#ED8936", light: "#FFFBEB", when: "A vibe coding tool is not a database. A prototype is not a product. Use the right tool for each job — not the same tool for every job." },
     ],
+    voiceover: { setup: "/audio/l5t1-s15-setup.mp3" },
   },
 
   /* ── Slide 16 — Bridge to App Evaluator (Beat 5 — Bridge) ── */
@@ -2145,6 +2280,7 @@ const L5T1_SLIDES: SlideData[] = [
       "Flags missing components before they become blockers",
       "Produces a structured build plan ready to execute",
     ],
+    voiceover: { setup: "/audio/l5t1-s16-setup.mp3" },
   },
 
 ];

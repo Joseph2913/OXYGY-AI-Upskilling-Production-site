@@ -1651,8 +1651,18 @@ RESPONSE FORMAT (JSON only, no markdown fences, no preamble):
   ],
   "tips": ["Pro tip 1", "Pro tip 2"],
   "limitations": "Platform-specific limitations or caveats",
-  "prd_snippet": "A ready-to-paste excerpt from the PRD, formatted for the platform. For CLI tools this should be markdown. For chat-based tools this should be a well-structured prompt. Include the app name, purpose, key features, tech stack, and UI/design requirements — trimmed to what the platform needs for a strong first pass."
+  "platform_preamble": "A platform-specific guidance section (see PLATFORM PREAMBLE below)"
 }
+
+PLATFORM PREAMBLE:
+Generate a focused guidance block (10-20 lines of markdown) that will be PREPENDED to the user's full PRD before they paste it into their chosen platform. This preamble must:
+- Be written as instructions TO THE AI PLATFORM (not to the user) — e.g. "You are building an app based on the PRD below…"
+- Include platform-specific directives for how the AI should interpret and use the PRD (e.g. "Read the full PRD below before writing any code", "Follow the Tech Stack section exactly", "Use the Design Tokens section for all styling")
+- Include any platform-specific adaptations (e.g. for CLI tools: "Create files matching the File & Folder Structure section"; for chat tools: "Generate one section at a time, starting with the foundation phase")
+- Mention the user's refinement context if provided (app description field may contain refinement notes)
+- End with a clear separator like "---" or "## PRD follows below" so the transition to the PRD content is clean
+- Do NOT repeat or summarise the PRD content — the full PRD will be appended automatically after this preamble
+- Format appropriately for the platform: markdown for CLI tools (Cursor, Claude Code), structured prompt for chat tools (Lovable, Bolt, Google AI Studio)
 
 STEP STRUCTURE — generate 4-6 steps covering these phases:
 1. PROJECT INITIALISATION — Create a new project/workspace in the platform. What to name it, what template to pick (if any).
@@ -1661,6 +1671,7 @@ STEP STRUCTURE — generate 4-6 steps covering these phases:
    - For chat tools: how to structure the initial prompt or system instructions
    - For agent tools: how to describe the project scope
    Be specific about WHERE in the platform UI to paste and WHAT sections of the PRD to include.
+   IMPORTANT: Tell the user to paste the ENTIRE "PRD — Ready to Paste" block (which includes both the platform preamble and full PRD). Do NOT tell them to paste only excerpts or summaries.
 3. FIRST PROMPT / KICK-OFF — What to say or do to get the platform to start generating the app. Reference specific PRD sections. Explain what a good first prompt looks like vs a bad one.
 4. REVIEW & ITERATE — How to review what the platform generates, how to give feedback, how to course-correct using the PRD as the source of truth. Platform-specific features for iteration (e.g. plan mode, composer, chat follow-ups).
 5. OPTIONAL: Any platform-specific extras (e.g. connecting a database, enabling specific modes, setting up environment variables).
@@ -1669,21 +1680,20 @@ RULES:
 - Each step instruction should be 3-6 sentences with specific, actionable detail
 - Reference PRD sections by name (e.g. "the Tech Stack section", "the UI & Design System section")
 - Include exact UI paths where relevant (e.g. "Open Settings → System Prompt", "Create a file called CLAUDE.md in the project root")
-- The prd_snippet field must be a condensed, ready-to-paste version of the PRD — not the full document. Focus on: app purpose, core features, tech stack, and design requirements. Format it appropriately for the platform
 - Tips should be platform-specific best practices for getting the best AI output (3-5 tips)
 - Limitations should honestly state what the platform struggles with for this type of app
 - NEVER mention specific AI model names (GPT-4, Claude, Gemini). Use "the AI" or "the platform's AI"
 
 PLATFORM-SPECIFIC GUIDANCE:
-- Cursor: Context file is .cursorrules in project root. Use Composer (Cmd+I) for multi-file generation. Start with "Build the app described in .cursorrules" then iterate. Explain chat vs Composer. Teach @-mentioning files.
-- Lovable: Paste the entire PRD as the first message. Iterate with follow-up messages referencing specific PRD sections. Guide Supabase integration if PRD mentions a database.
-- Bolt.new: Paste a focused PRD version as the first message. Explain the live StackBlitz environment. Use chat to request changes referencing PRD sections.
-- Claude Code: Create CLAUDE.md in project root with PRD content. Start with /plan to let the AI propose architecture. The AI creates files and runs commands — teach reviewing and approving. Reference specific PRD sections for refinement.
-- Codex (OpenAI): Paste PRD summary as the task description. Let the agent plan implementation. Teach reviewing diffs against PRD requirements.
-- Google AI Studio: Paste condensed PRD into System Instructions field. Ask for one section at a time. Explain how to request full file outputs and copy them into a project. This platform requires more manual assembly.
-- V0 (Vercel): V0 generates individual UI components. Reference the UI & Design System section. Include design details, colour palette, component behaviour. Generated code is Next.js/React.
-- Replit Agent: Paste PRD summary as initial agent description. Enable deployment, database, hosting from PRD requirements. Use chat to refine referencing PRD sections.
-- Not sure yet: Platform-agnostic advice — create a project context file, structure PRD as an effective prompt, iterate section by section.`;
+- Cursor: Context file is .cursorrules in project root — user will paste the full PRD (with preamble) here. Use Composer (Cmd+I) for multi-file generation. Start with "Build the app described in .cursorrules" then iterate. Explain chat vs Composer. Teach @-mentioning files.
+- Lovable: User will paste the full PRD (with preamble) as the first message — Lovable handles long context well. Iterate with follow-up messages referencing specific PRD sections. Guide Supabase integration if PRD mentions a database.
+- Bolt.new: User will paste the full PRD (with preamble) as the first message. Explain the live StackBlitz environment. Use chat to request changes referencing PRD sections.
+- Claude Code: Create CLAUDE.md in project root — user will paste the full PRD (with preamble) here. Start with /plan to let the AI propose architecture. The AI creates files and runs commands — teach reviewing and approving. Reference specific PRD sections for refinement.
+- Codex (OpenAI): User will paste the full PRD (with preamble) as the task description. Let the agent plan implementation. Teach reviewing diffs against PRD requirements.
+- Google AI Studio: User will paste the full PRD (with preamble) into the System Instructions field. Ask for one section at a time. Explain how to request full file outputs and copy them into a project. This platform requires more manual assembly.
+- V0 (Vercel): V0 generates individual UI components. Reference the UI & Design System section. User will paste the full PRD (with preamble). Include design details, colour palette, component behaviour. Generated code is Next.js/React.
+- Replit Agent: User will paste the full PRD (with preamble) as the initial agent description. Enable deployment, database, hosting from PRD requirements. Use chat to refine referencing PRD sections.
+- Not sure yet: Platform-agnostic advice — create a project context file, paste the full PRD as an effective prompt, iterate section by section.`;
 
   return {
     name: 'app-build-guide-proxy',
@@ -1708,7 +1718,7 @@ PLATFORM-SPECIFIC GUIDANCE:
           try {
             const { platform, prd_content, app_description } = JSON.parse(body);
 
-            const userMessage = `Platform: ${platform}\n\nApp Description: ${app_description || "See PRD"}\n\nFull PRD:\n${(prd_content || '').slice(0, 12000)}`;
+            const userMessage = `Platform: ${platform}\n\nApp Description: ${app_description || "See PRD"}\n\nFull PRD:\n${prd_content || ''}`;
 
             const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
@@ -1736,12 +1746,18 @@ PLATFORM-SPECIFIC GUIDANCE:
             const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
             const parsed = JSON.parse(cleaned);
 
+            const platformPreamble = typeof parsed.platform_preamble === 'string' ? parsed.platform_preamble : '';
+            // Combine platform-specific preamble with the full PRD from step 2
+            const prd_snippet = platformPreamble
+              ? `${platformPreamble}\n\n---\n\n${prd_content || ''}`
+              : (prd_content || '');
+
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({
               steps: Array.isArray(parsed.steps) ? parsed.steps : [],
               tips: Array.isArray(parsed.tips) ? parsed.tips : [],
               limitations: typeof parsed.limitations === 'string' ? parsed.limitations : '',
-              prd_snippet: typeof parsed.prd_snippet === 'string' ? parsed.prd_snippet : '',
+              prd_snippet,
             }));
           } catch (err) {
             console.error('Proxy error (app-build-guide):', err);

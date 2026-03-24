@@ -93,7 +93,7 @@ export function useJourneyData(): {
         const completedLevelSet = new Set<number>();
         for (let lvl = 1; lvl <= 5; lvl++) {
           const lvlTopics = LEVEL_TOPICS[lvl] || [];
-          const activeTopics = lvlTopics.filter(t => !t.comingSoon);
+          const activeTopics = lvlTopics;
           const progressForLvl = topicProgressRows.filter(r => r.level === lvl);
           const progressMapLvl = new Map(progressForLvl.map(r => [r.topic_id, r]));
           const lvlProjectPassed = psMap.get(lvl)?.status === 'passed';
@@ -156,7 +156,6 @@ export function useJourneyData(): {
 
           // Build per-topic phase breakdown
           const topicPhases = LEVEL_TOPICS[levelNumber]
-            .filter(t => !t.comingSoon)
             .map((topic, idx) => {
               const tp = topicProgressRows.find(
                 r => r.level === levelNumber && r.topic_id === topic.id
@@ -177,8 +176,7 @@ export function useJourneyData(): {
               };
             });
 
-          const activeTopics = topics.filter(t => !t.comingSoon);
-          const allTopicsDone = completedTopics === activeTopics.length && activeTopics.length > 0;
+          const allTopicsDone = completedTopics === topics.length && topics.length > 0;
           const toolUsed = lp?.tool_used ?? false;
           const workshopAttended = lp?.workshop_attended ?? false;
           const projectCompleted = lp?.project_completed ?? false;
@@ -205,11 +203,11 @@ export function useJourneyData(): {
             status = 'completed';
           } else {
             // Check if all topics have elearn done + toolkit done (artefacts) but project not passed
-            const allElearnToolkitDone = activeTopics.every(topic => {
+            const allElearnToolkitDone = topics.every(topic => {
               const row = progressMap.get(topic.id);
               return !!row?.elearn_completed_at;
             }) && levelToolkitDone;
-            if (allElearnToolkitDone && !levelProjectPassed && activeTopics.length > 0) {
+            if (allElearnToolkitDone && !levelProjectPassed && topics.length > 0) {
               status = 'project-pending';
             } else if (completedTopics > 0 || progressForLevel.length > 0) {
               status = 'active';

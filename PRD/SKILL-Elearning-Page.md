@@ -67,6 +67,30 @@ A **Topic Outline** document must be provided alongside this skill before author
 - Build on the marketing site (`MarketingSite.tsx`) — that is for promotional/landing pages only
 - Hardcode level-specific routes — derive the practice tool URL from `courseIntro.levelNumber` in slide data
 
+### Level accent color rule (CRITICAL)
+
+**Every e-learning module MUST use its level's accent color — never hardcode teal (`#38B2AC`) or any other fixed color.**
+
+The accent colors are defined in `data/levelTopics.ts`:
+
+| Level | Light (`accentColor`) | Dark (`accentDark`) | Use for |
+|-------|----------------------|--------------------|----|
+| L1 | `#A8F0E0` (Mint) | `#1A6B5F` | Underlines, pull-quote borders, stat highlights |
+| L2 | `#F7E8A4` (Pale Yellow) | `#8A6A00` | Same — yellow theme, NOT teal |
+| L3 | `#38B2AC` (Teal) | `#1A7A76` | Same — teal is only correct for L3 |
+| L4 | `#F5B8A0` (Soft Peach) | `#8C3A1A` | Same — peach/terracotta theme |
+| L5 | `#C3D0F5` (Lavender) | `#2E3F8F` | Same — lavender/indigo theme |
+
+These colors MUST be used for:
+- **Stat `valueColour`** in data — set to the level's `accentDark` (e.g. `#C4A934` for L2, `#38B2AC` for L3)
+- **Visual fills** in `evidenceHero` charts (calendar cells, dot grid dots, bar fills, card borders)
+- **Pull-quote bar** border-left and highlighted stat numbers
+- **`TealPhrase`** highlighted words in `tensionStatement` slides
+- **Heading underlines** via `renderTealHeading`
+- **Default large number card** border and gradient tint
+
+The `ELearningView` component receives `accentColor` and `accentDark` as props. All visual renderers derive `statColor` from `stat.valueColour || accentDark`. New slide types MUST follow the same pattern — never introduce a hardcoded color.
+
 ---
 
 ## 1. Page Structure
@@ -570,40 +594,62 @@ Every slide must declare a `type` field. Use only these types — do not invent 
 ### `courseIntro`
 **isStretchType. No takeaway header.**
 
-Full-width single column. Do not add a right-side framework preview grid.
+Two-column layout (58% left / 42% right). Every level's `courseIntro` MUST follow this pattern for visual consistency.
 
+**Left column** (gradient background, `borderRight: 1px solid #E2E8F0`):
 - Level badge: `background: accentLight, color: accentDark`, pill, 10px bold uppercase. Text: `"LEVEL N · E-LEARNING"`
-- Hook headline: `fontSize: 28px` (full) / `22px` (inline), `fontWeight: 800`, `#1A202C`
-- Subheading: `fontSize: 14px/13px`, `fontWeight: 600`, level accent dark color, `maxWidth: 600`
-- Objectives list: eyebrow `"YOU'LL WALK AWAY WITH"` (9px uppercase `#A0AEC0`). Each item: emoji icon + text (14px/13px, `#2D3748`, `lineHeight: 1.6`, `fontWeight: 500`). 3–4 items starting with action verbs.
-- Start button: level accent color background, white text, `borderRadius: 24`
+- Hook headline: `fontSize: 24px` (full) / `20px` (inline), `fontWeight: 800`, `#1A202C`
+- Subheading: `fontSize: 13px/12px`, `fontWeight: 600`, level accent dark color, `maxWidth: 380`
+- Objectives list: eyebrow `"YOU'LL WALK AWAY WITH"` (9px uppercase `#A0AEC0`). Each item: emoji icon + text (12px, `#2D3748`, `lineHeight: 1.55`, `fontWeight: 500`). 3–4 items starting with action verbs.
+- Start button: level accent dark color background, white text, `borderRadius: 24`
 
-Background gradients by level:
+**Right column** (`background: #FAFBFC`, vertically centered):
+- Eyebrow label: 9px uppercase `#A0AEC0` naming the level's core framework (e.g. "THE PROMPT BLUEPRINT", "THE THREE-LAYER AGENT MODEL", "WORKFLOW NODE TYPES", "THE BRIEF FRAMEWORK")
+- Description: 11px `#718096` — one sentence explaining the framework
+- Visual preview: 2×2 or stacked cards showing framework components. Each card: light bg + accent border, icon + label. Use the level's accent palette.
+- Footer: 10px italic `#A0AEC0` — estimated time + a sentence about what the learner will build
+
+Background gradients by level (left column only):
 - L1: `linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)`
 - L2: `linear-gradient(160deg, #FEFCE8 0%, #FEF9C3 50%, #F7FAFC 100%)`
-- L3: `linear-gradient(160deg, #FFFBEB 0%, #FEF3C7 50%, #F7FAFC 100%)`
+- L3: `linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)`
+- L4: `linear-gradient(160deg, #FFF7F4 0%, #FDEAE0 60%, #F7FAFC 100%)`
+- L5: `linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)`
 
 ---
 
 ### `evidenceHero`
+**Slide 2 in every module. Section label MUST be `"THE REALITY"`.** This is the first data slide the learner sees — it anchors the entire module's "why" with verifiable evidence.
+
 Two columns (48% text / 52% visual).
 
-**Left:** Body text — 15px, `#4A5568`, `lineHeight: 1.75`
+**Left:** Body text — 15px, `#4A5568`, `lineHeight: 1.75`. Sets the context for the stat. Should read naturally without the visual — the visual reinforces, not replaces.
 
 **Right:** Stat visual. Choose the visual that makes the number *feel* true:
 
-| `visualType` | When to use |
-|---|---|
-| *(default — large number card)* | Generic percentages with no relational meaning |
-| `dotGrid` | Percentages out of 100 — visceral human scale. 10×10 grid, active dots teal |
-| `barComparison` | Multipliers or ratios comparing two groups. Two vertical bars |
-| `adoptionGap` | Two stats showing a funnel drop |
+| `visualType` | When to use | Description |
+|---|---|---|
+| *(default — large number card)* | Generic percentages with no relational meaning | Large number in a bordered card with accent gradient bg, ↑ arrow, source badge |
+| `dotGrid` | Percentages out of 100 — visceral human scale | 10×10 grid of circles, N filled in accent color |
+| `barComparison` | Multipliers or ratios comparing two groups | Two vertical bars with gap bracket showing the multiplier |
+| `adoptionGap` | Two stats showing a funnel drop | Two stacked cards connected by a "but only" divider |
+| `weekBlocks` | Time lost / time allocation stats | Monthly calendar grid (Mon–Fri × 4 weeks = 20 working days). N days highlighted. Includes large stat value, day numbers in cells, "REWORK" label on highlighted days, legend |
 
-Set on the stat object: `stats: [{ value: "24%", label: "...", source: "McKinsey", visualType: "dotGrid" }]`
+Set on the stat object: `stats: [{ value: "24%", label: "...", source: "McKinsey", visualType: "dotGrid", valueColour: "#C4A934" }]`
 
-**Bottom (full width):** Pull-quote bar.
+**`valueColour` MUST match the level's accent dark color** (from `LEVEL_ACCENT_DARK_COLORS`). This color is used for the stat number, highlighted calendar cells, bar fills, dot fills, pull-quote border, and stat highlights. Never hardcode teal — the visual must reflect the level's identity.
+
+**Bottom (full width):** Pull-quote bar — `borderLeft: 4px solid [statColor]`, background `#F7FAFC`. Stat numbers within the quote are rendered in the stat's accent color with `fontWeight: 800`. For `weekBlocks` or similar visuals where the stat text is complex, the pull-quote should contain the full stat sentence with the source citation (e.g. "19% of the average knowledge worker's week is spent recreating information... — McKinsey Global Institute, The Social Economy").
 
 Every evidence slide must include a graphic — text-only layout is not acceptable.
+
+**Calendar visual design rules (`weekBlocks`):**
+- Grid: 5 columns (Mon–Fri) × 4 rows (weeks) = 20 working days in a month
+- Cell size: 52px fullscreen / 42px inline, borderRadius 10/8
+- Lost days: `Math.round(20 × percentage / 100)` — highlighted in `statColor` (solid fill, not gradient)
+- Each cell shows its day number (1–20) and lost cells show a small "REWORK" label
+- Below the grid: large stat value + legend (filled square = Lost to rework, empty = Productive work)
+- The visual must be immediately recognisable as a calendar — this familiarity is what makes the data stick
 
 ---
 
@@ -779,12 +825,165 @@ Three-column approach matrix.
 
 ---
 
-### `moduleSummary`
-Two-section summary filling the frame.
+### `moduleSummary` — "What You've Learned" (5-Card Takeaway Slide)
 
-**Section 1 (framework grid):** White card, `border: 1.5px solid #E2E8F0`. 3×2 grid — component cards `background: componentLight`. Component name (17–19px fontWeight 900) + one-line description (13–15px). Descriptions must be shorter than the `contextBar` version — a single memorable phrase.
+**Always the final slide of every e-learning module.** This is the single most important visual the learner takes away. It must be clear, scannable, and reinforce the entire module in five cards.
 
-**Section 2 (approaches):** 3 cards in a row. Each: `background: ap.light, borderTop: 3px solid {color}`. Icon + name + `"Use when:"` in bold accent color + specific condition text (not *"when you have time"* but *"when the output will be shared externally and tone matters"*).
+---
+
+#### Step 1: Identify the high-priority takeaways
+
+Before designing the slide, list **all** topics covered in the module (aim for ~10 items). Then curate down to **exactly 5** using this filter:
+
+1. **The Problem** — Why does this topic matter? What happens without it? (Ties to the `evidenceHero` reality slide)
+2. **When to Act** — What are the decision criteria? When should the learner apply this? (Ties to decision/judgment slides)
+3. **The Framework** — What is the core model or mental model taught? (The central concept of the module)
+4. **The Quality Bar** — What makes the output trustworthy or professional? (Accountability, checks, standards)
+5. **Where to Build / Next Step** — Where does the learner go to apply this? (Platforms, tools, or the toolkit)
+
+These five categories form a narrative arc: **problem → decision → design → quality → action**. Not every module will map perfectly to all five — adapt the labels, but always keep exactly 5 cards and always follow the arc from "why" to "how" to "where".
+
+**Rules for curating:**
+- If two topics are closely related (e.g., three individual layers of a framework), combine them into one card with the framework name
+- Every card must be self-contained — a learner reading only that card should understand the point
+- Descriptions must be a single sentence, max two lines. If it takes more, the scope of the card is too broad — split or simplify.
+
+---
+
+#### Step 2: Write the card content
+
+Each card has four fields in the data:
+
+```typescript
+{
+  number: 1,              // 1–5, determines order
+  label: "THE PROBLEM",   // Category label — uppercase, short (2–3 words)
+  title: "19% lost to rework",  // Main heading — bold, memorable, specific
+  desc: "When everyone prompts differently, the team pays in rework.",  // One sentence
+  icon: "⚠️",            // Single emoji representing the concept
+  color: "#C4A934",       // MUST be the level's accentDark colour for ALL cards
+  light: "#FEFCE8",       // MUST be the level's accentColor at low opacity for ALL cards
+  visual: "calendar",     // Visual type — see Step 3
+}
+```
+
+**Colour rule (CRITICAL):** All five cards MUST use the same colour — the level's accent colour. The `color` field should be set to `accentDark` and `light` should be set to `accentColor + "18"` (or the level's light tint). Do NOT use different colours per card. The summary slide should feel unified under the level's identity.
+
+---
+
+#### Step 3: Design the visuals
+
+Every card MUST have a visual in the lower section. Visuals use a shared **chip style**: white background, `borderRadius: 10`, consistent padding (`5px 10px` inline / `8px 12px` fullscreen), with a subtle border in the level's accent colour. All visuals within a slide must use the same chip dimensions.
+
+**Visual types and when to use them:**
+
+| `visual` value | When to use | Structure |
+|---|---|---|
+| `"items"` | Listing 3 consequences, symptoms, or examples | 3 chips, each with emoji + text |
+| `"equation"` | Decision criteria that combine to a conclusion | 3 chips joined by `+`, then `=`, then a filled conclusion button |
+| `"layers"` | A sequential framework (e.g., Input → Processing → Output) | 3 chips joined by `↓` arrows, each with icon + name + description |
+| `"checklist"` | Quality criteria or accountability checks | 3 chips with emoji + text + `✓` checkmark on the right |
+| `"platforms"` | Tools or platforms with logos | 3 chips with `<img>` logo + name + subtitle |
+
+**Rules for visuals:**
+- Default to 3 items per visual — but if the topic genuinely has more items (e.g. 6 node types), show ALL of them in the same stacked chip format. Every item must be visualised identically; never truncate some into a text-only footnote like "+ Condition, Handoff, Output". If a visual has more than 3 items, reduce chip padding and font size proportionally so all items fit within the card height.
+- Icon size: `16px` fullscreen / `13px` inline (reduce to `14px` / `11px` when showing 4+ items)
+- Text size: `11px` fullscreen / `10px` inline, colour `#4A5568`, `fontWeight: 500` (reduce to `10px` / `9px` when showing 4+ items)
+- Chip border: `1px solid ${accentDark}25` — subtle, not heavy
+- For `"equation"`: the conclusion button uses `accentDark` as background with white text
+- For `"layers"`: each layer keeps its own framework colour for the label text, but the chip border uses the level accent
+- For `"platforms"`: logos are loaded from `public/logos/brands/` as `<img>` tags, `20px` fullscreen / `16px` inline
+
+---
+
+#### Step 4: Card layout specification
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  [Card 1]  [Card 2]  [Card 3]  [Card 4]  [Card 5]                  │
+│  All same  All same  All same  All same  All same                   │
+│  height    height    height    height    height                     │
+│  flex: 1   flex: 1   flex: 1   flex: 1   flex: 1                   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+- **Container:** `display: flex`, `alignItems: 'center'`, `gap: 10px` (fs) / `7px` (inline)
+- **Each card:** Fixed `height: 380px` (fs) / `320px` (inline), `flex: 1`, `borderRadius: 14`
+- **Card background:** `${accentColor}18` — very light tint of the level colour
+- **Card border:** `1.5px solid ${accentDark}22`, `borderTop: 4px solid ${accentDark}`
+- **Card internal layout** (top to bottom):
+  1. **Label:** `11px` (fs) / `10px`, `fontWeight: 800`, `accentDark`, uppercase, `letterSpacing: 0.1em`
+  2. **Title:** `17px` (fs) / `14px`, `fontWeight: 700`, `#1A202C`
+  3. **Description:** `11px` (fs) / `10px`, `#718096`, `lineHeight: 1.5`
+  4. **Visual:** `flex: 1`, vertically centered within remaining space
+
+---
+
+#### Step 5: Data structure
+
+Add `visualId: "l2-summary"` (or the appropriate level prefix) and the `summaryCards` array to the `moduleSummary` slide in `topicContent.ts`. The renderer checks for `visualId` matching `"l2-summary"` pattern.
+
+```typescript
+{
+  section: "WHAT YOU'VE LEARNED", type: "moduleSummary",
+  takeaway: "You now have a framework for...",
+  heading: "Your five key takeaways",
+  visualId: "l2-summary",  // triggers the 5-card template
+  summaryCards: [
+    { number: 1, label: "THE PROBLEM", title: "...", desc: "...", icon: "⚠️", color: "#C4A934", light: "#FEFCE8", visual: "items" },
+    { number: 2, label: "WHEN TO ACT", title: "...", desc: "...", icon: "🎯", color: "#C4A934", light: "#FEFCE8", visual: "equation" },
+    { number: 3, label: "THE FRAMEWORK", title: "...", desc: "...", icon: "🏗️", color: "#C4A934", light: "#FEFCE8", visual: "layers" },
+    { number: 4, label: "THE QUALITY BAR", title: "...", desc: "...", icon: "🛡️", color: "#C4A934", light: "#FEFCE8", visual: "checklist" },
+    { number: 5, label: "WHERE TO BUILD", title: "...", desc: "...", icon: "🔧", color: "#C4A934", light: "#FEFCE8", visual: "platforms" },
+  ],
+  voiceover: { setup: "/audio/lXt1-sNN-setup.mp3" },
+}
+```
+
+---
+
+#### Step 6: Voiceover script
+
+The summary voiceover should be ~45–60 seconds, covering all five takeaways in sequence:
+
+```
+"Let's recap the five things you're taking away from this module.
+First, [label]: [one sentence].
+Second, [label]: [one sentence].
+Third, [label]: [one sentence].
+Fourth, [label]: [one sentence].
+And fifth, [label]: [one sentence].
+Head to [toolkit tool name] to put this into practice."
+```
+
+Keep it high-level — one sentence per takeaway, no elaboration. The visual carries the detail.
+
+---
+
+#### Level accent colours for summary cards
+
+| Level | `color` (accentDark) | `light` (card bg) |
+|-------|---------------------|-------------------|
+| L1 | `#1A6B5F` | `#A8F0E018` |
+| L2 | `#C4A934` | `#FEFCE8` |
+| L3 | `#1A7A76` | `#E6FFFA` |
+| L4 | `#8C3A1A` | `#FFF7F4` |
+| L5 | `#2E3F8F` | `#EBF4FF` |
+
+---
+
+#### Quality checklist
+
+- [ ] Exactly 5 cards, no more, no less
+- [ ] All cards use the same level accent colour — no per-card colour variation
+- [ ] All cards have a visual — no empty card bodies
+- [ ] All visuals use the shared chip style (white bg, borderRadius 10, consistent padding)
+- [ ] Each visual has exactly 3 items
+- [ ] Descriptions are one sentence max
+- [ ] Titles are specific and memorable (not generic like "Key concept")
+- [ ] The 5 cards follow the narrative arc: problem → decision → design → quality → action
+- [ ] Voiceover covers all 5 takeaways in ~45–60 seconds
+- [ ] `visualId` is set on the slide data to trigger the 5-card renderer
 
 ---
 
@@ -1204,9 +1403,15 @@ Three options always:
 
 Feedback must explain *why* that choice is strongest/partial/weak **in this specific situation** — not just label it. Include 3–4 scenarios per `situationalJudgment` slide.
 
-### Writing `moduleSummary`
+### Writing `moduleSummary` (5-Card Takeaway)
 
-Component descriptions: shorter than the `contextBar` version — a single memorable phrase, not a full explanation.
+**Follow the detailed spec in the `moduleSummary` slide type section above.** The summary process is:
+
+1. List ~10 topics covered in the module
+2. Curate to exactly 5 using the arc: problem → decision → design → quality → action
+3. Write one-sentence descriptions — shorter than contextBar, a single memorable phrase
+4. Choose visual types (items, equation, layers, checklist, platforms) — always 3 items per visual
+5. All cards use the level's accent colour — no per-card variation
 
 `"Use when:"` conditions must be specific and actionable — not *"when you have time"* but *"when the output will be shared externally and tone consistency matters."*
 

@@ -252,6 +252,16 @@ This project experienced a critical RLS infinite recursion bug (2026-03-16) wher
 2. After editing a component, check the browser console for `ReferenceError` or `is not defined` errors — these indicate missing imports.
 3. Never assume an icon/component is already imported. Grep the import block before using it.
 
+## Variable Removal & Rename Safety
+
+**When removing or renaming ANY variable, function, or type, ALWAYS grep the entire codebase for remaining references before finishing.** A missed reference will cause a `ReferenceError` at runtime that crashes the app — the user sees a broken page with no data.
+
+**Rules:**
+1. After every variable removal or rename, run `Grep` for the old name across all `*.ts` and `*.tsx` files.
+2. Verify **zero matches** before moving on.
+3. Do this even if you believe the variable was only used in one place — shared hooks (`useDashboardData`, `useJourneyData`, `useLevelData`, etc.) are consumed by multiple files.
+4. Do NOT rely on the TypeScript compiler to catch these — pre-existing TS errors can mask new ones, and Vite's dev server may not surface them until the code path executes at runtime.
+
 ## Async State & Onboarding Guards
 
 **Never derive initial UI state from async values that haven't loaded yet.** Context values like `hasLearningPlan` default to `false` before Supabase responds. If you use them to initialise `useState`, the component will render incorrectly during loading and may never self-correct.

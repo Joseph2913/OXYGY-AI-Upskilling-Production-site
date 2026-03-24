@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useOrg } from '../../context/OrgContext';
+import { useTourMode } from '../../context/TourModeContext';
 import {
   getOrgLeaderboard,
   getOrgWeeklyActivity,
@@ -16,6 +17,7 @@ import {
   validateAndAcceptInvite,
   ScoredMember,
   TopicProgressRow,
+  SCORING,
 } from '../../lib/database';
 import {
   LEVEL_ACCENT_COLORS,
@@ -50,15 +52,20 @@ const MEDAL_SHADOWS = [
 ];
 
 const SCORE_BREAKDOWN_COMPONENTS = [
-  { key: 'phases', label: 'Phases completed', color: '#38B2AC' },
-  { key: 'artefacts', label: 'Artefacts saved', color: '#667EEA' },
-  { key: 'insights', label: 'Insights logged', color: '#ED8936' },
+  { key: 'projects', label: 'Projects completed', color: '#D97706' },
+  { key: 'elearn', label: 'E-learning modules', color: '#8B5CF6' },
+  { key: 'artefacts', label: 'Artefacts created', color: '#38B2AC' },
   { key: 'streak', label: 'Day streak', color: '#F6AD55' },
   { key: 'active', label: 'Active days (30d)', color: '#48BB78' },
 ];
 
 const SCORE_ICONS: Record<string, React.ReactNode> = {
-  phases: (
+  projects: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  ),
+  elearn: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
     </svg>
@@ -66,11 +73,6 @@ const SCORE_ICONS: Record<string, React.ReactNode> = {
   artefacts: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-    </svg>
-  ),
-  insights: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
     </svg>
   ),
   streak: (
@@ -86,17 +88,17 @@ const SCORE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const SCORE_ICON_BG: Record<string, string> = {
-  phases: '#EAF3DE',
+  projects: '#FEF3C7',
+  elearn: '#F5F3FF',
   artefacts: '#E6FFFA',
-  insights: '#FBEAF0',
   streak: '#FAEEDA',
   active: '#E6F1FB',
 };
 
 const SCORE_ICON_COLOR: Record<string, string> = {
-  phases: '#27500A',
+  projects: '#92400E',
+  elearn: '#5B21B6',
   artefacts: '#085041',
-  insights: '#72243E',
   streak: '#633806',
   active: '#0C447C',
 };
@@ -161,6 +163,7 @@ interface DrawerData {
 
 const AppCohort: React.FC = () => {
   const { user } = useAuth();
+  const isTourMode = useTourMode();
   const { orgId, orgName, orgTier, members, loading: orgLoading } = useOrg();
 
   // Page-level state
@@ -195,6 +198,15 @@ const AppCohort: React.FC = () => {
   // ─── Data loading ───
 
   useEffect(() => {
+    if (isTourMode) {
+      import('../../data/tourDemoData').then(m => {
+        setMemberStats(m.DEMO_COHORT_MEMBERS as any);
+        setWeeklyActivity(m.DEMO_WEEKLY_ACTIVITY);
+        setWorkshopSessions(m.DEMO_WORKSHOP_SESSIONS);
+        setStatsLoading(false);
+      });
+      return;
+    }
     if (!orgId || !user) { setStatsLoading(false); return; }
     setStatsLoading(true);
     drawerCacheRef.current.clear();
@@ -208,7 +220,7 @@ const AppCohort: React.FC = () => {
       setWorkshopSessions(workshops);
       setStatsLoading(false);
     });
-  }, [orgId, user]);
+  }, [orgId, user, isTourMode]);
 
   // ─── Drawer data loading ───
 
@@ -392,17 +404,16 @@ const AppCohort: React.FC = () => {
   // ─── Score breakdown helper ───
 
   const getScoreBreakdown = (m: ScoredMember) => {
-    const phasesScore = (m.completionPct / 100) * m.score; // approximate
-    // Use the scoring formula from the PRD
-    const artefactScore = Math.min(m.artefactCount, 20) * 25;
-    const insightScore = Math.min(m.insightCount, 10) * 30;
-    const streakScore = Math.min(m.streakDays, 14) * 5;
-    const activeScore = Math.min(m.activeDays30, 30) * 2;
-    const phaseScore = Math.max(m.score - artefactScore - insightScore - streakScore - activeScore, 0);
+    const elearnScore = m.elearnCount * SCORING.ELEARN_COMPLETION;
+    const artefactScore = m.artefactCount * (SCORING.TOOLKIT_SESSION + SCORING.TOOLKIT_SAVE_BONUS);
+    const streakScore = Math.min(m.streakDays, SCORING.STREAK_CAP) * SCORING.STREAK_DAY;
+    const activeScore = Math.min(m.activeDays30, SCORING.ACTIVE_CAP) * SCORING.ACTIVE_DAY;
+    // Project score is whatever remains after subtracting known components
+    const projectScore = Math.max(m.score - elearnScore - artefactScore - streakScore - activeScore, 0);
     return [
-      { ...SCORE_BREAKDOWN_COMPONENTS[0], value: phaseScore },
-      { ...SCORE_BREAKDOWN_COMPONENTS[1], value: artefactScore },
-      { ...SCORE_BREAKDOWN_COMPONENTS[2], value: insightScore },
+      { ...SCORE_BREAKDOWN_COMPONENTS[0], value: projectScore },
+      { ...SCORE_BREAKDOWN_COMPONENTS[1], value: elearnScore },
+      { ...SCORE_BREAKDOWN_COMPONENTS[2], value: artefactScore },
       { ...SCORE_BREAKDOWN_COMPONENTS[3], value: streakScore },
       { ...SCORE_BREAKDOWN_COMPONENTS[4], value: activeScore },
     ];
@@ -421,7 +432,7 @@ const AppCohort: React.FC = () => {
 
   // ─── No-org state ───
 
-  if (!orgId) {
+  if (!orgId && !isTourMode) {
     return (
       <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', letterSpacing: '-0.4px' }}>My Cohort</h1>

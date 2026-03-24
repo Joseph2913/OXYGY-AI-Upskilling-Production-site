@@ -6,6 +6,19 @@ import type {
   OrgMemberRole,
 } from '../types';
 
+// ─── SCORING CONSTANTS ───
+
+export const SCORING = {
+  PROJECT_POINTS: { S: 50, A: 42, B: 35, C: 30, R: 0 } as Record<string, number>,
+  ELEARN_COMPLETION: 25,        // per topic where elearn_completed_at is set
+  TOOLKIT_SESSION: 7,           // per artefact created (proxy for session)
+  TOOLKIT_SAVE_BONUS: 3,        // additional pts per artefact saved
+  STREAK_DAY: 2,                // per consecutive day, max STREAK_CAP
+  STREAK_CAP: 14,
+  ACTIVE_DAY: 1,                // per distinct active day in last 30, max ACTIVE_CAP
+  ACTIVE_CAP: 30,
+} as const;
+
 // ─── HELPER: camelCase ↔ snake_case for profiles ───
 
 function profileToDb(profile: Partial<UserProfile>): Record<string, unknown> {
@@ -474,7 +487,7 @@ export async function getArtefacts(userId: string): Promise<Artefact[]> {
     .is('archived_at', null)
     .order('created_at', { ascending: false });
   if (error) { console.error('getArtefacts error:', error); return []; }
-  return (data || []).map((row: Record<string, unknown>) => ({
+  const rows = (data || []).map((row: Record<string, unknown>) => ({
     id: row.id as string,
     name: row.name as string,
     type: row.type as ArtefactType,
@@ -485,6 +498,16 @@ export async function getArtefacts(userId: string): Promise<Artefact[]> {
     updatedAt: new Date(row.updated_at as string),
     lastOpenedAt: row.last_opened_at ? new Date(row.last_opened_at as string) : null,
   }));
+
+  // Deduplicate project_proof artefacts: keep only the latest per level
+  // (results are ordered by created_at DESC, so first seen per level wins)
+  const seenProofLevels = new Set<number>();
+  return rows.filter((a) => {
+    if (a.type !== 'project_proof') return true;
+    if (seenProofLevels.has(a.level)) return false;
+    seenProofLevels.add(a.level);
+    return true;
+  });
 }
 
 export async function getArtefactContent(id: string, userId: string): Promise<ArtefactContent | null> {
@@ -646,8 +669,8 @@ export interface TopicProgressRow {
   current_phase: number;
   current_slide: number;
   elearn_completed_at: string | null;
-  read_completed_at: string | null;
-  watch_completed_at: string | null;
+  read_completed_at: string | null;   // repurposed: toolkit_completed_at
+  watch_completed_at: string | null;  // watch_completed_at: unused in current 3-phase topic model
   practise_completed_at: string | null;
   completed_at: string | null;
   visited_slides: number[];
@@ -728,8 +751,8 @@ export async function completePhaseDb(
 ): Promise<boolean> {
   const phaseColumns: Record<number, string> = {
     1: 'elearn_completed_at',
-    2: 'read_completed_at',
-    3: 'watch_completed_at',
+    2: 'read_completed_at',   // toolkit completion (repurposed)
+    3: 'watch_completed_at',  // unused in current 3-phase topic model
     4: 'practise_completed_at',
   };
   const column = phaseColumns[phaseNumber];
@@ -748,6 +771,19 @@ export async function completePhaseDb(
   }
 
   return upsertTopicProgress(userId, level, topicId, updates);
+}
+
+/** Mark the Toolkit phase as complete for a topic. Idempotent — safe to call multiple times. */
+export async function completeToolkitPhase(
+  userId: string,
+  level: number,
+  topicId: number,
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  return upsertTopicProgress(userId, level, topicId, {
+    read_completed_at: now,   // read_completed_at is used as toolkit_completed_at in application logic
+    current_phase: 3,         // advance to Project phase
+  });
 }
 
 export async function completeTopicDb(
@@ -874,9 +910,9 @@ export interface ScoredMember {
   level: number;
   score: number;
   completionPct: number;
+  elearnCount: number;
   streakDays: number;
   artefactCount: number;
-  insightCount: number;
   activeDays30: number;
   isCurrentUser: boolean;
 }
@@ -907,24 +943,25 @@ export async function getOrgLeaderboard(
     .select('id, full_name, current_level, streak_days')
     .in('id', userIds);
 
-  // 3. Batch fetch phase completions
+  // 3. Batch fetch e-learn completions (include level for per-level 3-phase check)
   const { data: topicRows } = await supabase
     .from('topic_progress')
-    .select('user_id, elearn_completed_at, read_completed_at, watch_completed_at, practise_completed_at')
+    .select('user_id, level, elearn_completed_at')
     .in('user_id', userIds);
 
-  // 4. Batch fetch artefact counts
+  // 4. Batch fetch artefact counts (include level for per-level toolkit check)
   const { data: artefactRows } = await supabase
     .from('artefacts')
-    .select('user_id')
+    .select('user_id, level')
     .in('user_id', userIds)
     .is('archived_at', null);
 
-  // 5. Batch fetch insight counts
-  const { data: insightRows } = await supabase
-    .from('application_insights')
-    .select('user_id')
-    .in('user_id', userIds);
+  // 5. Batch fetch passed project submissions with tier letters and level
+  const { data: projectRows } = await supabase
+    .from('project_submissions')
+    .select('user_id, tier_letter, level')
+    .in('user_id', userIds)
+    .eq('review_passed', true);
 
   // 6. Batch fetch activity counts (last 30 days)
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -938,31 +975,48 @@ export async function getOrgLeaderboard(
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
   const memberRoleMap = new Map(members.map(m => [m.user_id, m.role]));
 
-  // Phase completions per user
-  const phaseCountMap = new Map<string, number>();
+  // E-learn completions per user
+  const elearnCountMap = new Map<string, number>();
   (topicRows || []).forEach((row: Record<string, unknown>) => {
     const uid = row.user_id as string;
-    const count = phaseCountMap.get(uid) || 0;
-    let phases = 0;
-    if (row.elearn_completed_at) phases++;
-    if (row.read_completed_at) phases++;
-    if (row.watch_completed_at) phases++;
-    if (row.practise_completed_at) phases++;
-    phaseCountMap.set(uid, count + phases);
+    if (row.elearn_completed_at) {
+      elearnCountMap.set(uid, (elearnCountMap.get(uid) || 0) + 1);
+    }
   });
 
-  // Artefact counts per user
+  // Artefact counts per user (total + per-level for 3-phase check)
   const artefactCountMap = new Map<string, number>();
+  const artefactLevelMap = new Map<string, Set<number>>(); // user -> set of levels with artefacts
   (artefactRows || []).forEach((row: Record<string, unknown>) => {
     const uid = row.user_id as string;
+    const lvl = row.level as number;
     artefactCountMap.set(uid, (artefactCountMap.get(uid) || 0) + 1);
+    if (!artefactLevelMap.has(uid)) artefactLevelMap.set(uid, new Set());
+    if (lvl) artefactLevelMap.get(uid)!.add(lvl);
   });
 
-  // Insight counts per user
-  const insightCountMap = new Map<string, number>();
-  (insightRows || []).forEach((row: Record<string, unknown>) => {
+  // Project scores per user + per-level pass tracking for 3-phase check
+  const projectScoreMap = new Map<string, number>();
+  const projectPassedLevelMap = new Map<string, Set<number>>(); // user -> set of levels with passed projects
+  (projectRows || []).forEach((row: Record<string, unknown>) => {
     const uid = row.user_id as string;
-    insightCountMap.set(uid, (insightCountMap.get(uid) || 0) + 1);
+    const tier = (row.tier_letter as string) || 'R';
+    const lvl = row.level as number;
+    const pts = SCORING.PROJECT_POINTS[tier] ?? 0;
+    projectScoreMap.set(uid, (projectScoreMap.get(uid) || 0) + pts);
+    if (!projectPassedLevelMap.has(uid)) projectPassedLevelMap.set(uid, new Set());
+    if (lvl) projectPassedLevelMap.get(uid)!.add(lvl);
+  });
+
+  // E-learn completions per user per level (for 3-phase check)
+  const elearnLevelMap = new Map<string, Set<number>>(); // user -> set of levels with all elearns done
+  (topicRows || []).forEach((row: Record<string, unknown>) => {
+    const uid = row.user_id as string;
+    const lvl = row.level as number;
+    if (row.elearn_completed_at && lvl) {
+      if (!elearnLevelMap.has(uid)) elearnLevelMap.set(uid, new Set());
+      elearnLevelMap.get(uid)!.add(lvl);
+    }
   });
 
   // Active days per user (distinct calendar days in last 30 days)
@@ -978,21 +1032,46 @@ export async function getOrgLeaderboard(
 
   const scored: ScoredMember[] = userIds.map((userId, idx) => {
     const profile = profileMap.get(userId);
-    const phasesCompleted = phaseCountMap.get(userId) || 0;
-    const artefactCount = Math.min(artefactCountMap.get(userId) || 0, 20);
-    const insightCount = Math.min(insightCountMap.get(userId) || 0, 10);
-    const streakDays = Math.min(profile?.streak_days || 0, 14);
-    const activeDays30 = Math.min(activeDaysMap.get(userId) || 0, 30);
+    const projectScore = projectScoreMap.get(userId) || 0;
+    const elearnCount = elearnCountMap.get(userId) || 0;
+    const artefactCount = artefactCountMap.get(userId) || 0;  // no cap
+    const streakDays = Math.min(profile?.streak_days || 0, SCORING.STREAK_CAP);
+    const activeDays30 = Math.min(activeDaysMap.get(userId) || 0, SCORING.ACTIVE_CAP);
 
     const score =
-      (phasesCompleted * 4) +
-      (artefactCount * 25) +
-      (insightCount * 30) +
-      (streakDays * 5) +
-      (activeDays30 * 2);
+      projectScore +
+      (elearnCount * SCORING.ELEARN_COMPLETION) +
+      (artefactCount * (SCORING.TOOLKIT_SESSION + SCORING.TOOLKIT_SAVE_BONUS)) +
+      (streakDays * SCORING.STREAK_DAY) +
+      (activeDays30 * SCORING.ACTIVE_DAY);
 
-    const totalPhases = 20; // 5 levels × 4 phases
-    const completionPct = Math.round((phasesCompleted / totalPhases) * 100);
+    // 3-phase completion check (canonical logic from useDashboardData):
+    // A level is complete only when ALL 3 phases are done:
+    //   1. E-Learning: elearn_completed_at set for the level's topic
+    //   2. Toolkit: artefact count > 0 for the level
+    //   3. Project: project submission passed for the level
+    const userElearnLevels = elearnLevelMap.get(userId) || new Set<number>();
+    const userArtefactLevels = artefactLevelMap.get(userId) || new Set<number>();
+    const userProjectLevels = projectPassedLevelMap.get(userId) || new Set<number>();
+
+    let completedLevels = 0;
+    const completedLevelSet = new Set<number>();
+    for (let lvl = 1; lvl <= 5; lvl++) {
+      const elearnDone = userElearnLevels.has(lvl);
+      const toolkitDone = userArtefactLevels.has(lvl);
+      const projectDone = userProjectLevels.has(lvl);
+      if (elearnDone && toolkitDone && projectDone) {
+        completedLevels++;
+        completedLevelSet.add(lvl);
+      }
+    }
+    const completionPct = Math.round((completedLevels / 5) * 100);
+
+    // Derive current level from completedLevelSet (first incomplete level)
+    let derivedLevel = 5;
+    for (let lvl = 1; lvl <= 5; lvl++) {
+      if (!completedLevelSet.has(lvl)) { derivedLevel = lvl; break; }
+    }
 
     const fullName = profile?.full_name || 'Unknown';
     const initials = fullName.split(' ').map((n: string) => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || 'U';
@@ -1003,12 +1082,12 @@ export async function getOrgLeaderboard(
       initials,
       avatarColor: LEADERBOARD_PALETTE[idx % LEADERBOARD_PALETTE.length],
       role: memberRoleMap.get(userId) || 'learner',
-      level: profile?.current_level || 1,
+      level: derivedLevel,
       score,
       completionPct,
+      elearnCount,
       streakDays: profile?.streak_days || 0,
       artefactCount: artefactCountMap.get(userId) || 0,
-      insightCount: insightCountMap.get(userId) || 0,
       activeDays30: activeDaysMap.get(userId) || 0,
       isCurrentUser: userId === currentUserId,
     };
@@ -2299,21 +2378,43 @@ export async function upsertProjectArtefact(
     if (submission.caseStudyOutcome) content.caseStudyOutcome = submission.caseStudyOutcome;
     if (submission.caseStudyLearnings) content.caseStudyLearnings = submission.caseStudyLearnings;
 
-    // Update existing artefact if linked
-    if (submission.artefactId) {
-      const ok = await updateArtefactContent(submission.artefactId, userId, content);
+    // Resolve the artefact ID: use the linked ID, or find an existing project_proof for this level
+    let existingArtefactId = submission.artefactId || null;
+    if (!existingArtefactId) {
+      const { data: existing } = await supabase
+        .from('artefacts')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('type', 'project_proof')
+        .eq('level', submission.level)
+        .is('archived_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing) existingArtefactId = existing.id;
+    }
+
+    // Update existing artefact if found
+    if (existingArtefactId) {
+      const ok = await updateArtefactContent(existingArtefactId, userId, content);
       if (ok) {
         // Also update name + preview
         await supabase
           .from('artefacts')
           .update({ name: proofName, preview: preview.slice(0, 200), updated_at: new Date().toISOString() })
-          .eq('id', submission.artefactId)
+          .eq('id', existingArtefactId)
           .eq('user_id', userId);
-        return submission.artefactId;
+        // Keep tier_letter on project_submissions in sync
+        await supabase
+          .from('project_submissions')
+          .update({ artefact_id: existingArtefactId, tier_letter: tierLetter, updated_at: new Date().toISOString() })
+          .eq('id', submission.id)
+          .eq('user_id', userId);
+        return existingArtefactId;
       }
     }
 
-    // Create new artefact
+    // Create new artefact (only if no existing one was found)
     const result = await createArtefactFromTool(userId, {
       name: proofName,
       type: 'project_proof',
@@ -2324,10 +2425,10 @@ export async function upsertProjectArtefact(
     });
     if (!result) return null;
 
-    // Link the artefact to the submission
+    // Link the artefact to the submission and sync tier_letter
     await supabase
       .from('project_submissions')
-      .update({ artefact_id: result.id, updated_at: new Date().toISOString() })
+      .update({ artefact_id: result.id, tier_letter: tierLetter, updated_at: new Date().toISOString() })
       .eq('id', submission.id)
       .eq('user_id', userId);
 
@@ -2424,10 +2525,22 @@ export async function upsertProjectDraft(
   }>,
 ): Promise<boolean> {
   try {
+    // Check if a submission already exists and was previously passed.
+    // If so, preserve the 'passed' status — editing a passed project should
+    // never regress completion. Only new/unpassed submissions get 'draft'.
+    const { data: existing } = await supabase
+      .from('project_submissions')
+      .select('status')
+      .eq('user_id', userId)
+      .eq('level', level)
+      .maybeSingle();
+
+    const preserveStatus = existing?.status === 'passed';
+
     const row: Record<string, unknown> = {
       user_id: userId,
       level,
-      status: 'draft',
+      status: preserveStatus ? 'passed' : 'draft',
       updated_at: new Date().toISOString(),
     };
     if (fields.toolName !== undefined) row.tool_name = fields.toolName;
@@ -2470,6 +2583,17 @@ export async function submitProject(
   projectBrief: { projectTitle: string; projectDescription: string; deliverable: string; challengeConnection: string },
   learnerProfile: { role: string; function: string; seniority: string; aiExperience: string },
 ): Promise<{ success: boolean; review: ReviewProjectResponse | null; error: string | null }> {
+  // Remember the current status before we change anything.
+  // If the project was previously 'passed', error rollbacks should restore
+  // 'passed' instead of 'draft' to avoid regressing completion.
+  const { data: priorRow } = await supabase
+    .from('project_submissions')
+    .select('status')
+    .eq('user_id', userId)
+    .eq('level', level)
+    .maybeSingle();
+  const rollbackStatus = priorRow?.status === 'passed' ? 'passed' : 'draft';
+
   try {
     const now = new Date().toISOString();
 
@@ -2506,10 +2630,10 @@ export async function submitProject(
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      // Revert status to draft on failure
+      // Revert status on failure (preserve 'passed' if it was previously passed)
       await supabase
         .from('project_submissions')
-        .update({ status: 'draft', updated_at: new Date().toISOString() })
+        .update({ status: rollbackStatus, updated_at: new Date().toISOString() })
         .eq('user_id', userId)
         .eq('level', level);
       throw new Error(errData.error || 'Review API failed');
@@ -2518,7 +2642,11 @@ export async function submitProject(
     const review: ReviewProjectResponse = await response.json();
 
     // 3. Store the review results
-    const newStatus = review.overallPassed ? 'passed' : 'needs_revision';
+    // If the project was previously passed, never regress to 'needs_revision'.
+    // A passed level stays passed — the user is just iterating on their work.
+    const newStatus = review.overallPassed
+      ? 'passed'
+      : (rollbackStatus === 'passed' ? 'passed' : 'needs_revision');
     const updateData: Record<string, unknown> = {
       status: newStatus,
       review_dimensions: review.dimensions,
@@ -2539,7 +2667,7 @@ export async function submitProject(
       .eq('user_id', userId)
       .eq('level', level);
 
-    // 4. If passed, update level_progress
+    // 4. If passed, update level_progress AND mark topic complete
     if (review.overallPassed) {
       const { data: existing } = await supabase
         .from('level_progress')
@@ -2566,14 +2694,40 @@ export async function submitProject(
             project_completed_at: new Date().toISOString(),
           });
       }
+
+      // 5. Mark all topics in this level as complete (practise + completed_at)
+      // This ensures the journey page sees the level as done and unlocks the next level.
+      const { data: levelTopics } = await supabase
+        .from('topic_progress')
+        .select('topic_id, elearn_completed_at, read_completed_at, practise_completed_at, completed_at')
+        .eq('user_id', userId)
+        .eq('level', level);
+
+      const passedAt = new Date().toISOString();
+      for (const tp of levelTopics || []) {
+        // Mark topic complete if elearn is done (toolkit checked via artefacts, project just passed).
+        // Don't gate on read_completed_at — it's a legacy field not reliably set.
+        if (tp.elearn_completed_at && !tp.completed_at) {
+          await supabase
+            .from('topic_progress')
+            .update({
+              practise_completed_at: tp.practise_completed_at || passedAt,
+              completed_at: passedAt,
+              updated_at: passedAt,
+            })
+            .eq('user_id', userId)
+            .eq('level', level)
+            .eq('topic_id', tp.topic_id);
+        }
+      }
     }
 
     return { success: true, review, error: null };
   } catch (err) {
-    // Revert status to draft on any error (network failure, JSON parse, etc.)
+    // Revert status on any error (preserve 'passed' if it was previously passed)
     await supabase
       .from('project_submissions')
-      .update({ status: 'draft', updated_at: new Date().toISOString() })
+      .update({ status: rollbackStatus, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
       .eq('level', level);
     return { success: false, review: null, error: (err as Error).message };

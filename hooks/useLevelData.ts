@@ -1,21 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTourMode } from '../context/TourModeContext';
 import { LEVEL_TOPICS } from '../data/levelTopics';
 import {
   getTopicProgress,
   updateSlidePosition as dbUpdateSlide,
   completePhaseDb,
   completeTopicDb,
+  completeToolkitPhase,
   logActivity,
 } from '../lib/database';
 
 export interface TopicProgress {
   topicId: number;
-  phase: number; // 1–2 (E-Learn, Practise)
+  phase: number;           // 1 = E-Learning, 2 = Toolkit, 3 = Project
   slide: number;
   completedAt: Date | null;
-  phaseCompletions: [boolean, boolean]; // [elearn, practise]
+  phaseCompletions: [boolean, boolean, boolean]; // [elearn, toolkit, project]
   visitedSlides: Set<number>;
+  elearnCompletedAt: Date | null;    // needed by phase gate logic
+  toolkitCompletedAt: Date | null;   // read from read_completed_at
 }
 
 export interface LevelData {
@@ -29,14 +33,26 @@ export interface UseLevelDataReturn {
   advanceSlide: (topicId: number, newSlide: number) => void;
   completePhase: (topicId: number) => void;
   completeTopic: (topicId: number) => void;
+  markToolkitComplete: (topicId: number) => void;
 }
 
-export const TOTAL_PHASES = 2;
-export const PHASE_LABELS = ['E-Learn', 'Practise'];
-export const PHASE_ICONS = ['📖', '🛠️'];
+export const TOTAL_PHASES = 3;
+export const PHASE_LABELS = ['E-Learning', 'Toolkit', 'Project'];
+export const PHASE_ICONS  = ['▶', '⚙', '◈'];
+
+// Returns true if the user can access phase 2 (Toolkit) for a given topic
+export function isToolkitUnlocked(tp: TopicProgress): boolean {
+  return !!tp.elearnCompletedAt || tp.phaseCompletions[0];
+}
+
+// Returns true if the user can access phase 3 (Project) for a given topic
+export function isProjectUnlocked(tp: TopicProgress): boolean {
+  return !!tp.toolkitCompletedAt || tp.phaseCompletions[1];
+}
 
 export function useLevelData(currentLevel: number): UseLevelDataReturn {
   const { user } = useAuth();
+  const isTourMode = useTourMode();
   const [levelData, setLevelData] = useState<LevelData | null>(null);
   const [loading, setLoading] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,6 +60,14 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
 
   // ── Fetch on mount / level change ──
   useEffect(() => {
+    if (isTourMode) {
+      import('../data/tourDemoData').then(m => {
+        setLevelData(m.DEMO_LEVEL_DATA);
+        setLoading(false);
+      });
+      return;
+    }
+
     const topics = LEVEL_TOPICS[currentLevel] || [];
 
     // No user — build fallback data so the page renders without auth
@@ -53,8 +77,10 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         phase: 1,
         slide: 1,
         completedAt: null,
-        phaseCompletions: [false, false],
+        phaseCompletions: [false, false, false],
         visitedSlides: new Set<number>(),
+        elearnCompletedAt: null,
+        toolkitCompletedAt: null,
       }));
       setLevelData({ topicProgress, activeTopicId: topics[0]?.id ?? 1 });
       setLoading(false);
@@ -72,6 +98,16 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         const visited = new Set(row?.visited_slides || []);
         visitedSlidesRef.current[topic.id] = visited;
 
+        // Backward compatibility: if practise_completed_at is set but read_completed_at
+        // (toolkit) is null, treat toolkit as complete using the practise timestamp.
+        // This prevents existing users from being locked out of phases they've passed.
+        const toolkitCompletedAt =
+          row?.read_completed_at
+            ? new Date(row.read_completed_at)
+            : row?.practise_completed_at   // migration fallback for pre-PRD users
+              ? new Date(row.practise_completed_at)
+              : null;
+
         return {
           topicId: topic.id,
           phase: row?.current_phase ?? 1,
@@ -79,20 +115,18 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
           completedAt: row?.completed_at ? new Date(row.completed_at) : null,
           phaseCompletions: [
             !!row?.elearn_completed_at,
-            !!row?.practise_completed_at,
-          ],
+            !!row?.read_completed_at || !!row?.practise_completed_at,  // toolkit (with fallback)
+            !!row?.practise_completed_at,   // project
+          ] as [boolean, boolean, boolean],
           visitedSlides: visited,
+          elearnCompletedAt: row?.elearn_completed_at ? new Date(row.elearn_completed_at) : null,
+          toolkitCompletedAt,
         };
       });
 
-      // Active topic = first incomplete non-comingSoon topic, or last non-comingSoon topic
-      const availableTopics = topics.filter(t => !t.comingSoon);
-      const availableProgress = topicProgress.filter(tp =>
-        availableTopics.some(t => t.id === tp.topicId)
-      );
+      // Active topic = first incomplete topic, or last topic
       const activeTopicId =
-        availableProgress.find(tp => !tp.completedAt)?.topicId
-        ?? availableTopics[availableTopics.length - 1]?.id
+        topicProgress.find(tp => !tp.completedAt)?.topicId
         ?? topics[topics.length - 1]?.id
         ?? 1;
 
@@ -102,7 +136,7 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
       // Log session start
       logActivity(user.id, 'session_started', currentLevel);
     })();
-  }, [user, currentLevel]);
+  }, [user, currentLevel, isTourMode]);
 
   // ── Advance slide (debounced write) ──
   const advanceSlide = useCallback((topicId: number, newSlide: number) => {
@@ -135,7 +169,7 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     }, 500);
   }, [user, currentLevel]);
 
-  // ── Complete phase ──
+  // ── Complete phase (E-Learning → Toolkit transition only) ──
   const completePhase = useCallback((topicId: number) => {
     if (!user) return;
 
@@ -149,13 +183,14 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         topicProgress: prev.topicProgress.map(tp => {
           if (tp.topicId !== topicId) return tp;
           const newPhase = Math.min(tp.phase + 1, TOTAL_PHASES);
-          const newCompletions = [...tp.phaseCompletions] as [boolean, boolean];
+          const newCompletions = [...tp.phaseCompletions] as [boolean, boolean, boolean];
           newCompletions[tp.phase - 1] = true;
           return {
             ...tp,
             phase: newPhase,
             slide: 0,
             phaseCompletions: newCompletions,
+            elearnCompletedAt: tp.phase === 1 ? new Date() : tp.elearnCompletedAt,
           };
         }),
       };
@@ -164,6 +199,30 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     completePhaseDb(user.id, currentLevel, topicId, currentPhase);
     logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: currentPhase });
   }, [user, currentLevel, levelData]);
+
+  // ── Mark toolkit complete (local state — DB write is done by tool page) ──
+  const markToolkitComplete = useCallback((topicId: number) => {
+    if (!user) return;
+
+    setLevelData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        topicProgress: prev.topicProgress.map(tp => {
+          if (tp.topicId !== topicId) return tp;
+          return {
+            ...tp,
+            phase: 3,
+            toolkitCompletedAt: new Date(),
+            phaseCompletions: [tp.phaseCompletions[0], true, tp.phaseCompletions[2]],
+          };
+        }),
+      };
+    });
+
+    completeToolkitPhase(user.id, currentLevel, topicId);
+    logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: 2 });
+  }, [user, currentLevel]);
 
   // ── Complete topic ──
   const completeTopic = useCallback((topicId: number) => {
@@ -190,5 +249,5 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     }
   }, [user, currentLevel, levelData]);
 
-  return { levelData, loading, advanceSlide, completePhase, completeTopic };
+  return { levelData, loading, advanceSlide, completePhase, completeTopic, markToolkitComplete };
 }

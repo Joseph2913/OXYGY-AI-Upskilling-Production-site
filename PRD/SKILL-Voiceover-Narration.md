@@ -133,6 +133,7 @@ The `voiceover` field on `SlideData` in `data/topicContent.ts`:
 voiceover?: {
   setup: string;    // Path to audio file, e.g. "/audio/l1t1-s01-setup.mp3"
   reveal?: string;  // Only on predictFirst persona slides
+  reveals?: string[];  // Progressive-reveal slides — one clip per reveal step
 };
 ```
 
@@ -142,6 +143,7 @@ voiceover?: {
 |------|--------------|--------------|
 | `setup` | Automatically on slide load | **Every slide** that has narration |
 | `reveal` | After learner submits correct prediction | Only `predictFirst: true` persona slides |
+| `reveals[]` | One clip per progressive-reveal step, played on each "Next" click within the slide | Slides with `revealOnNext: true` or any multi-step progressive-reveal mechanic |
 
 ### 3.3 Adding voiceover to slides
 
@@ -199,6 +201,7 @@ Add the `voiceover` property to each slide object. Do not modify any other exist
 | `approachIntro` | Transition from previous section, preview what's coming |
 | `persona` (setup) | Introduce the character, describe their situation, ask for prediction |
 | `persona` (reveal) | Explain the correct approach, connect back to the framework |
+| `rctf` (revealOnNext) | **Split into multiple clips** per §4.5. Setup narrates first element; each reveal clip narrates the element that just appeared. |
 | `situationMatrix` | Explain the decision framework, instruct interaction |
 | `moduleSummary` | Recap key takeaways, point to next action (Prompt Playground, etc.) |
 
@@ -209,6 +212,57 @@ Persona slides with `predictFirst: true` require **two clips**:
 1. **Setup clip** — plays on slide load. Introduces the persona, describes their situation, asks the learner to predict which approach fits. Ends with "Make your prediction" or similar.
 
 2. **Reveal clip** — plays after the learner selects the correct answer. Explains why that approach fits, connects to the broader framework. Does NOT repeat the persona introduction.
+
+### 4.5 Progressive-Reveal Slide Multi-Clip Rule
+
+**RULE: When a slide reveals content in sequential steps that the user clicks through (e.g. `revealOnNext: true` with multiple elements, or any slide where sub-sections appear one at a time on user interaction), the voiceover MUST be split into separate clips — one per reveal step.**
+
+Do NOT write a single narration clip that covers all steps. Each clip must narrate only the content that is visible at that stage.
+
+**Why:** A single clip that describes content the learner hasn't seen yet creates a disconnect between what they hear and what they see. Splitting the audio keeps the narration tightly paired with the visual at every step, and lets the learner control pacing.
+
+**How it works:**
+
+1. **Setup clip** (`voiceover.setup`) — plays on slide load. Narrates only the first visible element.
+2. **Reveal clips** (`voiceover.reveals[]`) — an ordered array. `reveals[0]` plays when the user clicks to reveal the second element, `reveals[1]` plays on the next click, and so on. Each clip narrates only the element that just appeared.
+
+**File naming:**
+```
+l2t1-s09-setup.mp3    → plays on slide load (first element)
+l2t1-s09-reveal1.mp3  → plays on first "Next" click (second element)
+l2t1-s09-reveal2.mp3  → plays on second "Next" click (third element)
+```
+
+**Slide data example:**
+```typescript
+{
+  section: "THE THREE-LAYER MODEL", type: "rctf",
+  revealOnNext: true,
+  elements: [
+    { key: "INPUT", ... },
+    { key: "PROCESSING", ... },
+    { key: "OUTPUT", ... },
+  ],
+  voiceover: {
+    setup: "/audio/l2t1-s09-setup.mp3",       // narrates INPUT only
+    reveals: [
+      "/audio/l2t1-s09-reveal1.mp3",           // narrates PROCESSING only
+      "/audio/l2t1-s09-reveal2.mp3",           // narrates OUTPUT only
+    ],
+  },
+},
+```
+
+**Script writing guidance for progressive-reveal clips:**
+- Each clip should be self-contained — don't reference "the next card" since the learner controls when it appears
+- The setup clip may end with a gentle forward pointer: "Click next to see the second layer"
+- Reveal clips should briefly connect back to what came before: "That was Input. Now here's Processing..."
+- Keep each clip short (15–30 seconds / 40–80 words) since the learner is clicking through actively
+
+**When to apply this rule:** Any time a slide has multiple visual elements that appear sequentially on user interaction — not just `rctf` slides. If the learner must click to reveal the next piece of content, each piece gets its own narration clip. This includes but is not limited to:
+- `rctf` slides with `revealOnNext: true`
+- Any future slide type with step-by-step reveals
+- Slides where cards, panels, or sections animate in on user action
 
 ---
 

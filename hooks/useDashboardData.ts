@@ -147,8 +147,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
 
       for (let lvl = 1; lvl <= 5; lvl++) {
         const topics = LEVEL_TOPICS[lvl] || [];
-        const activeTopics = topics.filter(t => !t.comingSoon);
-        const totalTopics = activeTopics.length;
+        const totalTopics = topics.length;
         overallTotalTopics += totalTopics;
 
         const progressForLevel = topicProgressRows.filter(r => r.level === lvl);
@@ -182,7 +181,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         });
 
         overallCompletedTopics += completedTopics;
-        const isLevelComplete = completedTopics === activeTopics.length && activeTopics.length > 0;
+        const isLevelComplete = completedTopics === topics.length && topics.length > 0;
         if (isLevelComplete) { levelsCompleted++; completedLevelSet.add(lvl); }
 
         levelProgress[lvl] = {
@@ -303,14 +302,12 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         : ['L1', 'L2', 'L3', 'L4', 'L5'];
       const assignedLevels = new Set(assignedLevelKeys.map(k => parseInt(k.replace('L', ''), 10)));
 
-      const activeCurrentLevelTopics = currentLevelTopics.filter(t => !t.comingSoon);
-
       setData({
         currentLevel,
         completedTopics: completedTopicsInCurrentLevel,
-        totalTopics: activeCurrentLevelTopics.length,
+        totalTopics: currentLevelTopics.length,
         activeTopicIndex: activeTopicRow
-          ? activeCurrentLevelTopics.findIndex(t => t.id === activeTopicRow.topic_id)
+          ? currentLevelTopics.findIndex(t => t.id === activeTopicRow.topic_id)
           : 0,
         currentSlide: activeTopicRow?.current_slide ?? 0,
         totalSlides: 0, // derived per-topic in the component
@@ -346,7 +343,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         setData({
           currentLevel,
           completedTopics: 0,
-          totalTopics: currentLevelTopics.filter(t => !t.comingSoon).length,
+          totalTopics: currentLevelTopics.length,
           activeTopicIndex: 0,
           currentSlide: 0,
           totalSlides: 0,

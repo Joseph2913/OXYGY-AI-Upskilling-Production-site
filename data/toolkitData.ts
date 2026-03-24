@@ -186,6 +186,14 @@ export const ALL_TOOLS: Tool[] = [
   },
 ];
 
+export const TOOL_TOPIC_MAPPING: Record<string, { level: number; topicId: number }> = {
+  'prompt-playground':  { level: 1, topicId: 1 },
+  'agent-builder':      { level: 2, topicId: 1 },
+  'workflow-canvas':    { level: 3, topicId: 1 },
+  'dashboard-designer': { level: 4, topicId: 1 },
+  'ai-app-evaluator':   { level: 5, topicId: 1 },
+};
+
 export const DASHBOARD_TOOLS = ALL_TOOLS.slice(0, 5);
 
 /** One primary tool per level, shown on the Journey page */

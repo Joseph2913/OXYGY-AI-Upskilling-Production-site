@@ -19,7 +19,8 @@ import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -155,6 +156,42 @@ function buildFullPRD(result: NewPRDResult): string {
     return `## ${def?.title || key}\n\n${val}`;
   });
   return [`# ${result.prd_content}`, '', ...sectionBlocks].join('\n\n---\n\n');
+}
+
+/* ─── Parse build guide markdown back into structured steps (for artefacts missing buildGuideData) ─── */
+function parseBuildGuideMarkdown(md: string): { steps: { title: string; instruction: string }[]; tips: string[]; limitations: string; prd_snippet: string } {
+  const steps: { title: string; instruction: string }[] = [];
+  const tips: string[] = [];
+  let limitations = '';
+  let prd_snippet = '';
+
+  // Extract steps: ### Step N — Title ... (until next ### Step or ## or end)
+  const stepPattern = /### Step \d+\s*[–—-]\s*(.+?)\n([\s\S]*?)(?=### Step \d+|## |$)/g;
+  let m;
+  while ((m = stepPattern.exec(md)) !== null) {
+    const title = m[1].trim();
+    const instruction = m[2].trim();
+    if (title && instruction) steps.push({ title, instruction });
+  }
+
+  // Extract PRD snippet from fenced code block after "Ready to Paste"
+  const prdMatch = md.match(/## PRD\s*[–—-]\s*Ready to Paste\s*\n+```[\s\S]*?\n([\s\S]*?)```/);
+  if (prdMatch) prd_snippet = prdMatch[1].trim();
+
+  // Extract tips
+  const tipsMatch = md.match(/## Pro Tips\s*\n([\s\S]*?)(?=## |---|\n> \*\*Note|$)/);
+  if (tipsMatch) {
+    for (const line of tipsMatch[1].trim().split('\n')) {
+      const stripped = line.replace(/^[-*]\s*/, '').trim();
+      if (stripped) tips.push(stripped);
+    }
+  }
+
+  // Extract limitations
+  const limitMatch = md.match(/> \*\*Note:\*\*\s*(.+)/);
+  if (limitMatch) limitations = limitMatch[1].trim();
+
+  return { steps, tips, limitations, prd_snippet };
 }
 
 /* ─── Copyable code block for build guide steps ─── */
@@ -490,6 +527,7 @@ const AppDashboardDesigner: React.FC = () => {
   // ─── Build Guide output (Step 4) ───
   const [buildGuide, setBuildGuide] = useState<{ steps: { title: string; instruction: string }[]; tips: string[]; limitations: string; prd_snippet: string } | null>(null);
   const [buildGuideLoadingStep, setBuildGuideLoadingStep] = useState(0);
+  const [restoredBuildGuideMarkdown, setRestoredBuildGuideMarkdown] = useState<string | null>(null);
   const [buildPlanViewMode, setBuildPlanViewMode] = useState<'cards' | 'markdown'>('cards');
   const [buildPlanVisibleBlocks, setBuildPlanVisibleBlocks] = useState(0);
   const [buildPlanCopied, setBuildPlanCopied] = useState(false);
@@ -500,6 +538,7 @@ const AppDashboardDesigner: React.FC = () => {
   const [buildPlanAdditionalContext, setBuildPlanAdditionalContext] = useState('');
   const [checkedTests, setCheckedTests] = useState<Set<number>>(new Set());
   const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
+  const restoredFromArtefact = useRef(false);
 
   // ─── Refs ───
   const prdRef = useRef<HTMLDivElement>(null);
@@ -587,6 +626,11 @@ const AppDashboardDesigner: React.FC = () => {
   // ─── PRD staggered animation (Design Review Output Standard §9) ───
   useEffect(() => {
     if (!prdResult) return;
+    // Skip stagger animation when restoring from artefact
+    if (restoredFromArtefact.current) {
+      setVisibleBlocks(10);
+      return;
+    }
     setVisibleBlocks(0);
     const timers: ReturnType<typeof setTimeout>[] = [];
     const totalBlocks = 7; // score banner, primary output, actions, refinement, buffer
@@ -599,6 +643,12 @@ const AppDashboardDesigner: React.FC = () => {
   // ─── Build plan staggered animation (Step 4) ───
   useEffect(() => {
     if (!buildGuide) return;
+    // Skip stagger animation when restoring from artefact
+    if (restoredFromArtefact.current) {
+      setBuildPlanVisibleBlocks(10);
+      restoredFromArtefact.current = false;
+      return;
+    }
     setBuildPlanVisibleBlocks(0);
     setBuildPlanViewMode('cards');
     const totalBlocks = 4; // content + actions + refinement + buffer
@@ -694,6 +744,11 @@ const AppDashboardDesigner: React.FC = () => {
       upsertToolUsed(user.id, 4);
       toolUsedRef.current = true;
     }
+    // Mark toolkit phase complete (idempotent)
+    if (user) {
+      const mapping = TOOL_TOPIC_MAPPING['dashboard-designer'];
+      if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
+    }
 
     setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
   };
@@ -712,21 +767,26 @@ const AppDashboardDesigner: React.FC = () => {
     setDataSourcesText(example.q5_dataSources);
   };
 
+  // Capture location.state into a ref immediately so StrictMode double-invoke doesn't lose it
+  const artefactPrefillRef = useRef(location.state as {
+    sourceArtefactId?: string;
+    sourceArtefactContent?: Record<string, any>;
+    sourceArtefactType?: string;
+    artefactPrefill?: Record<string, any>;
+  } | null);
+
   // ─── Artefact prefill from "Launch in Tool" — restore full result ───
   useEffect(() => {
-    const state = location.state as {
-      sourceArtefactId?: string;
-      sourceArtefactContent?: Record<string, any>;
-      sourceArtefactType?: string;
-      artefactPrefill?: Record<string, any>;
-    } | null;
-    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    const state = artefactPrefillRef.current;
+    if (!state) return;
+    artefactPrefillRef.current = null; // consume once
+    const prefill = state.sourceArtefactContent || state.artefactPrefill;
     if (!prefill) return;
     // Restore brief inputs
     if (prefill.brief && typeof prefill.brief === 'object') {
       handleExampleClick(prefill.brief as typeof EXAMPLE_BRIEFS[0]);
-    } else if (prefill.description) {
-      setBrief(prev => ({ ...prev, q1_purpose: prefill.description || '' }));
+    } else if (prefill.description || prefill.taskDescription) {
+      setBrief(prev => ({ ...prev, q1_purpose: prefill.description || prefill.taskDescription || '' }));
     }
     // Restore full PRD result so the output section is visible immediately
     if (prefill.prdMarkdown && prefill.sections) {
@@ -740,7 +800,43 @@ const AppDashboardDesigner: React.FC = () => {
       });
       setVisibleBlocks(10);
     }
-    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    // Restore build_guide artefacts — skip straight to the final build guide view
+    if (state.sourceArtefactType === 'build_guide' && prefill.markdown) {
+      restoredFromArtefact.current = true;
+      // Set a minimal PRD result so earlier steps show as done
+      if (!prefill.prdMarkdown) {
+        setPrdResult({
+          prd_content: '',
+          sections: {} as any,
+          readiness: { score: 0, verdict: '', criteria: [] },
+          refinement_questions: [],
+        });
+      }
+      setPrdApproved(true);
+      setSelectedPlatform(prefill.platform || 'generic');
+      setPlatformStepDone(true);
+      // Store the original markdown for copy/download
+      setRestoredBuildGuideMarkdown(prefill.markdown);
+      // Restore the structured build guide if available, otherwise parse markdown back into steps
+      if (prefill.buildGuideData && prefill.buildGuideData.steps) {
+        setBuildGuide(prefill.buildGuideData);
+      } else {
+        // Parse the markdown to reconstruct card-friendly steps
+        const parsed = parseBuildGuideMarkdown(prefill.markdown);
+        setBuildGuide(parsed.steps.length > 0 ? parsed : {
+          steps: [{ title: 'Build Guide', instruction: prefill.markdown }],
+          tips: [],
+          limitations: '',
+          prd_snippet: '',
+        });
+      }
+      setBuildPlanViewMode('cards');
+      setBuildPlanVisibleBlocks(10);
+      setVisibleBlocks(10);
+      // Auto-scroll to the build guide after render
+      setTimeout(() => step4Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600);
+    }
+    if (state.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
     window.history.replaceState({}, '');
   }, []);
 
@@ -749,6 +845,7 @@ const AppDashboardDesigner: React.FC = () => {
     setPrdResult(null); setActiveView('cards');    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
     setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
     setPrdApproved(false); setSelectedPlatform(null); setPlatformStepDone(false); setBuildGuide(null);
+    setRestoredBuildGuideMarkdown(null);
     setSavedToLibrary(false); resetBuildPlanState();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -780,6 +877,7 @@ const AppDashboardDesigner: React.FC = () => {
     setPrdResult(null); setActiveView('cards');    setPrdRefinementAnswers({}); setPrdAdditionalContext(''); setPrdRefinementCount(0);
     setIsPrdRefineLoading(false); setPrdRefineExpanded(false);
     setPrdApproved(false); setSelectedPlatform(null); setPlatformStepDone(false); setBuildGuide(null);
+    setRestoredBuildGuideMarkdown(null);
     setSavedToLibrary(false); resetBuildPlanState();
     resetCounts();
     localStorage.removeItem('oxygy_dashboard-designer_draft');
@@ -823,6 +921,7 @@ const AppDashboardDesigner: React.FC = () => {
           markdown: buildFullBuildGuide(),
           platform: selectedPlatform || 'generic',
           taskDescription: brief.q1_purpose,
+          buildGuideData: guide,
         });
       }
       setBuildPlanCopied(false);
@@ -834,6 +933,7 @@ const AppDashboardDesigner: React.FC = () => {
 
   // ─── Build full markdown for build guide ───
   const buildFullBuildGuide = (): string => {
+    if (restoredBuildGuideMarkdown) return restoredBuildGuideMarkdown;
     if (!buildGuide || !prdResult) return '';
     const platformLabel = VIBE_CODING_PLATFORMS.find(p => p.id === selectedPlatform)?.label || 'your platform';
     const parts: string[] = [
@@ -909,6 +1009,7 @@ const AppDashboardDesigner: React.FC = () => {
         platform: selectedPlatform || 'generic',
         toolName: 'Dashboard Designer',
         taskDescription: brief.q1_purpose,
+        buildGuideData: buildGuide,
       },
       preview: `Build Guide: ${brief.q1_purpose}`.slice(0, 200),
     });
@@ -1667,6 +1768,8 @@ const AppDashboardDesigner: React.FC = () => {
             {VIBE_CODING_PLATFORMS.map(p => {
               const isSelected = selectedPlatform === p.id;
               const isRecommended = p.recommended;
+              // Only show teal recommended highlight when no other platform is selected
+              const showRecommendedHighlight = isRecommended && (!selectedPlatform || isSelected);
               return (
                 <button
                   key={p.id}
@@ -1675,23 +1778,24 @@ const AppDashboardDesigner: React.FC = () => {
                   style={{
                     position: 'relative',
                     display: 'flex', alignItems: 'center', gap: 10, padding: 14,
-                    background: isSelected ? '#FFFDF5' : isRecommended ? '#F0FFF4' : '#FFFFFF',
+                    background: isSelected ? '#FFFDF5' : showRecommendedHighlight ? '#F0FFF4' : '#FFFFFF',
                     border: isSelected
                       ? `2px solid ${LEVEL_ACCENT_DARK}`
-                      : isRecommended
+                      : showRecommendedHighlight
                         ? '2px solid #38B2AC'
                         : '1px solid #E2E8F0',
                     borderRadius: 12, cursor: 'pointer', textAlign: 'left',
                     transition: 'border-color 0.3s, background 0.3s, box-shadow 0.3s',
-                    boxShadow: isRecommended && !isSelected ? '0 0 0 3px #38B2AC18' : 'none',
+                    boxShadow: showRecommendedHighlight && !isSelected ? '0 0 0 3px #38B2AC18' : 'none',
                   }}
                 >
                   {isRecommended && (
                     <span style={{
                       position: 'absolute', top: -9, left: 14,
-                      background: '#38B2AC', color: '#FFFFFF', fontSize: 10, fontWeight: 700,
+                      background: showRecommendedHighlight ? '#38B2AC' : '#A0AEC0', color: '#FFFFFF', fontSize: 10, fontWeight: 700,
                       padding: '2px 8px', borderRadius: 6, fontFamily: FONT,
                       letterSpacing: '0.03em',
+                      transition: 'background 0.3s',
                     }}>
                       Recommended
                     </span>
@@ -1705,7 +1809,7 @@ const AppDashboardDesigner: React.FC = () => {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C', fontFamily: FONT }}>{p.label}</div>
-                    <div style={{ fontSize: 11, color: isRecommended ? '#2C7A7B' : '#718096', fontFamily: FONT }}>{p.description}</div>
+                    <div style={{ fontSize: 11, color: showRecommendedHighlight ? '#2C7A7B' : '#718096', fontFamily: FONT }}>{p.description}</div>
                   </div>
                 </button>
               );

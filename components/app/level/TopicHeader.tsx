@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Topic } from '../../../data/levelTopics';
 import { TOTAL_PHASES } from '../../../hooks/useLevelData';
 
-const PHASE_LABELS = ['E-Learning', 'Practise'];
+const PHASE_LABELS = ['E-Learning', 'Toolkit', 'Project'];
 
 interface TopicHeaderProps {
   levelNumber: number;
@@ -16,6 +16,9 @@ interface TopicHeaderProps {
   accentDark: string;
   showPhaseTabs: boolean;
   onPhaseClick: (phase: number) => void;
+  phaseCompletions: [boolean, boolean, boolean]; // [elearn, toolkit, project]
+  toolkitUnlocked: boolean;   // elearn done
+  projectUnlocked: boolean;   // toolkit done
 }
 
 /* ─── Progress Ring ─── */
@@ -58,6 +61,9 @@ const TopicHeader: React.FC<TopicHeaderProps> = ({
   accentDark,
   showPhaseTabs,
   onPhaseClick,
+  phaseCompletions,
+  toolkitUnlocked,
+  projectUnlocked,
 }) => {
   const [descOpen, setDescOpen] = useState(false);
 
@@ -111,31 +117,48 @@ const TopicHeader: React.FC<TopicHeaderProps> = ({
           <div style={{ display: 'flex', gap: 4, background: '#F7FAFC', borderRadius: 10, padding: 4, flexShrink: 0 }}>
             {PHASE_LABELS.map((label, i) => {
               const phaseNum = i + 1;
-              const isDone = phaseNum <= completedPhases;
+              const isDone = phaseCompletions[i];
               const isActive = phaseNum === currentPhase;
+
+              // Determine if this phase is accessible
+              const isLocked =
+                (phaseNum === 2 && !toolkitUnlocked) ||
+                (phaseNum === 3 && !projectUnlocked);
+
               return (
                 <button
                   key={i}
-                  onClick={() => onPhaseClick(phaseNum)}
+                  onClick={isLocked ? undefined : () => onPhaseClick(phaseNum)}
+                  disabled={isLocked}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 8, border: 'none',
+                    cursor: isLocked ? 'default' : 'pointer',
                     background: isActive ? accentColor : 'transparent',
+                    opacity: isLocked ? 0.45 : 1,
                     transition: 'all 0.15s ease',
                   }}
                 >
+                  {/* Badge: lock icon when locked, number otherwise */}
                   <span style={{
                     width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                    background: isActive ? accentDark : isDone ? '#1A202C' : '#E2E8F0',
-                    color: isActive || isDone ? '#FFFFFF' : '#A0AEC0',
+                    background: isLocked ? '#E2E8F0' : isActive ? accentDark : isDone ? '#1A202C' : '#E2E8F0',
+                    color: isLocked ? '#A0AEC0' : isActive || isDone ? '#FFFFFF' : '#A0AEC0',
                     fontSize: 9, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{phaseNum}</span>
+                  }}>
+                    {isLocked
+                      ? <svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M9 5H3V10H9V5Z" stroke="currentColor" strokeWidth="1.5"/><path d="M4 5V3.5a2 2 0 014 0V5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      : phaseNum
+                    }
+                  </span>
                   <span style={{
                     fontSize: 11, fontWeight: isActive ? 700 : 500,
-                    color: isActive ? accentDark : isDone ? '#4A5568' : '#A0AEC0',
+                    color: isLocked ? '#CBD5E0' : isActive ? accentDark : isDone ? '#4A5568' : '#A0AEC0',
                     whiteSpace: 'nowrap' as const,
-                  }}>{label}</span>
+                  }}>
+                    {label}
+                  </span>
                 </button>
               );
             })}

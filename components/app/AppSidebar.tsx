@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
 import { useAppContext } from '../../context/AppContext';
@@ -25,6 +25,7 @@ const HIDE_SCROLLBAR_CSS = `
 
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
+  const sidebarNavigate = useNavigate();
   const { isAdmin } = useOrg();
   const { userProfile } = useAppContext();
   const { signOut } = useAuth();
@@ -315,6 +316,7 @@ export const AppSidebar: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {[
                   { label: 'Edit Profile & Regenerate Plan', desc: 'Update your role, goals, and availability', action: () => { setSettingsOpen(false); window.location.href = '/app/journey'; } },
+                  { label: 'Replay product tour', desc: 'Revisit the guided walkthrough of the platform', action: () => { setSettingsOpen(false); localStorage.removeItem('oxygy_tour_completed'); sidebarNavigate('/app/journey'); window.dispatchEvent(new CustomEvent('oxygy:replay-tour')); } },
                   { label: 'Sign Out', desc: 'Sign out of your Oxygy account', action: () => { setSettingsOpen(false); signOut(); } },
                 ].map((item, i) => (
                   <button

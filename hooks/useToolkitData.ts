@@ -68,7 +68,7 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
       const completedLevelSet = new Set<number>();
       for (let lvl = 1; lvl <= 5; lvl++) {
         const topics = LEVEL_TOPICS[lvl] || [];
-        const activeTopics = topics.filter(t => !t.comingSoon);
+        const activeTopics = topics;
         const progressForLevel = topicRows.filter(r => r.level === lvl);
         const progressMap = new Map(progressForLevel.map(r => [r.topic_id, r]));
         const levelProjectPassed = projectSubMap.get(lvl)?.status === 'passed';

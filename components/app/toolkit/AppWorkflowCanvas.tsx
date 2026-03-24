@@ -18,7 +18,8 @@ import { buildIntermediate } from '../../../utils/assembleN8nWorkflow';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
@@ -937,7 +938,11 @@ const AppWorkflowCanvas: React.FC = () => {
     });
     if (result && 'workflow_name' in result) {
       setGenerateResult(result);
-      if (user) upsertToolUsed(user.id, 3);
+      if (user) {
+        upsertToolUsed(user.id, 3);
+        const mapping = TOOL_TOPIC_MAPPING['workflow-canvas'];
+        if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
+      }
     }
   };
 

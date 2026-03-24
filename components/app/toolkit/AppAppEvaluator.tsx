@@ -20,7 +20,8 @@ import type {
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
@@ -58,6 +59,116 @@ const FALLBACK_REFINEMENT_QUESTIONS = [
   'Are there compliance, security, or data residency requirements?',
   'What is the team size and technical skill level for implementation?',
 ];
+
+/* ─── Parse build plan markdown back into structured phases (for artefacts missing buildPlanData) ─── */
+function parseBuildPlanMarkdown(md: string): AppBuildPlanResult {
+  let build_plan_summary = '';
+  let build_overview = '';
+  let stack_integration_notes = '';
+  const implementation_phases: BuildPlanPhase[] = [];
+  const architecture_components: ArchitectureComponent[] = [];
+  const risk_items: RiskItem[] = [];
+  let risks_summary = '';
+
+  // Extract summary (text between first heading and first ##)
+  const summaryMatch = md.match(/# AI Application Build Plan\s*\n+([\s\S]*?)(?=\n## )/);
+  if (summaryMatch) build_plan_summary = summaryMatch[1].trim();
+
+  // Extract Build Overview
+  const overviewMatch = md.match(/## Build Overview\s*\n+([\s\S]*?)(?=\n## )/);
+  if (overviewMatch) build_overview = overviewMatch[1].trim();
+
+  // Extract Implementation Phases
+  const phasesSection = md.match(/## Implementation Phases\s*\n+([\s\S]*?)(?=\n## Architecture|$)/);
+  if (phasesSection) {
+    const phasePattern = /### (.+?)\s*\(([^)]*)\)\s*\n([\s\S]*?)(?=\n### |$)/g;
+    let pm;
+    while ((pm = phasePattern.exec(phasesSection[1])) !== null) {
+      const phaseName = pm[1].trim();
+      const duration = pm[2].trim();
+      const body = pm[3];
+
+      const descMatch = body.match(/^([\s\S]*?)(?=\n> \*\*Why|\n\*\*Key activities|\n\*\*Deliverables|\n> \*\*Stack|$)/);
+      const whyMatch = body.match(/> \*\*Why this matters:\*\*\s*(.+)/);
+      const activitiesMatch = body.match(/\*\*Key activities:\*\*\s*\n([\s\S]*?)(?=\n\*\*Deliverables|\n> \*\*Stack|$)/);
+      const deliverablesMatch = body.match(/\*\*Deliverables:\*\*\s*\n([\s\S]*?)(?=\n> \*\*Stack|$)/);
+      const stackMatch = body.match(/> \*\*Stack notes:\*\*\s*(.+)/);
+
+      const activities = activitiesMatch
+        ? activitiesMatch[1].trim().split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean)
+        : [];
+      const deliverables = deliverablesMatch
+        ? deliverablesMatch[1].trim().split('\n').map(l => l.replace(/^[-*]\s*\[[ x]?\]\s*/, '').trim()).filter(Boolean)
+        : [];
+
+      implementation_phases.push({
+        phase: phaseName,
+        description: (descMatch?.[1] || '').trim(),
+        why_this_matters: whyMatch?.[1]?.trim() || '',
+        key_activities: activities,
+        deliverables,
+        tech_stack_notes: stackMatch?.[1]?.trim() || '',
+        duration_estimate: duration,
+      });
+    }
+  }
+
+  // Extract Architecture Components
+  const archSection = md.match(/## Architecture Components\s*\n+([\s\S]*?)(?=\n## Stack Integration|\n## Risks|$)/);
+  if (archSection) {
+    const compPattern = /### (.+?)\s*\[([A-Z]+)\]\s*\n([\s\S]*?)(?=\n### |$)/g;
+    let cm;
+    while ((cm = compPattern.exec(archSection[1])) !== null) {
+      const toolsMatch = cm[3].match(/\*\*Tools:\*\*\s*(.+)/);
+      const rawPriority = cm[2].toLowerCase();
+      const priority = (rawPriority === 'essential' || rawPriority === 'recommended' || rawPriority === 'optional')
+        ? rawPriority : 'recommended' as const;
+      architecture_components.push({
+        name: cm[1].trim(),
+        description: cm[3].replace(/\*\*Tools:\*\*.*/, '').trim(),
+        priority,
+        tools: toolsMatch ? toolsMatch[1].split(',').map(t => t.trim()) : [],
+        level_connection: 0,
+      });
+    }
+  }
+
+  // Extract Stack Integration Notes
+  const stackSection = md.match(/## Stack Integration Notes\s*\n+([\s\S]*?)(?=\n## Risks|$)/);
+  if (stackSection) stack_integration_notes = stackSection[1].trim();
+
+  // Extract Risks
+  const risksSection = md.match(/## Risks & Mitigations\s*\n+([\s\S]*?)$/);
+  if (risksSection) {
+    const body = risksSection[1];
+    const riskSummaryMatch = body.match(/^([\s\S]*?)(?=\n### |$)/);
+    if (riskSummaryMatch) risks_summary = riskSummaryMatch[1].trim();
+
+    const riskPattern = /### (.+?)\s*\[([A-Z]+)\]\s*\n([\s\S]*?)(?=\n### |$)/g;
+    let rm;
+    while ((rm = riskPattern.exec(body)) !== null) {
+      const mitMatch = rm[3].match(/\*\*Mitigation:\*\*\s*(.+)/);
+      const rawSeverity = rm[2].toLowerCase();
+      const severity = (rawSeverity === 'high' || rawSeverity === 'medium' || rawSeverity === 'low')
+        ? rawSeverity : 'medium' as const;
+      risk_items.push({
+        name: rm[1].trim(),
+        description: rm[3].replace(/\*\*Mitigation:\*\*.*/, '').trim(),
+        severity,
+        mitigation: mitMatch?.[1]?.trim() || '',
+      });
+    }
+  }
+
+  return {
+    build_plan_summary,
+    build_overview,
+    implementation_phases,
+    architecture_components,
+    risks_and_gaps: { summary: risks_summary, items: risk_items },
+    stack_integration_notes,
+  };
+}
 
 /* ─── Helpers ─── */
 
@@ -697,6 +808,7 @@ const AppAppEvaluator: React.FC = () => {
 
   // Step 3 — Build Plan
   const [buildPlan, setBuildPlan] = useState<AppBuildPlanResult | null>(null);
+  const [restoredBuildPlanMarkdown, setRestoredBuildPlanMarkdown] = useState<string | null>(null);
   const [buildPlanLoadingStep, setBuildPlanLoadingStep] = useState(0);
   const [isBuildPlanRefineLoading, setIsBuildPlanRefineLoading] = useState(false);
   const [buildPlanVisibleBlocks, setBuildPlanVisibleBlocks] = useState(0);
@@ -709,6 +821,7 @@ const AppAppEvaluator: React.FC = () => {
   const [buildRefinementAdditional, setBuildRefinementAdditional] = useState('');
   const [buildRefinementCount, setBuildRefinementCount] = useState(0);
   const [sourceArtefactId, setSourceArtefactId] = useState<string | null>(null);
+  const restoredFromArtefact = useRef(false);
 
   // Refs
   const step1Ref = useRef<HTMLDivElement>(null);
@@ -725,18 +838,23 @@ const AppAppEvaluator: React.FC = () => {
   const allStackSelected = selectedHosting !== null && selectedDatabase !== null && selectedAiEngine !== null;
   const step3Done = step2Done && allStackSelected && (buildPlan !== null || isBuildPlanLoading);
 
+  // Capture location.state into a ref immediately so StrictMode double-invoke doesn't lose it
+  const artefactPrefillRef = useRef(location.state as {
+    sourceArtefactId?: string;
+    sourceArtefactContent?: Record<string, any>;
+    sourceArtefactType?: string;
+    artefactPrefill?: Record<string, any>;
+  } | null);
+
   // Artefact prefill from "Launch in Tool" — restore full result
   useEffect(() => {
-    const state = location.state as {
-      sourceArtefactId?: string;
-      sourceArtefactContent?: Record<string, any>;
-      sourceArtefactType?: string;
-      artefactPrefill?: Record<string, any>;
-    } | null;
-    const prefill = state?.sourceArtefactContent || state?.artefactPrefill;
+    const state = artefactPrefillRef.current;
+    if (!state) return;
+    artefactPrefillRef.current = null; // consume once
+    const prefill = state.sourceArtefactContent || state.artefactPrefill;
     if (!prefill) return;
     // Restore inputs
-    if (prefill.appDescription) setAppDescription(prefill.appDescription);
+    if (prefill.appDescription || prefill.taskDescription) setAppDescription(prefill.appDescription || prefill.taskDescription);
     if (prefill.problemStatement) setProblemAndUsers(prefill.problemStatement);
     // Restore full result so the evaluation output is visible immediately
     if (prefill.designScore || prefill.architecture) {
@@ -750,13 +868,60 @@ const AppAppEvaluator: React.FC = () => {
       });
       setVisibleBlocks(10);
     }
-    if (state?.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
+    // Restore build_guide artefacts — skip straight to the final build plan view
+    if (state.sourceArtefactType === 'build_guide' && prefill.markdown) {
+      restoredFromArtefact.current = true;
+      // Set a minimal evaluation result so earlier steps show as done
+      if (!prefill.designScore && !prefill.architecture) {
+        setResult({
+          design_score: { overall: 0, criteria: {}, verdict: '' },
+          matrix_placement: { quadrant: '', x: 0, y: 0, label: '' },
+          architecture: { summary: '', components: [] },
+          implementation_plan: { summary: '', steps: [] },
+          risks_and_gaps: { summary: '', items: [] },
+          refinement_questions: [],
+        });
+      }
+      setStep2Approved(true);
+      setSelectedHosting('generic');
+      setSelectedDatabase('generic');
+      setSelectedAiEngine('generic');
+      // Store the original markdown for copy/download
+      setRestoredBuildPlanMarkdown(prefill.markdown);
+      // Restore the structured build plan if available, otherwise parse markdown back into phases
+      if (prefill.buildPlanData && prefill.buildPlanData.implementation_phases) {
+        setBuildPlan(prefill.buildPlanData as AppBuildPlanResult);
+      } else {
+        // Parse the markdown to reconstruct card-friendly phases
+        const parsed = parseBuildPlanMarkdown(prefill.markdown);
+        setBuildPlan(parsed.implementation_phases.length > 0 ? parsed : {
+          build_plan_summary: '',
+          build_overview: prefill.markdown,
+          implementation_phases: [],
+          architecture_components: [],
+          risks_and_gaps: { summary: '', items: [] },
+          stack_integration_notes: '',
+        });
+      }
+      setBuildPlanViewMode('cards');
+      setBuildPlanVisibleBlocks(10);
+      setVisibleBlocks(10);
+      // Auto-scroll to the build plan after render
+      setTimeout(() => step4Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600);
+    }
+    if (state.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
     window.history.replaceState({}, '');
   }, []);
 
   // Staggered block appearance — Step 2 (score card + matrix card + summary + refinement)
   useEffect(() => {
     if (!result) return;
+    // Skip stagger animation when restoring from artefact — show everything immediately
+    if (restoredFromArtefact.current) {
+      setVisibleBlocks(10);
+      setScoreAnimated(true);
+      return;
+    }
     setVisibleBlocks(0);
     setScoreAnimated(false);
     setExpandedCard(null);
@@ -775,6 +940,12 @@ const AppAppEvaluator: React.FC = () => {
   // Staggered block appearance — Step 3 build plan
   useEffect(() => {
     if (!buildPlan) return;
+    // Skip stagger animation when restoring from artefact — show everything immediately
+    if (restoredFromArtefact.current) {
+      setBuildPlanVisibleBlocks(10);
+      restoredFromArtefact.current = false; // Reset after both effects have fired
+      return;
+    }
     setBuildPlanVisibleBlocks(0);
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < 8; i++) {
@@ -881,7 +1052,11 @@ const AppAppEvaluator: React.FC = () => {
           problemStatement: problemAndUsers,
         });
       }
-      if (user) upsertToolUsed(user.id, 5);
+      if (user) {
+        upsertToolUsed(user.id, 5);
+        const mapping = TOOL_TOPIC_MAPPING['ai-app-evaluator'];
+        if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
+      }
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
   };
@@ -923,6 +1098,7 @@ const AppAppEvaluator: React.FC = () => {
     setSelectedDatabase(null);
     setSelectedAiEngine(null);
     setBuildPlan(null);
+    setRestoredBuildPlanMarkdown(null);
     setBuildPlanVisibleBlocks(0);
     setBuildPlanCopied(false);
     setBuildPlanSaved(false);
@@ -1117,6 +1293,7 @@ const AppAppEvaluator: React.FC = () => {
 
   /** Build the cohesive deliverable for Step 3 build plan */
   const buildFullBuildPlan = (bp: AppBuildPlanResult): string => {
+    if (restoredBuildPlanMarkdown) return restoredBuildPlanMarkdown;
     const lines: string[] = [];
     lines.push('# AI Application Build Plan');
     lines.push('');
@@ -1223,6 +1400,7 @@ const AppAppEvaluator: React.FC = () => {
         platform: 'generic',
         toolName: 'App Evaluator',
         taskDescription: appDescription,
+        buildPlanData: buildPlan,
       },
       preview: `Build Plan: ${appDescription.slice(0, 180)}`,
     });
