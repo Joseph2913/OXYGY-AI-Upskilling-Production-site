@@ -48,8 +48,8 @@ const AppLayoutInner: React.FC = () => {
     // Track visits for the heuristic above
     localStorage.setItem('oxygy_visit_count', String(visitCount + 1));
 
-    // Only auto-trigger on the Journey page (post-onboarding landing)
-    if (location.pathname !== '/app/journey') return;
+    // Only auto-trigger on the Dashboard page (post-survey landing)
+    if (location.pathname !== '/app/dashboard') return;
     if (tourTriggeredRef.current) return;
     tourTriggeredRef.current = true;
 

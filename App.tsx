@@ -26,7 +26,6 @@ const AppDashboardDesigner = React.lazy(() => import('./components/app/toolkit/A
 const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppAppEvaluator'));
 const AppLearningCoach = React.lazy(() => import('./components/app/toolkit/AppLearningCoach'));
 const BuildGuideView = React.lazy(() => import('./pages/app/BuildGuideView'));
-const AppOnboarding = React.lazy(() => import('./pages/app/AppOnboarding'));
 
 const AppAdmin = React.lazy(() => import('./pages/app/AppAdmin'));
 const JoinPage = React.lazy(() => import('./pages/app/JoinPage'));
@@ -186,7 +185,7 @@ function App() {
           <Route path="artefacts/:id/build-guide" element={<AppSuspense><BuildGuideView /></AppSuspense>} />
           <Route path="cohort" element={<AppSuspense><AppCohort /></AppSuspense>} />
           <Route path="admin" element={<AppSuspense><AppAdmin /></AppSuspense>} />
-          <Route path="onboarding" element={<AppSuspense><AppOnboarding /></AppSuspense>} />
+
         </Route>
 
         {/* Join org via invite link */}
