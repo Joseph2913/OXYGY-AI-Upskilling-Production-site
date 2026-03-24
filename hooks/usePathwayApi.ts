@@ -14,6 +14,7 @@ export function usePathwayApi() {
   const generatePathway = async (
     formData: PathwayFormData,
     levelDepths: Record<string, string>,
+    persona: 'strategic-leader' | 'practitioner' = 'practitioner',
   ): Promise<PathwayApiResponse | null> => {
     const now = Date.now();
     if (now - lastCallRef.current < 8000) {
@@ -32,7 +33,7 @@ export function usePathwayApi() {
       const res = await fetchWithRetry('/api/generate-pathway', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formData, levelDepths }),
+        body: JSON.stringify({ formData, levelDepths, persona }),
         signal: controller.signal,
       });
 

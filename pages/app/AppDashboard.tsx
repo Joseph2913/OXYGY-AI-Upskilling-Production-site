@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, PenTool, KeyRound, Mail, Users, ChevronRight, Zap, FolderOpen, ChevronDown } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowRight, Check, Lock, Trophy, Flame, Target, BookOpen, PenTool, KeyRound, Mail, Users, ChevronRight, Zap, FolderOpen, ChevronDown, X, Map, Wrench, BarChart2 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { useAuth } from '../../context/AuthContext';
@@ -221,10 +221,190 @@ function JourneySteps({ currentLevel, levelsCompleted }: { currentLevel: number;
 }
 
 /* ═══════════════════════════════════════════
+   TUTORIAL WELCOME MODAL
+   ═══════════════════════════════════════════ */
+const TOUR_STEPS = [
+  {
+    icon: Map,
+    color: '#38B2AC',
+    title: 'My Journey',
+    desc: 'Track your progress across all five levels. See which phases you have completed and what comes next.',
+  },
+  {
+    icon: Wrench,
+    color: '#C3D0F5',
+    title: 'Toolkit',
+    desc: 'Hands-on AI tools at each level — prompt playground, agent builder, workflow canvas, and more.',
+  },
+  {
+    icon: BarChart2,
+    color: '#FBE8A6',
+    title: 'Dashboard',
+    desc: 'Your home base. See your current level, weekly progress, and where your cohort stands.',
+  },
+  {
+    icon: Trophy,
+    color: '#FBCEB1',
+    title: 'Projects',
+    desc: 'Each level ends with a real-world project. Submit it here when you are ready for review.',
+  },
+];
+
+const TutorialModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const isLast = step === TOUR_STEPS.length - 1;
+  const current = TOUR_STEPS[step];
+  const Icon = current.icon;
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(26, 32, 44, 0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+        backdropFilter: 'blur(2px)',
+      }}
+    >
+      <div
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: 20,
+          padding: '36px 32px 28px',
+          maxWidth: 460,
+          width: '100%',
+          fontFamily: "'DM Sans', sans-serif",
+          position: 'relative',
+        }}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 16, right: 16,
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#A0AEC0', padding: 4, lineHeight: 1,
+          }}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Step counter dots */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+          {TOUR_STEPS.map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: i === step ? 20 : 6,
+                height: 6,
+                borderRadius: 3,
+                background: i === step ? '#1A202C' : '#E2E8F0',
+                transition: 'all 0.25s',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Icon */}
+        <div
+          style={{
+            width: 52, height: 52, borderRadius: 14,
+            background: current.color + '22',
+            border: `1.5px solid ${current.color}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 20,
+          }}
+        >
+          <Icon size={24} color={current.color} />
+        </div>
+
+        {/* Content */}
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', marginBottom: 10 }}>
+          {step === 0 ? 'Welcome to your dashboard' : current.title}
+        </div>
+        <div style={{ fontSize: 15, color: '#4A5568', lineHeight: 1.7, marginBottom: 32 }}>
+          {step === 0
+            ? "Here's a quick look at how the platform is organised so you can hit the ground running."
+            : current.desc}
+        </div>
+
+        {/* Feature card shown from step 1 onward */}
+        {step > 0 && (
+          <div
+            style={{
+              background: '#F7FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: 12,
+              padding: '14px 16px',
+              marginBottom: 28,
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                background: current.color + '22',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Icon size={18} color={current.color} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', marginBottom: 3 }}>{current.title}</div>
+              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.6 }}>{current.desc}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          {step > 0 && (
+            <button
+              onClick={() => setStep(s => s - 1)}
+              style={{
+                flex: 1, padding: '11px 0', borderRadius: 24,
+                border: '1px solid #E2E8F0', background: 'transparent',
+                fontSize: 14, fontWeight: 600, color: '#4A5568',
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Back
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (isLast) {
+                onClose();
+                navigate('/app/journey');
+              } else {
+                setStep(s => s + 1);
+              }
+            }}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 24,
+              border: 'none', background: '#1A202C',
+              fontSize: 14, fontWeight: 700, color: '#FFFFFF',
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            {isLast ? 'Go to My Journey' : step === 0 ? 'Show me around' : 'Next'}
+            {!isLast && <ArrowRight size={15} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════
    MAIN DASHBOARD
    ═══════════════════════════════════════════ */
 const AppDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { userProfile, hasLearningPlan, learningPlanLoading, projectSubmissions } = useAppContext();
   const { data, loading } = useDashboardData();
@@ -240,6 +420,24 @@ const AppDashboard: React.FC = () => {
   const [weekExpanded, setWeekExpanded] = useState(false);
   const [levelDepths, setLevelDepths] = useState<Record<string, string>>({});
   const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set());
+
+  // Tutorial modal — shown once per user after completing onboarding
+  const tutorialKey = user ? `oxygy_tutorial_seen_${user.id}` : null;
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    if (!tutorialKey) return;
+    const fromOnboarding = (location.state as { showTutorial?: boolean } | null)?.showTutorial === true;
+    const alreadySeen = localStorage.getItem(tutorialKey) === 'true';
+    if (fromOnboarding && !alreadySeen) {
+      setShowTutorial(true);
+    }
+  }, [tutorialKey, location.state]);
+
+  const dismissTutorial = () => {
+    if (tutorialKey) localStorage.setItem(tutorialKey, 'true');
+    setShowTutorial(false);
+  };
 
   useEffect(() => {
     if (user) {
@@ -371,6 +569,9 @@ const AppDashboard: React.FC = () => {
   return (
     <div style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
       <style>{pulseStyle}</style>
+
+      {/* ═══ Tutorial Welcome Modal ═══ */}
+      {showTutorial && <TutorialModal onClose={dismissTutorial} />}
 
       {/* ═══ Hero Strip ═══ */}
       <div

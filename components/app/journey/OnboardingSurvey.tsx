@@ -471,7 +471,11 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
     clearError();
     try {
       const depths = classifyLevels(formData.aiExperience, formData.ambition);
-      const result = await generatePathway(formData, depths);
+      const isStrategicLeader =
+        (formData.seniority?.includes('Senior') || formData.seniority?.includes('Director')) &&
+        formData.ambition === 'lead-ai-strategy';
+      const persona: 'strategic-leader' | 'practitioner' = isStrategicLeader ? 'strategic-leader' : 'practitioner';
+      const result = await generatePathway(formData, depths, persona);
       if (!result) {
         // Read from ref (synchronously updated) since React state may not have flushed yet
         setGenError(lastErrorRef.current || 'Something went wrong generating your plan. Please try again.');
@@ -616,24 +620,10 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>
                         {meta.name}
                       </div>
-                      {planLevel?.projectTitle && (
-                        <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>
-                          Project: {planLevel.projectTitle}
-                        </div>
-                      )}
+                      <div style={{ fontSize: 12, color: '#718096', marginTop: 2, lineHeight: 1.4 }}>
+                        {meta.tagline}
+                      </div>
                     </div>
-                    {planLevel?.depth && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, flexShrink: 0,
-                        color: planLevel.depth === 'full' ? meta.accentDark : '#718096',
-                        background: planLevel.depth === 'full' ? `${meta.accentColor}25` : '#F7FAFC',
-                        border: `1px solid ${planLevel.depth === 'full' ? meta.accentColor + '66' : '#E2E8F0'}`,
-                        borderRadius: 6, padding: '2px 8px',
-                        textTransform: 'uppercase' as const,
-                      }}>
-                        {planLevel.depth === 'full' ? 'Full' : 'Fast-track'}
-                      </span>
-                    )}
                   </div>
                 );
               })}

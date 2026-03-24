@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, X, ArrowUpDown, ChevronDown, Check,
-  Zap, Bot, GitBranch, LayoutDashboard, Layers,
-  BookOpen, FileText,
+  Zap, BookOpen, MessageCircle, Award,
 } from 'lucide-react';
 import {
   LEVEL_ACCENT_COLORS,
@@ -11,14 +10,18 @@ import {
 } from '../../../data/levelTopics';
 import type { ArtefactType } from '../../../hooks/useArtefactsData';
 
-const TYPE_CONFIG: { type: ArtefactType; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
-  { type: 'prompt', label: 'Prompt', Icon: Zap },
-  { type: 'agent', label: 'Agent', Icon: Bot },
-  { type: 'workflow', label: 'Workflow', Icon: GitBranch },
-  { type: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { type: 'app_spec', label: 'App Spec', Icon: Layers },
-  { type: 'build_guide', label: 'Build Guide', Icon: BookOpen },
-  { type: 'prd', label: 'PRD', Icon: FileText },
+export type ArtefactCategory = 'toolkit' | 'learning_coach' | 'project_proof';
+
+export const CATEGORY_TO_TYPES: Record<ArtefactCategory, ArtefactType[]> = {
+  toolkit: ['prompt', 'agent', 'workflow', 'dashboard', 'app_spec', 'build_guide', 'prd'],
+  learning_coach: ['pathway'],
+  project_proof: ['project_proof'],
+};
+
+const CATEGORY_CONFIG: { category: ArtefactCategory; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
+  { category: 'learning_coach', label: 'Learning Coach', Icon: MessageCircle },
+  { category: 'toolkit', label: 'Toolkit', Icon: Zap },
+  { category: 'project_proof', label: 'Project Proof', Icon: Award },
 ];
 
 export type SortMode = 'recent' | 'oldest' | 'az';
@@ -28,8 +31,8 @@ const SORT_CYCLE: SortMode[] = ['recent', 'oldest', 'az'];
 interface Props {
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  activeTypes: Set<ArtefactType>;
-  onToggleType: (t: ArtefactType) => void;
+  activeCategories: Set<ArtefactCategory>;
+  onToggleCategory: (c: ArtefactCategory) => void;
   activeLevels: Set<number>;
   onToggleLevel: (l: number) => void;
   availableLevels: number[];
@@ -123,7 +126,7 @@ function FilterDropdown({
 
 const SearchFilterBar: React.FC<Props> = ({
   searchQuery, onSearchChange,
-  activeTypes, onToggleType,
+  activeCategories, onToggleCategory,
   activeLevels, onToggleLevel,
   sortMode, onSortChange,
   hasActiveFilters, onClearFilters,
@@ -248,17 +251,17 @@ const SearchFilterBar: React.FC<Props> = ({
           })}
         </FilterDropdown>
 
-        {/* ── Type Dropdown ── */}
+        {/* ── Category Dropdown ── */}
         <FilterDropdown
           label="Asset Type"
-          selectedCount={activeTypes.size}
+          selectedCount={activeCategories.size}
         >
-          {TYPE_CONFIG.map(({ type, label, Icon }) => {
-            const active = activeTypes.has(type);
+          {CATEGORY_CONFIG.map(({ category, label, Icon }) => {
+            const active = activeCategories.has(category);
             return (
               <button
-                key={type}
-                onClick={() => onToggleType(type)}
+                key={category}
+                onClick={() => onToggleCategory(category)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   width: '100%', padding: '9px 14px',
@@ -306,12 +309,12 @@ const SearchFilterBar: React.FC<Props> = ({
           </span>
         ))}
 
-        {activeTypes.size > 0 && Array.from(activeTypes).map((type) => {
-          const cfg = TYPE_CONFIG.find((t) => t.type === type);
+        {activeCategories.size > 0 && Array.from(activeCategories).map((cat) => {
+          const cfg = CATEGORY_CONFIG.find((c) => c.category === cat);
           if (!cfg) return null;
           return (
             <span
-              key={`tag-${type}`}
+              key={`tag-${cat}`}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 padding: '4px 10px 4px 8px', borderRadius: 8,
@@ -322,7 +325,7 @@ const SearchFilterBar: React.FC<Props> = ({
             >
               {cfg.label}
               <button
-                onClick={() => onToggleType(type)}
+                onClick={() => onToggleCategory(cat)}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   padding: 0, display: 'flex', alignItems: 'center',

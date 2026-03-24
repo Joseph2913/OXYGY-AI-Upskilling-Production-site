@@ -10,8 +10,8 @@ import ArtefactCard from './ArtefactCard';
 import type { Artefact, ArtefactType } from '../../../hooks/useArtefactsData';
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
-  prompt: 'Prompt', agent: 'Agent', workflow: 'Workflow', dashboard: 'Dashboard',
-  app_spec: 'App Spec', build_guide: 'Build Guide', prd: 'PRD', pathway: 'Pathway',
+  prompt: 'Toolkit', agent: 'Toolkit', workflow: 'Toolkit', dashboard: 'Toolkit',
+  app_spec: 'Toolkit', build_guide: 'Toolkit', prd: 'Toolkit', pathway: 'Learning Coach',
   project_proof: 'Project Proof',
 };
 

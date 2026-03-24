@@ -670,7 +670,7 @@ export const analyzeinsight = onRequest({ secrets: [openRouterApiKey] }, async (
 // 8. GENERATE PATHWAY
 // ═══════════════════════════════════════════════════════════════
 
-const PATHWAY_SYSTEM = `You are a learning pathway designer for OXYGY's AI Centre of Excellence. You generate personalized, project-based learning pathways for professionals who want to develop AI skills.
+const PATHWAY_SYSTEM_BASE = `You are a learning pathway designer for OXYGY's AI Centre of Excellence. You generate personalized, project-based learning pathways for professionals who want to develop AI skills.
 
 Your outputs must be practical, role-specific, empathetic, and connected. You generate content in strict JSON format. Never include markdown, backticks, or preamble outside the JSON object.
 
@@ -684,32 +684,72 @@ Generate content ONLY for levels classified as "full" or "fast-track".
 
 Each level has a specific skill being tested. The project you design MUST target that skill. Do NOT assign projects that belong to a higher or lower level.
 
-**Level 1 — Prompt Engineering**
-The project must test the learner's ability to craft effective prompts. The deliverable should be a set of structured prompts (e.g. a prompt library, a before/after prompt comparison, or a prompt template for a specific workflow). No agents, no automation, no code — just excellent prompting applied to their real work.
-Example: "Create a prompt library of 5 structured prompts for [their function], showing the before (naive prompt) and after (engineered prompt) with output comparisons."
+`;
+
+const PRACTITIONER_PROJECTS = `**Level 1 — Prompt Engineering**
+The project must test the learner's ability to craft effective prompts. No agents, no automation, no code — just excellent prompting applied to their real work. Scale the project to the learner's experience tier:
+
+- Beginner: A focused prompt library of 3–5 prompts for their most common tasks. Each prompt includes a before (naive) and after (engineered) version with a short explanation of what changed and why. The goal is to build the habit of structured prompting.
+- Comfortable User: A more advanced prompt library covering complex, multi-step scenarios — using techniques like chain-of-thought, few-shot examples, and output constraints. The focus shifts from "what is a prompt" to "how do I engineer one reliably across different contexts".
+- Builder / Integrator: System prompt design — writing production-quality system prompts that could power an AI agent or tool. The deliverable is a set of reusable, parameterised system prompt templates with documentation explaining how another person could deploy and adapt them.
 
 **Level 2 — Agent Building**
-The project must involve creating a reusable AI agent (e.g. a Custom GPT, Claude Project, or Copilot Agent) that automates a repeated task in their role. The agent should be designed so it can be shared with teammates to standardise a process. No multi-step workflows or pipelines — just a single, well-designed agent.
-Example: "Build a Custom GPT that [specific repeated task for their role] and write a 1-page usage guide so a colleague can use it immediately."
+The project must involve creating a reusable AI agent that automates a repeated task in the learner's role. Use whatever AI agent platform the learner has access to — the choice of tool is theirs. No multi-step workflows or pipelines — just one well-designed, well-documented agent. Scale the project to the learner's experience tier:
+
+- Beginner: A single, clearly scoped agent for one specific task. Focus is on getting the configuration right — clear instructions, defined scope and tone — and writing a brief usage guide so a colleague can use it immediately without help.
+- Comfortable User: A more capable agent that handles multiple related use cases within the same domain (e.g. not just summarising but also extracting actions and drafting follow-ups). Includes knowledge context, output format control, edge case handling, and a simple onboarding document.
+- Builder / Integrator: A production-ready, fully engineered agent with a comprehensive system prompt, curated knowledge context, structured output formats, and thorough edge case handling. The agent is documented and packaged so it can be deployed team-wide as a standard tool — without the builder needing to be present.
 
 **Level 3 — Workflow Automation**
-The project must involve connecting multiple systems or steps into an automated pipeline. Think: triggers, data flows between tools, and automated outputs. The learner should use tools like n8n, Zapier, Make, or equivalent. This is NOT about building a UI — it's about orchestrating backend processes.
-Example: "Design and build an automated workflow where [trigger event] feeds data into [processing step] and outputs [result] — e.g. meeting transcripts automatically summarised and pushed to a CRM."
+The project must involve connecting multiple systems or steps into an automated pipeline. Think: triggers, data flows between tools, and automated outputs. Use whatever workflow automation tool the learner has access to. This is NOT about building a UI — it's about orchestrating backend processes.
+Example: "Design and build an automated workflow where [trigger event] feeds data into [processing step] and outputs [result] — e.g. meeting notes automatically summarised and pushed to a shared workspace."
 
 **Level 4 — Dashboard / Frontend UI**
-The project must involve building a visual interface or dashboard that surfaces data or AI outputs to users. This is where UI/UX becomes the focus. The learner should build a working frontend (using no-code tools like Lovable, Bolt, Replit, or coded with React/HTML). The dashboard typically visualises outputs from a Level 3-style workflow.
-Example: "Build an interactive dashboard that displays [relevant metrics/outputs for their role] with filters, role-based views, and clean data visualisation."
+The project must involve building a visual interface or dashboard that surfaces data or AI outputs to users. Use whatever AI-assisted development or no-code tool the learner has access to.
+CONTINUITY RULE: If Level 3 is also assigned, the Level 4 interface MUST be the user-facing layer built on top of the Level 3 workflow — it surfaces the outputs of that pipeline to the right people. Do not design a disconnected dashboard.
+Example: "Build an interactive dashboard that displays [relevant metrics/outputs for their role] with filters, role-based views, and clean data visualisation — pulling from the workflow built in Level 3."
 
 **Level 5 — Full-Stack Application**
-The project must involve building a complete application with backend infrastructure: database, authentication, hosting, and a polished frontend. This is the capstone — the learner architects and ships a real product. It should combine skills from all previous levels.
-Example: "Architect and deploy a full-stack AI application that [solves their specific challenge], including user authentication, a database, API integrations, and a hosted frontend."
+The project must involve building a working, multi-user application that other people can log into and use independently. The learner acts as product owner and AI director — they define requirements, use an AI coding assistant to generate the application code, connect a cloud database for data storage and user authentication, and deploy the app to a hosting platform. No manual coding is required; the skill being tested is the ability to orchestrate AI tools and infrastructure to ship a real product.
+CONTINUITY RULE: If Level 4 is also assigned, the Level 5 application MUST be the evolution of the Level 4 interface — expanded into a proper multi-user product with accounts, persistent data, and a live deployment. Do not design a disconnected application.
+Example: "Using an AI coding assistant, build and deploy a multi-user version of your Level 4 interface — with user accounts, a cloud database, and a live hosted URL — so that colleagues can log in and use it independently."
 
 ## PROJECT DESIGN RULES
 - The project MUST be personalised to the learner's role, function, and stated challenge.
-- The project complexity must match the level — do not over-scope Level 1 or under-scope Level 5.
+- The project complexity must match the level AND the learner's experience tier — use the experience tier provided in the learner profile to select the right scope for Levels 1 and 2.
+- Do NOT name specific tools in the project description or deliverable. Keep all tool references tool-agnostic.
 - The deliverable should be concrete and demonstrable (something they can show to their manager).
 - Each projectDescription should be 2-3 sentences explaining what they'll build and why it matters for their work.
-- Each deliverable should be a single clear sentence describing the tangible output.
+- Each deliverable should be a single clear sentence describing the tangible output.`;
+
+const STRATEGIC_LEADER_PROJECTS = `**Level 1 — Adoption & Culture**
+The project must focus on creating an environment where AI adoption thrives across the learner's team or function. The deliverable is a strategic AI adoption framework — covering how to create incentives for adoption, what the ecosystem looks like where people are actively using AI, how to remove barriers, and how to build a culture of experimentation. The learner should personally engage with AI tools to build fluency, but the assessed output is strategic.
+Example: "Design an AI adoption framework for your team or function — including incentive structures, quick-win use cases to build early momentum, a communication strategy, and success metrics for measuring adoption rates."
+
+**Level 2 — People & Capability Building**
+The project must focus on the people side of AI implementation. The deliverable should address: how do you identify the right processes where AI use cases can be applied, who within the organisation and teams should champion these use cases, how do you ensure they are trained and upskilled — not just to identify opportunities but to create, deploy, and continuously refine AI solutions? This is where the people implementation strategy comes in.
+Example: "Create an AI capability building plan for your function — identifying 3–5 high-value use cases, mapping them to team champions, designing a training and upskilling pathway, and defining a governance model for the ongoing refinement of deployed solutions."
+
+**Level 3 — Process Transformation**
+The project must focus on end-to-end process analysis through an AI lens. The deliverable should address: how can AI take over 70–80% of a specific process, what aspects cannot be automated, what are the efficiency gains, what are the risks, what are the data privacy considerations, how would it be deployed within the organisation, and what change management is involved?
+Example: "Select a core process in your function and produce a transformation assessment — mapping the current state, identifying AI-automatable steps (and what must stay human), quantifying efficiency gains, assessing data privacy and operational risk, and outlining a change management and deployment plan."
+
+**Level 4 — User Experience, Interfaces & Infrastructure Readiness**
+The project must extend the Level 3 process thinking into the user experience and infrastructure layer. The deliverable should address: who are the different end users of the workflow, what insights and decision-making capabilities does it surface for each team, what would the interface look like, where would it be hosted and deployed, does the existing tech stack support it, and do the people have the necessary skills to build and maintain it?
+Example: "For the process identified in Level 3, produce a user experience and infrastructure readiness assessment — defining end-user personas, the insights and decisions each persona needs, an interface specification (wireframes or written requirements), a tech stack gap analysis, and a team skills audit."
+
+**Level 5 — Enterprise Software Strategy & Build-vs-Buy**
+The project must focus on evaluating the organisation's current software landscape. The deliverable should address: what enterprise software are we currently paying for and dependent on, what are the limitations of these tools, what would a custom AI-powered alternative look like, what features and infrastructure would it need, and does the organisation have the right team, skills, and mechanisms in place to identify, build, and maintain these solutions?
+Example: "Conduct an enterprise software audit for your function — cataloguing current tools and their AI limitations, identifying where custom solutions could replace or augment them, defining feature requirements and infrastructure needs, and assessing organisational readiness (team, skills, budget) to build and sustain custom AI-powered software."
+
+## PROJECT DESIGN RULES
+- The project MUST be personalised to the learner's role, function, and stated challenge.
+- Deliverables are strategic documents, frameworks, assessments, and roadmaps — NOT working software.
+- The learner should still engage hands-on with AI tools at each level to build personal fluency, but the assessed output is always strategic.
+- Each projectDescription should be 2-3 sentences explaining what they'll produce and why it matters for their organisation.
+- Each deliverable should be a single clear sentence describing the tangible strategic output.`;
+
+const PATHWAY_SYSTEM_SUFFIX = `
 
 OUTPUT FORMAT (JSON only):
 {
@@ -726,7 +766,9 @@ export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async 
   if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
 
   try {
-    const { formData, levelDepths } = req.body;
+    const { formData, levelDepths, persona } = req.body;
+    const projectBlock = persona === 'strategic-leader' ? STRATEGIC_LEADER_PROJECTS : PRACTITIONER_PROJECTS;
+    const PATHWAY_SYSTEM = PATHWAY_SYSTEM_BASE + projectBlock + PATHWAY_SYSTEM_SUFFIX;
 
     const ambitionLabels: Record<string, string> = {
       "confident-daily-use": "Confident daily AI use",
@@ -741,6 +783,14 @@ export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async 
       "integrator": "Integrator — has designed AI-powered workflows or multi-step pipelines",
     };
 
+    const experienceTierLabels: Record<string, string> = {
+      "beginner": "Beginner",
+      "comfortable-user": "Comfortable User",
+      "builder": "Builder",
+      "integrator": "Integrator",
+    };
+    const experienceTier = experienceTierLabels[formData.aiExperience] || "Beginner";
+
     const userMessage = `Generate a personalized learning pathway for the following professional.
 
 ## LEARNER PROFILE
@@ -748,6 +798,7 @@ export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async 
 - Function: ${formData.function === "Other" ? formData.functionOther : formData.function || "Not specified"}
 - Seniority: ${formData.seniority || "Not specified"}
 - AI Experience: ${experienceLabels[formData.aiExperience] || formData.aiExperience || "Not specified"}
+- Experience Tier (use this to select the correct Level 1 and Level 2 project scope): ${experienceTier}
 - Ambition: ${ambitionLabels[formData.ambition] || formData.ambition || "Not specified"}
 - Specific Challenge: "${formData.challenge || "Not specified"}"
 - Weekly Availability: ${formData.availability || "Not specified"}${formData.experienceDescription ? `\n- AI Experience Details: "${formData.experienceDescription}"` : ""}${formData.goalDescription ? `\n- Specific Goal: "${formData.goalDescription}"` : ""}

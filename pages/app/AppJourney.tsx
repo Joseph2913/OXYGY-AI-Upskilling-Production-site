@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown, MoveDown } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -347,18 +347,12 @@ const AppJourney: React.FC = () => {
       );
     }
 
-    // Transition to journey view
+    // Fade out then redirect to dashboard (where the tutorial welcome modal will show)
     setTransitioning(true);
     setTimeout(() => {
-      setShowOnboarding(false);
-      setTransitioning(false);
-      setPrefillData(null);
-      if (contentRef.current) {
-        contentRef.current.scrollTop = 0;
-      }
-      window.scrollTo({ top: 0 });
-    }, 500);
-  }, []);
+      navigate('/app/dashboard', { replace: true, state: { showTutorial: true } });
+    }, 400);
+  }, [navigate]);
 
   // Show loading skeleton while learning plan status is loading (skip in demo mode)
   if (!demoMode && learningPlanLoading) {

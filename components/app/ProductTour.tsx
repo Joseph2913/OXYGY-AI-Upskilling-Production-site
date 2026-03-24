@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Map, Home, BookOpen, Wrench, Zap, GraduationCap, Folder, Users, Award, Volume2, VolumeX, Pause, Play, RotateCcw, Maximize2 } from 'lucide-react';
+import { Map, Home, BookOpen, Wrench, GraduationCap, Folder, Users, Award, Volume2, VolumeX, Pause, Play, RotateCcw, Maximize2 } from 'lucide-react';
 
 /* ─── Types ─── */
 interface TourStep {
@@ -23,60 +23,60 @@ interface ProductTourProps {
 }
 
 /* ─── Step Data ─── */
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 
 const TOUR_STEPS: TourStep[] = [
   {
-    id: 'journey',
+    id: 'dashboard',
     eyebrow: `STEP 1 OF ${TOTAL_STEPS}`,
-    title: 'Your Learning Journey',
-    description: 'This is your personalised roadmap. Each level builds on the last — complete the e-learning, use the toolkit, and submit a project to progress. Your journey page tracks it all.',
-    chips: ['E-learning', 'Toolkit activity', 'Project submission'],
-    route: '/app/journey',
-    icon: Map,
-    hasInlineIllustration: 'journey',
+    title: 'Your Control Centre',
+    description: 'Your Dashboard gives you an at-a-glance view of your progress, your current level, and where you left off. If you\'re part of a cohort, you\'ll also find your team leaderboard here.',
+    chips: ['Progress overview', 'Resume learning', 'Cohort leaderboard'],
+    route: '/app/dashboard',
+    icon: Home,
+    hasInlineIllustration: null,
     hasSpotlights: false,
     footnote: null,
     secondaryNote: null,
     audioSrc: '/audio/tour-step-1.mp3',
   },
   {
-    id: 'project',
+    id: 'journey',
     eyebrow: `STEP 2 OF ${TOTAL_STEPS}`,
-    title: 'Project Submissions & Scoring',
-    description: 'At the end of each level you submit a project — real work from your role, not a hypothetical exercise. Your submission is reviewed by AI across multiple dimensions and scored into one of five tiers.',
-    chips: ['R · Developing', 'C · Competent', 'B · Proficient', 'A · Advanced', 'S · Exceptional'],
-    route: '/app/journey/project/1',
-    icon: Award,
-    hasInlineIllustration: 'tiers',
+    title: 'Your Learning Journey',
+    description: 'This is your personalised roadmap through five levels. Each level has three things to complete: e-learning, a toolkit activity, and a project submission. Track your progress across all three from right here.',
+    chips: ['E-learning', 'Toolkit activity', 'Project submission'],
+    route: '/app/journey',
+    icon: Map,
+    hasInlineIllustration: null,
     hasSpotlights: false,
     footnote: null,
-    secondaryNote: 'Aim for A-tier or above — that means you\'ve clearly applied the framework to your own work with strong evidence of impact.',
+    secondaryNote: null,
     audioSrc: '/audio/tour-step-2.mp3',
   },
   {
-    id: 'dashboard',
+    id: 'project',
     eyebrow: `STEP 3 OF ${TOTAL_STEPS}`,
-    title: 'Your Control Centre',
-    description: 'Track your overall progress, pick up where you left off, and — if you\'re part of a cohort — see how your team is progressing on the leaderboard.',
-    chips: ['Resume learning', 'Progress overview', 'Cohort leaderboard*'],
-    route: '/app/dashboard',
-    icon: Home,
-    hasInlineIllustration: 'dashboard',
+    title: 'Project Submissions & Scoring',
+    description: 'At the end of each level you submit real work from your role. It\'s reviewed by AI across multiple dimensions and scored into one of five tiers — from Developing through to Exceptional. Aim for A-tier or above.',
+    chips: ['R · Developing', 'C · Competent', 'B · Proficient', 'A · Advanced', 'S · Exceptional'],
+    route: '/app/journey/project/1',
+    icon: Award,
+    hasInlineIllustration: null,
     hasSpotlights: false,
-    footnote: '* Only visible if you\'re enrolled in a cohort',
+    footnote: null,
     secondaryNote: null,
     audioSrc: '/audio/tour-step-3.mp3',
   },
   {
     id: 'level',
     eyebrow: `STEP 4 OF ${TOTAL_STEPS}`,
-    title: 'Your Learning Environment',
-    description: 'This is where you pick up your e-learning exactly where you left off. We recommend enabling narration and using fullscreen mode for the best experience.',
+    title: 'Your E-Learning Environment',
+    description: 'Interactive lessons with auto-saved progress — close the browser and pick up exactly where you left off. Enable audio narration for a guided experience, or go fullscreen to remove distractions.',
     chips: ['Auto-resumes progress', 'Audio narration', 'Fullscreen mode'],
     route: '/app/level?level=1',
     icon: BookOpen,
-    hasInlineIllustration: 'elearning',
+    hasInlineIllustration: null,
     hasSpotlights: true,
     footnote: null,
     secondaryNote: null,
@@ -86,75 +86,61 @@ const TOUR_STEPS: TourStep[] = [
     id: 'toolkit',
     eyebrow: `STEP 5 OF ${TOTAL_STEPS}`,
     title: 'My Toolkit',
-    description: 'Your toolkit contains AI tools that match your current level. Each tool follows a structured flow — input your task, get AI-generated output, and save it to your Artefacts.',
+    description: 'Five AI-powered tools — one per level — that unlock as you progress. Describe your task, get a tailored AI output, and save it to your Artefacts. Each tool follows the same structured flow.',
     chips: ['5 AI tools', 'Level-gated', 'Saves to Artefacts'],
     route: '/app/toolkit',
     icon: Wrench,
-    hasInlineIllustration: 'toolkit',
+    hasInlineIllustration: null,
     hasSpotlights: false,
     footnote: null,
-    secondaryNote: 'Explore your other unlocked tools in your own time — each one follows the same structured flow.',
+    secondaryNote: null,
     audioSrc: '/audio/tour-step-5.mp3',
   },
   {
-    id: 'prompt-playground',
+    id: 'coach',
     eyebrow: `STEP 6 OF ${TOTAL_STEPS}`,
-    title: 'Prompt Playground',
-    description: 'This is where you build, test, and refine prompts. Describe your task and the AI generates a structured prompt using proven strategies — then save your best work to your Prompt Library.',
-    chips: ['AI-powered', 'Strategy breakdown', 'Save to Library'],
-    route: '/app/toolkit/prompt-playground',
-    icon: Zap,
-    hasInlineIllustration: 'prompt',
+    title: 'Your Learning Coach',
+    description: 'The Learning Coach curates external resources tailored to your current topic. Choose a platform — YouTube, Perplexity, or NotebookLM — set your learning goal, and get a personalised study plan.',
+    chips: ['NotebookLM', 'Perplexity', 'YouTube'],
+    route: '/app/toolkit/learning-coach',
+    icon: GraduationCap,
+    hasInlineIllustration: null,
     hasSpotlights: false,
     footnote: null,
     secondaryNote: null,
     audioSrc: '/audio/tour-step-6.mp3',
   },
   {
-    id: 'coach',
+    id: 'artefacts',
     eyebrow: `STEP 7 OF ${TOTAL_STEPS}`,
-    title: 'Your Learning Coach',
-    description: 'The Learning Coach curates external learning resources tailored to your current topic and learning style. Choose a platform, pick your objective, and get a personalised plan.',
-    chips: ['NotebookLM', 'Perplexity', 'YouTube'],
-    route: '/app/toolkit/learning-coach',
-    icon: GraduationCap,
-    hasInlineIllustration: 'coach',
+    title: 'My Artefacts',
+    description: 'When you click Save to Library in any toolkit tool, it lands here — prompts, agents, workflows, and project submissions. Your growing portfolio of AI work. Click any artefact to pick up where you left off.',
+    chips: ['Toolkit outputs', 'Project proofs', 'Quick access'],
+    route: '/app/artefacts',
+    icon: Folder,
+    hasInlineIllustration: null,
     hasSpotlights: false,
     footnote: null,
     secondaryNote: null,
     audioSrc: '/audio/tour-step-7.mp3',
   },
   {
-    id: 'artefacts',
+    id: 'cohort',
     eyebrow: `STEP 8 OF ${TOTAL_STEPS}`,
-    title: 'My Artefacts',
-    description: 'Everything you create is saved here automatically — prompts from the Playground, agents from the Agent Builder, and completed project submissions. Click any artefact to open it directly.',
-    chips: ['Toolkit outputs', 'Project proofs', 'Quick access'],
-    route: '/app/artefacts',
-    icon: Folder,
-    hasInlineIllustration: 'artefacts',
+    title: 'My Cohort',
+    description: 'If you\'re enrolled in a team cohort, this is where you see everyone\'s progress together — a leaderboard, weekly activity, and learning milestones shared across your team.',
+    chips: ['Team leaderboard', 'Weekly activity', 'Milestone tracking'],
+    route: '/app/cohort',
+    icon: Users,
+    hasInlineIllustration: null,
     hasSpotlights: false,
     footnote: null,
     secondaryNote: null,
     audioSrc: '/audio/tour-step-8.mp3',
   },
-  {
-    id: 'cohort',
-    eyebrow: `STEP 9 OF ${TOTAL_STEPS}`,
-    title: 'My Cohort',
-    description: 'If you\'re enrolled in a cohort, this is where you track your team\'s collective progress — weekly activity, learning milestones, and how everyone is moving through the programme together.',
-    chips: ['Team leaderboard', 'Weekly activity', 'Milestone tracking'],
-    route: '/app/cohort',
-    icon: Users,
-    hasInlineIllustration: 'cohort',
-    hasSpotlights: false,
-    footnote: null,
-    secondaryNote: null,
-    audioSrc: '/audio/tour-step-9.mp3',
-  },
 ];
 
-const STEP_ICONS = [Map, Award, Home, BookOpen, Wrench, Zap, GraduationCap, Folder, Users];
+const STEP_ICONS = [Home, Map, Award, BookOpen, Wrench, GraduationCap, Folder, Users];
 
 /* ─── Audio helper ─── */
 function killAudio(audio: HTMLAudioElement) {
@@ -739,6 +725,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
   const startTourWithNarration = () => {
     setNarrationEnabled(true);
     setPhase('touring');
+    navigate(TOUR_STEPS[0].route);
     // Play welcome clip first, then step 1 audio will play when step effect fires
     playAudio('/audio/tour-welcome.mp3');
   };
@@ -746,6 +733,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
   const startTourWithoutNarration = () => {
     setNarrationEnabled(false);
     setPhase('touring');
+    navigate(TOUR_STEPS[0].route);
   };
 
   /* ── Toggle narration mid-tour ── */
@@ -773,7 +761,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
   if (!visible) return null;
 
   /* ─── Shared card shell style ─── */
-  const CARD_HEIGHT = 520; // Fixed height so the card never shifts between steps
+  const CARD_HEIGHT = 400; // Fixed height — no illustrations, consistent across all steps
   const cardStyle: React.CSSProperties = {
     position: 'fixed', bottom: 24, right: 24, width: 400,
     maxWidth: 'calc(100vw - 48px)', zIndex: 9999,

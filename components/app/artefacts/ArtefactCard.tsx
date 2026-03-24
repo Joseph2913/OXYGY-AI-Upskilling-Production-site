@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Zap, Bot, GitBranch, LayoutDashboard, Layers,
-  BookOpen, FileText, Award,
+  Zap, BookOpen, MessageCircle, Award,
 } from 'lucide-react';
 import { LEVEL_ACCENT_COLORS, LEVEL_ACCENT_DARK_COLORS } from '../../../data/levelTopics';
 import { timeAgo } from '../../../utils/timeAgo';
@@ -9,25 +8,25 @@ import type { Artefact, ArtefactType } from '../../../hooks/useArtefactsData';
 
 const TYPE_ICONS: Record<ArtefactType, React.FC<{ size?: number; color?: string }>> = {
   prompt: Zap,
-  agent: Bot,
-  workflow: GitBranch,
-  dashboard: LayoutDashboard,
-  app_spec: Layers,
+  agent: Zap,
+  workflow: Zap,
+  dashboard: Zap,
+  app_spec: Zap,
   build_guide: BookOpen,
-  prd: FileText,
-  pathway: Zap,
+  prd: BookOpen,
+  pathway: MessageCircle,
   project_proof: Award,
 };
 
 const TYPE_LABELS: Record<ArtefactType, string> = {
-  prompt: 'Prompt',
-  agent: 'Agent',
-  workflow: 'Workflow',
-  dashboard: 'Dashboard',
-  app_spec: 'App Spec',
-  build_guide: 'Build Guide',
-  prd: 'PRD',
-  pathway: 'Pathway',
+  prompt: 'Toolkit',
+  agent: 'Toolkit',
+  workflow: 'Toolkit',
+  dashboard: 'Toolkit',
+  app_spec: 'Toolkit',
+  build_guide: 'Toolkit',
+  prd: 'Toolkit',
+  pathway: 'Learning Coach',
   project_proof: 'Project Proof',
 };
 

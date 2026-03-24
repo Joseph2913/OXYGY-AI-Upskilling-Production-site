@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { useArtefactsData } from '../../hooks/useArtefactsData';
-import type { ArtefactType, ArtefactContent } from '../../hooks/useArtefactsData';
+import type { ArtefactContent } from '../../hooks/useArtefactsData';
 import SearchFilterBar from '../../components/app/artefacts/SearchFilterBar';
-import type { SortMode } from '../../components/app/artefacts/SearchFilterBar';
+import type { SortMode, ArtefactCategory } from '../../components/app/artefacts/SearchFilterBar';
+import { CATEGORY_TO_TYPES } from '../../components/app/artefacts/SearchFilterBar';
 import ArtefactGrid from '../../components/app/artefacts/ArtefactGrid';
 import QuickUsePanel from '../../components/app/artefacts/QuickUsePanel';
 import { ToastContainer, showToast } from '../../components/app/Toast';
@@ -24,7 +25,7 @@ const AppArtefacts: React.FC = () => {
 
   // Filter/search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTypes, setActiveTypes] = useState<Set<ArtefactType>>(new Set());
+  const [activeCategories, setActiveCategories] = useState<Set<ArtefactCategory>>(new Set());
   const [activeLevels, setActiveLevels] = useState<Set<number>>(new Set());
   const [sortMode, setSortMode] = useState<SortMode>('recent');
 
@@ -50,9 +51,12 @@ const AppArtefacts: React.FC = () => {
       );
     }
 
-    // Type filter (OR)
-    if (activeTypes.size > 0) {
-      result = result.filter((a) => activeTypes.has(a.type));
+    // Category filter (OR across categories, each category maps to multiple types)
+    if (activeCategories.size > 0) {
+      const allowedTypes = new Set(
+        Array.from(activeCategories).flatMap((cat) => CATEGORY_TO_TYPES[cat])
+      );
+      result = result.filter((a) => allowedTypes.has(a.type));
     }
 
     // Level filter (OR)
@@ -70,20 +74,20 @@ const AppArtefacts: React.FC = () => {
     }
 
     return result;
-  }, [artefacts, searchQuery, activeTypes, activeLevels, sortMode]);
+  }, [artefacts, searchQuery, activeCategories, activeLevels, sortMode]);
 
-  const hasActiveFilters = searchQuery.length > 0 || activeTypes.size > 0 || activeLevels.size > 0;
+  const hasActiveFilters = searchQuery.length > 0 || activeCategories.size > 0 || activeLevels.size > 0;
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
-    setActiveTypes(new Set());
+    setActiveCategories(new Set());
     setActiveLevels(new Set());
   }, []);
 
-  const toggleType = useCallback((t: ArtefactType) => {
-    setActiveTypes((prev) => {
+  const toggleCategory = useCallback((c: ArtefactCategory) => {
+    setActiveCategories((prev) => {
       const next = new Set(prev);
-      if (next.has(t)) next.delete(t); else next.add(t);
+      if (next.has(c)) next.delete(c); else next.add(c);
       return next;
     });
   }, []);
@@ -239,8 +243,8 @@ const AppArtefacts: React.FC = () => {
         <SearchFilterBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          activeTypes={activeTypes}
-          onToggleType={toggleType}
+          activeCategories={activeCategories}
+          onToggleCategory={toggleCategory}
           activeLevels={activeLevels}
           onToggleLevel={toggleLevel}
           availableLevels={availableLevels}
