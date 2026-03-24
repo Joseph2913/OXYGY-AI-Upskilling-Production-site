@@ -71,10 +71,15 @@ const AppCurrentLevel: React.FC = () => {
   const handleCompletePhase = useCallback(
     (topicId: number) => {
       completePhase(topicId);
-      setViewingPhase(2); // explicitly show toolkit section
-      scrollToTop();
+      const topic = topics.find((t) => t.id === topicId);
+      if (topic?.toolkitToolPath) {
+        navigate(topic.toolkitToolPath);
+      } else {
+        setViewingPhase(2);
+        scrollToTop();
+      }
     },
-    [completePhase, scrollToTop],
+    [completePhase, topics, navigate, scrollToTop],
   );
 
   const handleCompleteTopic = useCallback(

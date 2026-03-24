@@ -488,10 +488,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const moduleLevel = slides.find(s => s.type === 'courseIntro')?.levelNumber ?? 1;
   const PRACTICE_URLS: Record<number, string> = {
     1: '/app/toolkit/prompt-playground',
-    2: '/app/toolkit',
-    3: '/app/level-3/workflow-canvas',
-    4: '/app/level-4/app-designer',
-    5: '/app/level-5/app-evaluator',
+    2: '/app/toolkit/agent-builder',
+    3: '/app/toolkit/workflow-canvas',
+    4: '/app/toolkit/dashboard-designer',
+    5: '/app/toolkit/ai-app-evaluator',
   };
   const practiceUrl = PRACTICE_URLS[moduleLevel] ?? '/app/toolkit';
   const isTourMode = useTourMode();
@@ -4247,7 +4247,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     if (isTourMode) return;
     const slide = slides[currentSlide - 1];
     if (slide?.predictFirst && predictSelected !== null && predictSelected === slide.predictCorrect && slide.voiceover?.reveal) {
-      voiceover.loadClip(slide.voiceover.reveal, 'reveal');
+      voiceover.loadClip(slide.voiceover.reveal, 'reveal', autoNarration && !isTourMode && !userPausedRef.current);
     }
   }, [predictSelected, isTourMode]);
 
@@ -4257,7 +4257,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     const slide = slides[currentSlide - 1];
     if (slide && (slide as any).revealOnNext && slide.voiceover?.reveals) {
       const clip = slide.voiceover.reveals[contextStep - 1];
-      if (clip) voiceover.loadClip(clip, 'reveal');
+      if (clip) voiceover.loadClip(clip, 'reveal', autoNarration && !isTourMode && !userPausedRef.current);
     }
   }, [contextStep, isTourMode]);
 

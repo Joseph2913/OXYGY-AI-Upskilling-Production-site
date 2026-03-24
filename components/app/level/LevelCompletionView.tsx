@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LEVEL_META } from '../../../data/levelTopics';
+import { LEVEL_META, LEVEL_TOPICS } from '../../../data/levelTopics';
 import { ALL_TOOLS } from '../../../data/toolkitData';
 
 interface LevelCompletionViewProps {
@@ -159,7 +159,12 @@ const LevelCompletionView: React.FC<LevelCompletionViewProps> = ({
           </button>
         ) : (
           <button
-            onClick={onContinueToNextLevel}
+            onClick={() => {
+              onContinueToNextLevel();
+              const nextLevelTopics = LEVEL_TOPICS[levelNumber + 1];
+              const toolkitPath = nextLevelTopics?.[0]?.toolkitToolPath;
+              if (toolkitPath) navigate(toolkitPath);
+            }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.background = '#2D3748';
             }}
