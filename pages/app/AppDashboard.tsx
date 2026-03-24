@@ -330,7 +330,7 @@ const AppDashboard: React.FC = () => {
   const phaseDoneCount = [eLearnDone, toolkitDone, projectDone].filter(Boolean).length;
   const totalPhases = 3;
 
-  // Derive resume route based on current phase
+  // Derive resume route and button text based on phase completion
   const toolkitRoutes: Record<number, string> = {
     1: '/app/toolkit/prompt-playground',
     2: '/app/toolkit/agent-builder',
@@ -338,11 +338,27 @@ const AppDashboard: React.FC = () => {
     4: '/app/toolkit/dashboard-designer',
     5: '/app/toolkit/ai-app-evaluator',
   };
+  const projectSub = data.projectSubmissions[level];
+  const projectStarted = !!projectSub && (projectSub.status === 'draft' || projectSub.status === 'submitted' || projectSub.status === 'passed');
+
   const getResumeRoute = () => {
-    const phase = data.currentPhase;
-    if (phase === 2) return toolkitRoutes[level] || '/app/toolkit';
-    if (phase === 3) return `/app/journey/project/${level}`;
-    return '/app/level?phase=1'; // default to e-learning
+    if (!eLearnDone) return '/app/level?phase=1';
+    if (!toolkitDone) return toolkitRoutes[level] || '/app/toolkit';
+    return `/app/journey/project/${level}`;
+  };
+
+  const getResumeLabel = () => {
+    if (!eLearnDone) {
+      const hasStartedElearn = (data.currentSlide ?? 0) > 0;
+      return hasStartedElearn ? 'Resume E-Learning' : 'Start E-Learning';
+    }
+    if (!toolkitDone) {
+      return currentLevelArtefacts > 0 ? 'Resume Toolkit' : 'Start Toolkit';
+    }
+    if (!projectDone) {
+      return projectStarted ? 'Resume Project' : 'Start Project';
+    }
+    return 'Complete';
   };
 
 
@@ -383,7 +399,6 @@ const AppDashboard: React.FC = () => {
           <JourneySteps currentLevel={level} levelsCompleted={data.levelsCompleted} />
           <div style={{ fontSize: 12, color: '#718096', marginTop: 8 }}>
             Level {level} · <span style={{ fontWeight: 600, color: '#1A202C' }}>{levelFull}</span>
-            {' — '}{data.overallCompletedTopics} of {data.overallTotalTopics} topics complete across all levels
           </div>
         </div>
 
@@ -433,7 +448,7 @@ const AppDashboard: React.FC = () => {
               <div style={{ fontSize: 11, color: '#718096', marginTop: 2 }}>Rank #{currentUserRank} of {data.leaderboard.length}</div>
             </div>
           )}
-          <ProgressRing completed={data.overallCompletedTopics} total={data.overallTotalTopics} accentColor={accent} />
+          <ProgressRing completed={data.overallCompletedPhases} total={data.overallTotalPhases} accentColor={accent} />
         </div>
       </div>
 
@@ -464,19 +479,11 @@ const AppDashboard: React.FC = () => {
             <div style={{ padding: '22px 26px', display: 'flex', gap: 20, alignItems: 'stretch' }}>
               {/* Left content area */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-                {/* Header badges */}
+                {/* Header badge — level only */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ background: accent + '55', color: accentDark, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', padding: '3px 10px', borderRadius: 20 }}>
                     LEVEL {level}
                   </span>
-                  <span style={{ fontSize: 12, color: '#718096' }}>
-                    {activeTopic?.title}
-                  </span>
-                  {phaseNames[data.currentPhase] && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, background: accent + '33', padding: '2px 10px', borderRadius: 20 }}>
-                      {phaseNames[data.currentPhase]}
-                    </span>
-                  )}
                 </div>
 
                 {/* Title + description */}
@@ -487,6 +494,54 @@ const AppDashboard: React.FC = () => {
                   <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
                     {activeTopic?.description || ''}
                   </div>
+                </div>
+
+                {/* Phase tracker: E-Learning → Toolkit → Project */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: 4 }}>
+                  {[
+                    { label: 'E-Learning', done: eLearnDone },
+                    { label: 'Toolkit', done: toolkitDone },
+                    { label: 'Project', done: projectDone },
+                  ].map((phase, i) => {
+                    const isActive = !phase.done && (
+                      (i === 0) ||
+                      (i === 1 && eLearnDone) ||
+                      (i === 2 && eLearnDone && toolkitDone)
+                    );
+                    return (
+                      <React.Fragment key={phase.label}>
+                        {i > 0 && (
+                          <div style={{
+                            width: 28, height: 2,
+                            background: [eLearnDone, toolkitDone, projectDone][i - 1] ? accentDark : '#E2E8F0',
+                            flexShrink: 0,
+                          }} />
+                        )}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '5px 12px',
+                          borderRadius: 20,
+                          background: phase.done ? accentDark : isActive ? accent + '15' : '#F7FAFC',
+                          border: `1.5px solid ${phase.done ? accentDark : isActive ? accent + '66' : '#E2E8F0'}`,
+                          flexShrink: 0,
+                        }}>
+                          {phase.done ? (
+                            <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#FFFFFF33', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                            </div>
+                          ) : (
+                            <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${isActive ? accent : '#CBD5E0'}`, flexShrink: 0 }} />
+                          )}
+                          <span style={{
+                            fontSize: 12, fontWeight: phase.done || isActive ? 600 : 500,
+                            color: phase.done ? '#FFFFFF' : isActive ? '#1A202C' : '#A0AEC0',
+                          }}>
+                            {phase.label}
+                          </span>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -526,7 +581,7 @@ const AppDashboard: React.FC = () => {
                   onMouseEnter={e => (e.currentTarget.style.background = '#2D3748')}
                   onMouseLeave={e => (e.currentTarget.style.background = '#1A202C')}
                 >
-                  Resume <ArrowRight size={14} />
+                  {getResumeLabel()} <ArrowRight size={14} />
                 </button>
               </div>
             </div>

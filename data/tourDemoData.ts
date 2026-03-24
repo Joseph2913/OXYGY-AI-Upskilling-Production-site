@@ -50,6 +50,16 @@ export const DEMO_DASHBOARD_DATA: DashboardData = {
   overallTotalTopics: 5,
   levelsCompleted: 0,
 
+  overallCompletedPhases: 0,
+  overallTotalPhases: 15,
+  levelPhaseCompletion: {
+    1: { elearn: false, toolkit: false, project: false },
+    2: { elearn: false, toolkit: false, project: false },
+    3: { elearn: false, toolkit: false, project: false },
+    4: { elearn: false, toolkit: false, project: false },
+    5: { elearn: false, toolkit: false, project: false },
+  },
+
   levelProgress: DEMO_LEVEL_PROGRESS,
   toolUsage: DEMO_TOOL_USAGE,
 

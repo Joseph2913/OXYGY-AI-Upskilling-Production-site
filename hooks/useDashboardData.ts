@@ -59,6 +59,12 @@ export interface DashboardData {
   overallTotalTopics: number;
   levelsCompleted: number;
 
+  // Phase-level granularity: 3 phases per level × 5 levels = 15 total
+  overallCompletedPhases: number;
+  overallTotalPhases: number;
+  // Per-level phase completion: level → { elearn, toolkit, project }
+  levelPhaseCompletion: Record<number, { elearn: boolean; toolkit: boolean; project: boolean }>;
+
   levelProgress: Record<number, LevelProgress>;
   toolUsage: Record<string, ToolUsage>;
 
@@ -147,6 +153,9 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       let overallTotalTopics = 0;
       let levelsCompleted = 0;
       const completedLevelSet = new Set<number>();
+      let overallCompletedPhases = 0;
+      const overallTotalPhases = 5 * 3; // 5 levels × 3 phases (e-learn, toolkit, project)
+      const levelPhaseCompletion: Record<number, { elearn: boolean; toolkit: boolean; project: boolean }> = {};
 
       for (let lvl = 1; lvl <= 5; lvl++) {
         const topics = LEVEL_TOPICS[lvl] || [];
@@ -192,6 +201,15 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           phasesCompleted,
           artefactCount: artefactCounts[lvl] || 0,
         };
+
+        // Phase-level granularity: count each of 3 phases per level independently
+        const lvlElearnDone = phasesCompleted[0]; // any topic in this level has elearn done
+        const lvlToolkitDone = levelToolkitDone;
+        const lvlProjectDone = !!levelProjectPassed;
+        levelPhaseCompletion[lvl] = { elearn: lvlElearnDone, toolkit: lvlToolkitDone, project: lvlProjectDone };
+        if (lvlElearnDone) overallCompletedPhases++;
+        if (lvlToolkitDone) overallCompletedPhases++;
+        if (lvlProjectDone) overallCompletedPhases++;
       }
 
       // ── Derive current level from progress (auto-advance) ──
@@ -320,6 +338,10 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         overallTotalTopics,
         levelsCompleted,
 
+        overallCompletedPhases,
+        overallTotalPhases,
+        levelPhaseCompletion,
+
         levelProgress,
         toolUsage,
 
@@ -355,6 +377,9 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           overallCompletedTopics: 0,
           overallTotalTopics: 0,
           levelsCompleted: 0,
+          overallCompletedPhases: 0,
+          overallTotalPhases: 15,
+          levelPhaseCompletion: {},
           levelProgress: {},
           toolUsage: {},
           projectSubmissions: {},
