@@ -253,11 +253,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   // A level is accessible if the user has started it (active, completed, or project-pending)
   const isAccessible = isCompleted || isActive || isProjectPending;
 
-  // Phase completion status (used for sequential phase locking in chips + expanded view)
-  const tp0 = level.topicPhases?.[0];
-  const levelElearnDone = isCompleted || !!tp0?.elearnDone;
-  const levelToolkitDone = isCompleted || !!tp0?.toolkitDone || level.toolUsed;
-
   const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
 
@@ -417,16 +412,12 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               borderRadius: 8, padding: '2px 8px', whiteSpace: 'nowrap', flexShrink: 0,
             });
 
-            // Sequential phase unlock: E-Learning always open for accessible levels,
-            // Toolkit requires e-learning done, Project requires toolkit done.
-            // Completed levels bypass all locks.
-            const canOpenElearn = isAccessible;
-            const canOpenToolkit = isAccessible && (isCompleted || eLearnDone);
-            const canOpenProject = isAccessible && (isCompleted || toolkitDone);
+            // All three phases unlock together when the level is accessible
+            // (i.e. all previous levels are complete). No within-level phase locking.
 
             return (
               <>
-                <div style={{ ...chipStyle, cursor: canOpenElearn ? 'pointer' : 'default', opacity: canOpenElearn ? 1 : 0.7 }} onClick={canOpenElearn ? () => navigate(`/app/level?level=${level.levelNumber}`) : undefined} onMouseEnter={canOpenElearn ? hoverOn : undefined} onMouseLeave={canOpenElearn ? hoverOff : undefined}>
+                <div style={{ ...chipStyle, cursor: isAccessible ? 'pointer' : 'default', opacity: isAccessible ? 1 : 0.7 }} onClick={isAccessible ? () => navigate(`/app/level?level=${level.levelNumber}`) : undefined} onMouseEnter={isAccessible ? hoverOn : undefined} onMouseLeave={isAccessible ? hoverOff : undefined}>
                   <BookOpen size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -435,19 +426,18 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.elearn}</div>
                   </div>
-                  {canOpenElearn && (
+                  {isAccessible ? (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       Open <ArrowRight size={11} />
                     </span>
-                  )}
-                  {!canOpenElearn && (
+                  ) : (
                     <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
                   )}
                 </div>
 
                 {connector}
 
-                <div style={{ ...chipStyle, cursor: canOpenToolkit ? 'pointer' : 'default', opacity: canOpenToolkit ? 1 : 0.7 }} onClick={canOpenToolkit && primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={canOpenToolkit ? hoverOn : undefined} onMouseLeave={canOpenToolkit ? hoverOff : undefined}>
+                <div style={{ ...chipStyle, cursor: isAccessible && primaryTool ? 'pointer' : 'default', opacity: isAccessible ? 1 : 0.7 }} onClick={isAccessible && primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={isAccessible ? hoverOn : undefined} onMouseLeave={isAccessible ? hoverOff : undefined}>
                   <Wrench size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -456,19 +446,18 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.toolkit}</div>
                   </div>
-                  {canOpenToolkit && (
+                  {isAccessible ? (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       Open <ArrowRight size={11} />
                     </span>
-                  )}
-                  {!canOpenToolkit && (
+                  ) : (
                     <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
                   )}
                 </div>
 
                 {connector}
 
-                <div style={{ ...chipStyle, cursor: canOpenProject ? 'pointer' : 'default', opacity: canOpenProject ? 1 : 0.7 }} onClick={canOpenProject ? () => navigate('/app/journey/project/' + level.levelNumber) : undefined} onMouseEnter={canOpenProject ? hoverOn : undefined} onMouseLeave={canOpenProject ? hoverOff : undefined}>
+                <div style={{ ...chipStyle, cursor: isAccessible ? 'pointer' : 'default', opacity: isAccessible ? 1 : 0.7 }} onClick={isAccessible ? () => navigate('/app/journey/project/' + level.levelNumber) : undefined} onMouseEnter={isAccessible ? hoverOn : undefined} onMouseLeave={isAccessible ? hoverOff : undefined}>
                   <FolderKanban size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -477,12 +466,11 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.project}</div>
                   </div>
-                  {canOpenProject && (
+                  {isAccessible ? (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       Open <ArrowRight size={11} />
                     </span>
-                  )}
-                  {!canOpenProject && (
+                  ) : (
                     <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
                   )}
                 </div>
@@ -628,8 +616,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
             const isDone = level.toolUsed;
             const statusColor = isDone ? '#48BB78' : '#CBD5E0';
             const statusLabel = isDone ? 'Complete' : 'Not started';
-            // Toolkit unlocked only after e-learning is done (or level completed)
-            const canOpenThis = isAccessible && levelElearnDone;
 
             return (
               <div style={{
@@ -637,7 +623,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 padding: '14px 16px', borderRadius: 10,
                 background: isDone ? '#F0FFF408' : '#F7FAFC',
                 border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
-                opacity: canOpenThis ? 1 : 0.6,
               }}>
                 {/* Phase number badge */}
                 <div style={{
@@ -647,7 +632,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : accentDark,
                 }}>
-                  {!canOpenThis && !isDone ? <Lock size={10} color="#A0AEC0" /> : isDone ? <Check size={12} strokeWidth={3} /> : '2'}
+                  {isDone ? <Check size={12} strokeWidth={3} /> : '2'}
                 </div>
 
                 {/* Content */}
@@ -657,7 +642,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Toolkit</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{canOpenThis ? statusLabel : 'Complete E-Learning to unlock'}</span>
+                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, marginBottom: 2 }}>
@@ -671,7 +656,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 </div>
 
                 {/* CTA */}
-                {canOpenThis ? (
+                {isAccessible ? (
                   <button
                     onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(primaryTool.route); }}
                     style={{
@@ -707,8 +692,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               : ps === 'needs_revision' ? 'Needs revision'
               : ps === 'draft' ? 'Draft saved'
               : 'Not started';
-            // Project unlocked only after toolkit is done (or level completed)
-            const canOpenThis = isAccessible && levelToolkitDone;
 
             return (
               <div style={{
@@ -716,7 +699,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 padding: '14px 16px', borderRadius: 10,
                 background: isDone ? '#F0FFF408' : '#F7FAFC',
                 border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
-                opacity: canOpenThis ? 1 : 0.6,
               }}>
                 {/* Phase number badge */}
                 <div style={{
@@ -726,7 +708,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : inProgress ? '#C05621' : accentDark,
                 }}>
-                  {!canOpenThis && !isDone ? <Lock size={10} color="#A0AEC0" /> : isDone ? <Check size={12} strokeWidth={3} /> : '3'}
+                  {isDone ? <Check size={12} strokeWidth={3} /> : '3'}
                 </div>
 
                 {/* Content */}
@@ -736,7 +718,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Project</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{canOpenThis ? statusLabel : 'Complete Toolkit to unlock'}</span>
+                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
                     </div>
                   </div>
                   {projectTitle ? (
@@ -752,7 +734,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 </div>
 
                 {/* CTA */}
-                {canOpenThis ? (
+                {isAccessible ? (
                   <button
                     onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/journey/project/' + level.levelNumber); }}
                     style={{
