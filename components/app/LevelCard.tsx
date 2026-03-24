@@ -253,6 +253,11 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   // A level is accessible if the user has started it (active, completed, or project-pending)
   const isAccessible = isCompleted || isActive || isProjectPending;
 
+  // Phase completion status (used for sequential phase locking in chips + expanded view)
+  const tp0 = level.topicPhases?.[0];
+  const levelElearnDone = isCompleted || !!tp0?.elearnDone;
+  const levelToolkitDone = isCompleted || !!tp0?.toolkitDone || level.toolUsed;
+
   const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
 
@@ -280,54 +285,48 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
       <div
         onClick={() => setShowPhases(!showPhases)}
         style={{
-          padding: showPhases ? '16px 20px 0' : '14px 20px',
+          padding: '14px 20px',
           display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-          transition: 'padding 0.2s',
         }}
       >
         {/* Level circle */}
         <div style={{
-          width: showPhases ? 40 : 34, height: showPhases ? 40 : 34, borderRadius: '50%', flexShrink: 0,
+          width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
           background: isCompleted ? `${accent}55` : isActive ? accent : `${accent}33`,
           border: isCompleted ? 'none' : isActive ? 'none' : `1px solid ${accent}88`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: showPhases ? 15 : 13, fontWeight: 800, color: accentDark,
-          transition: 'all 0.2s',
+          fontSize: 13, fontWeight: 800, color: accentDark,
         }}>
-          {isCompleted ? <Check size={showPhases ? 16 : 14} color={accentDark} strokeWidth={3} /> : isAccessible ? level.levelNumber : <Lock size={14} color="#A0AEC0" />}
+          {isCompleted ? <Check size={14} color={accentDark} strokeWidth={3} /> : isAccessible ? level.levelNumber : <Lock size={14} color="#A0AEC0" />}
         </div>
 
         {/* Title + description block */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Top row: Level label + depth badge + time */}
+          {/* Top row: Level label */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
               Level {level.levelNumber}
             </span>
-            {planDepth && (
-              <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, background: `${accent}20`, borderRadius: 6, padding: '1px 7px', textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>
-                {planDepth === 'full' ? 'Full Program' : 'Fast-track'}
-              </span>
-            )}
-            {planTime && (
-              <span style={{ fontSize: 10, color: '#A0AEC0' }}>{planTime}</span>
-            )}
           </div>
 
           {/* Title */}
           <div style={{
-            fontSize: showPhases ? 16 : 14, fontWeight: 700, color: '#1A202C',
-            letterSpacing: '-0.2px', lineHeight: 1.25, marginBottom: showPhases ? 4 : 2,
-            transition: 'font-size 0.2s',
+            fontSize: 14, fontWeight: 700, color: '#1A202C',
+            letterSpacing: '-0.2px', lineHeight: 1.25, marginBottom: 2,
           }}>
             {meta.name}
           </div>
 
-          {/* Description — full when focused, truncated tagline when collapsed */}
-          {showPhases ? (
-            <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6 }}>{description}</div>
-          ) : (
-            <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.tagline}</div>
+          {/* Description — always the same text */}
+          <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.4 }}>
+            {description}
+          </div>
+          {projectTitle && (
+            <div style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+              <FolderKanban size={11} color={accentDark} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 4 }} />
+              <strong style={{ color: '#1A202C', fontWeight: 600 }}>{projectTitle}</strong>
+              {deliverable && <span style={{ color: '#718096' }}>: {deliverable}</span>}
+            </div>
           )}
         </div>
 
@@ -400,13 +399,11 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               flex: 1, minWidth: 0,
               padding: '10px 12px', borderRadius: 8,
               background: '#F7FAFC', border: '1px solid #E2E8F0',
-              cursor: isAccessible ? 'pointer' : 'default',
               transition: 'border-color 0.15s, background 0.15s',
               display: 'flex', alignItems: 'center', gap: 10,
-              opacity: isAccessible ? 1 : 0.7,
             };
 
-            const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { if (isAccessible) { e.currentTarget.style.borderColor = accent; e.currentTarget.style.background = `${accent}08`; } };
+            const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.background = `${accent}08`; };
             const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F7FAFC'; };
 
             const connector = (
@@ -420,9 +417,16 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               borderRadius: 8, padding: '2px 8px', whiteSpace: 'nowrap', flexShrink: 0,
             });
 
+            // Sequential phase unlock: E-Learning always open for accessible levels,
+            // Toolkit requires e-learning done, Project requires toolkit done.
+            // Completed levels bypass all locks.
+            const canOpenElearn = isAccessible;
+            const canOpenToolkit = isAccessible && (isCompleted || eLearnDone);
+            const canOpenProject = isAccessible && (isCompleted || toolkitDone);
+
             return (
               <>
-                <div style={chipStyle} onClick={isAccessible ? () => navigate(`/app/level?level=${level.levelNumber}`) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={{ ...chipStyle, cursor: canOpenElearn ? 'pointer' : 'default', opacity: canOpenElearn ? 1 : 0.7 }} onClick={canOpenElearn ? () => navigate(`/app/level?level=${level.levelNumber}`) : undefined} onMouseEnter={canOpenElearn ? hoverOn : undefined} onMouseLeave={canOpenElearn ? hoverOff : undefined}>
                   <BookOpen size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -431,19 +435,19 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.elearn}</div>
                   </div>
-                  {isAccessible && (
+                  {canOpenElearn && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       Open <ArrowRight size={11} />
                     </span>
                   )}
-                  {!isAccessible && (
+                  {!canOpenElearn && (
                     <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
                   )}
                 </div>
 
                 {connector}
 
-                <div style={chipStyle} onClick={isAccessible && primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={{ ...chipStyle, cursor: canOpenToolkit ? 'pointer' : 'default', opacity: canOpenToolkit ? 1 : 0.7 }} onClick={canOpenToolkit && primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={canOpenToolkit ? hoverOn : undefined} onMouseLeave={canOpenToolkit ? hoverOff : undefined}>
                   <Wrench size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -452,19 +456,19 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.toolkit}</div>
                   </div>
-                  {isAccessible && (
+                  {canOpenToolkit && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       Open <ArrowRight size={11} />
                     </span>
                   )}
-                  {!isAccessible && (
+                  {!canOpenToolkit && (
                     <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
                   )}
                 </div>
 
                 {connector}
 
-                <div style={chipStyle} onClick={isAccessible ? () => navigate('/app/journey/project/' + level.levelNumber) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={{ ...chipStyle, cursor: canOpenProject ? 'pointer' : 'default', opacity: canOpenProject ? 1 : 0.7 }} onClick={canOpenProject ? () => navigate('/app/journey/project/' + level.levelNumber) : undefined} onMouseEnter={canOpenProject ? hoverOn : undefined} onMouseLeave={canOpenProject ? hoverOff : undefined}>
                   <FolderKanban size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -473,12 +477,12 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.project}</div>
                   </div>
-                  {isAccessible && (
+                  {canOpenProject && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                       Open <ArrowRight size={11} />
                     </span>
                   )}
-                  {!isAccessible && (
+                  {!canOpenProject && (
                     <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
                   )}
                 </div>
@@ -591,24 +595,30 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                   )}
                 </div>
 
-                {/* CTA */}
-                <button
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    navigate(`/app/level?level=${level.levelNumber}`);
-                  }}
-                  style={{
-                    background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
-                    borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
-                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
-                  }}
-                  onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
-                  onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
-                >
-                  {isDone ? 'Review' : inProgress ? 'Continue' : 'Start'} <ArrowRight size={11} />
-                </button>
+                {/* CTA — E-Learning is always accessible for an active level */}
+                {isAccessible ? (
+                  <button
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      e.stopPropagation();
+                      navigate(`/app/level?level=${level.levelNumber}`);
+                    }}
+                    style={{
+                      background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
+                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
+                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
+                  >
+                    {isDone ? 'Review' : inProgress ? 'Continue' : 'Start'} <ArrowRight size={11} />
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>
+                    <Lock size={12} /> Locked
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -618,6 +628,8 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
             const isDone = level.toolUsed;
             const statusColor = isDone ? '#48BB78' : '#CBD5E0';
             const statusLabel = isDone ? 'Complete' : 'Not started';
+            // Toolkit unlocked only after e-learning is done (or level completed)
+            const canOpenThis = isAccessible && levelElearnDone;
 
             return (
               <div style={{
@@ -625,6 +637,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 padding: '14px 16px', borderRadius: 10,
                 background: isDone ? '#F0FFF408' : '#F7FAFC',
                 border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
+                opacity: canOpenThis ? 1 : 0.6,
               }}>
                 {/* Phase number badge */}
                 <div style={{
@@ -634,7 +647,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : accentDark,
                 }}>
-                  {isDone ? <Check size={12} strokeWidth={3} /> : '2'}
+                  {!canOpenThis && !isDone ? <Lock size={10} color="#A0AEC0" /> : isDone ? <Check size={12} strokeWidth={3} /> : '2'}
                 </div>
 
                 {/* Content */}
@@ -644,7 +657,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Toolkit</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
+                      <span style={{ fontSize: 10, color: '#718096' }}>{canOpenThis ? statusLabel : 'Complete E-Learning to unlock'}</span>
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, marginBottom: 2 }}>
@@ -658,20 +671,26 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 </div>
 
                 {/* CTA */}
-                <button
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(primaryTool.route); }}
-                  style={{
-                    background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
-                    borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
-                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
-                  }}
-                  onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
-                  onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
-                >
-                  Open <ArrowRight size={11} />
-                </button>
+                {canOpenThis ? (
+                  <button
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(primaryTool.route); }}
+                    style={{
+                      background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
+                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
+                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
+                  >
+                    Open <ArrowRight size={11} />
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>
+                    <Lock size={12} /> Locked
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -688,6 +707,8 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               : ps === 'needs_revision' ? 'Needs revision'
               : ps === 'draft' ? 'Draft saved'
               : 'Not started';
+            // Project unlocked only after toolkit is done (or level completed)
+            const canOpenThis = isAccessible && levelToolkitDone;
 
             return (
               <div style={{
@@ -695,6 +716,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                 padding: '14px 16px', borderRadius: 10,
                 background: isDone ? '#F0FFF408' : '#F7FAFC',
                 border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
+                opacity: canOpenThis ? 1 : 0.6,
               }}>
                 {/* Phase number badge */}
                 <div style={{
@@ -704,7 +726,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : inProgress ? '#C05621' : accentDark,
                 }}>
-                  {isDone ? <Check size={12} strokeWidth={3} /> : '3'}
+                  {!canOpenThis && !isDone ? <Lock size={10} color="#A0AEC0" /> : isDone ? <Check size={12} strokeWidth={3} /> : '3'}
                 </div>
 
                 {/* Content */}
@@ -714,38 +736,42 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Project</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
+                      <span style={{ fontSize: 10, color: '#718096' }}>{canOpenThis ? statusLabel : 'Complete Toolkit to unlock'}</span>
                     </div>
                   </div>
                   {projectTitle ? (
-                    <>
-                      <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, marginBottom: 2 }}>
-                        <strong style={{ color: '#1A202C' }}>{projectTitle}</strong>
-                        {deliverable && <span> — Deliverable: {deliverable}</span>}
-                      </div>
-                    </>
+                    <div style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5, marginBottom: 2 }}>
+                      <strong style={{ color: '#1A202C', fontWeight: 600 }}>{projectTitle}</strong>
+                      {deliverable && <span style={{ color: '#718096' }}>: {deliverable}</span>}
+                    </div>
                   ) : (
-                    <div style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>
                       {hasLearningPlan ? 'Not included in your programme' : 'Generate a learning plan to see your project'}
                     </div>
                   )}
                 </div>
 
                 {/* CTA */}
-                <button
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/journey/project/' + level.levelNumber); }}
-                  style={{
-                    background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
-                    borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
-                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
-                  }}
-                  onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
-                  onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
-                >
-                  {isDone ? 'Review' : inProgress ? 'Continue' : 'Start'} <ArrowRight size={11} />
-                </button>
+                {canOpenThis ? (
+                  <button
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/journey/project/' + level.levelNumber); }}
+                    style={{
+                      background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
+                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
+                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
+                  >
+                    {isDone ? 'Review' : inProgress ? 'Continue' : 'Start'} <ArrowRight size={11} />
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>
+                    <Lock size={12} /> Locked
+                  </div>
+                )}
               </div>
             );
           })()}

@@ -195,14 +195,21 @@ export function useJourneyData(): {
 
           // Determine status using the same 3-phase completion logic:
           // - completed: all active topics pass the broad check (elearn + artefacts + project)
-          // - project-pending: elearn + toolkit done for all topics, but project not passed
-          // - active: any progress exists
-          // - not-started: no progress at all
+          // - project-pending / active: ONLY if all previous levels are complete (sequential unlock)
+          // - not-started: previous levels not yet complete, or no progress
+          //
+          // A level can only be active/project-pending if every level before it is in completedLevelSet.
+          const allPreviousComplete = Array.from({ length: levelNumber - 1 }, (_, i) => i + 1)
+            .every(prev => completedLevelSet.has(prev));
+
           let status: LevelProgress['status'];
           if (allTopicsDone) {
             status = 'completed';
+          } else if (!allPreviousComplete) {
+            // Previous levels not finished — this level stays locked regardless of any stale progress
+            status = 'not-started';
           } else {
-            // Check if all topics have elearn done + toolkit done (artefacts) but project not passed
+            // All previous levels are complete — this level is unlockable
             const allElearnToolkitDone = topics.every(topic => {
               const row = progressMap.get(topic.id);
               return !!row?.elearn_completed_at;

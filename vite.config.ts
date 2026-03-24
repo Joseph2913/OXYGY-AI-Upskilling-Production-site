@@ -1067,7 +1067,7 @@ For each applicable level, generate:
 5. A recommended session format — based on their seniority level
 6. 2-4 suggested resources — real tools, platforms, guides relevant to the project
 
-For "fast-track" levels, frame as "validate and sharpen" rather than "learn from scratch."
+For "fast-track" levels, frame as building on existing knowledge rather than learning from scratch. Describe the project and its deliverable directly — do not use phrases like "validate and sharpen".
 
 ## OUTPUT FORMAT
 
