@@ -168,7 +168,7 @@ The key diagnostic insight: if `RPC is_oxygy_admin()` returns `true` but `SELECT
 | `is_oxygy_admin()` | Check if current user has oxygy_admin or super_admin role | Policies on profiles, user_org_memberships |
 | `get_admin_org_ids()` | Get org_ids where current user is org admin | Policies on user_org_memberships |
 | `get_user_org_ids()` | Get org_ids where current user is any active member | Policies on user_org_memberships (SELECT, INSERT, UPDATE, DELETE) |
-| `get_org_colleague_ids()` | Get all user_ids in same org(s) as current user | Policies on profiles, topic_progress, activity_log, artefacts, application_insights |
+| `get_org_colleague_ids()` | Get all user_ids in same org(s) as current user | Policies on profiles, topic_progress, activity_log, artefacts, project_submissions, application_insights |
 | `debug_rls_policies()` | Dump all RLS policies for debugging (can be dropped in production) | Admin diagnostics only |
 
 ---
@@ -205,7 +205,26 @@ artefacts policies:
 application_insights policies:
   ├── "Users can read own"                → auth.uid() = user_id (safe)
   └── "Org members can read org"          → get_org_colleague_ids() (safe, SECURITY DEFINER)
+
+project_submissions policies:
+  ├── "Users can read own submissions"    → auth.uid() = user_id (safe)
+  └── "Org members can read org project submissions" → get_org_colleague_ids() (safe, SECURITY DEFINER)
 ```
 
 No table's policies query another table whose policies query back. All cross-table lookups
 use SECURITY DEFINER functions (plpgsql) that bypass RLS on the inner query.
+
+---
+
+## Mandatory Org-Scoped SELECT Policies for Cross-User Features
+
+**Every table read by `getOrgLeaderboard()` or any cross-user feature MUST have an org-scoped SELECT policy using `get_org_colleague_ids()`.** Without it, the Supabase anon key silently filters out other users' rows — no error, just zero rows — causing wrong scores, wrong levels, and inconsistent data across users.
+
+Tables that require org-scoped SELECT: `profiles`, `topic_progress`, `artefacts`, `project_submissions`, `activity_log`, `application_insights`.
+
+When creating a new table with per-user data visible to org colleagues, always add:
+```sql
+CREATE POLICY "Org members can read org [table_name]"
+ON [table_name] FOR SELECT
+USING (user_id IN (SELECT get_org_colleague_ids()));
+```

@@ -243,6 +243,42 @@ This project experienced a critical RLS infinite recursion bug (2026-03-16) wher
 6. **Audit all existing policies** before adding new ones: `SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'your_table'`
 7. **PostgreSQL evaluates ALL select policies (OR'd)** — one recursive policy poisons every query on that table, even if simpler policies exist.
 
+## Supabase RLS — Mandatory Org-Scoped SELECT Policies (CRITICAL)
+
+**Every table whose data is read by `getOrgLeaderboard()` or any other cross-user feature (cohort page, leaderboard, admin analytics) MUST have an org-scoped SELECT policy.** Without it, user A cannot see user B's data even if they are in the same org — the Supabase anon key enforces RLS on all client-side queries, silently returning zero rows instead of an error.
+
+### Required policy pattern
+Every such table needs **both** of these SELECT policies:
+1. `"Users can read own …"` → `auth.uid() = user_id` (own data)
+2. `"Org members can read org …"` → `user_id IN (SELECT get_org_colleague_ids())` (colleague data)
+
+### Tables that MUST have org-scoped SELECT policies
+
+| Table | Org-scoped SELECT policy | Used by leaderboard for |
+|-------|:------------------------:|-------------------------|
+| `profiles` | ✅ Required | Names, streak days, current level |
+| `topic_progress` | ✅ Required | E-learning completion count |
+| `artefacts` | ✅ Required | Artefact/toolkit count + per-level 3-phase check |
+| `project_submissions` | ✅ Required | Project scores (tier points) + per-level 3-phase check |
+| `activity_log` | ✅ Required | Active days in last 30 days |
+| `application_insights` | ✅ Required | App evaluator insights |
+
+### What happens when the policy is missing
+A missing org-scoped SELECT policy causes **silent data loss** — no errors, just zero rows returned for other users. This leads to:
+- **Wrong scores**: components of the score that depend on the invisible table read as 0
+- **Wrong levels**: the 3-phase completion check fails (e.g. missing project data → no level ever completes → user shows as L1)
+- **Wrong completion %**: derived from the broken 3-phase check → shows 0%
+- **Inconsistent views**: each user sees correct data for themselves but wrong data for every colleague
+
+### Rule for new tables
+When creating any new table that stores per-user data which other org members need to see (for leaderboard, cohort, admin views, or any cross-user feature), **always add the org-scoped SELECT policy at table creation time**:
+```sql
+CREATE POLICY "Org members can read org [table_name]"
+ON [table_name] FOR SELECT
+USING (user_id IN (SELECT get_org_colleague_ids()));
+```
+Never defer this to a later PR — a missing policy is invisible until someone notices wrong numbers in production.
+
 ## Component Import Safety
 
 **Every icon or component used in a file MUST be imported.** A missing import (e.g. using `FileText` without importing it from `lucide-react`) will cause a `ReferenceError` at runtime that crashes the entire React tree — the user sees a blank page with no visible error unless they open the console.
