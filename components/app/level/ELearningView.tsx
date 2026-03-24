@@ -4236,7 +4236,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     // Suppress auto-play during product tour to avoid overlapping with tour narration
     const currentSlideData = slides[currentSlide - 1];
     if (currentSlideData?.voiceover?.setup) {
-      voiceover.loadClip(currentSlideData.voiceover.setup, 'setup', autoNarration && !isTourMode && !userPausedRef.current);
+      voiceover.loadClip(currentSlideData.voiceover.setup, 'setup', autoNarration && !isTourMode && !userPausedRef.current && !voiceover.isMuted);
     } else {
       voiceover.stopAndReset();
     }
@@ -4247,7 +4247,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     if (isTourMode) return;
     const slide = slides[currentSlide - 1];
     if (slide?.predictFirst && predictSelected !== null && predictSelected === slide.predictCorrect && slide.voiceover?.reveal) {
-      voiceover.loadClip(slide.voiceover.reveal, 'reveal', autoNarration && !isTourMode && !userPausedRef.current);
+      voiceover.loadClip(slide.voiceover.reveal, 'reveal', autoNarration && !isTourMode && !userPausedRef.current && !voiceover.isMuted);
     }
   }, [predictSelected, isTourMode]);
 
@@ -4257,7 +4257,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     const slide = slides[currentSlide - 1];
     if (slide && (slide as any).revealOnNext && slide.voiceover?.reveals) {
       const clip = slide.voiceover.reveals[contextStep - 1];
-      if (clip) voiceover.loadClip(clip, 'reveal', autoNarration && !isTourMode && !userPausedRef.current);
+      if (clip) voiceover.loadClip(clip, 'reveal', autoNarration && !isTourMode && !userPausedRef.current && !voiceover.isMuted);
     }
   }, [contextStep, isTourMode]);
 
