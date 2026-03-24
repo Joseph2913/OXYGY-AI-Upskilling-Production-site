@@ -484,7 +484,7 @@ const AppJourney: React.FC = () => {
   const overallPct = Math.round((completedLevelsCount / 5) * 100);
 
   // Find the current active level, or the next not-started if all completed
-  const activeLevel = levels.find(l => l.status === 'active');
+  const activeLevel = levels.find(l => l.status === 'active' || l.status === 'project-pending');
   const currentLevel = activeLevel || levels.find(l => l.status === 'not-started') || levels[levels.length - 1];
   const currentMeta = LEVEL_META.find(m => m.number === currentLevel.levelNumber)!;
   const currentTopics = LEVEL_TOPICS[currentLevel.levelNumber] || [];
@@ -492,9 +492,11 @@ const AppJourney: React.FC = () => {
 
   // Calculate phase progress for the active level
   const phaseLabels = ['E-Learn', 'Practise'];
-  const currentPhaseLabel = currentLevel.status === 'active' && currentLevel.currentPhase > 0
-    ? phaseLabels[currentLevel.currentPhase - 1] || phaseLabels[0]
-    : currentLevel.status === 'completed' ? 'All complete' : 'Not started';
+  const currentPhaseLabel = currentLevel.status === 'project-pending'
+    ? 'Project Pending'
+    : (currentLevel.status === 'active' && currentLevel.currentPhase > 0)
+      ? phaseLabels[currentLevel.currentPhase - 1] || phaseLabels[0]
+      : currentLevel.status === 'completed' ? 'All complete' : 'Not started';
 
   const scrollToLevel = (levelNum: number) => {
     setExpandedFromOverview(levelNum);
@@ -665,7 +667,7 @@ const AppJourney: React.FC = () => {
                   fontSize: 10, fontWeight: 700, color: currentMeta.accentDark,
                   textTransform: 'uppercase' as const, letterSpacing: '0.06em',
                 }}>
-                  {currentLevel.status === 'completed' ? 'Last Completed' : currentLevel.status === 'active' ? 'Currently On' : 'Up Next'}
+                  {currentLevel.status === 'completed' ? 'Last Completed' : (currentLevel.status === 'active' || currentLevel.status === 'project-pending') ? 'Currently On' : 'Up Next'}
                 </span>
                 <span style={{
                   fontSize: 9, fontWeight: 600, color: '#718096',
@@ -685,7 +687,7 @@ const AppJourney: React.FC = () => {
 
             <button
               onClick={() => {
-                if (currentLevel.status === 'active' || currentLevel.status === 'completed') {
+                if (currentLevel.status === 'active' || currentLevel.status === 'project-pending' || currentLevel.status === 'completed') {
                   navigate(`/app/level?level=${currentLevel.levelNumber}`);
                 } else {
                   scrollToLevel(currentLevel.levelNumber);
@@ -701,7 +703,7 @@ const AppJourney: React.FC = () => {
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
-              {currentLevel.status === 'active' ? 'Continue' : currentLevel.status === 'completed' ? 'Review' : 'View'}
+              {(currentLevel.status === 'active' || currentLevel.status === 'project-pending') ? 'Continue' : currentLevel.status === 'completed' ? 'Review' : 'View'}
               <ArrowRight size={12} />
             </button>
           </div>
