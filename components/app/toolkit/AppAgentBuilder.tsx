@@ -17,7 +17,6 @@ import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
-import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
@@ -2105,19 +2104,6 @@ const AppAgentBuilder: React.FC = () => {
                       </div>
                     )}
 
-                    {/* §2.5 Output Actions Panel */}
-                    <div style={{
-                      opacity: buildPlanVisibleBlocks >= 2 ? 1 : 0,
-                      transform: buildPlanVisibleBlocks >= 2 ? 'translateY(0)' : 'translateY(8px)',
-                      transition: 'opacity 0.3s, transform 0.3s',
-                    }}>
-                      <OutputActionsPanel
-                        workflowName={`Agent: ${taskDescription.slice(0, 50)}`}
-                        fullMarkdown={fullBuildPlanMd}
-                        onSaveToArtefacts={handleSaveBuildPlan}
-                        isSaved={buildPlanSaved}
-                      />
-                    </div>
 
                     {/* §2.6 Refinement Section */}
                     <div style={{
