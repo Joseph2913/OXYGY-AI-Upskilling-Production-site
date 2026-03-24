@@ -6,6 +6,7 @@ import { useTourMode } from '../context/TourModeContext';
 import {
   getAllTopicProgress,
   getArtefactCountsByLevel,
+  getArtefactBreakdown,
   getLevelProgress,
   getOrgLeaderboard,
   updateStreak,
@@ -13,7 +14,7 @@ import {
   getAllProjectSubmissions,
   getLatestLearningPlan,
 } from '../lib/database';
-import type { ProjectSubmission } from '../lib/database';
+import type { ProjectSubmission, ArtefactBreakdown } from '../lib/database';
 import type { LevelDepth } from '../types';
 import { LEVEL_TOPICS } from '../data/levelTopics';
 import { ALL_TOOLS } from '../data/toolkitData';
@@ -75,6 +76,7 @@ export interface DashboardData {
   unlockedToolIds: string[];
   assignedLevels: Set<number>;  // levels in the user's learning plan
   completedLevelSet: Set<number>; // levels where all topics have completed_at
+  artefactBreakdown: ArtefactBreakdown;
 }
 
 function getInitials(name: string): string {
@@ -115,13 +117,14 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       setLoading(true);
 
       // Parallel fetch all data sources
-      const [topicProgressRows, artefactCounts, levelProgressRows, activeDaysThisWeek, projectSubRows, learningPlanResult] = await Promise.all([
+      const [topicProgressRows, artefactCounts, levelProgressRows, activeDaysThisWeek, projectSubRows, learningPlanResult, artefactBreakdown] = await Promise.all([
         getAllTopicProgress(user.id),
         getArtefactCountsByLevel(user.id),
         getLevelProgress(user.id),
         getActiveDaysThisWeek(user.id),
         getAllProjectSubmissions(user.id),
         getLatestLearningPlan(user.id),
+        getArtefactBreakdown(user.id),
       ]);
 
       // Fetch leaderboard if user has an org
@@ -334,6 +337,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         unlockedToolIds,
         assignedLevels,
         completedLevelSet,
+        artefactBreakdown,
       });
       setLoading(false);
       } catch (err) {
@@ -377,6 +381,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           unlockedToolIds: [],
           assignedLevels: new Set([1, 2, 3, 4, 5]),
           completedLevelSet: new Set<number>(),
+          artefactBreakdown: { coach: {}, toolkit: {}, project: {} },
         });
         setLoading(false);
       }

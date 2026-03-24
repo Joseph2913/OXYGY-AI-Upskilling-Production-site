@@ -531,59 +531,13 @@ const AppDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Your Week — integrated footer strip ── */}
+            {/* ── Your Artefact Collection — integrated footer strip ── */}
             {(() => {
-              // ── Derive Learning stats ──
-              const phaseLabels = ['E-Learning', 'Read', 'Watch', 'Practice'];
-              const phaseCounts = [0, 0, 0, 0];
-              Object.values(data.levelProgress).forEach(lp => {
-                lp.phasesCompleted.forEach((done, i) => { if (done) phaseCounts[i]++; });
-              });
-              const totalPhasesThisWeek = phaseCounts.reduce((a, b) => a + b, 0);
-              const maxPhase = Math.max(...phaseCounts, 1);
-
-              // ── Derive Toolkit stats ──
-              const TOOL_DISPLAY: Record<string, { name: string; level: number }> = {
-                'prompt-playground': { name: 'Prompt Playground', level: 1 },
-                'agent-builder': { name: 'Agent Builder', level: 2 },
-                'workflow-canvas': { name: 'Workflow Canvas', level: 3 },
-                'dashboard-designer': { name: 'Dashboard Designer', level: 4 },
-                'ai-app-evaluator': { name: 'App Evaluator', level: 5 },
-              };
-              const toolEntries = Object.entries(data.toolUsage)
-                .filter(([, u]) => u.artefactsCreated > 0)
-                .map(([id, u]) => ({ id, ...TOOL_DISPLAY[id], count: u.artefactsCreated }))
-                .filter(t => t.name)
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 3);
-              const totalArtefacts = Object.values(data.toolUsage).reduce((s, u) => s + u.artefactsCreated, 0);
-              const toolCount = toolEntries.length;
-
-              // ── Derive Project stats ──
-              const assignedLevels = [1, 2, 3, 4, 5].filter(lvl => {
-                const depth = levelDepths[`L${lvl}`];
-                return !depth || depth !== 'skip';
-              });
-              const projectEntries = assignedLevels.map(lvl => {
-                const sub = projectSubmissions[lvl];
-                return { lvl, status: sub?.status || 'not-started' };
-              });
-              const activeProjects = projectEntries.filter(p => p.status !== 'not-started').length;
-
-              // ── Verdict label ──
-              const activeDaysCount = data.activeDaysThisWeek.filter(Boolean).length;
-              const verdict = activeDaysCount >= 5 ? { label: 'Strong week', bg: '#F0FFF4', color: '#276749' }
-                : activeDaysCount >= 3 ? { label: 'Good progress', bg: '#EBF8FF', color: '#2B6CB0' }
-                : activeDaysCount >= 1 ? { label: 'Getting going', bg: '#FFFBEB', color: '#92400E' }
-                : { label: 'Start today', bg: '#F7FAFC', color: '#718096' };
-
-              const PROJECT_STATUS_STYLES: Record<string, { label: string; color: string; dot: string }> = {
-                passed: { label: 'Passed ✓', color: '#276749', dot: '#48BB78' },
-                submitted: { label: 'Under review', color: '#92400E', dot: '#ECC94B' },
-                needs_revision: { label: 'Needs revision', color: '#C53030', dot: '#FC8181' },
-                draft: { label: 'Draft saved', color: '#718096', dot: '#A0AEC0' },
-                'not-started': { label: 'Not started', color: '#A0AEC0', dot: '#E2E8F0' },
-              };
+              const bd = data.artefactBreakdown;
+              const totalCoach = Object.values(bd.coach).reduce((s, n) => s + n, 0);
+              const totalToolkit = Object.values(bd.toolkit).reduce((s, n) => s + n, 0);
+              const totalProject = Object.values(bd.project).reduce((s, n) => s + n, 0);
+              const grandTotal = totalCoach + totalToolkit + totalProject;
 
               const sectionStyle = { flex: 1, minWidth: 0, padding: '0 20px' };
               const dividerStyle = { width: 1, background: accentDark + '22', flexShrink: 0 };
@@ -593,6 +547,21 @@ const AppDashboard: React.FC = () => {
               const bigSubStyle = { fontSize: 12, color: '#718096', marginBottom: 12 };
               const pillStyle = { display: 'flex', alignItems: 'center', gap: 7, padding: '5px 10px', borderRadius: 8, background: '#FFFFFF', border: '1px solid ' + accent + '55', marginBottom: 5 };
 
+              const LEVEL_NAMES: Record<number, string> = { 1: 'AI Fundamentals', 2: 'Applied Capability', 3: 'Systemic Integration', 4: 'Interactive Dashboards', 5: 'Full AI Applications' };
+
+              const renderLevelRows = (counts: Record<number, number>) => {
+                return [1, 2, 3, 4, 5].map(lvl => {
+                  const count = counts[lvl] || 0;
+                  return (
+                    <div key={lvl} style={{ ...pillStyle, opacity: count === 0 ? 0.45 : 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: LEVEL_ACCENT_COLORS[lvl] + '33', color: LEVEL_ACCENT_DARK_COLORS[lvl], flexShrink: 0 }}>L{lvl}</span>
+                      <span style={{ fontSize: 12, color: count === 0 ? '#A0AEC0' : '#4A5568', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{LEVEL_NAMES[lvl]}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: count === 0 ? '#CBD5E0' : '#1A202C' }}>{count}</span>
+                    </div>
+                  );
+                });
+              };
+
               return (
                 <div style={{ background: accent + '12', borderTop: '1px solid ' + accent + '33' }}>
                   {/* ── Collapsed header — always visible ── */}
@@ -600,12 +569,8 @@ const AppDashboard: React.FC = () => {
                     onClick={() => setWeekExpanded(!weekExpanded)}
                     style={{ padding: '16px 26px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0 }}
                   >
-                    {/* Week label + verdict */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>Your Week</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 11px', borderRadius: 20, background: verdict.bg, color: verdict.color }}>
-                        {verdict.label}
-                      </span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#1A202C' }}>Your Artefact Collection</span>
                     </div>
                     {/* Summary stats row */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 22, marginRight: 16 }}>
@@ -613,21 +578,21 @@ const AppDashboard: React.FC = () => {
                         <div style={iconBoxStyle('#EAF3DE')}>
                           <BookOpen size={11} color="#27500A" />
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalPhasesThisWeek}</span>
-                        <span style={{ fontSize: 13, color: '#718096' }}>phases</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalCoach}</span>
+                        <span style={{ fontSize: 13, color: '#718096' }}>coach</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <div style={iconBoxStyle('#E6FFFA')}>
                           <Zap size={11} color="#085041" />
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalArtefacts}</span>
-                        <span style={{ fontSize: 13, color: '#718096' }}>artefacts</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalToolkit}</span>
+                        <span style={{ fontSize: 13, color: '#718096' }}>toolkit</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <div style={iconBoxStyle('#EEEDFE')}>
                           <FolderOpen size={11} color="#3C3489" />
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{activeProjects}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{totalProject}</span>
                         <span style={{ fontSize: 13, color: '#718096' }}>projects</span>
                       </div>
                     </div>
@@ -638,25 +603,15 @@ const AppDashboard: React.FC = () => {
                   <div style={{ maxHeight: weekExpanded ? 300 : 0, overflow: 'hidden', transition: 'max-height 0.35s ease', borderTop: weekExpanded ? '1px solid ' + accent + '33' : 'none' }}>
                     <div style={{ padding: '18px 26px', display: 'flex', gap: 0, alignItems: 'flex-start' }}>
 
-                      {/* Learning column */}
+                      {/* Coach column */}
                       <div style={{ ...sectionStyle, paddingLeft: 0 }}>
                         <div style={colLabelStyle}>
                           <div style={iconBoxStyle('#EAF3DE')}><BookOpen size={11} color="#27500A" /></div>
-                          Learning
+                          Learning Coach
                         </div>
-                        <div style={bigNumStyle}>{totalPhasesThisWeek} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>phases</span></div>
-                        <div style={bigSubStyle}>Completed to date</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {phaseLabels.map((label, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 11, color: '#718096', width: 68, flexShrink: 0 }}>{label}</span>
-                              <div style={{ flex: 1, height: 5, background: '#FFFFFF', borderRadius: 3, overflow: 'hidden' }}>
-                                <div style={{ height: '100%', borderRadius: 3, background: LEVEL_ACCENT_COLORS[i + 1] || '#A8F0E0', width: `${(phaseCounts[i] / maxPhase) * 100}%`, transition: 'width 0.4s ease' }} />
-                              </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#1A202C', width: 18, textAlign: 'right' as const }}>{phaseCounts[i]}</span>
-                            </div>
-                          ))}
-                        </div>
+                        <div style={bigNumStyle}>{totalCoach} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>saved</span></div>
+                        <div style={bigSubStyle}>Across {Object.keys(bd.coach).length} level{Object.keys(bd.coach).length !== 1 ? 's' : ''}</div>
+                        {renderLevelRows(bd.coach)}
                       </div>
 
                       <div style={dividerStyle} />
@@ -667,41 +622,22 @@ const AppDashboard: React.FC = () => {
                           <div style={iconBoxStyle('#E6FFFA')}><Zap size={11} color="#085041" /></div>
                           Toolkit
                         </div>
-                        <div style={bigNumStyle}>{totalArtefacts} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>artefacts</span></div>
-                        <div style={bigSubStyle}>Across {toolCount} tool{toolCount !== 1 ? 's' : ''}</div>
-                        {toolEntries.length > 0 ? toolEntries.map(t => (
-                          <div key={t.id} style={pillStyle}>
-                            <div style={{ width: 7, height: 7, borderRadius: '50%', background: LEVEL_ACCENT_COLORS[t.level] || '#E2E8F0', flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, color: '#4A5568', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>{t.count}</span>
-                          </div>
-                        )) : (
-                          <div style={{ fontSize: 13, color: '#A0AEC0', fontStyle: 'italic' }}>No artefacts yet</div>
-                        )}
+                        <div style={bigNumStyle}>{totalToolkit} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>created</span></div>
+                        <div style={bigSubStyle}>Across {Object.keys(bd.toolkit).length} level{Object.keys(bd.toolkit).length !== 1 ? 's' : ''}</div>
+                        {renderLevelRows(bd.toolkit)}
                       </div>
 
                       <div style={dividerStyle} />
 
-                      {/* Projects column */}
+                      {/* Project Proof column */}
                       <div style={{ ...sectionStyle, paddingRight: 0 }}>
                         <div style={colLabelStyle}>
                           <div style={iconBoxStyle('#EEEDFE')}><FolderOpen size={11} color="#3C3489" /></div>
-                          Projects
+                          Project Proofs
                         </div>
-                        <div style={bigNumStyle}>{activeProjects} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>active</span></div>
-                        <div style={bigSubStyle}>Across assigned levels</div>
-                        {projectEntries.map(({ lvl, status }) => {
-                          const s = PROJECT_STATUS_STYLES[status] || PROJECT_STATUS_STYLES['not-started'];
-                          const weekAccent = LEVEL_ACCENT_COLORS[lvl];
-                          const weekAccentDk = LEVEL_ACCENT_DARK_COLORS[lvl];
-                          return (
-                            <div key={lvl} style={pillStyle}>
-                              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: weekAccent + '33', color: weekAccentDk, flexShrink: 0 }}>L{lvl}</span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: s.color, flex: 1 }}>{s.label}</span>
-                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
-                            </div>
-                          );
-                        })}
+                        <div style={bigNumStyle}>{totalProject} <span style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>submitted</span></div>
+                        <div style={bigSubStyle}>Across {Object.keys(bd.project).length} level{Object.keys(bd.project).length !== 1 ? 's' : ''}</div>
+                        {renderLevelRows(bd.project)}
                       </div>
 
                     </div>

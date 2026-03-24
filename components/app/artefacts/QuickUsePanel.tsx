@@ -17,6 +17,7 @@ import AppSpecContent from './content/AppSpecContent';
 import BuildGuideContent from './content/BuildGuideContent';
 import PrdContent from './content/PrdContent';
 import ProjectProofContent from './content/ProjectProofContent';
+import PathwayContent from './content/PathwayContent';
 
 const TYPE_ICONS: Record<ArtefactType, React.FC<{ size?: number; color?: string }>> = {
   prompt: Zap, agent: Bot, workflow: GitBranch, dashboard: LayoutDashboard,
@@ -41,7 +42,7 @@ const TOOL_ROUTES: Record<ArtefactType, string> = {
   prompt: '/app/toolkit/prompt-playground', agent: '/app/toolkit/agent-builder',
   workflow: '/app/toolkit/workflow-canvas', dashboard: '/app/toolkit/dashboard-designer',
   app_spec: '/app/toolkit/ai-app-evaluator', build_guide: '', prd: '/app/toolkit/dashboard-designer',
-  pathway: '', project_proof: '',
+  pathway: '/app/toolkit/learning-coach', project_proof: '',
 };
 
 /* Build guides are created by different tools depending on level */
@@ -72,6 +73,7 @@ function getCopyText(content: ArtefactContent, type: ArtefactType): string {
     case 'build_guide': return content.markdown || '';
     case 'prd': return content.prdMarkdown || '';
     case 'project_proof': return content.reflectionText || '';
+    case 'pathway': return content.markdown || JSON.stringify(content.result, null, 2) || '';
     default: return '';
   }
 }
@@ -382,6 +384,7 @@ const QuickUsePanel: React.FC<Props> = ({
               {artefact.type === 'build_guide' && <BuildGuideContent content={content} level={artefact.level} />}
               {artefact.type === 'prd' && <PrdContent content={content} level={artefact.level} />}
               {artefact.type === 'project_proof' && <ProjectProofContent content={content} level={artefact.level} />}
+              {artefact.type === 'pathway' && <PathwayContent content={content} level={artefact.level} />}
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: 40, color: '#A0AEC0', fontSize: 13 }}>

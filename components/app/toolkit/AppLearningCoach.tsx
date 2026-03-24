@@ -610,28 +610,56 @@ const AppLearningCoach: React.FC = () => {
 
   /* ── Save to library ── */
   const handleSaveToLibrary = async () => {
-    if (!result || !user) return;
-    const saved = await createArtefactFromTool(user.id, {
-      name: `Learning Support Guide: ${selectedObjective}`,
-      type: 'pathway' as any,
-      level: selectedLevel!,
-      sourceTool: 'learning-coach',
-      content: {
-        result,
-        inputs: {
-          level: selectedLevel,
-          objective: selectedObjective,
-          gap: gapDescription,
-          platforms: selectedPlatforms,
-          preferences: selectedPreferences,
-        },
-        markdown: buildFullPathway(result),
-      },
-      preview: result.gapReflection,
-    });
-    if (saved) {
-      setSavedToLibrary(true);
-      setToastMessage('Guide saved to your artefacts');
+    if (!user || !selectedLevel) return;
+    const inputs = {
+      level: selectedLevel,
+      objective: selectedObjective,
+      gap: gapDescription,
+      platforms: selectedPlatforms,
+      preferences: selectedPreferences,
+    };
+    let name = '';
+    let content: Record<string, unknown> = {};
+    let preview = '';
+
+    if (result) {
+      name = `Learning Support Guide: ${selectedObjective}`;
+      content = { result, inputs, markdown: buildFullPathway(result) };
+      preview = result.gapReflection || selectedObjective || '';
+    } else if (notebookResult) {
+      name = `NotebookLM Guide: ${selectedObjective}`;
+      content = { result: notebookResult, inputs };
+      preview = notebookResult.studioConfig?.steeringPrompt?.slice(0, 200) || selectedObjective || '';
+    } else if (perplexityResult) {
+      name = `Perplexity Guide: ${selectedObjective}`;
+      content = { result: perplexityResult, inputs };
+      preview = perplexityResult.spaceConfig?.customInstructions?.slice(0, 200) || selectedObjective || '';
+    } else if (youtubeResult) {
+      name = `YouTube Guide: ${selectedObjective}`;
+      content = { result: youtubeResult, inputs };
+      preview = youtubeResult.summary?.slice(0, 200) || selectedObjective || '';
+    } else {
+      return;
+    }
+
+    try {
+      const saved = await createArtefactFromTool(user.id, {
+        name,
+        type: 'pathway' as any,
+        level: selectedLevel,
+        sourceTool: 'learning-coach',
+        content,
+        preview,
+      });
+      if (saved) {
+        setSavedToLibrary(true);
+        setToastMessage('Guide saved to your artefacts');
+      } else {
+        setToastMessage('Failed to save — please try again');
+      }
+    } catch (err) {
+      console.error('Save to library error:', err);
+      setToastMessage('Failed to save — please try again');
     }
   };
 
@@ -1236,6 +1264,8 @@ const AppLearningCoach: React.FC = () => {
               accentLight={LEVEL_ACCENT}
               accentDark={LEVEL_ACCENT_DARK}
               onStartOver={handleStartOver}
+              onSaveToLibrary={handleSaveToLibrary}
+              savedToLibrary={savedToLibrary}
             />
           )}
 
@@ -1246,6 +1276,8 @@ const AppLearningCoach: React.FC = () => {
               accentLight={LEVEL_ACCENT}
               accentDark={LEVEL_ACCENT_DARK}
               onStartOver={handleStartOver}
+              onSaveToLibrary={handleSaveToLibrary}
+              savedToLibrary={savedToLibrary}
             />
           )}
 
@@ -1256,6 +1288,8 @@ const AppLearningCoach: React.FC = () => {
               accentLight={LEVEL_ACCENT}
               accentDark={LEVEL_ACCENT_DARK}
               onStartOver={handleStartOver}
+              onSaveToLibrary={handleSaveToLibrary}
+              savedToLibrary={savedToLibrary}
             />
           )}
 
@@ -1683,9 +1717,15 @@ const AppLearningCoach: React.FC = () => {
 
               {/* Bottom Navigation Row */}
               <div style={{
-                display: 'flex', justifyContent: 'flex-start', marginTop: 20, gap: 12,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, gap: 12,
               }}>
                 <ActionBtn onClick={handleStartOver} label="Start Over" icon={<RotateCcw size={12} />} />
+                <ActionBtn
+                  onClick={handleSaveToLibrary}
+                  label={savedToLibrary ? 'Saved ✓' : 'Save to Library'}
+                  accent="#5A67D8"
+                  disabled={savedToLibrary}
+                />
               </div>
 
               {/* Pathway Metadata Footer */}
@@ -1876,7 +1916,9 @@ const YouTubeGuideOutput: React.FC<{
   accentLight: string;
   accentDark: string;
   onStartOver: () => void;
-}> = ({ result, accentLight, accentDark, onStartOver }) => {
+  onSaveToLibrary: () => void;
+  savedToLibrary: boolean;
+}> = ({ result, accentLight, accentDark, onStartOver, onSaveToLibrary, savedToLibrary }) => {
   const [expandedVideo, setExpandedVideo] = useState<number | null>(null);
 
   const formatViews = (n: number) => {
@@ -2312,8 +2354,8 @@ const YouTubeGuideOutput: React.FC<{
         </div>
       )}
 
-      {/* Start Over */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+      {/* Start Over + Save */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
         <button
           onClick={onStartOver}
           style={{
@@ -2324,6 +2366,20 @@ const YouTubeGuideOutput: React.FC<{
           }}
         >
           <RotateCcw size={12} /> Start Over
+        </button>
+        <button
+          onClick={onSaveToLibrary}
+          disabled={savedToLibrary}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: savedToLibrary ? '#C6F6D5' : '#5A67D8', color: savedToLibrary ? '#276749' : '#FFFFFF',
+            border: 'none', borderRadius: 8,
+            padding: '8px 14px', fontSize: 12, fontWeight: 600,
+            cursor: savedToLibrary ? 'default' : 'pointer', fontFamily: FONT_SUB,
+            opacity: savedToLibrary ? 0.8 : 1, transition: 'background 0.15s',
+          }}
+        >
+          {savedToLibrary ? 'Saved \u2713' : 'Save to Library'}
         </button>
       </div>
     </div>
@@ -2465,7 +2521,9 @@ const PerplexityGuideOutput: React.FC<{
   accentLight: string;
   accentDark: string;
   onStartOver: () => void;
-}> = ({ result, accentLight, accentDark, onStartOver }) => {
+  onSaveToLibrary: () => void;
+  savedToLibrary: boolean;
+}> = ({ result, accentLight, accentDark, onStartOver, onSaveToLibrary, savedToLibrary }) => {
   const [expandedStep, setExpandedStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const sc = result.spaceConfig;
@@ -2740,8 +2798,8 @@ const PerplexityGuideOutput: React.FC<{
         )}
       </div>
 
-      {/* Start Over */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+      {/* Start Over + Save */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
         <button
           onClick={onStartOver}
           style={{
@@ -2753,6 +2811,20 @@ const PerplexityGuideOutput: React.FC<{
         >
           <RotateCcw size={12} /> Start Over
         </button>
+        <button
+          onClick={onSaveToLibrary}
+          disabled={savedToLibrary}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: savedToLibrary ? '#C6F6D5' : '#5A67D8', color: savedToLibrary ? '#276749' : '#FFFFFF',
+            border: 'none', borderRadius: 8,
+            padding: '8px 14px', fontSize: 12, fontWeight: 600,
+            cursor: savedToLibrary ? 'default' : 'pointer', fontFamily: FONT_SUB,
+            opacity: savedToLibrary ? 0.8 : 1, transition: 'background 0.15s',
+          }}
+        >
+          {savedToLibrary ? 'Saved \u2713' : 'Save to Library'}
+        </button>
       </div>
     </div>
   );
@@ -2763,7 +2835,9 @@ const NotebookGuideOutput: React.FC<{
   accentLight: string;
   accentDark: string;
   onStartOver: () => void;
-}> = ({ result, accentLight, accentDark, onStartOver }) => {
+  onSaveToLibrary: () => void;
+  savedToLibrary: boolean;
+}> = ({ result, accentLight, accentDark, onStartOver, onSaveToLibrary, savedToLibrary }) => {
   const [expandedStep, setExpandedStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const sc = result.studioConfig;
@@ -2973,8 +3047,8 @@ const NotebookGuideOutput: React.FC<{
         )}
       </div>
 
-      {/* Start Over */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+      {/* Start Over + Save */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
         <button
           onClick={onStartOver}
           style={{
@@ -2985,6 +3059,20 @@ const NotebookGuideOutput: React.FC<{
           }}
         >
           <RotateCcw size={12} /> Start Over
+        </button>
+        <button
+          onClick={onSaveToLibrary}
+          disabled={savedToLibrary}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: savedToLibrary ? '#C6F6D5' : '#5A67D8', color: savedToLibrary ? '#276749' : '#FFFFFF',
+            border: 'none', borderRadius: 8,
+            padding: '8px 14px', fontSize: 12, fontWeight: 600,
+            cursor: savedToLibrary ? 'default' : 'pointer', fontFamily: FONT_SUB,
+            opacity: savedToLibrary ? 0.8 : 1, transition: 'background 0.15s',
+          }}
+        >
+          {savedToLibrary ? 'Saved \u2713' : 'Save to Library'}
         </button>
       </div>
     </div>

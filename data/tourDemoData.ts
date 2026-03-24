@@ -67,6 +67,7 @@ export const DEMO_DASHBOARD_DATA: DashboardData = {
   unlockedToolIds: ['prompt-playground', 'prompt-library', 'learning-coach'],
   assignedLevels: new Set([1, 2, 3, 4, 5]),
   completedLevelSet: new Set<number>(),
+  artefactBreakdown: { coach: {}, toolkit: {}, project: {} },
 };
 
 

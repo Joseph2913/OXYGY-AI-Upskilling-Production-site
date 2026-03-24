@@ -848,6 +848,32 @@ export async function getArtefactCountsByLevel(
   return counts;
 }
 
+export interface ArtefactBreakdown {
+  coach: Record<number, number>;   // learning-coach artefacts by level
+  toolkit: Record<number, number>; // toolkit tool artefacts by level
+  project: Record<number, number>; // project_proof artefacts by level
+}
+
+export async function getArtefactBreakdown(userId: string): Promise<ArtefactBreakdown> {
+  const { data, error } = await supabase
+    .from('artefacts')
+    .select('level, source_tool, type')
+    .eq('user_id', userId)
+    .is('archived_at', null);
+  if (error) { console.error('getArtefactBreakdown error:', error); return { coach: {}, toolkit: {}, project: {} }; }
+  const result: ArtefactBreakdown = { coach: {}, toolkit: {}, project: {} };
+  (data || []).forEach((row: { level: number; source_tool: string | null; type: string }) => {
+    if (row.type === 'project_proof') {
+      result.project[row.level] = (result.project[row.level] || 0) + 1;
+    } else if (row.source_tool === 'learning-coach') {
+      result.coach[row.level] = (result.coach[row.level] || 0) + 1;
+    } else {
+      result.toolkit[row.level] = (result.toolkit[row.level] || 0) + 1;
+    }
+  });
+  return result;
+}
+
 export async function getFullProfile(userId: string): Promise<{
   fullName: string;
   role: string;

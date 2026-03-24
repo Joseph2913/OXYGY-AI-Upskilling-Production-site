@@ -606,14 +606,14 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' && currentSlide < totalSlides) { userPausedRef.current = false; try { localStorage.removeItem('oxygy_vo_user_paused'); } catch { /* ignore */ } onSlideChange(currentSlide + 1); }
-      if (e.key === 'ArrowLeft' && currentSlide > 1) { userPausedRef.current = false; try { localStorage.removeItem('oxygy_vo_user_paused'); } catch { /* ignore */ } onSlideChange(currentSlide - 1); }
+      if (e.key === 'ArrowRight' && currentSlide < totalSlides) onSlideChange(currentSlide + 1);
+      if (e.key === 'ArrowLeft' && currentSlide > 1) onSlideChange(currentSlide - 1);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [currentSlide, totalSlides, onSlideChange]);
 
-  const goToSlide = useCallback((i: number) => { if (i >= 1 && i <= totalSlides) { userPausedRef.current = false; try { localStorage.removeItem('oxygy_vo_user_paused'); } catch { /* ignore */ } onSlideChange(i); } }, [totalSlides, onSlideChange]);
+  const goToSlide = useCallback((i: number) => { if (i >= 1 && i <= totalSlides) onSlideChange(i); }, [totalSlides, onSlideChange]);
   const isLastSlide = currentSlide === totalSlides;
   const s = slides[Math.min(currentSlide, totalSlides) - 1];
   if (!s) return null;
