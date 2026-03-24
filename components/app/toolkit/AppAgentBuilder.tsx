@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code, Download, Library,
+  ArrowRight, ArrowDown, ArrowLeft, Copy, Check, RotateCcw, Code, Library,
   Info, ChevronRight, ChevronDown, ChevronUp, Sparkles, Eye, Square, CheckSquare, X,
   FileText, BookOpen,
 } from 'lucide-react';
@@ -1648,6 +1648,12 @@ const AppAgentBuilder: React.FC = () => {
                   primary
                 />
                 <ActionBtn
+                  icon={savedToLibrary ? <Check size={13} /> : <BookOpen size={13} />}
+                  label={savedToLibrary ? 'Saved!' : 'Save to Artefacts'}
+                  onClick={handleSaveToLibrary}
+                  disabled={savedToLibrary}
+                />
+                <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
                   onClick={handleReset}
@@ -1738,12 +1744,12 @@ const AppAgentBuilder: React.FC = () => {
         </StepCard>
       </div>
 
-      {/* ═══ Step 4 — Download your Build Plan (per BUILD-GUIDE-OUTPUT-STANDARD) ═══ */}
+      {/* ═══ Step 4 — Your Build Plan (per BUILD-GUIDE-OUTPUT-STANDARD) ═══ */}
       <StepConnector />
       <div ref={step4Ref} style={step3Done ? { animation: 'ppFadeIn 0.3s ease both' } : undefined}>
         <StepCard
           stepNumber={4}
-          title="Download your Build Plan"
+          title="Your Build Plan"
           subtitle="Your complete, platform-specific deployment guide."
           done={step4Done}
           collapsed={false}
@@ -1784,7 +1790,7 @@ const AppAgentBuilder: React.FC = () => {
                       <NextStepBanner
                         accentColor={LEVEL_ACCENT}
                         accentDark={LEVEL_ACCENT_DARK}
-                        text={`Download your Build Plan and follow the steps in ${platformLabel}. Use the system prompt from Step 2 and deploy it step by step.`}
+                        text={`Follow each step in ${platformLabel}. Copy the system prompt below and paste it into your agent setup.`}
                       />
                     </div>
 
@@ -1826,11 +1832,6 @@ const AppAgentBuilder: React.FC = () => {
                           label={buildPlanCopied ? 'Copied!' : 'Copy Build Plan'}
                           onClick={handleCopyBuildPlan}
                           primary
-                        />
-                        <ActionBtn
-                          icon={<Download size={13} />}
-                          label="Download (.md)"
-                          onClick={handleDownloadBuildPlan}
                         />
                         <ActionBtn
                           icon={<BookOpen size={13} />}
@@ -2035,25 +2036,74 @@ const AppAgentBuilder: React.FC = () => {
                             </div>
                           )}
 
-                          {/* "Want the full guide?" CTA */}
-                          <div style={{
-                            background: '#F7FAFC', border: '1px solid #E2E8F0',
-                            borderRadius: 10, padding: '16px 20px', marginTop: 20,
-                            display: 'flex', alignItems: 'center', gap: 12,
-                          }}>
-                            <Download size={18} color="#718096" />
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: '#4A5568', fontFamily: FONT }}>
-                                Want the full guide?
-                              </div>
-                              <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: FONT }}>
-                                Download as a Markdown or Word document using the buttons below.
-                              </div>
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
+
+                    {/* §2.4b System Prompt from Step 2 */}
+                    {result && (
+                      <div style={{
+                        opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
+                        transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
+                        transition: 'opacity 0.3s, transform 0.3s',
+                        marginTop: 16,
+                      }}>
+                        <div style={{
+                          background: '#FFFFFF', border: '1px solid #E2E8F0',
+                          borderRadius: 16, padding: '24px 28px',
+                        }}>
+                          <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            marginBottom: 14,
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 15 }}>📝</span>
+                              <span style={{
+                                fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT,
+                              }}>
+                                Your System Prompt
+                              </span>
+                              <span style={{
+                                fontSize: 11, color: '#718096', fontWeight: 400, fontFamily: FONT,
+                              }}>
+                                — paste this into your agent on {platformLabel}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const content = buildFullSystemPrompt(result);
+                                copyToClipboard(content);
+                                setCopied(true);
+                                setToastMessage('System prompt copied to clipboard');
+                                setTimeout(() => setCopied(false), 2500);
+                              }}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: copied ? '#38B2AC' : '#F7FAFC',
+                                border: `1px solid ${copied ? '#38B2AC' : '#E2E8F0'}`,
+                                borderRadius: 8, padding: '6px 12px',
+                                fontSize: 12, fontWeight: 600,
+                                color: copied ? '#fff' : '#4A5568',
+                                cursor: 'pointer', fontFamily: FONT,
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {copied ? <Check size={13} /> : <Copy size={13} />}
+                              {copied ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                          <pre style={{
+                            background: '#1A202C', color: '#E2E8F0',
+                            borderRadius: 10, padding: '18px 20px',
+                            fontSize: 12, fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                            lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                            margin: 0, maxHeight: 400, overflow: 'auto',
+                          }}>
+                            {buildFullSystemPrompt(result)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
 
                     {/* §2.5 Output Actions Panel */}
                     <div style={{
