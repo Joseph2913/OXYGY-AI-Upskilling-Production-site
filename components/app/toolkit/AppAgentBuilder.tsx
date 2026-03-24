@@ -1280,6 +1280,12 @@ const AppAgentBuilder: React.FC = () => {
                       onClick={handleCopyFull}
                       primary
                     />
+                    <ActionBtn
+                      icon={savedToLibrary ? <Check size={13} /> : <BookOpen size={13} />}
+                      label={savedToLibrary ? 'Saved!' : 'Save to Artefacts'}
+                      onClick={handleSaveToLibrary}
+                      disabled={savedToLibrary}
+                    />
                   </div>
                 </div>
 
@@ -1646,12 +1652,6 @@ const AppAgentBuilder: React.FC = () => {
                   }}
                   iconAfter={<ArrowRight size={13} />}
                   primary
-                />
-                <ActionBtn
-                  icon={savedToLibrary ? <Check size={13} /> : <BookOpen size={13} />}
-                  label={savedToLibrary ? 'Saved!' : 'Save to Artefacts'}
-                  onClick={handleSaveToLibrary}
-                  disabled={savedToLibrary}
                 />
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
