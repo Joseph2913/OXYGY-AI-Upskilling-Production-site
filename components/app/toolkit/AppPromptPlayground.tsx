@@ -316,7 +316,7 @@ const AppPromptPlayground: React.FC = () => {
     });
     if (saved) {
       setSavedToLibrary(true);
-      setToastMessage('Prompt saved to your library');
+      setToastMessage('Prompt saved to your artefacts');
     }
   };
 
@@ -923,7 +923,7 @@ const AppPromptPlayground: React.FC = () => {
                 />
                 <ActionBtn
                   icon={<Library size={13} />}
-                  label="Save to Prompt Library"
+                  label="Save to Artefacts"
                   onClick={handleSaveToLibrary}
                   accent
                   disabled={savedToLibrary}

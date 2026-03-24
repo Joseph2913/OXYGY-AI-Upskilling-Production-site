@@ -33,10 +33,10 @@ const OutputActionsPanel: React.FC<OutputActionsPanelProps> = ({
           <BookOpen size={20} color="#38B2AC" />
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', ...FONT }}>
-              Save to your Shared Library
+              Save to Artefacts
             </div>
             <div style={{ fontSize: 12, color: '#718096', marginTop: 2, ...FONT }}>
-              Your Build Guide will be saved and accessible from your library.
+              Your Build Guide will be saved and accessible from your artefacts.
             </div>
           </div>
         </div>
@@ -57,7 +57,7 @@ const OutputActionsPanel: React.FC<OutputActionsPanelProps> = ({
             ...FONT,
           }}
         >
-          {isSaved ? '✓ Saved' : 'Save to your library →'}
+          {isSaved ? '✓ Saved' : 'Save to Artefacts →'}
         </button>
       </div>
     </div>

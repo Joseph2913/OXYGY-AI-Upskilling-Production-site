@@ -1361,7 +1361,7 @@ const AppLearningCoach: React.FC = () => {
                   <ActionBtn onClick={handleDownload} label="Download (.md)" />
                   <ActionBtn
                     onClick={handleSaveToLibrary}
-                    label={savedToLibrary ? 'Saved ✓' : 'Save to Library'}
+                    label={savedToLibrary ? 'Saved ✓' : 'Save to Artefacts'}
                     accent="#5A67D8"
                     disabled={savedToLibrary}
                   />
@@ -1722,7 +1722,7 @@ const AppLearningCoach: React.FC = () => {
                 <ActionBtn onClick={handleStartOver} label="Start Over" icon={<RotateCcw size={12} />} />
                 <ActionBtn
                   onClick={handleSaveToLibrary}
-                  label={savedToLibrary ? 'Saved ✓' : 'Save to Library'}
+                  label={savedToLibrary ? 'Saved ✓' : 'Save to Artefacts'}
                   accent="#5A67D8"
                   disabled={savedToLibrary}
                 />
@@ -2379,7 +2379,7 @@ const YouTubeGuideOutput: React.FC<{
             opacity: savedToLibrary ? 0.8 : 1, transition: 'background 0.15s',
           }}
         >
-          {savedToLibrary ? 'Saved \u2713' : 'Save to Library'}
+          {savedToLibrary ? 'Saved \u2713' : 'Save to Artefacts'}
         </button>
       </div>
     </div>
@@ -2823,7 +2823,7 @@ const PerplexityGuideOutput: React.FC<{
             opacity: savedToLibrary ? 0.8 : 1, transition: 'background 0.15s',
           }}
         >
-          {savedToLibrary ? 'Saved \u2713' : 'Save to Library'}
+          {savedToLibrary ? 'Saved \u2713' : 'Save to Artefacts'}
         </button>
       </div>
     </div>
@@ -3072,7 +3072,7 @@ const NotebookGuideOutput: React.FC<{
             opacity: savedToLibrary ? 0.8 : 1, transition: 'background 0.15s',
           }}
         >
-          {savedToLibrary ? 'Saved \u2713' : 'Save to Library'}
+          {savedToLibrary ? 'Saved \u2713' : 'Save to Artefacts'}
         </button>
       </div>
     </div>

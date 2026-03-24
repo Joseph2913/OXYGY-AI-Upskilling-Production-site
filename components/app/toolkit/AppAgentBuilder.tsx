@@ -843,7 +843,7 @@ const AppAgentBuilder: React.FC = () => {
     });
     if (saved) {
       setSavedToLibrary(true);
-      setToastMessage('Agent saved to your library');
+      setToastMessage('Agent saved to your artefacts');
       setTimeout(() => setSavedToLibrary(false), 3000);
     }
   };
@@ -875,7 +875,7 @@ const AppAgentBuilder: React.FC = () => {
     });
     if (saved) {
       setBuildPlanSaved(true);
-      setToastMessage('Build guide saved to your library');
+      setToastMessage('Build guide saved to your artefacts');
     }
   };
 
@@ -1834,7 +1834,7 @@ const AppAgentBuilder: React.FC = () => {
                         />
                         <ActionBtn
                           icon={<BookOpen size={13} />}
-                          label={buildPlanSaved ? 'Saved!' : 'Save to Library'}
+                          label={buildPlanSaved ? 'Saved!' : 'Save to Artefacts'}
                           onClick={handleSaveBuildPlan}
                           primary
                           disabled={buildPlanSaved}

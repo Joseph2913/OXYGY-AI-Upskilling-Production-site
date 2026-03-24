@@ -1382,7 +1382,7 @@ const AppAppEvaluator: React.FC = () => {
       preview: `App Spec: ${appDescription.slice(0, 180)}`,
     });
     if (saved) {
-      setToastMessage('App spec saved to your library');
+      setToastMessage('App spec saved to your artefacts');
     }
   };
 
@@ -1406,7 +1406,7 @@ const AppAppEvaluator: React.FC = () => {
     });
     if (saved) {
       setBuildPlanSaved(true);
-      setToastMessage('Build plan saved to your library');
+      setToastMessage('Build plan saved to your artefacts');
       setTimeout(() => setBuildPlanSaved(false), 3000);
     }
   };

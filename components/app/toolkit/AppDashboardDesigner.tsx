@@ -1015,7 +1015,7 @@ const AppDashboardDesigner: React.FC = () => {
     });
     if (saved) {
       setBuildPlanSaved(true);
-      toast('Build guide saved to your library');
+      toast('Build guide saved to your artefacts');
     }
   };
 
@@ -1095,7 +1095,7 @@ const AppDashboardDesigner: React.FC = () => {
     });
     if (saved) {
       setSavedToLibrary(true);
-      toast('PRD saved to your library');
+      toast('PRD saved to your artefacts');
     }
   };
 
@@ -1942,7 +1942,7 @@ const AppDashboardDesigner: React.FC = () => {
                       />
                       <ActionBtn
                         icon={<BookOpen size={13} />}
-                        label={buildPlanSaved ? 'Saved!' : 'Save to Library'}
+                        label={buildPlanSaved ? 'Saved!' : 'Save to Artefacts'}
                         onClick={handleSaveBuildGuide}
                         accent
                         disabled={buildPlanSaved}

@@ -1072,7 +1072,7 @@ const AppWorkflowCanvas: React.FC = () => {
     });
     if (saved) {
       setSavedToArtefacts(true);
-      toast('Workflow saved to your library');
+      toast('Workflow saved to your artefacts');
     } else {
       toast('Failed to save — please try again');
     }
@@ -1669,7 +1669,7 @@ const AppWorkflowCanvas: React.FC = () => {
                   />
                   <ActionBtn
                     icon={<Library size={13} />}
-                    label={savedToArtefacts ? 'Saved!' : 'Save to your library'}
+                    label={savedToArtefacts ? 'Saved!' : 'Save to Artefacts'}
                     onClick={handleSaveToArtefacts}
                     accent
                     disabled={savedToArtefacts}
