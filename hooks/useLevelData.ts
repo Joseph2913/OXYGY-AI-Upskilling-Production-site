@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { useTourMode } from '../context/TourModeContext';
 import { LEVEL_TOPICS } from '../data/levelTopics';
 import {
@@ -52,6 +53,7 @@ export function isProjectUnlocked(tp: TopicProgress): boolean {
 
 export function useLevelData(currentLevel: number): UseLevelDataReturn {
   const { user } = useAuth();
+  const { invalidateProgress } = useAppContext();
   const isTourMode = useTourMode();
   const [levelData, setLevelData] = useState<LevelData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,12 +171,13 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     }, 500);
   }, [user, currentLevel]);
 
-  // ── Complete phase (E-Learning → Toolkit transition only) ──
-  const completePhase = useCallback((topicId: number) => {
+  // ── Complete E-Learning phase ──
+  // This is ONLY called when e-learning finishes, so it always writes phase 1
+  // (elearn_completed_at). The local phase number may already be >1 if the user
+  // saved a toolkit artefact before finishing e-learning — we must ignore that
+  // and always mark e-learning as done.
+  const completePhase = useCallback(async (topicId: number) => {
     if (!user) return;
-
-    // Get the current phase number before advancing
-    const currentPhase = levelData?.topicProgress.find(tp => tp.topicId === topicId)?.phase ?? 1;
 
     setLevelData(prev => {
       if (!prev) return prev;
@@ -182,23 +185,25 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         ...prev,
         topicProgress: prev.topicProgress.map(tp => {
           if (tp.topicId !== topicId) return tp;
-          const newPhase = Math.min(tp.phase + 1, TOTAL_PHASES);
+          const newPhase = Math.max(tp.phase, 2); // at least advance past e-learning
           const newCompletions = [...tp.phaseCompletions] as [boolean, boolean, boolean];
-          newCompletions[tp.phase - 1] = true;
+          newCompletions[0] = true; // e-learning is always index 0
           return {
             ...tp,
             phase: newPhase,
             slide: 0,
             phaseCompletions: newCompletions,
-            elearnCompletedAt: tp.phase === 1 ? new Date() : tp.elearnCompletedAt,
+            elearnCompletedAt: new Date(),
           };
         }),
       };
     });
 
-    completePhaseDb(user.id, currentLevel, topicId, currentPhase);
-    logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: currentPhase });
-  }, [user, currentLevel, levelData]);
+    // Always write phase 1 (elearn_completed_at) regardless of local phase state
+    await completePhaseDb(user.id, currentLevel, topicId, 1);
+    logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: 1 });
+    invalidateProgress();
+  }, [user, currentLevel, invalidateProgress]);
 
   // ── Mark toolkit complete (local state — DB write is done by tool page) ──
   const markToolkitComplete = useCallback((topicId: number) => {
@@ -222,7 +227,8 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
 
     completeToolkitPhase(user.id, currentLevel, topicId);
     logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: 2 });
-  }, [user, currentLevel]);
+    invalidateProgress();
+  }, [user, currentLevel, invalidateProgress]);
 
   // ── Complete topic ──
   const completeTopic = useCallback((topicId: number) => {
@@ -247,7 +253,8 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     if (allComplete) {
       logActivity(user.id, 'level_completed', currentLevel);
     }
-  }, [user, currentLevel, levelData]);
+    invalidateProgress();
+  }, [user, currentLevel, levelData, invalidateProgress]);
 
   return { levelData, loading, advanceSlide, completePhase, completeTopic, markToolkitComplete };
 }

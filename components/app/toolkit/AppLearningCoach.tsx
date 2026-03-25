@@ -166,7 +166,7 @@ const STEP_DELAYS = [800, 1500, 3000, 3500, 4000, -1];
 
 const AppLearningCoach: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, invalidateProgress } = useAppContext();
 
   /* ── Input state ── */
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
@@ -654,6 +654,7 @@ const AppLearningCoach: React.FC = () => {
       if (saved) {
         setSavedToLibrary(true);
         setToastMessage('Guide saved to your artefacts');
+        invalidateProgress();
       } else {
         setToastMessage('Failed to save — please try again');
       }

@@ -27,7 +27,7 @@ export interface ToolkitData {
 
 export function useToolkitData(): { data: ToolkitData | null; loading: boolean } {
   const { user } = useAuth();
-  const { userProfile } = useAppContext();
+  const { userProfile, dataVersion } = useAppContext();
   const isTourMode = useTourMode();
   const [data, setData] = useState<ToolkitData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +129,7 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
       setData({ currentLevel, totalArtefacts, totalPoints, totalUsage, levelStats });
       setLoading(false);
     })();
-  }, [user, userProfile, isTourMode]);
+  }, [user, userProfile, isTourMode, dataVersion]);
 
   return { data, loading };
 }

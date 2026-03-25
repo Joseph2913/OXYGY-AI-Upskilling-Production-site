@@ -612,7 +612,7 @@ const CanvasSkeleton: React.FC<{ nodesPerRow: number }> = ({ nodesPerRow }) => {
 
 const AppWorkflowCanvas: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips, invalidateProgress } = useAppContext();
   const projectChip = projectChips?.[3] ?? null;
   const location = useLocation();
 
@@ -1073,6 +1073,7 @@ const AppWorkflowCanvas: React.FC = () => {
     if (saved) {
       setSavedToArtefacts(true);
       toast('Workflow saved to your artefacts');
+      invalidateProgress();
     } else {
       toast('Failed to save — please try again');
     }

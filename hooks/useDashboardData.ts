@@ -36,7 +36,7 @@ export interface LeaderboardMember {
 
 export interface LevelProgress {
   level: number;
-  phasesCompleted: boolean[];  // [elearn, read, watch, practise]
+  phasesCompleted: boolean[];  // [elearn, toolkit, project]
   artefactCount: number;
 }
 
@@ -97,7 +97,7 @@ function getInitials(name: string): string {
 
 export function useDashboardData(): { data: DashboardData | null; loading: boolean } {
   const { user } = useAuth();
-  const { userProfile } = useAppContext();
+  const { userProfile, dataVersion } = useAppContext();
   const { orgId } = useOrg();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,7 +165,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         const progressForLevel = topicProgressRows.filter(r => r.level === lvl);
         const progressMap = new Map(progressForLevel.map(r => [r.topic_id, r]));
 
-        const phasesCompleted: boolean[] = [false, false, false, false];
+        const phasesCompleted: boolean[] = [false, false, false]; // [elearn, toolkit, project]
         let completedTopics = 0;
 
         const levelProjectPassed = projectSubMap.get(lvl)?.status === 'passed';
@@ -186,10 +186,9 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           const eLearnDone = !!row?.elearn_completed_at;
           const isTopicComplete = eLearnDone && levelToolkitDone && levelProjectPassed;
           if (isTopicComplete) completedTopics++;
-          if (row?.elearn_completed_at) phasesCompleted[0] = true;
-          if (row?.read_completed_at) phasesCompleted[1] = true;
-          if (row?.watch_completed_at) phasesCompleted[2] = true;
-          if (row?.practise_completed_at) phasesCompleted[3] = true;
+          if (row?.elearn_completed_at) phasesCompleted[0] = true;  // E-Learning
+          if (levelToolkitDone) phasesCompleted[1] = true;            // Toolkit (artefact count > 0)
+          if (levelProjectPassed) phasesCompleted[2] = true;          // Project (submission passed)
         });
 
         overallCompletedTopics += completedTopics;
@@ -411,7 +410,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         setLoading(false);
       }
     })();
-  }, [user, userProfile, orgId, isTourMode]);
+  }, [user, userProfile, orgId, isTourMode, dataVersion]);
 
   return { data, loading };
 }

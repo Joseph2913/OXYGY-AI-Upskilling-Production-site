@@ -307,6 +307,40 @@ Never defer this to a later PR — a missing policy is invisible until someone n
 2. Any `useEffect` that sets a boolean to `true` based on a condition must also set it to `false` in the `else` branch — otherwise state can get stuck.
 3. Background refresh functions (e.g. `refreshLearningPlan()`) must NOT set loading flags that cause parent components to re-render with skeletons. Use a ref to track whether the initial load is done, and only show loading UI on the first call.
 
+## Cross-Hook Data Invalidation (CRITICAL)
+
+**Every database write that changes progress data MUST call `invalidateProgress()` from AppContext.** Without this, other pages display stale data — the write succeeds but the UI doesn't update until a full page reload.
+
+### How it works
+`AppContext` exposes a `dataVersion` counter and an `invalidateProgress()` function that increments it. The data-fetching hooks (`useDashboardData`, `useJourneyData`, `useToolkitData`) include `dataVersion` in their dependency arrays, so incrementing it triggers a re-fetch.
+
+### When to call `invalidateProgress()`
+Any function that writes to these tables MUST call it afterward:
+- `topic_progress` — e-learning completion, toolkit phase completion, topic completion
+- `artefacts` — saving a toolkit artefact (any of the 5 tools)
+- `project_submissions` — submitting or saving a project draft
+- `activity_log` — logging user activity (streak/active days)
+- `profiles` — updating current level
+
+### At-risk write functions (must always trigger invalidation)
+| Function | Table | Called from |
+|----------|-------|------------|
+| `completePhaseDb()` | topic_progress | `useLevelData.completePhase()` |
+| `completeToolkitPhase()` | topic_progress | `useLevelData.markToolkitComplete()` |
+| `completeTopicDb()` | topic_progress | `useLevelData.completeTopic()` |
+| `createArtefactFromTool()` | artefacts | All 5 toolkit tool pages |
+| `submitProject()` | project_submissions + others | `useProjectData.submitForReview()` |
+| `upsertProjectDraft()` | project_submissions | `useProjectData.saveDraft()` |
+| `logActivity()` | activity_log | `useLevelData` (multiple places) |
+
+### Rules for new write operations
+1. If your new code writes to any table that `useDashboardData`, `useJourneyData`, or `useToolkitData` reads from, you MUST call `invalidateProgress()` after the write.
+2. Never assume navigation will trigger a re-fetch — hooks only re-run when their dependency arrays change.
+3. Call `invalidateProgress()` AFTER the database write succeeds, not before.
+
+### Background (2026-03-25 incident)
+Users completed e-learning but the dashboard still showed "Resume E-Learning" and My Journey showed the phase as "To do". The Current Level page (which uses local state) displayed correctly, masking the fact that cross-page state was stale. The root cause was that `completePhaseDb()` wrote to Supabase but no hook was notified to re-fetch. This same pattern affected all 8 write operations listed above.
+
 ## Topic Completion — Canonical Logic (CRITICAL)
 
 **Every piece of code that checks whether a topic is complete MUST use the 3-phase check exclusively.** This is non-negotiable.
@@ -362,11 +396,25 @@ Every hook that derives level state (`useDashboardData`, `useJourneyData`, `useT
 3. Never use `userProfile.currentLevel` as the source of truth — it may be stale. Always derive from live data and sync back to the profile if needed.
 4. In `useJourneyData`, promote `'not-started'` → `'active'` for the derived current level if it is assigned.
 
-### Legacy DB fields — DO NOT USE for completion gating
-- `read_completed_at` — legacy "Read" phase timestamp, not set in the 3-phase flow
-- `practise_completed_at` — legacy "Practise" phase timestamp, not reliably set
-- `watch_completed_at` — legacy "Watch" phase timestamp, not used in current flow
-- These fields may still be read for backward compatibility in `useLevelData.ts` (phase stepper UI), but NEVER for level advancement, unlock gating, or completion percentage calculations.
+### 3-Phase Model & Legacy DB Column Mapping (CRITICAL)
+
+The platform uses a **3-phase model**: E-Learning → Toolkit → Project. There are NO "Read" or "Watch" phases.
+
+The `topic_progress` table still has legacy column names from a previous 4-phase model. The current mapping is:
+
+| Phase | Phase Number | DB Column | Purpose |
+|-------|-------------|-----------|---------|
+| E-Learning | 1 | `elearn_completed_at` | E-learning module finished |
+| Toolkit | 2 | `read_completed_at` | Toolkit artefact saved (legacy column name) |
+| Project | 3 | `practise_completed_at` | Project submission passed (legacy column name) |
+| — | — | `watch_completed_at` | **UNUSED — do not read or write** |
+
+**Rules:**
+1. `current_phase` values are 1–3, NOT 1–4. Max is 3.
+2. `completePhaseDb()` maps phase numbers 1/2/3 to the columns above. Phase 4 does not exist.
+3. `watch_completed_at` is a dead column — never read it, never write it, never use it in any logic.
+4. `phasesCompleted` arrays are always 3 elements: `[elearn, toolkit, project]`, NOT 4.
+5. When adding new code that reads phase completion, use the column mapping above — not the column name.
 
 ## Navigation & Scroll Behaviour — App Shell Rules
 

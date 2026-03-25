@@ -55,7 +55,7 @@ const STEP_DELAYS = [800, 1500, 3000, 4000, 4500, 5000, -1];
 
 const AppPromptPlayground: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips, invalidateProgress } = useAppContext();
   const projectChip = projectChips?.[1] ?? null;
   const { generate, isLoading, error, clearError } = usePlaygroundApi();
   const location = useLocation();
@@ -317,6 +317,7 @@ const AppPromptPlayground: React.FC = () => {
     if (saved) {
       setSavedToLibrary(true);
       setToastMessage('Prompt saved to your artefacts');
+      invalidateProgress();
     }
   };
 

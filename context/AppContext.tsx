@@ -39,6 +39,8 @@ interface AppContextValue {
   projectSubmissions: Record<number, ProjectSubmissionSummary>;
   refreshProjectSubmissions: () => Promise<void>;
   projectChips: Record<number, Record<string, string>>;
+  dataVersion: number;
+  invalidateProgress: () => void;
 }
 
 // Fallback profile when Supabase is not configured
@@ -64,6 +66,8 @@ const AppContext = createContext<AppContextValue>({
   projectSubmissions: {},
   refreshProjectSubmissions: async () => {},
   projectChips: {},
+  dataVersion: 0,
+  invalidateProgress: () => {},
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -76,6 +80,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const learningPlanInitialLoadDone = useRef(false);
   const [projectSubmissions, setProjectSubmissions] = useState<Record<number, ProjectSubmissionSummary>>({});
   const [projectChips, setProjectChips] = useState<Record<number, Record<string, string>>>({});
+  const [dataVersion, setDataVersion] = useState(0);
+  const invalidateProgress = useCallback(() => setDataVersion(v => v + 1), []);
 
   const fetchProjectSubmissions = useCallback(async () => {
     if (!isSupabaseConfigured || !user) {
@@ -256,6 +262,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       projectSubmissions,
       refreshProjectSubmissions: fetchProjectSubmissions,
       projectChips,
+      dataVersion,
+      invalidateProgress,
     }}>
       {children}
     </AppContext.Provider>

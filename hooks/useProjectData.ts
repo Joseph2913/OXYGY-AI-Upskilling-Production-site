@@ -42,7 +42,7 @@ export interface UseProjectDataReturn {
 
 export function useProjectData(level: number): UseProjectDataReturn {
   const { user } = useAuth();
-  const { refreshProjectSubmissions } = useAppContext();
+  const { refreshProjectSubmissions, invalidateProgress } = useAppContext();
   const [submission, setSubmission] = useState<ProjectSubmission | null>(null);
   const [projectBrief, setProjectBrief] = useState<ProjectBrief | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,7 +104,8 @@ export function useProjectData(level: number): UseProjectDataReturn {
     const updated = await getProjectSubmission(user.id, level);
     if (updated) setSubmission(updated);
     setSaving(false);
-  }, [user, level]);
+    invalidateProgress();
+  }, [user, level, invalidateProgress]);
 
   const submitForReview = useCallback(async (
     screenshotDataUris: string[],
@@ -128,10 +129,11 @@ export function useProjectData(level: number): UseProjectDataReturn {
     const updated = await getProjectSubmission(user.id, level);
     if (updated) setSubmission(updated);
     await refreshProjectSubmissions();
+    invalidateProgress();
 
     setSaving(false);
     return result;
-  }, [user, level, submission, projectBrief, refreshProjectSubmissions]);
+  }, [user, level, submission, projectBrief, refreshProjectSubmissions, invalidateProgress]);
 
   const uploadScreenshotFn = useCallback(async (file: File): Promise<string | null> => {
     if (!user) return null;

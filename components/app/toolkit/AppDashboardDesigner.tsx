@@ -491,7 +491,7 @@ function getBuildPlanRefinementQuestions(platformLabel: string): string[] {
 
 const AppDashboardDesigner: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips, invalidateProgress } = useAppContext();
   const projectChip = projectChips?.[4] ?? null;
   const location = useLocation();
 
@@ -1016,6 +1016,7 @@ const AppDashboardDesigner: React.FC = () => {
     if (saved) {
       setBuildPlanSaved(true);
       toast('Build guide saved to your artefacts');
+      invalidateProgress();
     }
   };
 
@@ -1096,6 +1097,7 @@ const AppDashboardDesigner: React.FC = () => {
     if (saved) {
       setSavedToLibrary(true);
       toast('PRD saved to your artefacts');
+      invalidateProgress();
     }
   };
 

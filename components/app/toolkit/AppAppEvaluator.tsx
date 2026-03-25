@@ -765,7 +765,7 @@ const CodeBlockWithCopy: React.FC<{ code: string }> = ({ code }) => {
 
 const AppAppEvaluator: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips, invalidateProgress } = useAppContext();
   const projectChip = projectChips?.[5] ?? null;
   const location = useLocation();
 
@@ -1383,6 +1383,7 @@ const AppAppEvaluator: React.FC = () => {
     });
     if (saved) {
       setToastMessage('App spec saved to your artefacts');
+      invalidateProgress();
     }
   };
 
@@ -1408,6 +1409,7 @@ const AppAppEvaluator: React.FC = () => {
       setBuildPlanSaved(true);
       setToastMessage('Build plan saved to your artefacts');
       setTimeout(() => setBuildPlanSaved(false), 3000);
+      invalidateProgress();
     }
   };
 

@@ -4545,7 +4545,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               ← Back to slides
             </button>
             <button
-              onClick={() => { onCompletePhase(); window.location.href = practiceUrl; }}
+              onClick={() => { onCompletePhase(); }}
               style={{ padding: '10px 28px', borderRadius: 24, border: 'none', background: '#1A202C', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
             >
               Continue to Practice →

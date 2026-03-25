@@ -347,7 +347,7 @@ const ScoreCircle: React.FC<{ score: number; animated: boolean }> = ({ score, an
 
 const AppAgentBuilder: React.FC = () => {
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading, projectChips } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, projectChips, invalidateProgress } = useAppContext();
   const projectChip = projectChips?.[2] ?? null;
   const location = useLocation();
 
@@ -845,6 +845,7 @@ const AppAgentBuilder: React.FC = () => {
       setSavedToLibrary(true);
       setToastMessage('Agent saved to your artefacts');
       setTimeout(() => setSavedToLibrary(false), 3000);
+      invalidateProgress();
     }
   };
 
@@ -876,6 +877,7 @@ const AppAgentBuilder: React.FC = () => {
     if (saved) {
       setBuildPlanSaved(true);
       setToastMessage('Build guide saved to your artefacts');
+      invalidateProgress();
     }
   };
 

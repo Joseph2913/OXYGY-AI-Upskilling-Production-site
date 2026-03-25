@@ -666,12 +666,12 @@ export interface TopicProgressRow {
   user_id: string;
   level: number;
   topic_id: number;
-  current_phase: number;
+  current_phase: number;              // 1 = E-Learning, 2 = Toolkit, 3 = Project
   current_slide: number;
-  elearn_completed_at: string | null;
-  read_completed_at: string | null;   // repurposed: toolkit_completed_at
-  watch_completed_at: string | null;  // watch_completed_at: unused in current 3-phase topic model
-  practise_completed_at: string | null;
+  elearn_completed_at: string | null; // Phase 1: E-Learning done
+  read_completed_at: string | null;   // Phase 2: Toolkit done (legacy column name)
+  watch_completed_at: string | null;  // UNUSED — legacy column, not part of 3-phase model
+  practise_completed_at: string | null; // Phase 3: Project done (legacy column name)
   completed_at: string | null;
   visited_slides: number[];
   practise_score: number | null;
@@ -743,6 +743,14 @@ export async function updateSlidePosition(
   });
 }
 
+/**
+ * Mark a phase as complete in the DB.
+ * Current 3-phase model: 1 = E-Learning, 2 = Toolkit, 3 = Project.
+ * Phase column mapping:
+ *   1 → elearn_completed_at
+ *   2 → read_completed_at   (legacy column name, used for toolkit completion)
+ *   3 → practise_completed_at (legacy column name, used for project completion)
+ */
 export async function completePhaseDb(
   userId: string,
   level: number,
@@ -751,9 +759,8 @@ export async function completePhaseDb(
 ): Promise<boolean> {
   const phaseColumns: Record<number, string> = {
     1: 'elearn_completed_at',
-    2: 'read_completed_at',   // toolkit completion (repurposed)
-    3: 'watch_completed_at',  // unused in current 3-phase topic model
-    4: 'practise_completed_at',
+    2: 'read_completed_at',      // toolkit completion (legacy column name)
+    3: 'practise_completed_at',  // project completion (legacy column name)
   };
   const column = phaseColumns[phaseNumber];
   if (!column) return false;
@@ -761,19 +768,19 @@ export async function completePhaseDb(
   const now = new Date().toISOString();
   const updates: Record<string, unknown> = {
     [column]: now,
-    current_phase: Math.min(phaseNumber + 1, 4),
+    current_phase: Math.min(phaseNumber + 1, 3),
     current_slide: 0,
     updated_at: now,
   };
 
-  if (phaseNumber === 4) {
+  if (phaseNumber === 3) {
     updates.completed_at = now;
   }
 
   return upsertTopicProgress(userId, level, topicId, updates);
 }
 
-/** Mark the Toolkit phase as complete for a topic. Idempotent — safe to call multiple times. */
+/** Mark the Toolkit phase (phase 2) as complete for a topic. Idempotent. */
 export async function completeToolkitPhase(
   userId: string,
   level: number,
@@ -781,8 +788,8 @@ export async function completeToolkitPhase(
 ): Promise<boolean> {
   const now = new Date().toISOString();
   return upsertTopicProgress(userId, level, topicId, {
-    read_completed_at: now,   // read_completed_at is used as toolkit_completed_at in application logic
-    current_phase: 3,         // advance to Project phase
+    read_completed_at: now,   // legacy column name, used for toolkit completion
+    current_phase: 3,         // advance to phase 3 (Project)
   });
 }
 

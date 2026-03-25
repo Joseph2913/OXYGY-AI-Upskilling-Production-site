@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { useTourMode } from '../context/TourModeContext';
 import {
   getAllTopicProgress,
@@ -52,6 +53,7 @@ export function useJourneyData(): {
   retry: () => void;
 } {
   const { user } = useAuth();
+  const { dataVersion } = useAppContext();
   const isTourMode = useTourMode();
   const [data, setData] = useState<JourneyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -256,7 +258,7 @@ export function useJourneyData(): {
         setLoading(false);
       }
     })();
-  }, [user, retryCount, isTourMode]);
+  }, [user, retryCount, isTourMode, dataVersion]);
 
   const retry = () => setRetryCount(c => c + 1);
   return { data, loading, error, retry };

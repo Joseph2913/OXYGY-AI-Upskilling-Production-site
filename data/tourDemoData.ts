@@ -22,11 +22,11 @@ const DEMO_LEADERBOARD: LeaderboardMember[] = [
 ];
 
 const DEMO_LEVEL_PROGRESS: Record<number, DashboardLevelProgress> = {
-  1: { level: 1, phasesCompleted: [true, false, false, false], artefactCount: 3 },
-  2: { level: 2, phasesCompleted: [false, false, false, false], artefactCount: 0 },
-  3: { level: 3, phasesCompleted: [false, false, false, false], artefactCount: 0 },
-  4: { level: 4, phasesCompleted: [false, false, false, false], artefactCount: 0 },
-  5: { level: 5, phasesCompleted: [false, false, false, false], artefactCount: 0 },
+  1: { level: 1, phasesCompleted: [true, false, false], artefactCount: 3 },
+  2: { level: 2, phasesCompleted: [false, false, false], artefactCount: 0 },
+  3: { level: 3, phasesCompleted: [false, false, false], artefactCount: 0 },
+  4: { level: 4, phasesCompleted: [false, false, false], artefactCount: 0 },
+  5: { level: 5, phasesCompleted: [false, false, false], artefactCount: 0 },
 };
 
 const DEMO_TOOL_USAGE: Record<string, ToolUsage> = {

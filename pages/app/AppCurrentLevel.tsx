@@ -69,8 +69,8 @@ const AppCurrentLevel: React.FC = () => {
   );
 
   const handleCompletePhase = useCallback(
-    (topicId: number) => {
-      completePhase(topicId);
+    async (topicId: number) => {
+      await completePhase(topicId);
       const topic = topics.find((t) => t.id === topicId);
       if (topic?.toolkitToolPath) {
         navigate(topic.toolkitToolPath);
