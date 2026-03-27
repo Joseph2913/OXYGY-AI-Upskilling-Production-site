@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowRight, ArrowDown, ArrowLeft, Check, RotateCcw, Copy, Download, Library,
+  ArrowRight, ArrowDown, ArrowLeft, Check, RotateCcw, Copy, Library,
   Info, ChevronRight, ChevronDown, Sparkles, X,
   Loader2, Eye, Code,
   FileText, Key, ListChecks, Clock, Layers, GitBranch,
@@ -1079,7 +1079,7 @@ const AppWorkflowCanvas: React.FC = () => {
   };
 
 
-  /* ── Copy / Download handlers (matches L1 pattern) ── */
+  /* ── Copy handler ── */
   const handleCopyBuildGuide = useCallback(() => {
     if (!buildGuideMarkdown) return;
     navigator.clipboard.writeText(buildGuideMarkdown);
@@ -1088,20 +1088,7 @@ const AppWorkflowCanvas: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   }, [buildGuideMarkdown, toast]);
 
-  const handleDownloadBuildGuide = useCallback(() => {
-    if (!buildGuideMarkdown) return;
-    const date = new Date().toISOString().split('T')[0];
-    const blob = new Blob([buildGuideMarkdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `build-guide-${date}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Downloaded as .md');
-  }, [buildGuideMarkdown, toast]);
-
-  /* ── Refinement handler (matches L1 pattern) ── */
+/* ── Refinement handler (matches L1 pattern) ── */
   const hasRefinementInput = Object.values(refinementAnswers).some((v: string) => v.trim()) || additionalContext.trim();
 
   const handleRefine = useCallback(async () => {
@@ -1215,9 +1202,9 @@ const AppWorkflowCanvas: React.FC = () => {
           { number: 1, label: 'Define your workflow', detail: 'Describe the process and choose your path', done: step1Done },
           { number: 2, label: 'Build & review your canvas', detail: 'Review, refine, and approve your workflow', done: step2Done },
           { number: 3, label: 'Choose the platform', detail: 'Select your automation tool', done: platformStepDone },
-          { number: 4, label: 'Download your Build Guide', detail: 'Get your implementation document', done: !!buildGuideMarkdown },
+          { number: 4, label: 'Get your Build Guide', detail: 'Review, copy, or save your implementation document', done: !!buildGuideMarkdown },
         ]}
-        outcome="A downloadable Build Guide — a complete, platform-specific implementation document ready to build from."
+        outcome="A Build Guide — a complete, platform-specific implementation document you can copy to clipboard or save to artefacts."
       />
 
       {/* ─── STEP 1: Define your workflow ─── */}
@@ -1612,12 +1599,12 @@ const AppWorkflowCanvas: React.FC = () => {
 
       <StepConnector />
 
-      {/* ─── STEP 4: Download Build Guide ─── */}
+      {/* ─── STEP 4: Build Guide ─── */}
       <div ref={step3Ref}>
         <StepCard
           stepNumber={4}
-          title="Download your Build Guide"
-          subtitle="Your complete, platform-specific implementation document."
+          title="Your Build Guide"
+          subtitle="Your complete, platform-specific implementation document. Copy it or save it to your artefacts."
           done={!!buildGuideMarkdown}
           collapsed={false}
           locked={!buildGuideMarkdown && !exportLoading}
@@ -1637,7 +1624,7 @@ const AppWorkflowCanvas: React.FC = () => {
               <NextStepBanner
                 accentColor={LEVEL_ACCENT}
                 accentDark={LEVEL_ACCENT_DARK}
-                text="Download your Build Guide and follow the steps in your chosen platform. Use the test checklist to verify each step."
+                text="Copy your Build Guide or save it to artefacts, then follow the steps in your chosen platform. Use the test checklist to verify each step."
               />
 
               {/* Top row: View toggle (left) + Copy (right) */}
@@ -1661,11 +1648,6 @@ const AppWorkflowCanvas: React.FC = () => {
                     label={copied ? 'Copied!' : 'Copy Build Guide'}
                     onClick={handleCopyBuildGuide}
                     primary
-                  />
-                  <ActionBtn
-                    icon={<Download size={13} />}
-                    label="Download (.md)"
-                    onClick={handleDownloadBuildGuide}
                   />
                   <ActionBtn
                     icon={<Library size={13} />}
