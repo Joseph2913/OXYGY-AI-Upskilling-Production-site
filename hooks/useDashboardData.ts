@@ -181,7 +181,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           //   2. Practice: toolkit tool opened (tool_used_at set in level_progress)
           // NEVER use completed_at alone — it may be set prematurely in the DB.
           const eLearnDone = !!row?.elearn_completed_at;
-          const isTopicComplete = eLearnDone && levelToolkitDone;
+          const isTopicComplete = eLearnDone && levelToolkitDone && levelProjectPassed;
           if (isTopicComplete) completedTopics++;
           if (row?.elearn_completed_at) phasesCompleted[0] = true;  // E-Learning
           if (levelToolkitDone) phasesCompleted[1] = true;          // Practice (tool_used_at)
@@ -230,11 +230,12 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       const currentLevelProgress = topicProgressRows.filter(r => r.level === currentLevel);
       const currentLevelLpRow = levelProgressRows.find(r => r.level === currentLevel);
       const currentLevelToolkitDone = !!currentLevelLpRow?.tool_used_at;
+      const currentLevelProjectPassed = projectSubMap.get(currentLevel)?.status === 'passed';
 
-      // Use the same 2-phase completion check as the per-level loop above.
+      // Same 3-signal check as the per-level loop above.
       // NEVER use completed_at — it may be stale/premature.
       const isTopicRowComplete = (r: typeof topicProgressRows[0]) =>
-        !!r.elearn_completed_at && currentLevelToolkitDone;
+        !!r.elearn_completed_at && currentLevelToolkitDone && currentLevelProjectPassed;
 
       const completedTopicsInCurrentLevel = currentLevelProgress.filter(isTopicRowComplete).length;
       const activeTopicRow = currentLevelProgress.find(r => !isTopicRowComplete(r));

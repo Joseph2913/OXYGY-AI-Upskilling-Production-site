@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { useTourMode } from '../context/TourModeContext';
-import { getArtefactCountsByLevel, getAllTopicProgress, getAllProjectSubmissions, getLatestLearningPlan, SCORING } from '../lib/database';
+import { getArtefactCountsByLevel, getAllTopicProgress, getAllProjectSubmissions, getLatestLearningPlan, getLevelProgress, SCORING } from '../lib/database';
 import { getPrimaryTool } from '../data/toolkitData';
 import { LEVEL_TOPICS } from '../data/levelTopics';
 
@@ -48,11 +48,12 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
 
     (async () => {
       setLoading(true);
-      const [artefactCounts, topicRows, projectSubs, learningPlanData] = await Promise.all([
+      const [artefactCounts, topicRows, projectSubs, learningPlanData, levelProgressRows] = await Promise.all([
         getArtefactCountsByLevel(user.id),
         getAllTopicProgress(user.id),
         getAllProjectSubmissions(user.id),
         getLatestLearningPlan(user.id),
+        getLevelProgress(user.id),
       ]);
 
       // Build project submission map
@@ -72,12 +73,12 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
         const progressForLevel = topicRows.filter(r => r.level === lvl);
         const progressMap = new Map(progressForLevel.map(r => [r.topic_id, r]));
         const levelProjectPassed = projectSubMap.get(lvl)?.status === 'passed';
-        const levelToolkitDone = (artefactCounts[lvl] || 0) > 0;
+        const levelToolkitDone = !!levelProgressRows.find(r => r.level === lvl)?.tool_used_at;
 
         let completedTopics = 0;
         topics.forEach(topic => {
           const row = progressMap.get(topic.id);
-          // NEVER use completed_at — may be set prematurely. 3-phase check is the only truth.
+          // All 3 required: elearn + toolkit (tool_used_at) + project passed
           const isComplete = !!row?.elearn_completed_at && levelToolkitDone && levelProjectPassed;
           if (isComplete) completedTopics++;
         });
