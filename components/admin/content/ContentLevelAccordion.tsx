@@ -14,8 +14,6 @@ interface TopicStatus {
   hasContent: boolean;
   phases: {
     elearn: { available: boolean; count: number };
-    read: { available: boolean; count: number };
-    watch: { available: boolean; count: number };
     practice: { available: boolean };
   };
   overallStatus: 'published' | 'partial' | 'empty';
@@ -26,25 +24,20 @@ function getTopicStatus(level: number, topicId: number): TopicStatus {
   const topic = (LEVEL_TOPICS[level] || []).find(t => t.id === topicId);
 
   const hasSlides = (content?.slides?.length || 0) > 0;
-  const hasArticles = (content?.articles?.length || 0) > 0;
-  const hasVideos = (content?.videos?.length || 0) > 0;
 
   const phases = {
     elearn: { available: hasSlides, count: content?.slides?.length || 0 },
-    read: { available: hasArticles, count: content?.articles?.length || 0 },
-    watch: { available: hasVideos, count: content?.videos?.length || 0 },
     practice: { available: true },
   };
 
-  const phaseCount = [hasSlides, hasArticles, hasVideos].filter(Boolean).length;
-  const overallStatus: TopicStatus['overallStatus'] = phaseCount === 0 ? 'empty' : phaseCount === 3 ? 'published' : 'partial';
+  const overallStatus: TopicStatus['overallStatus'] = hasSlides ? 'published' : 'empty';
 
   return {
     level, topicId,
     title: topic?.title || 'Unknown',
     subtitle: topic?.subtitle || '',
     estimatedMinutes: topic?.estimatedMinutes || 0,
-    hasContent: phaseCount > 0,
+    hasContent: hasSlides,
     phases,
     overallStatus,
   };
@@ -56,10 +49,8 @@ const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }>
   empty: { bg: '#EDF2F7', color: '#A0AEC0', label: 'No Content' },
 };
 
-const PHASE_LABELS: Array<{ key: 'elearn' | 'read' | 'watch' | 'practice'; label: string }> = [
+const PHASE_LABELS: Array<{ key: 'elearn' | 'practice'; label: string }> = [
   { key: 'elearn', label: 'E-Learn' },
-  { key: 'read', label: 'Read' },
-  { key: 'watch', label: 'Watch' },
   { key: 'practice', label: 'Practice' },
 ];
 

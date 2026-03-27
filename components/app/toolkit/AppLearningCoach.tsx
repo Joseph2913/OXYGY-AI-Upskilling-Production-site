@@ -572,6 +572,7 @@ const AppLearningCoach: React.FC = () => {
       if (!hasTrackedUsage && user) {
         upsertToolUsed(user.id, selectedLevel!);
         setHasTrackedUsage(true);
+        invalidateProgress();
       }
 
       setTimeout(() => {

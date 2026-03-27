@@ -20,7 +20,7 @@ import type {
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -1054,8 +1054,7 @@ const AppAppEvaluator: React.FC = () => {
       }
       if (user) {
         upsertToolUsed(user.id, 5);
-        const mapping = TOOL_TOPIC_MAPPING['ai-app-evaluator'];
-        if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
+        invalidateProgress();
       }
       setTimeout(() => step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }

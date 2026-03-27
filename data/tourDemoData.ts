@@ -22,11 +22,11 @@ const DEMO_LEADERBOARD: LeaderboardMember[] = [
 ];
 
 const DEMO_LEVEL_PROGRESS: Record<number, DashboardLevelProgress> = {
-  1: { level: 1, phasesCompleted: [true, false, false], artefactCount: 3 },
-  2: { level: 2, phasesCompleted: [false, false, false], artefactCount: 0 },
-  3: { level: 3, phasesCompleted: [false, false, false], artefactCount: 0 },
-  4: { level: 4, phasesCompleted: [false, false, false], artefactCount: 0 },
-  5: { level: 5, phasesCompleted: [false, false, false], artefactCount: 0 },
+  1: { level: 1, phasesCompleted: [true, false], artefactCount: 3 },
+  2: { level: 2, phasesCompleted: [false, false], artefactCount: 0 },
+  3: { level: 3, phasesCompleted: [false, false], artefactCount: 0 },
+  4: { level: 4, phasesCompleted: [false, false], artefactCount: 0 },
+  5: { level: 5, phasesCompleted: [false, false], artefactCount: 0 },
 };
 
 const DEMO_TOOL_USAGE: Record<string, ToolUsage> = {
@@ -51,7 +51,7 @@ export const DEMO_DASHBOARD_DATA: DashboardData = {
   levelsCompleted: 0,
 
   overallCompletedPhases: 0,
-  overallTotalPhases: 15,
+  overallTotalPhases: 10,
   levelPhaseCompletion: {
     1: { elearn: false, toolkit: false, project: false },
     2: { elearn: false, toolkit: false, project: false },
@@ -199,10 +199,10 @@ export const DEMO_LEVEL_DATA: LevelData = {
       phase: 1,
       slide: 1,
       completedAt: null,
-      phaseCompletions: [false, false, false],
+      phaseCompletions: [false, false],
       visitedSlides: new Set([1]),
       elearnCompletedAt: null,
-      toolkitCompletedAt: null,
+      practiceCompletedAt: null,
     },
   ],
   activeTopicId: 1,

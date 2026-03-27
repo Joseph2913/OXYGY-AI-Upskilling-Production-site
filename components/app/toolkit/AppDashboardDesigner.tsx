@@ -19,7 +19,7 @@ import type { DashboardBrief, NewPRDResult } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -743,11 +743,7 @@ const AppDashboardDesigner: React.FC = () => {
     if (user && !toolUsedRef.current) {
       upsertToolUsed(user.id, 4);
       toolUsedRef.current = true;
-    }
-    // Mark toolkit phase complete (idempotent)
-    if (user) {
-      const mapping = TOOL_TOPIC_MAPPING['dashboard-designer'];
-      if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
+      invalidateProgress();
     }
 
     setTimeout(() => prdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);

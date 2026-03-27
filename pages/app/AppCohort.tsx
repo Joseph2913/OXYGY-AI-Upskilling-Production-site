@@ -1319,8 +1319,7 @@ const AppCohort: React.FC = () => {
                               const topicMeta = LEVEL_TOPICS[lvl]?.find(t => t.id === tp.topic_id);
                               const phases = [
                                 { name: 'E-Learn', done: !!tp.elearn_completed_at },
-                                { name: 'Toolkit', done: !!tp.read_completed_at },
-                                { name: 'Project', done: !!tp.practise_completed_at },
+                                { name: 'Practice', done: !!tp.read_completed_at || !!tp.practise_completed_at },
                               ];
                               return (
                                 <div key={tp.topic_id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '6px 10px', background: '#F7FAFC', borderRadius: 8 }}>

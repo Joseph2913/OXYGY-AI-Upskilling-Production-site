@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Topic } from '../../../data/levelTopics';
 import { TOTAL_PHASES } from '../../../hooks/useLevelData';
 
-const PHASE_LABELS = ['E-Learning', 'Toolkit', 'Project'];
+const PHASE_LABELS = ['E-Learning', 'Practice'];
 
 interface TopicHeaderProps {
   levelNumber: number;
@@ -16,9 +16,7 @@ interface TopicHeaderProps {
   accentDark: string;
   showPhaseTabs: boolean;
   onPhaseClick: (phase: number) => void;
-  phaseCompletions: [boolean, boolean, boolean]; // [elearn, toolkit, project]
-  toolkitUnlocked: boolean;   // elearn done
-  projectUnlocked: boolean;   // toolkit done
+  phaseCompletions: [boolean, boolean]; // [elearn, practice]
 }
 
 /* ─── Progress Ring ─── */
@@ -62,8 +60,6 @@ const TopicHeader: React.FC<TopicHeaderProps> = ({
   showPhaseTabs,
   onPhaseClick,
   phaseCompletions,
-  toolkitUnlocked,
-  projectUnlocked,
 }) => {
   const [descOpen, setDescOpen] = useState(false);
 
@@ -120,10 +116,8 @@ const TopicHeader: React.FC<TopicHeaderProps> = ({
               const isDone = phaseCompletions[i];
               const isActive = phaseNum === currentPhase;
 
-              // Determine if this phase is accessible
-              const isLocked =
-                (phaseNum === 2 && !toolkitUnlocked) ||
-                (phaseNum === 3 && !projectUnlocked);
+              // Practice (phase 2) locked until e-learning is done
+              const isLocked = phaseNum === 2 && !phaseCompletions[0];
 
               return (
                 <button

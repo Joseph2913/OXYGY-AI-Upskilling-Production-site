@@ -36,7 +36,7 @@ export interface LeaderboardMember {
 
 export interface LevelProgress {
   level: number;
-  phasesCompleted: boolean[];  // [elearn, toolkit, project]
+  phasesCompleted: boolean[];  // [elearn, practice]
   artefactCount: number;
 }
 
@@ -59,10 +59,10 @@ export interface DashboardData {
   overallTotalTopics: number;
   levelsCompleted: number;
 
-  // Phase-level granularity: 3 phases per level × 5 levels = 15 total
+  // Phase-level granularity: 2 phases per level × 5 levels = 10 total
   overallCompletedPhases: number;
   overallTotalPhases: number;
-  // Per-level phase completion: level → { elearn, toolkit, project }
+  // Per-level phase completion: level → { elearn, practice }
   levelPhaseCompletion: Record<number, { elearn: boolean; toolkit: boolean; project: boolean }>;
 
   levelProgress: Record<number, LevelProgress>;
@@ -154,7 +154,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       let levelsCompleted = 0;
       const completedLevelSet = new Set<number>();
       let overallCompletedPhases = 0;
-      const overallTotalPhases = 5 * 3; // 5 levels × 3 phases (e-learn, toolkit, project)
+      const overallTotalPhases = 5 * 2; // 5 levels × 2 phases (e-learn, practice)
       const levelPhaseCompletion: Record<number, { elearn: boolean; toolkit: boolean; project: boolean }> = {};
 
       for (let lvl = 1; lvl <= 5; lvl++) {
@@ -165,30 +165,26 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         const progressForLevel = topicProgressRows.filter(r => r.level === lvl);
         const progressMap = new Map(progressForLevel.map(r => [r.topic_id, r]));
 
-        const phasesCompleted: boolean[] = [false, false, false]; // [elearn, toolkit, project]
+        const phasesCompleted: boolean[] = [false, false]; // [elearn, practice]
         let completedTopics = 0;
 
         const levelProjectPassed = projectSubMap.get(lvl)?.status === 'passed';
 
-        // Toolkit completion for this level = artefact count > 0
-        const levelArtefactCount = artefactCounts[lvl] || 0;
-        const levelToolkitDone = levelArtefactCount > 0;
+        // Practice completion = toolkit tool opened/used for this level (tool_used_at)
+        const levelLpRow = levelProgressRows.find(r => r.level === lvl);
+        const levelToolkitDone = !!levelLpRow?.tool_used_at;
 
         topics.forEach(topic => {
           const row = progressMap.get(topic.id);
-          // A topic is complete ONLY when all 3 user-visible phases are done:
+          // A topic is complete when both phases are done:
           //   1. E-Learning: elearn_completed_at is set
-          //   2. Toolkit: artefact count > 0 for this level
-          //   3. Project: project submission status === 'passed'
-          // NEVER use completed_at alone — it may be set prematurely in the DB
-          // and would falsely mark a topic as done even when phases are incomplete.
-          // The 3-phase check is the single source of truth.
+          //   2. Practice: toolkit tool opened (tool_used_at set in level_progress)
+          // NEVER use completed_at alone — it may be set prematurely in the DB.
           const eLearnDone = !!row?.elearn_completed_at;
-          const isTopicComplete = eLearnDone && levelToolkitDone && levelProjectPassed;
+          const isTopicComplete = eLearnDone && levelToolkitDone;
           if (isTopicComplete) completedTopics++;
           if (row?.elearn_completed_at) phasesCompleted[0] = true;  // E-Learning
-          if (levelToolkitDone) phasesCompleted[1] = true;            // Toolkit (artefact count > 0)
-          if (levelProjectPassed) phasesCompleted[2] = true;          // Project (submission passed)
+          if (levelToolkitDone) phasesCompleted[1] = true;          // Practice (tool_used_at)
         });
 
         overallCompletedTopics += completedTopics;
@@ -201,14 +197,13 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           artefactCount: artefactCounts[lvl] || 0,
         };
 
-        // Phase-level granularity: count each of 3 phases per level independently
+        // Phase-level granularity: count each of 2 phases per level independently
         const lvlElearnDone = phasesCompleted[0]; // any topic in this level has elearn done
         const lvlToolkitDone = levelToolkitDone;
-        const lvlProjectDone = !!levelProjectPassed;
+        const lvlProjectDone = !!levelProjectPassed; // kept for display purposes only
         levelPhaseCompletion[lvl] = { elearn: lvlElearnDone, toolkit: lvlToolkitDone, project: lvlProjectDone };
         if (lvlElearnDone) overallCompletedPhases++;
         if (lvlToolkitDone) overallCompletedPhases++;
-        if (lvlProjectDone) overallCompletedPhases++;
       }
 
       // ── Derive current level from progress (auto-advance) ──
@@ -233,13 +228,13 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
 
       const currentLevelTopics = LEVEL_TOPICS[currentLevel] || [];
       const currentLevelProgress = topicProgressRows.filter(r => r.level === currentLevel);
-      const currentLevelProjectPassed = projectSubMap.get(currentLevel)?.status === 'passed';
-      const currentLevelToolkitDone = (artefactCounts[currentLevel] || 0) > 0;
+      const currentLevelLpRow = levelProgressRows.find(r => r.level === currentLevel);
+      const currentLevelToolkitDone = !!currentLevelLpRow?.tool_used_at;
 
-      // Use the same 3-phase completion check as the per-level loop above.
+      // Use the same 2-phase completion check as the per-level loop above.
       // NEVER use completed_at — it may be stale/premature.
       const isTopicRowComplete = (r: typeof topicProgressRows[0]) =>
-        !!r.elearn_completed_at && currentLevelToolkitDone && currentLevelProjectPassed;
+        !!r.elearn_completed_at && currentLevelToolkitDone;
 
       const completedTopicsInCurrentLevel = currentLevelProgress.filter(isTopicRowComplete).length;
       const activeTopicRow = currentLevelProgress.find(r => !isTopicRowComplete(r));
@@ -377,7 +372,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
           overallTotalTopics: 0,
           levelsCompleted: 0,
           overallCompletedPhases: 0,
-          overallTotalPhases: 15,
+          overallTotalPhases: 10,
           levelPhaseCompletion: {},
           levelProgress: {},
           toolUsage: {},

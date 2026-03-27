@@ -238,7 +238,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                 {status === 'active' && (
                   <div style={{ marginTop: 5 }}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      {[1, 2, 3].map((phase) => (
+                      {[1, 2].map((phase) => (
                         <div
                           key={phase}
                           style={{
@@ -250,20 +250,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                         />
                       ))}
                     </div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-                      {['E-Learn', 'Read', 'Watch'].map((label) => (
-                        <span
-                          key={label}
-                          style={{ fontSize: 9, color: '#A0AEC0', width: 6, textAlign: 'center' }}
-                        >
-                          {/* Labels are wider than dots, shown below */}
-                        </span>
-                      ))}
-                    </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 1 }}>
                       <span style={{ fontSize: 9, color: '#A0AEC0' }}>E-Learn</span>
-                      <span style={{ fontSize: 9, color: '#A0AEC0' }}>Read</span>
-                      <span style={{ fontSize: 9, color: '#A0AEC0' }}>Watch</span>
+                      <span style={{ fontSize: 9, color: '#A0AEC0' }}>Practice</span>
                     </div>
                   </div>
                 )}

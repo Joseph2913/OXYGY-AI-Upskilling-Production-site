@@ -5,22 +5,22 @@ import { useTourMode } from '../context/TourModeContext';
 import { LEVEL_TOPICS } from '../data/levelTopics';
 import {
   getTopicProgress,
+  getLevelProgress,
   updateSlidePosition as dbUpdateSlide,
   completePhaseDb,
   completeTopicDb,
-  completeToolkitPhase,
   logActivity,
 } from '../lib/database';
 
 export interface TopicProgress {
   topicId: number;
-  phase: number;           // 1 = E-Learning, 2 = Toolkit, 3 = Project
+  phase: number;           // 1 = E-Learning, 2 = Practice (completed by using toolkit)
   slide: number;
   completedAt: Date | null;
-  phaseCompletions: [boolean, boolean, boolean]; // [elearn, toolkit, project]
+  phaseCompletions: [boolean, boolean]; // [elearn, practice]
   visitedSlides: Set<number>;
-  elearnCompletedAt: Date | null;    // needed by phase gate logic
-  toolkitCompletedAt: Date | null;   // read from read_completed_at
+  elearnCompletedAt: Date | null;
+  practiceCompletedAt: Date | null;  // derived from level_progress.tool_used_at
 }
 
 export interface LevelData {
@@ -34,21 +34,15 @@ export interface UseLevelDataReturn {
   advanceSlide: (topicId: number, newSlide: number) => void;
   completePhase: (topicId: number) => void;
   completeTopic: (topicId: number) => void;
-  markToolkitComplete: (topicId: number) => void;
 }
 
-export const TOTAL_PHASES = 3;
-export const PHASE_LABELS = ['E-Learning', 'Toolkit', 'Project'];
-export const PHASE_ICONS  = ['▶', '⚙', '◈'];
+export const TOTAL_PHASES = 2;
+export const PHASE_LABELS = ['E-Learning', 'Practice'];
+export const PHASE_ICONS  = ['▶', '◈'];
 
-// Returns true if the user can access phase 2 (Toolkit) for a given topic
-export function isToolkitUnlocked(tp: TopicProgress): boolean {
-  return !!tp.elearnCompletedAt || tp.phaseCompletions[0];
-}
-
-// Returns true if the user can access phase 3 (Project) for a given topic
-export function isProjectUnlocked(tp: TopicProgress): boolean {
-  return !!tp.toolkitCompletedAt || tp.phaseCompletions[1];
+// Practice (phase 2) unlocked once e-learning is done
+export function isPracticeUnlocked(tp: TopicProgress): boolean {
+  return tp.phaseCompletions[0];
 }
 
 export function useLevelData(currentLevel: number): UseLevelDataReturn {
@@ -79,10 +73,10 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         phase: 1,
         slide: 1,
         completedAt: null,
-        phaseCompletions: [false, false, false],
+        phaseCompletions: [false, false],
         visitedSlides: new Set<number>(),
         elearnCompletedAt: null,
-        toolkitCompletedAt: null,
+        practiceCompletedAt: null,
       }));
       setLevelData({ topicProgress, activeTopicId: topics[0]?.id ?? 1 });
       setLoading(false);
@@ -92,37 +86,41 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     setLoading(true);
 
     (async () => {
-      const rows = await getTopicProgress(user.id, currentLevel);
+      const [rows, levelProgressRows] = await Promise.all([
+        getTopicProgress(user.id, currentLevel),
+        getLevelProgress(user.id),
+      ]);
       const rowMap = new Map(rows.map(r => [r.topic_id, r]));
+
+      // Practice done = toolkit tool opened/used for this level (tool_used_at in level_progress)
+      // Also accept legacy read_completed_at on any topic row as fallback for existing users
+      const levelRow = levelProgressRows.find(r => r.level === currentLevel);
+      const practiceDone = !!levelRow?.tool_used_at
+        || rows.some(r => !!r.read_completed_at);
+      const practiceCompletedAt = levelRow?.tool_used_at
+        ? new Date(levelRow.tool_used_at)
+        : null;
 
       const topicProgress: TopicProgress[] = topics.map(topic => {
         const row = rowMap.get(topic.id);
         const visited = new Set(row?.visited_slides || []);
         visitedSlidesRef.current[topic.id] = visited;
 
-        // Backward compatibility: if practise_completed_at is set but read_completed_at
-        // (toolkit) is null, treat toolkit as complete using the practise timestamp.
-        // This prevents existing users from being locked out of phases they've passed.
-        const toolkitCompletedAt =
-          row?.read_completed_at
-            ? new Date(row.read_completed_at)
-            : row?.practise_completed_at   // migration fallback for pre-PRD users
-              ? new Date(row.practise_completed_at)
-              : null;
+        const elearnDone = !!row?.elearn_completed_at;
+        const phase = Math.min(
+          elearnDone ? 2 : (row?.current_phase ?? 1),
+          2,
+        );
 
         return {
           topicId: topic.id,
-          phase: row?.current_phase ?? 1,
+          phase,
           slide: Math.max(1, row?.current_slide ?? 1),
           completedAt: row?.completed_at ? new Date(row.completed_at) : null,
-          phaseCompletions: [
-            !!row?.elearn_completed_at,
-            !!row?.read_completed_at || !!row?.practise_completed_at,  // toolkit (with fallback)
-            !!row?.practise_completed_at,   // project
-          ] as [boolean, boolean, boolean],
+          phaseCompletions: [elearnDone, practiceDone] as [boolean, boolean],
           visitedSlides: visited,
-          elearnCompletedAt: row?.elearn_completed_at ? new Date(row.elearn_completed_at) : null,
-          toolkitCompletedAt,
+          elearnCompletedAt: elearnDone ? new Date(row!.elearn_completed_at!) : null,
+          practiceCompletedAt,
         };
       });
 
@@ -185,12 +183,10 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
         ...prev,
         topicProgress: prev.topicProgress.map(tp => {
           if (tp.topicId !== topicId) return tp;
-          const newPhase = Math.max(tp.phase, 2); // at least advance past e-learning
-          const newCompletions = [...tp.phaseCompletions] as [boolean, boolean, boolean];
-          newCompletions[0] = true; // e-learning is always index 0
+          const newCompletions: [boolean, boolean] = [true, tp.phaseCompletions[1]];
           return {
             ...tp,
-            phase: newPhase,
+            phase: 2,
             slide: 0,
             phaseCompletions: newCompletions,
             elearnCompletedAt: new Date(),
@@ -202,31 +198,6 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     // Always write phase 1 (elearn_completed_at) regardless of local phase state
     await completePhaseDb(user.id, currentLevel, topicId, 1);
     logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: 1 });
-    invalidateProgress();
-  }, [user, currentLevel, invalidateProgress]);
-
-  // ── Mark toolkit complete (local state — DB write is done by tool page) ──
-  const markToolkitComplete = useCallback((topicId: number) => {
-    if (!user) return;
-
-    setLevelData(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        topicProgress: prev.topicProgress.map(tp => {
-          if (tp.topicId !== topicId) return tp;
-          return {
-            ...tp,
-            phase: 3,
-            toolkitCompletedAt: new Date(),
-            phaseCompletions: [tp.phaseCompletions[0], true, tp.phaseCompletions[2]],
-          };
-        }),
-      };
-    });
-
-    completeToolkitPhase(user.id, currentLevel, topicId);
-    logActivity(user.id, 'phase_completed', currentLevel, topicId, { phase: 2 });
     invalidateProgress();
   }, [user, currentLevel, invalidateProgress]);
 
@@ -256,5 +227,5 @@ export function useLevelData(currentLevel: number): UseLevelDataReturn {
     invalidateProgress();
   }, [user, currentLevel, levelData, invalidateProgress]);
 
-  return { levelData, loading, advanceSlide, completePhase, completeTopic, markToolkitComplete };
+  return { levelData, loading, advanceSlide, completePhase, completeTopic };
 }

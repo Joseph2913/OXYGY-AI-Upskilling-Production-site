@@ -13,7 +13,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import { useTourMode } from '../../../context/TourModeContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
-import { upsertToolUsed, createArtefactFromTool, updateArtefactContent, completeToolkitPhase } from '../../../lib/database';
+import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
 import NextStepBanner from './NextStepBanner';
@@ -237,11 +237,7 @@ const AppPromptPlayground: React.FC = () => {
       if (!hasTrackedUsage && user) {
         upsertToolUsed(user.id, 1);
         setHasTrackedUsage(true);
-      }
-      // Mark toolkit phase complete
-      if (user) {
-        const mapping = TOOL_TOPIC_MAPPING['prompt-playground'];
-        if (mapping) completeToolkitPhase(user.id, mapping.level, mapping.topicId);
+        invalidateProgress();
       }
       setTimeout(() => {
         outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

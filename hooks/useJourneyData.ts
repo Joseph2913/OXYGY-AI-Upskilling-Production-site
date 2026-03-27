@@ -90,7 +90,7 @@ export function useJourneyData(): {
           ? Object.keys(learningPlanData.plan.levels)    // e.g. ['L1', 'L2', 'L3']
           : ['L1', 'L2', 'L3', 'L4', 'L5'];             // fallback: all assigned if no plan
 
-        // ── Build completedLevelSet using canonical 3-phase check ──
+        // ── Build completedLevelSet using canonical 2-phase check ──
         // MUST match useDashboardData.ts logic exactly.
         const completedLevelSet = new Set<number>();
         for (let lvl = 1; lvl <= 5; lvl++) {
@@ -98,13 +98,12 @@ export function useJourneyData(): {
           const activeTopics = lvlTopics;
           const progressForLvl = topicProgressRows.filter(r => r.level === lvl);
           const progressMapLvl = new Map(progressForLvl.map(r => [r.topic_id, r]));
-          const lvlProjectPassed = psMap.get(lvl)?.status === 'passed';
-          const lvlToolkitDone = (artefactCounts[lvl] || 0) > 0;
+          const lvlToolkitDone = !!lpMap.get(lvl)?.tool_used_at;
           let completedCount = 0;
           lvlTopics.forEach(topic => {
             const row = progressMapLvl.get(topic.id);
-            // NEVER use completed_at — may be set prematurely. 3-phase check is the only truth.
-          const isDone = !!row?.elearn_completed_at && lvlToolkitDone && lvlProjectPassed;
+            // 2-phase check: elearn + practice (toolkit tool opened)
+          const isDone = !!row?.elearn_completed_at && lvlToolkitDone;
             if (isDone) completedCount++;
           });
           if (completedCount === activeTopics.length && activeTopics.length > 0) {
@@ -132,20 +131,18 @@ export function useJourneyData(): {
           let currentPhase = 1;
           let foundActive = false;
 
-          // Check if this level's project passed
+          // Check if this level's project passed (for display only, not required for completion)
           const levelProjectPassed = ps?.status === 'passed';
-          // Toolkit = artefacts created for this level
-          const levelToolkitDone = (artefactCounts[levelNumber] || 0) > 0;
+          // Practice = toolkit tool opened/used for this level (tool_used_at)
+          const levelToolkitDone = !!lp?.tool_used_at;
 
           topics.forEach((topic, idx) => {
             const row = progressMap.get(topic.id);
-            // A topic is complete ONLY when all 3 user-visible phases are done:
+            // A topic is complete when both phases are done:
             //   1. E-Learning: elearn_completed_at is set
-            //   2. Toolkit: artefact count > 0 for this level
-            //   3. Project: project submission status === 'passed'
+            //   2. Practice: toolkit tool opened (tool_used_at set in level_progress)
             // NEVER use completed_at — it may be set prematurely in the DB.
-            // The 3-phase check is the single source of truth.
-            const isTopicComplete = !!row?.elearn_completed_at && levelToolkitDone && levelProjectPassed;
+            const isTopicComplete = !!row?.elearn_completed_at && levelToolkitDone;
             if (isTopicComplete) {
               completedTopics++;
             } else if (!foundActive) {
@@ -165,9 +162,9 @@ export function useJourneyData(): {
               const prevTopic = idx > 0
                 ? topicProgressRows.find(r => r.level === levelNumber && r.topic_id === LEVEL_TOPICS[levelNumber][idx - 1].id)
                 : null;
-              // Previous topic is complete using the same 3-phase check — never use completed_at
+              // Previous topic is complete using the same 2-phase check — never use completed_at
               const prevComplete = idx === 0 ||
-                (!!prevTopic?.elearn_completed_at && levelToolkitDone && levelProjectPassed);
+                (!!prevTopic?.elearn_completed_at && levelToolkitDone);
               return {
                 topicId: topic.id,
                 topicTitle: topic.title,
@@ -195,12 +192,10 @@ export function useJourneyData(): {
               : new Date(); // fallback: all topics done but no timestamp
           }
 
-          // Determine status using the same 3-phase completion logic:
-          // - completed: all active topics pass the broad check (elearn + artefacts + project)
-          // - project-pending / active: ONLY if all previous levels are complete (sequential unlock)
+          // Determine status using the 2-phase completion logic (elearn + practice):
+          // - completed: all topics pass both phases
+          // - active: previous levels complete and user has started or is assigned
           // - not-started: previous levels not yet complete, or no progress
-          //
-          // A level can only be active/project-pending if every level before it is in completedLevelSet.
           const allPreviousComplete = Array.from({ length: levelNumber - 1 }, (_, i) => i + 1)
             .every(prev => completedLevelSet.has(prev));
 
@@ -210,23 +205,10 @@ export function useJourneyData(): {
           } else if (!allPreviousComplete) {
             // Previous levels not finished — this level stays locked regardless of any stale progress
             status = 'not-started';
+          } else if (completedTopics > 0 || progressForLevel.length > 0 || (levelNumber === derivedCurrentLevel && isAssigned)) {
+            status = 'active';
           } else {
-            // All previous levels are complete — this level is unlockable
-            const allElearnToolkitDone = topics.every(topic => {
-              const row = progressMap.get(topic.id);
-              return !!row?.elearn_completed_at;
-            }) && levelToolkitDone;
-            if (allElearnToolkitDone && !levelProjectPassed && topics.length > 0) {
-              status = 'project-pending';
-            } else if (completedTopics > 0 || progressForLevel.length > 0) {
-              status = 'active';
-            } else if (levelNumber === derivedCurrentLevel && isAssigned) {
-              // This is the current active level (all previous levels complete) — unlock it
-              // even if no progress rows exist yet in the database.
-              status = 'active';
-            } else {
-              status = 'not-started';
-            }
+            status = 'not-started';
           }
 
           return {
