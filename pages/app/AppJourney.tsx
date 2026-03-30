@@ -347,10 +347,10 @@ const AppJourney: React.FC = () => {
       );
     }
 
-    // Fade out then redirect to dashboard (where the tutorial welcome modal will show)
+    // Fade out then redirect to dashboard
     setTransitioning(true);
     setTimeout(() => {
-      navigate('/app/dashboard', { replace: true, state: { showTutorial: true } });
+      navigate('/app/dashboard', { replace: true });
     }, 400);
   }, [navigate]);
 
