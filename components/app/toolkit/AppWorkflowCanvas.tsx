@@ -1694,7 +1694,7 @@ const AppWorkflowCanvas: React.FC = () => {
                 </div>
               )}
 
-              {/* ── Output Actions Panel (download .md, .doc, save to library) ── */}
+              {/* ── Output Actions Panel (save to artefacts) ── */}
               <div style={{
                 marginTop: 20,
                 opacity: visibleBlocks >= 2 ? 1 : 0,

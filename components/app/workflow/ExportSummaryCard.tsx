@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { FileText, ChevronDown, ChevronUp, Download, Copy, Check } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 
 interface ExportSummaryCardProps {
   workflowName: string;
@@ -633,28 +633,6 @@ const ExportSummaryCard: React.FC<ExportSummaryCardProps> = ({
         </div>
       )}
 
-      {/* ── SECTION 4: Download prompt (replaces raw preview) ── */}
-      <div
-        style={{
-          background: '#F7FAFC',
-          border: '1px solid #E2E8F0',
-          borderRadius: 10,
-          padding: '16px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <Download size={18} color="#718096" />
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#4A5568', fontFamily: FONT_FAMILY }}>
-            Want the full guide?
-          </div>
-          <div style={{ fontSize: 12, color: '#A0AEC0', marginTop: 2, fontFamily: FONT_FAMILY }}>
-            Download as a Markdown or Word document using the buttons below.
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
