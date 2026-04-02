@@ -966,12 +966,19 @@ export async function getOrgLeaderboard(
     .select('user_id, level, elearn_completed_at')
     .in('user_id', userIds);
 
-  // 4. Batch fetch artefact counts (include level for per-level toolkit check)
+  // 4. Batch fetch artefact counts
   const { data: artefactRows } = await supabase
     .from('artefacts')
     .select('user_id, level')
     .in('user_id', userIds)
     .is('archived_at', null);
+
+  // 4b. Batch fetch level_progress for toolkit (tool_used_at) — canonical 3-phase check
+  const { data: levelProgressRows } = await supabase
+    .from('level_progress')
+    .select('user_id, level, tool_used_at')
+    .in('user_id', userIds)
+    .not('tool_used_at', 'is', null);
 
   // 5. Batch fetch passed project submissions with tier letters and level
   const { data: projectRows } = await supabase
@@ -1001,15 +1008,22 @@ export async function getOrgLeaderboard(
     }
   });
 
-  // Artefact counts per user (total + per-level for 3-phase check)
+  // Artefact counts per user (total only — for scoring)
   const artefactCountMap = new Map<string, number>();
-  const artefactLevelMap = new Map<string, Set<number>>(); // user -> set of levels with artefacts
   (artefactRows || []).forEach((row: Record<string, unknown>) => {
     const uid = row.user_id as string;
-    const lvl = row.level as number;
     artefactCountMap.set(uid, (artefactCountMap.get(uid) || 0) + 1);
-    if (!artefactLevelMap.has(uid)) artefactLevelMap.set(uid, new Set());
-    if (lvl) artefactLevelMap.get(uid)!.add(lvl);
+  });
+
+  // Toolkit completion per user per level — canonical check uses tool_used_at from level_progress
+  const toolkitLevelMap = new Map<string, Set<number>>(); // user -> set of levels with tool_used_at set
+  (levelProgressRows || []).forEach((row: Record<string, unknown>) => {
+    const uid = row.user_id as string;
+    const lvl = row.level as number;
+    if (lvl) {
+      if (!toolkitLevelMap.has(uid)) toolkitLevelMap.set(uid, new Set());
+      toolkitLevelMap.get(uid)!.add(lvl);
+    }
   });
 
   // Project scores per user + per-level pass tracking for 3-phase check
@@ -1068,14 +1082,14 @@ export async function getOrgLeaderboard(
     //   2. Toolkit: artefact count > 0 for the level
     //   3. Project: project submission passed for the level
     const userElearnLevels = elearnLevelMap.get(userId) || new Set<number>();
-    const userArtefactLevels = artefactLevelMap.get(userId) || new Set<number>();
+    const userToolkitLevels = toolkitLevelMap.get(userId) || new Set<number>();
     const userProjectLevels = projectPassedLevelMap.get(userId) || new Set<number>();
 
     let completedLevels = 0;
     const completedLevelSet = new Set<number>();
     for (let lvl = 1; lvl <= 5; lvl++) {
       const elearnDone = userElearnLevels.has(lvl);
-      const toolkitDone = userArtefactLevels.has(lvl);
+      const toolkitDone = userToolkitLevels.has(lvl);
       const projectDone = userProjectLevels.has(lvl);
       if (elearnDone && toolkitDone && projectDone) {
         completedLevels++;

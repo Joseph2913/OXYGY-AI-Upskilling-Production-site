@@ -1073,11 +1073,16 @@ const AppDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Leaderboard list */}
+              {/* Leaderboard list — top 10, with current user appended if outside top 10 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {data.leaderboard.map((member, i) => (
+                {data.leaderboard.slice(0, 10).map((member, i) => (
                   <LeaderboardRow key={i} member={member} rank={i + 1} />
                 ))}
+                {currentUserRank > 10 && currentUserData && (
+                  <div style={{ borderTop: '1px dashed #E2E8F0', marginTop: 6, paddingTop: 6 }}>
+                    <LeaderboardRow member={currentUserData} rank={currentUserRank} />
+                  </div>
+                )}
               </div>
 
             </>
