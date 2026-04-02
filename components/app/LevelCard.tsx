@@ -400,7 +400,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
 
             return (
               <>
-                <div style={{ ...chipStyle, cursor: isAccessible ? 'pointer' : 'default', opacity: isAccessible ? 1 : 0.7 }} onClick={isAccessible ? () => navigate(`/app/level?level=${level.levelNumber}`) : undefined} onMouseEnter={isAccessible ? hoverOn : undefined} onMouseLeave={isAccessible ? hoverOff : undefined}>
+                <div style={{ ...chipStyle, cursor: 'pointer' }} onClick={() => navigate(`/app/level?level=${level.levelNumber}`)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <BookOpen size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -409,18 +409,14 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.elearn}</div>
                   </div>
-                  {isAccessible ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                      Open <ArrowRight size={11} />
-                    </span>
-                  ) : (
-                    <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
-                  )}
+                  <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    Open <ArrowRight size={11} />
+                  </span>
                 </div>
 
                 {connector}
 
-                <div style={{ ...chipStyle, cursor: isAccessible && primaryTool ? 'pointer' : 'default', opacity: isAccessible ? 1 : 0.7 }} onClick={isAccessible && primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={isAccessible ? hoverOn : undefined} onMouseLeave={isAccessible ? hoverOff : undefined}>
+                <div style={{ ...chipStyle, cursor: primaryTool ? 'pointer' : 'default' }} onClick={primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <Wrench size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -429,18 +425,14 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.toolkit}</div>
                   </div>
-                  {isAccessible ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                      Open <ArrowRight size={11} />
-                    </span>
-                  ) : (
-                    <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
-                  )}
+                  <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    Open <ArrowRight size={11} />
+                  </span>
                 </div>
 
                 {connector}
 
-                <div style={{ ...chipStyle, cursor: isAccessible ? 'pointer' : 'default', opacity: isAccessible ? 1 : 0.7 }} onClick={isAccessible ? () => navigate('/app/journey/project/' + level.levelNumber) : undefined} onMouseEnter={isAccessible ? hoverOn : undefined} onMouseLeave={isAccessible ? hoverOff : undefined}>
+                <div style={{ ...chipStyle, cursor: 'pointer' }} onClick={() => navigate('/app/journey/project/' + level.levelNumber)} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <FolderKanban size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -449,13 +441,9 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
                     </div>
                     <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.4, marginTop: 2 }}>{shorts.project}</div>
                   </div>
-                  {isAccessible ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                      Open <ArrowRight size={11} />
-                    </span>
-                  ) : (
-                    <Lock size={12} color="#A0AEC0" style={{ flexShrink: 0 }} />
-                  )}
+                  <span style={{ fontSize: 11, fontWeight: 600, color: accentDark, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    Open <ArrowRight size={11} />
+                  </span>
                 </div>
               </>
             );
