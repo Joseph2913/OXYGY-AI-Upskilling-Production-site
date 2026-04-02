@@ -203,7 +203,7 @@ const AppToolkit: React.FC = () => {
 
   const levels = [1, 2, 3, 4, 5];
   const primaryTools = levels.map(lvl => getPrimaryTool(lvl)).filter(Boolean) as Tool[];
-  const unlockedCount = tkData ? tkData.levelStats.filter(s => s.unlocked).length : 0;
+  const unlockedCount = tkData ? tkData.levelStats.filter(s => s.unlocked || s.isAssigned).length : 0;
   const currentMeta = LEVEL_META.find(m => m.number === currentLevel)!;
 
   // Banner
@@ -329,10 +329,12 @@ const AppToolkit: React.FC = () => {
             {levels.map((lvl, i) => {
               const lvlMeta = LEVEL_META.find(m => m.number === lvl)!;
               const tool = getPrimaryTool(lvl);
-              const isUnlocked = lvl <= currentLevel;
+              const lvlStats = tkData.levelStats.find(s => s.levelNumber === lvl);
+              const isUnlocked = lvl <= currentLevel || !!lvlStats?.isAssigned;
               const isCurrent = lvl === currentLevel;
               const prevMeta = i > 0 ? LEVEL_META.find(m => m.number === levels[i - 1])! : null;
-              const prevUnlocked = i > 0 && levels[i - 1] <= currentLevel;
+              const prevLvlStats = i > 0 ? tkData.levelStats.find(s => s.levelNumber === levels[i - 1]) : null;
+              const prevUnlocked = i > 0 && (levels[i - 1] <= currentLevel || !!prevLvlStats?.isAssigned);
               return (
                 <React.Fragment key={lvl}>
                   {i > 0 && (
@@ -424,8 +426,9 @@ const AppToolkit: React.FC = () => {
           const meta = LEVEL_META.find(m => m.number === lvl)!;
           const stats = tkData.levelStats.find(s => s.levelNumber === lvl);
           const isNotAssigned = stats ? !stats.isAssigned : false;
-          const isLocked = stats ? !stats.unlocked && !isNotAssigned : false;
-          const isAccessible = stats ? stats.unlocked : false;
+          // Assigned levels are always accessible — never locked
+          const isLocked = false;
+          const isAccessible = stats ? (stats.isAssigned || stats.unlocked) : false;
           const toolkitCompleted = stats?.toolkitCompleted ?? false;
           const accent = meta.accentColor;
           const accentDark = meta.accentDark;

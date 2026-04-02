@@ -650,18 +650,6 @@ const AppProjectProof: React.FC = () => {
     );
   }
 
-  const currentLevel = userProfile?.currentLevel ?? 1;
-  if (validLevel > currentLevel + 1) {
-    return (
-      <div style={{ padding: '28px 36px', fontFamily: FONT }}>
-        <span onClick={() => navigate('/app/journey')} style={{ fontSize: 13, fontWeight: 500, color: '#718096', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><ArrowLeft size={14} /> Back to My Journey</span>
-        <div style={{ textAlign: 'center', paddingTop: 60 }}>
-          <div style={{ fontSize: 16, color: '#718096' }}>Complete Level {validLevel - 1} to unlock this project.</div>
-        </div>
-      </div>
-    );
-  }
-
   const screenshotProps = {
     localScreenshots,
     existingPaths,

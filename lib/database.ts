@@ -1079,7 +1079,7 @@ export async function getOrgLeaderboard(
     // 3-phase completion check (canonical logic from useDashboardData):
     // A level is complete only when ALL 3 phases are done:
     //   1. E-Learning: elearn_completed_at set for the level's topic
-    //   2. Toolkit: artefact count > 0 for the level
+    //   2. Toolkit: tool_used_at set in level_progress for the level
     //   3. Project: project submission passed for the level
     const userElearnLevels = elearnLevelMap.get(userId) || new Set<number>();
     const userToolkitLevels = toolkitLevelMap.get(userId) || new Set<number>();

@@ -1075,7 +1075,7 @@ const AppDashboard: React.FC = () => {
               </div>
 
               {/* Leaderboard list */}
-              <div className="leaderboard-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520 }}>
+              <div className="leaderboard-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 650 }}>
                 {data.leaderboard.map((member, i) => (
                   <LeaderboardRow key={i} member={member} rank={i + 1} />
                 ))}

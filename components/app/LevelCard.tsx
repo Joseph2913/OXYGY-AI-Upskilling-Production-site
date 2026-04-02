@@ -82,9 +82,6 @@ const PhaseStepperWithTooltips: React.FC<{
       const phaseNum = i + 1;
       const isDone = isCompleted || (isActive && phaseNum < currentPhase) || phaseDetails[i]?.done;
       const isCurrent = isActive && phaseNum === currentPhase;
-      const isLocked =
-        (i === 1 && !phaseDetails[0]?.done) ||  // Toolkit locked until E-Learning done
-        (i === 2 && !phaseDetails[1]?.done);    // Project locked until Toolkit done
       const detail = phaseDetails[i]?.detail || '';
       return (
         <React.Fragment key={step.label}>
@@ -104,12 +101,9 @@ const PhaseStepperWithTooltips: React.FC<{
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               background: isDone ? accent : isCurrent ? '#FFFFFF' : '#F7FAFC',
               border: isDone ? 'none' : isCurrent ? `2.5px solid ${accent}` : '1.5px solid #E2E8F0',
-              opacity: isLocked ? 0.4 : 1,
               transition: 'all 0.2s ease',
             }}>
-              {isLocked ? (
-                <Lock size={8} />
-              ) : isDone ? (
+              {isDone ? (
                 <Check size={12} strokeWidth={3} color={accentDark} />
               ) : isCurrent ? (
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: accent }} />
