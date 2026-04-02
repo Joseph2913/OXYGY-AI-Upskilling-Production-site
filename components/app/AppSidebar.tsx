@@ -80,26 +80,21 @@ export const AppSidebar: React.FC = () => {
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           boxSizing: 'border-box',
           flexShrink: 0,
+          background: '#E2E8F0',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-          <div
+          <img
+            src="/logos/brands/cropped-favicon-32x32-2.png"
+            alt="Oxygy"
             style={{
-              width: 30,
-              height: 30,
+              width: 24,
+              height: 24,
               borderRadius: 8,
-              background: '#38B2AC',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              fontWeight: 800,
-              fontSize: 14,
               flexShrink: 0,
+              objectFit: 'contain',
             }}
-          >
-            O
-          </div>
+          />
           <div
             style={{
               opacity: expanded ? 1 : 0,
@@ -108,7 +103,7 @@ export const AppSidebar: React.FC = () => {
           >
             <div
               style={{
-                color: '#FFFFFF',
+                color: '#1A202C',
                 fontWeight: 700,
                 fontSize: 15,
                 letterSpacing: '-0.3px',
@@ -119,7 +114,7 @@ export const AppSidebar: React.FC = () => {
             </div>
             <div
               style={{
-                color: 'rgba(255,255,255,0.35)',
+                color: '#718096',
                 fontSize: 10,
                 fontWeight: 500,
                 letterSpacing: '0.08em',

@@ -517,7 +517,7 @@ export const CaseStudiesPage: React.FC = () => {
         <ArtifactClosing
           summaryText="Inspired by what you see? Start building your own AI capability with a personalized learning pathway."
           ctaLabel="Start Your Journey"
-          ctaHref="#learning-pathway"
+          ctaHref="/app/dashboard"
           accentColor="#2C9A94"
         />
         </div>

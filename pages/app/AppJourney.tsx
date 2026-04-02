@@ -306,21 +306,6 @@ const AppJourney: React.FC = () => {
     }
   }, [hasLearningPlan, learningPlanLoading, simulateNewUser, demoMode]);
 
-  // Load prefill data for regeneration
-  const handleRegenerate = useCallback(async () => {
-    if (!demoMode && user) {
-      const profile = await getProfile(user.id);
-      if (profile) {
-        const prefill = profile as Partial<PathwayFormData>;
-        setPrefillData(prefill);
-        try { sessionStorage.setItem('oxygy_survey_prefill', JSON.stringify(prefill)); } catch {}
-      }
-    }
-    demoPlanCompleted.current = false;
-    sessionStorage.setItem('oxygy_survey_active', 'true');
-    setShowOnboarding(true);
-  }, [user, demoMode]);
-
   const handlePlanGenerated = useCallback((result?: PathwayApiResponse) => {
     // Clear persisted survey state
     sessionStorage.removeItem('oxygy_survey_active');
@@ -516,16 +501,6 @@ const AppJourney: React.FC = () => {
           fontSize: 13, color: '#92400E',
         }}>
           <span><strong>Demo Mode</strong> — No data saved to your account. AI-generated plan stored locally only.</span>
-          <button
-            onClick={handleRegenerate}
-            style={{
-              background: '#F59E0B', color: '#FFFFFF', border: 'none',
-              borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 600,
-              cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
-          >
-            Re-run Survey
-          </button>
         </div>
       )}
 
@@ -841,11 +816,10 @@ const AppJourney: React.FC = () => {
                   await upsertProfile(user.id, profileForm);
                   setProfileSaving(false);
                   setProfilePanelOpen(false);
-                  handleRegenerate();
                 }}
                 style={{ flex: 2, padding: '10px', borderRadius: 20, border: 'none', background: profileSaving ? '#A0AEC0' : '#38B2AC', fontSize: 13, fontWeight: 700, color: '#FFFFFF', cursor: profileSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
               >
-                {profileSaving ? 'Saving…' : 'Save & Regenerate Plan →'}
+                {profileSaving ? 'Saving…' : 'Save Profile'}
               </button>
             </div>
           </div>

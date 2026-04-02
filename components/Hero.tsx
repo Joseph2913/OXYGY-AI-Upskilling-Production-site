@@ -750,7 +750,7 @@ export const Hero: React.FC = () => {
               style={{ marginTop: '32px' }}
             >
               <a
-                href="#learning-pathway"
+                href="/app/dashboard"
                 className="inline-flex items-center justify-center gap-2 transition-colors"
                 style={{
                   background: '#38B2AC',

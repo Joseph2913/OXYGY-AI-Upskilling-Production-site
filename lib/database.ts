@@ -9,7 +9,7 @@ import type {
 // ─── SCORING CONSTANTS ───
 
 export const SCORING = {
-  PROJECT_POINTS: { S: 50, A: 42, B: 35, C: 30, R: 0 } as Record<string, number>,
+  PROJECT_POINTS: { 'A+': 50, A: 42, 'B+': 35, B: 30, C: 0, /* legacy DB values */ S: 50, R: 0 } as Record<string, number>,
   ELEARN_COMPLETION: 25,        // per topic where elearn_completed_at is set
   TOOLKIT_SESSION: 7,           // per artefact created (proxy for session)
   TOOLKIT_SAVE_BONUS: 3,        // additional pts per artefact saved
@@ -1031,7 +1031,7 @@ export async function getOrgLeaderboard(
   const projectPassedLevelMap = new Map<string, Set<number>>(); // user -> set of levels with passed projects
   (projectRows || []).forEach((row: Record<string, unknown>) => {
     const uid = row.user_id as string;
-    const tier = (row.tier_letter as string) || 'R';
+    const tier = (row.tier_letter as string) || 'C';
     const lvl = row.level as number;
     const pts = SCORING.PROJECT_POINTS[tier] ?? 0;
     projectScoreMap.set(uid, (projectScoreMap.get(uid) || 0) + pts);
@@ -2279,6 +2279,7 @@ export interface ProjectSubmission {
   caseStudySolution: string | null;
   caseStudyOutcome: string | null;
   caseStudyLearnings: string | null;
+  customProjectDescription: string | null;
   reviewDimensions: unknown | null;
   reviewSummary: string | null;
   reviewEncouragement: string | null;
@@ -2308,6 +2309,7 @@ function dbToProjectSubmission(row: Record<string, unknown>): ProjectSubmission 
     caseStudySolution: (row.case_study_solution as string) || null,
     caseStudyOutcome: (row.case_study_outcome as string) || null,
     caseStudyLearnings: (row.case_study_learnings as string) || null,
+    customProjectDescription: (row.custom_project_description as string) || null,
     reviewDimensions: row.review_dimensions || null,
     reviewSummary: (row.review_summary as string) || null,
     reviewEncouragement: (row.review_encouragement as string) || null,
@@ -2553,6 +2555,7 @@ export async function upsertProjectDraft(
     caseStudySolution: string;
     caseStudyOutcome: string;
     caseStudyLearnings: string;
+    customProjectDescription: string;
   }>,
 ): Promise<boolean> {
   try {
@@ -2585,6 +2588,7 @@ export async function upsertProjectDraft(
     if (fields.caseStudySolution !== undefined) row.case_study_solution = fields.caseStudySolution;
     if (fields.caseStudyOutcome !== undefined) row.case_study_outcome = fields.caseStudyOutcome;
     if (fields.caseStudyLearnings !== undefined) row.case_study_learnings = fields.caseStudyLearnings;
+    if (fields.customProjectDescription !== undefined) row.custom_project_description = fields.customProjectDescription;
 
     const { error } = await supabase
       .from('project_submissions')
@@ -2636,12 +2640,16 @@ export async function submitProject(
       .eq('level', level);
 
     // 2. Call the review API
+    // If the learner described a custom project, use that as the brief description
+    const effectiveBrief = submission.customProjectDescription
+      ? { ...projectBrief, projectDescription: submission.customProjectDescription }
+      : projectBrief;
     const response = await fetch('/api/review-project', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         level,
-        projectBrief,
+        projectBrief: effectiveBrief,
         submission: {
           toolName: submission.toolName,
           platformUsed: submission.platformUsed,

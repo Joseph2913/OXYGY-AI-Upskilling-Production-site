@@ -74,7 +74,7 @@ export const Departments: React.FC = () => {
                   {/* CTA - Button Style */}
                   <div className="mt-auto pt-2">
                      <a
-                       href="#learning-pathway"
+                       href="/app/dashboard"
                        className="w-full py-2.5 rounded-full border border-gray-200 text-sm font-semibold text-navy-900 flex items-center justify-center gap-2 group-hover:border-transparent group-hover:text-navy-900 transition-all duration-300 no-underline"
                        style={{
                          backgroundColor: 'transparent',

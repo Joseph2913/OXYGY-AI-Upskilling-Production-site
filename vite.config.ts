@@ -3281,7 +3281,7 @@ CRITICAL SCORING PHILOSOPHY:
 CRITICAL TONE RULES:
 - Always reference the learner's specific submission — their tool name, their described workflow, their stated outcomes. NEVER give generic feedback.
 - When something is good, say specifically WHY it's good. "Your reflection shows genuine iteration" is better than "Good reflection."
-- When something needs work, frame it as an OPPORTUNITY, not a deficiency. "To push this to S-tier, consider adding..." is better than "This section lacks..."
+- When something needs work, frame it as an OPPORTUNITY, not a deficiency. "To push this to A+, consider adding..." is better than "This section lacks..."
 - Assume competence. These are working professionals, not students. Address them as peers.
 - The encouragement field must identify one genuinely specific thing they did well. If you can't find something specific, you're not looking hard enough.
 
@@ -3330,7 +3330,7 @@ RESPONSE FORMAT (JSON only, no markdown, no preamble):
       "id": "evidence_quality",
       "name": "Evidence Quality",
       "status": "developing",
-      "feedback": "Your screenshot shows the project exists in Claude. To reach S-tier, consider adding a screenshot of..."
+      "feedback": "Your screenshot shows the project exists in Claude. To reach A+, consider adding a screenshot of..."
     },
     {
       "id": "reflection_depth",

@@ -42,7 +42,7 @@ export const DashboardProfileNudge: React.FC<Props> = ({ onNavigateToProfile }) 
   };
 
   const handleGoToPathway = () => {
-    window.location.hash = '#learning-pathway';
+    window.location.href = '/app/dashboard';
   };
 
   return (

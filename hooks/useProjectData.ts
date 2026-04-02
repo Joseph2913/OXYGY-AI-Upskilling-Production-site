@@ -100,6 +100,7 @@ export function useProjectData(level: number): UseProjectDataReturn {
       caseStudySolution: data.caseStudySolution ?? undefined,
       caseStudyOutcome: data.caseStudyOutcome ?? undefined,
       caseStudyLearnings: data.caseStudyLearnings ?? undefined,
+      customProjectDescription: data.customProjectDescription ?? undefined,
     });
     const updated = await getProjectSubmission(user.id, level);
     if (updated) setSubmission(updated);

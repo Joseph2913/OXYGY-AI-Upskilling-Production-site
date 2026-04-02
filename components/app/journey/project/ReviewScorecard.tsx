@@ -28,7 +28,7 @@ const FONT = "'DM Sans', sans-serif";
 
 /* ── Tier Badge ── */
 const TierBadge: React.FC<{ tierInfo: TierInfo }> = ({ tierInfo }) => {
-  const isS = tierInfo.tier === 'S';
+  const isS = tierInfo.tier === 'A+';
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
@@ -67,15 +67,15 @@ const TierBadge: React.FC<{ tierInfo: TierInfo }> = ({ tierInfo }) => {
   );
 };
 
-/* ── Score Bar with R, C, B, A, S markers ── */
+/* ── Score Bar with C, B, B+, A, A+ markers ── */
 const ScoreBar: React.FC<{ tierInfo: TierInfo }> = ({ tierInfo }) => {
   const pct = (tierInfo.points / tierInfo.maxPoints) * 100;
   const markers = [
-    { pct: 0, label: 'R', minPts: 0 },
-    { pct: (6 / 12) * 100, label: 'C', minPts: 6 },
-    { pct: (8 / 12) * 100, label: 'B', minPts: 8 },
+    { pct: 0, label: 'C', minPts: 0 },
+    { pct: (6 / 12) * 100, label: 'B', minPts: 6 },
+    { pct: (8 / 12) * 100, label: 'B+', minPts: 8 },
     { pct: (10 / 12) * 100, label: 'A', minPts: 10 },
-    { pct: 100, label: 'S', minPts: 12 },
+    { pct: 100, label: 'A+', minPts: 12 },
   ];
 
   return (
@@ -208,7 +208,7 @@ export const ReviewScorecard: React.FC<ReviewScorecardProps> = ({
         </div>
       </div>
 
-      {/* ── R-Tier: Must revise ── */}
+      {/* ── C-Grade: Must revise ── */}
       {isR && (
         <div style={{
           marginTop: 16, padding: '16px 20px', borderRadius: 12,
@@ -246,7 +246,7 @@ export const ReviewScorecard: React.FC<ReviewScorecardProps> = ({
         </div>
       )}
 
-      {/* ── Non-R Tier: Confirm or Improve ── */}
+      {/* ── Non-C Grade: Confirm or Improve ── */}
       {!isR && !isConfirmed && (
         <div style={{
           marginTop: 16, padding: '16px 20px', borderRadius: 12,
@@ -254,16 +254,16 @@ export const ReviewScorecard: React.FC<ReviewScorecardProps> = ({
           animation: 'bannerFade 0.3s ease 400ms both',
         }}>
           {/* Hint text */}
-          {hint && tierInfo.tier !== 'S' && (
+          {hint && tierInfo.tier !== 'A+' && (
             <div style={{ fontSize: 13, color: tierInfo.darkColor, marginBottom: 12, fontFamily: FONT, lineHeight: 1.5 }}>
               You scored <strong>{tierInfo.tier}</strong> — {hint}
             </div>
           )}
-          {tierInfo.tier === 'S' && (
+          {tierInfo.tier === 'A+' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 16 }}>✦</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: tierInfo.darkColor, fontFamily: FONT }}>
-                S-Tier achieved — exceptional work!
+                A+ achieved — exceptional work!
               </span>
             </div>
           )}
@@ -283,7 +283,7 @@ export const ReviewScorecard: React.FC<ReviewScorecardProps> = ({
                 <CheckCircle size={14} /> Confirm Submission
               </button>
             )}
-            {showResubmit && onEditResubmit && tierInfo.tier !== 'S' && (
+            {showResubmit && onEditResubmit && tierInfo.tier !== 'A+' && (
               <button
                 onClick={onEditResubmit}
                 style={{

@@ -345,7 +345,7 @@ const EmptyPlanPlaceholder: React.FC<{ reason: 'not-assigned' | 'no-plan' }> = (
             Based on your profile, this level was considered too advanced for now. You can revisit the Learning Plan Generator to update your pathway as you progress.
           </p>
           <a
-            href="#learning-pathway"
+            href="/app/dashboard"
             className="dash-focus"
             style={{
               display: 'inline-flex',
@@ -366,7 +366,7 @@ const EmptyPlanPlaceholder: React.FC<{ reason: 'not-assigned' | 'no-plan' }> = (
             No plan generated for this level yet.
           </p>
           <a
-            href="#learning-pathway"
+            href="/app/dashboard"
             className="dash-focus"
             style={{
               display: 'inline-flex',
@@ -543,7 +543,7 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
             Your progress across all five levels will appear here once you've completed your profile via the Learning Plan Generator.
           </p>
           <a
-            href="#learning-pathway"
+            href="/app/dashboard"
             className="dash-focus"
             style={{
               display: 'inline-flex',

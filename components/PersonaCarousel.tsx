@@ -275,7 +275,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
 
             {/* CTA link */}
             <a
-              href="#learning-pathway"
+              href="/app/dashboard"
               className="mt-auto text-[13px] font-semibold text-[#38B2AC] hover:underline inline-flex items-center gap-1"
               tabIndex={isFlipped ? 0 : -1}
               onClick={(e) => e.stopPropagation()}
@@ -663,7 +663,7 @@ export const PersonaCarousel: React.FC = () => {
             </div>
             <div className="flex flex-col items-center md:items-end flex-shrink-0">
               <a
-                href="#learning-pathway"
+                href="/app/dashboard"
                 className="inline-flex items-center gap-2 bg-white text-[#2C9A94] rounded-full px-6 py-2.5 text-sm font-semibold hover:bg-[#F0FFFC] no-underline transition-colors duration-150"
               >
                 Build My Learning Pathway

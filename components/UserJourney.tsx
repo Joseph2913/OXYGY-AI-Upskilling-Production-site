@@ -209,7 +209,7 @@ export const UserJourney: React.FC = () => {
                     Whether you're a product manager exploring prompt engineering or a data leader building end-to-end AI applications, the pathway adapts to you. The structure is the same for everyone, but the projects, depth, and focus areas are entirely yours &mdash; so you're always building something real, not just absorbing theory.
                   </p>
                   <a
-                    href="#learning-pathway"
+                    href="/app/dashboard"
                     className="inline-flex items-center gap-2 text-white font-semibold rounded-full transition-all duration-200 hover:-translate-y-0.5"
                     style={{
                       backgroundColor: STEP1_COLOR,
@@ -529,7 +529,7 @@ export const UserJourney: React.FC = () => {
         <ArtifactClosing
           summaryText="Ready to begin? Start with the Learning Pathway Generator to build a journey tailored to your role, goals, and experience."
           ctaLabel="Start Your Journey"
-          ctaHref="#learning-pathway"
+          ctaHref="/app/dashboard"
           accentColor={ACCENT_DARK}
         />
       </div>

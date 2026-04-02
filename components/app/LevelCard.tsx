@@ -176,11 +176,10 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   const navigate = useNavigate();
   // Two-tier expansion: mid = phase chips visible, full = detailed expanded view
   const [showPhases, setShowPhases] = useState(!!isFocused);
-  const [expanded, setExpanded] = useState(false);
 
   // Auto-expand when forceExpand prop changes to true
   React.useEffect(() => {
-    if (forceExpand) { setShowPhases(true); setExpanded(true); }
+    if (forceExpand) { setShowPhases(true); }
   }, [forceExpand]);
 
   // Sync isFocused
@@ -238,7 +237,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   // A level is accessible if the user has started it (active, completed, or project-pending)
   const isAccessible = isCompleted || isActive || isProjectPending;
 
-  const ctaLabel = isCompleted ? 'Review' : isActive ? 'Continue' : 'Start';
   const description = marketingData?.descriptionCollapsed || meta.tagline;
 
   // Project submission status badge
@@ -265,7 +263,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
       <div
         onClick={() => setShowPhases(!showPhases)}
         style={{
-          padding: '14px 20px',
+          padding: '18px 24px',
           display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
         }}
       >
@@ -336,7 +334,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
          ════════════════════════════════════════════════ */}
       {showPhases && (
       <>
-      <div style={{ padding: '10px 20px 0', paddingLeft: 70 }}>
+      <div style={{ padding: '10px 24px 14px', paddingLeft: 70 }}>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
           {(() => {
             // Use topicPhases from useJourneyData for accurate status
@@ -465,285 +463,9 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
         </div>
       </div>
 
-      {/* BOTTOM ROW — Learn more (left) + Continue CTA (right) */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px 14px' }}>
-        <span
-          onClick={() => setExpanded(!expanded)}
-          style={{ fontSize: 12, fontWeight: 600, color: accentDark, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 50 }}
-        >
-          {expanded ? 'Show less' : 'Learn more'}
-          <ChevronDown size={13} style={{ transition: 'transform 0.25s ease', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-        </span>
-        {isAccessible ? (
-          <button
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(`/app/level?level=${level.levelNumber}`); }}
-            style={{
-              background: `${accent}30`, color: accentDark, border: `1.5px solid ${accent}88`,
-              borderRadius: 20, padding: '7px 18px', fontSize: 12, fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.15s',
-              display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontFamily: 'inherit',
-            }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}50`; }}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}30`; }}
-          >
-            {ctaLabel} <ArrowRight size={12} />
-          </button>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600 }}>
-            <Lock size={12} /> Locked
-          </div>
-        )}
-      </div>
       </>
       )}
 
-      {/* ════════════════════════════════════════════════
-          EXPANDED VIEW — detailed phase info (only when phases visible)
-         ════════════════════════════════════════════════ */}
-      <div style={{
-        maxHeight: (showPhases && expanded) ? 600 : 0,
-        overflow: 'hidden',
-        transition: 'max-height 0.35s ease',
-      }}>
-        <div style={{
-          borderTop: '1px solid #E2E8F0',
-          padding: '18px 22px 20px',
-          paddingLeft: 66,
-          display: 'flex', flexDirection: 'column', gap: 12,
-        }}>
-          {/* ── PHASE 1: LEARNING (E-Learning) ── */}
-          {(() => {
-            const phasesTotal = topic?.phases?.length ?? 2;
-            const phasesDone = isCompleted
-              ? phasesTotal
-              : isActive
-              ? Math.max(0, level.currentPhase - 1)
-              : 0;
-            const isDone = isCompleted || phasesDone >= phasesTotal;
-            const inProgress = !isDone && phasesDone > 0;
-            const statusColor = isDone ? '#48BB78' : inProgress ? '#ED8936' : '#CBD5E0';
-            const statusLabel = isDone ? 'Complete' : inProgress ? `${phasesDone} of ${phasesTotal} phases` : 'Not started';
-
-            return (
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 14,
-                padding: '14px 16px', borderRadius: 10,
-                background: isDone ? '#F0FFF408' : '#F7FAFC',
-                border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
-              }}>
-                {/* Phase number badge */}
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                  background: isDone ? '#48BB7820' : inProgress ? '#ED893620' : `${accent}15`,
-                  border: `1.5px solid ${isDone ? '#48BB7855' : inProgress ? '#ED893655' : accent + '44'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : inProgress ? '#C05621' : accentDark,
-                }}>
-                  {isDone ? <Check size={12} strokeWidth={3} /> : '1'}
-                </div>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>Learning</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>E-Learning</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
-                    </div>
-                  </div>
-                  {topic ? (
-                    <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, marginBottom: 2 }}>
-                      <strong style={{ color: '#1A202C' }}>{topic.title}</strong> — {topic.subtitle}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 12, color: '#A0AEC0', fontStyle: 'italic' }}>No topic assigned</div>
-                  )}
-                  {topic?.phases && topic.phases.length > 0 && (
-                    <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.5, marginTop: 4 }}>
-                      {topic.phases.map((p, i) => (
-                        <span key={i}>{i > 0 ? ' → ' : ''}{p.label}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA — E-Learning is always accessible for an active level */}
-                {isAccessible ? (
-                  <button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.stopPropagation();
-                      navigate(`/app/level?level=${level.levelNumber}`);
-                    }}
-                    style={{
-                      background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
-                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
-                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
-                    }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
-                  >
-                    {isDone ? 'Review' : inProgress ? 'Continue' : 'Start'} <ArrowRight size={11} />
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>
-                    <Lock size={12} /> Locked
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* ── PHASE 2: APPLYING (Toolkit) ── */}
-          {primaryTool && (() => {
-            const isDone = level.toolUsed;
-            const statusColor = isDone ? '#48BB78' : '#CBD5E0';
-            const statusLabel = isDone ? 'Complete' : 'Not started';
-
-            return (
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 14,
-                padding: '14px 16px', borderRadius: 10,
-                background: isDone ? '#F0FFF408' : '#F7FAFC',
-                border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
-              }}>
-                {/* Phase number badge */}
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                  background: isDone ? '#48BB7820' : `${accent}15`,
-                  border: `1.5px solid ${isDone ? '#48BB7855' : accent + '44'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : accentDark,
-                }}>
-                  {isDone ? <Check size={12} strokeWidth={3} /> : '2'}
-                </div>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>Applying</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Toolkit</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.55, marginBottom: 2 }}>
-                    <strong style={{ color: '#1A202C' }}>{primaryTool.name}</strong> — {primaryTool.description || primaryTool.toolType}
-                  </div>
-                  {primaryTool.capabilities && primaryTool.capabilities.length > 0 && (
-                    <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.5, marginTop: 4 }}>
-                      {primaryTool.capabilities.slice(0, 2).join(' · ')}
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA */}
-                {isAccessible ? (
-                  <button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(primaryTool.route); }}
-                    style={{
-                      background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
-                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
-                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
-                    }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
-                  >
-                    Open <ArrowRight size={11} />
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>
-                    <Lock size={12} /> Locked
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* ── PHASE 3: IMPLEMENTING (Project) ── */}
-          {(() => {
-            const ps = level.projectSubmission?.status;
-            const isDone = ps === 'passed';
-            const inProgress = ps === 'submitted' || ps === 'needs_revision' || ps === 'draft';
-            const statusColor = isDone ? '#48BB78' : inProgress ? '#ED8936' : '#CBD5E0';
-            const statusLabel = isDone
-              ? 'Complete'
-              : ps === 'submitted' ? 'Under review'
-              : ps === 'needs_revision' ? 'Needs revision'
-              : ps === 'draft' ? 'Draft saved'
-              : 'Not started';
-
-            return (
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 14,
-                padding: '14px 16px', borderRadius: 10,
-                background: isDone ? '#F0FFF408' : '#F7FAFC',
-                border: `1px solid ${isDone ? '#C6F6D544' : '#E2E8F0'}`,
-              }}>
-                {/* Phase number badge */}
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                  background: isDone ? '#48BB7820' : inProgress ? '#ED893620' : `${accent}15`,
-                  border: `1.5px solid ${isDone ? '#48BB7855' : inProgress ? '#ED893655' : accent + '44'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: isDone ? '#276749' : inProgress ? '#C05621' : accentDark,
-                }}>
-                  {isDone ? <Check size={12} strokeWidth={3} /> : '3'}
-                </div>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>Implementing</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: accentDark, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Project</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                      <span style={{ fontSize: 10, color: '#718096' }}>{statusLabel}</span>
-                    </div>
-                  </div>
-                  {projectTitle ? (
-                    <div style={{ fontSize: 11, color: '#4A5568', lineHeight: 1.5, marginBottom: 2 }}>
-                      <strong style={{ color: '#1A202C', fontWeight: 600 }}>{projectTitle}</strong>
-                      {deliverable && <span style={{ color: '#718096' }}>: {deliverable}</span>}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic' }}>
-                      {hasLearningPlan ? 'Not included in your programme' : 'Generate a learning plan to see your project'}
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA */}
-                {isAccessible ? (
-                  <button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate('/app/journey/project/' + level.levelNumber); }}
-                    style={{
-                      background: `${accent}20`, color: accentDark, border: `1px solid ${accent}55`,
-                      borderRadius: 8, cursor: 'pointer', padding: '6px 14px',
-                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0, alignSelf: 'center',
-                    }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}35`; }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = `${accent}20`; }}
-                  >
-                    {isDone ? 'Review' : inProgress ? 'Continue' : 'Start'} <ArrowRight size={11} />
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A0AEC0', fontSize: 11, fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>
-                    <Lock size={12} /> Locked
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      </div>
     </div>
   );
 };

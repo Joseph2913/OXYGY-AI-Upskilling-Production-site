@@ -153,7 +153,7 @@ export const MyProfile: React.FC<Props> = () => {
           Complete the Learning Plan Generator to set up your profile. Your answers will appear here as a summary.
         </p>
         <a
-          href="#learning-pathway"
+          href="/app/dashboard"
           className="dash-focus"
           style={{
             display: 'inline-flex',
@@ -230,7 +230,7 @@ export const MyProfile: React.FC<Props> = () => {
           </div>
         </div>
         <a
-          href="#learning-pathway"
+          href="/app/dashboard"
           className="dash-focus"
           style={{
             display: 'inline-flex',
@@ -388,7 +388,7 @@ export const MyProfile: React.FC<Props> = () => {
           <p style={{ fontSize: 13, color: '#2D3748', margin: 0, lineHeight: 1.5 }}>
             Want to update your answers or regenerate your learning plan?
           </p>
-          <a href="#learning-pathway" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#38B2AC', textDecoration: 'none', flexShrink: 0 }}>
+          <a href="/app/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#38B2AC', textDecoration: 'none', flexShrink: 0 }}>
             Go to Learning Plan Generator <ArrowRight size={14} />
           </a>
         </div>

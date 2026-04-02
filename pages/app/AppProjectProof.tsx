@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowDown, FileText, Lightbulb, Check, Award, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, ArrowDown, FileText, Lightbulb, Check, Award, Plus, Pencil, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useProjectData } from '../../hooks/useProjectData';
@@ -165,23 +165,23 @@ const DEMO_REVIEW: ReviewData = {
       id: 'evidence_quality',
       name: 'Evidence Quality',
       status: 'strong',
-      feedback: 'Excellent evidence of application. You\'ve included specific before/after examples, time savings with concrete numbers, and colleague feedback. This is precisely what an A-tier submission looks like — concrete, not abstract.',
+      feedback: 'Excellent evidence of application. You\'ve included specific before/after examples, time savings with concrete numbers, and colleague feedback. This is precisely what an A-grade submission looks like — concrete, not abstract.',
     },
     {
       id: 'reflection_depth',
       name: 'Reflection Depth',
       status: 'developing',
-      feedback: 'Your reflection shows good awareness of what worked, but could go deeper on challenge and iteration. What was the hardest part of getting the prompt right? What does that tell you about prompt engineering as a skill? Addressing this would push you to S-tier.',
+      feedback: 'Your reflection shows good awareness of what worked, but could go deeper on challenge and iteration. What was the hardest part of getting the prompt right? What does that tell you about prompt engineering as a skill? Addressing this would push you to A+.',
     },
     {
       id: 'impact',
       name: 'Impact',
       status: 'strong',
-      feedback: 'Clear, quantifiable impact: ~3 hours saved per week and improved stakeholder satisfaction. You\'ve also described team-level adoption beyond your own workflow — this kind of initiative is exactly what distinguishes A-tier submissions.',
+      feedback: 'Clear, quantifiable impact: ~3 hours saved per week and improved stakeholder satisfaction. You\'ve also described team-level adoption beyond your own workflow — this kind of initiative is exactly what distinguishes A-grade submissions.',
     },
   ],
   overallPassed: true,
-  summary: 'This is a strong A-tier submission. You\'ve applied Level 1 fundamentals to a genuine business problem, evidenced clear and measurable impact, and reflected thoughtfully on your experience. The main area to strengthen is reflection depth — particularly around the challenges and iteration process — which would push this into S-tier territory.',
+  summary: 'This is a strong A-grade submission. You\'ve applied Level 1 fundamentals to a genuine business problem, evidenced clear and measurable impact, and reflected thoughtfully on your experience. The main area to strengthen is reflection depth — particularly around the challenges and iteration process — which would push this into A+ territory.',
   encouragement: 'Excellent work. Your structured approach to stakeholder briefings demonstrates real mastery of core prompt engineering. Keep building on this as you move into Level 2.',
 };
 
@@ -338,6 +338,9 @@ const AppProjectProof: React.FC = () => {
   const [showSaved, setShowSaved] = useState(false);
   const [previousTier, setPreviousTier] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [showScoringCriteria, setShowScoringCriteria] = useState(false);
+  const [customProjectExpanded, setCustomProjectExpanded] = useState(false);
+  const [customProjectDesc, setCustomProjectDesc] = useState('');
   // 'picker' = show landing cards, 'form' = show the submission form/review
   const [pageView, setPageView] = useState<'picker' | 'form'>('form');
 
@@ -354,6 +357,8 @@ const AppProjectProof: React.FC = () => {
       setCaseStudySolution(submission.caseStudySolution || '');
       setCaseStudyOutcome(submission.caseStudyOutcome || '');
       setCaseStudyLearnings(submission.caseStudyLearnings || '');
+      setCustomProjectDesc(submission.customProjectDescription || '');
+      if (submission.customProjectDescription) setCustomProjectExpanded(true);
       formInitializedRef.current = true;
 
       // Load existing review data
@@ -432,9 +437,10 @@ const AppProjectProof: React.FC = () => {
       caseStudySolution: caseStudySolution || null,
       caseStudyOutcome: caseStudyOutcome || null,
       caseStudyLearnings: caseStudyLearnings || null,
+      customProjectDescription: customProjectDesc || null,
     } as any);
     setSavedAt(Date.now());
-  }, [saveDraft, toolName, platformUsed, toolLink, reflectionText, adoptionScope, outcomeText, caseStudyProblem, caseStudySolution, caseStudyOutcome, caseStudyLearnings]);
+  }, [saveDraft, toolName, platformUsed, toolLink, reflectionText, adoptionScope, outcomeText, caseStudyProblem, caseStudySolution, caseStudyOutcome, caseStudyLearnings, customProjectDesc]);
 
   triggerSaveRef.current = triggerSave;
 
@@ -698,9 +704,64 @@ const AppProjectProof: React.FC = () => {
       <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1A202C', letterSpacing: '-0.4px', margin: 0, marginBottom: 6, animation: 'ppFadeIn 0.3s ease 40ms both' }}>
         Level {validLevel} Project Proof
       </h1>
-      <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, margin: 0, marginBottom: 24, animation: 'ppFadeIn 0.3s ease 60ms both' }}>
-        {LEVEL_DESCRIPTIONS[validLevel]}
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 24, animation: 'ppFadeIn 0.3s ease 60ms both' }}>
+        <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, margin: 0 }}>
+          {LEVEL_DESCRIPTIONS[validLevel]}
+        </p>
+        <button
+          onClick={() => setShowScoringCriteria(prev => !prev)}
+          style={{
+            border: '1px solid #E2E8F0', borderRadius: 20, padding: '5px 14px',
+            fontSize: 12, fontWeight: 600, color: '#718096', background: '#F7FAFC',
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
+            fontFamily: FONT, whiteSpace: 'nowrap' as const, flexShrink: 0,
+          }}
+        >
+          <Award size={13} />
+          View Scoring Criteria
+          {showScoringCriteria ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+      </div>
+
+      {/* Scoring Criteria Panel */}
+      <div style={{
+        maxHeight: showScoringCriteria ? 500 : 0,
+        opacity: showScoringCriteria ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease',
+        marginBottom: showScoringCriteria ? 20 : 0,
+      }}>
+        <div style={{
+          background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
+          padding: '20px 24px',
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 6 }}>
+            How your project is scored
+          </div>
+          <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 16px', fontFamily: FONT }}>
+            Your project is reviewed by an AI scoring agent across four dimensions. Each dimension is rated as Strong, Developing, or Needs Attention.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { name: 'Application Quality', desc: 'How well you applied the level\u2019s core skills to a real work situation' },
+              { name: 'Evidence Quality', desc: 'The specificity and credibility of your examples, screenshots, and outcomes' },
+              { name: 'Reflection Depth', desc: 'How thoughtfully you described what worked, what didn\u2019t, and what you learned' },
+              { name: 'Real-World Impact', desc: 'The tangible value created — for you, your team, or your organisation' },
+            ].map(d => (
+              <div key={d.name} style={{
+                borderLeft: `3px solid ${LEVEL_ACCENT}`,
+                background: '#F7FAFC', borderRadius: 8, padding: '12px 16px',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{d.name}</div>
+                <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginTop: 4, fontFamily: FONT }}>{d.desc}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic', margin: '14px 0 0', fontFamily: FONT }}>
+            Scoring is fully automated — no human reviewer is involved. You can resubmit as many times as you like.
+          </p>
+        </div>
+      </div>
 
       {/* Project Brief (always visible) */}
       <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', borderLeft: `4px solid ${LEVEL_ACCENT_DARK}`, padding: '24px 28px', marginBottom: 20, animation: 'ppFadeIn 0.3s ease 80ms both' }}>
@@ -719,6 +780,95 @@ const AppProjectProof: React.FC = () => {
             <div style={{ fontSize: 13, color: '#718096', fontStyle: 'italic', lineHeight: 1.5 }}>{projectBrief.challengeConnection}</div>
           </div>
         )}
+
+        {/* ── Custom project accordion (toolkit-style) ── */}
+        <div style={{
+          background: '#FFFBF0', borderRadius: 14, border: '1px solid #F7E8A4',
+          borderLeft: '4px solid #F7E8A4', padding: '16px 20px', marginTop: 16,
+        }}>
+          {/* Always-visible message */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: customProjectExpanded ? 14 : 0 }}>
+            <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>✨</span>
+            <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+              You're not locked into this project. You can submit proof for any project that demonstrates your Level {validLevel} skills — it doesn't have to match the one assigned by the learning plan generator.
+            </div>
+          </div>
+
+          {/* Collapsed: expand button */}
+          {!customProjectExpanded && (
+            <button
+              onClick={() => setCustomProjectExpanded(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontSize: 13, fontWeight: 600, color: LEVEL_ACCENT_DARK, fontFamily: FONT,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.8'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+            >
+              <ChevronDown size={14} />
+              Describe your alternative project
+              {customProjectDesc && (
+                <span style={{
+                  fontSize: 11, fontWeight: 600, background: LEVEL_ACCENT, color: LEVEL_ACCENT_DARK,
+                  borderRadius: 20, padding: '2px 10px', marginLeft: 6,
+                }}>Saved</span>
+              )}
+            </button>
+          )}
+
+          {/* Expanded: textarea + save */}
+          {customProjectExpanded && (
+            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 14, animation: 'ppFadeIn 0.2s ease both' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: LEVEL_ACCENT_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontFamily: FONT }}>
+                  Describe Your Project
+                </div>
+                <button
+                  onClick={() => setCustomProjectExpanded(false)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                    borderRadius: 6, display: 'flex', color: '#A0AEC0', transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#4A5568'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#A0AEC0'; }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginBottom: 10, fontFamily: FONT }}>
+                Briefly describe the project you're submitting instead. The AI reviewer will use this to evaluate your work.
+              </div>
+              <textarea
+                value={customProjectDesc}
+                onChange={e => {
+                  setCustomProjectDesc(e.target.value);
+                  if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+                  saveTimerRef.current = setTimeout(() => { triggerSaveRef.current(); }, 3000);
+                }}
+                placeholder="e.g. I built a prompt library for our sales team that standardises how we draft proposals using AI..."
+                rows={3}
+                style={{
+                  width: '100%', resize: 'vertical', borderRadius: 10,
+                  border: `1.5px solid ${LEVEL_ACCENT}`, padding: '10px 14px',
+                  fontSize: 13, color: '#2D3748', fontFamily: FONT, lineHeight: 1.6,
+                  outline: 'none', background: '#FFFFFF',
+                  boxSizing: 'border-box' as const,
+                }}
+                onFocus={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT_DARK; e.currentTarget.style.boxShadow = `0 0 0 3px ${LEVEL_ACCENT}40`; }}
+                onBlur={e => { e.currentTarget.style.borderColor = LEVEL_ACCENT; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+              {customProjectDesc && (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={12} color="#38B2AC" />
+                  <span style={{ fontSize: 11, color: '#718096', fontFamily: FONT }}>
+                    This description will be used when your project is reviewed
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════ */}

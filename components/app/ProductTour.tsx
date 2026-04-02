@@ -58,8 +58,8 @@ const TOUR_STEPS: TourStep[] = [
     id: 'project',
     eyebrow: `STEP 3 OF ${TOTAL_STEPS}`,
     title: 'Project Submissions & Scoring',
-    description: 'At the end of each level you submit real work from your role. It\'s reviewed by AI across multiple dimensions and scored into one of five tiers — from Developing through to Exceptional. Aim for A-tier or above.',
-    chips: ['R · Developing', 'C · Competent', 'B · Proficient', 'A · Advanced', 'S · Exceptional'],
+    description: 'At the end of each level you submit real work from your role. It\'s reviewed by AI across multiple dimensions and scored into one of five grades — from Needs Improvement through to Exceptional. Aim for A or above.',
+    chips: ['C · Needs improvement', 'B · Good start', 'B+ · Strong foundation', 'A · Excellent', 'A+ · Exceptional'],
     route: '/app/journey/project/1',
     icon: Award,
     hasInlineIllustration: null,
@@ -208,11 +208,11 @@ const JourneyIllustration: React.FC = () => {
 /* Step 2 — Tiers */
 const TiersIllustration: React.FC = () => {
   const tiers = [
-    { letter: 'S', label: 'Exceptional', color: '#38B2AC', desc: 'Innovative application with measurable impact' },
-    { letter: 'A', label: 'Advanced', color: '#48BB78', desc: 'Clear evidence of applied learning and reflection' },
-    { letter: 'B', label: 'Proficient', color: '#ECC94B', desc: 'Solid understanding with room to deepen' },
-    { letter: 'C', label: 'Competent', color: '#ED8936', desc: 'Meets basic requirements but lacks depth' },
-    { letter: 'R', label: 'Developing', color: '#E53E3E', desc: 'Needs revision — key elements missing' },
+    { letter: 'A+', label: 'Exceptional', color: '#38B2AC', desc: 'Innovative application with measurable impact' },
+    { letter: 'A', label: 'Excellent', color: '#48BB78', desc: 'Clear evidence of applied learning and reflection' },
+    { letter: 'B+', label: 'Strong foundation', color: '#ECC94B', desc: 'Solid understanding with room to deepen' },
+    { letter: 'B', label: 'Good start', color: '#ED8936', desc: 'Meets basic requirements but lacks depth' },
+    { letter: 'C', label: 'Needs improvement', color: '#E53E3E', desc: 'Needs revision — key elements missing' },
   ];
   return (
     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
