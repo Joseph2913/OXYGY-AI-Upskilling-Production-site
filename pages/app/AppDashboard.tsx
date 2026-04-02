@@ -728,9 +728,10 @@ const AppDashboard: React.FC = () => {
                 const lvlAccentDark = LEVEL_ACCENT_DARK_COLORS[lvl];
                 const isAssigned = data.assignedLevels.has(lvl);
                 const depth = data.levelDepths[String(lvl)] ?? 'full';
-                const isNotReached = lvl > data.currentLevel;
+                // Assigned levels are accessible from the start — no progression gate.
+                // Only unassigned (bonus) levels are gated behind currentLevel.
+                const isNotReached = !isAssigned && lvl > data.currentLevel;
                 const isNotInPlan = !isAssigned || depth === 'skip';
-                // A level is greyed out if it's not in the plan OR not yet reached
                 const isSkipped = isNotInPlan || isNotReached;
                 const progress = data.levelProgress[lvl];
                 const phasesCompleted = progress?.phasesCompleted?.filter(Boolean).length ?? 0;
