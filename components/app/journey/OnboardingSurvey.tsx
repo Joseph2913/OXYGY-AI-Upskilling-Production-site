@@ -429,6 +429,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [completedPlan, setCompletedPlan] = useState<PathwayApiResponse | null>(null);
+  const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
 
   // Persist step + form data to sessionStorage on every change
   useEffect(() => {
@@ -605,33 +606,61 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
             </div>
 
             {/* Assigned level chips */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
               {assignedLevels.map(n => {
                 const meta = LEVEL_META.find(m => m.number === n)!;
                 const planLevel = completedPlan.levels[`L${n}`];
                 const isFastTrack = planLevel?.depth === 'fast-track';
+                const isExpanded = expandedLevel === n;
                 return (
                   <div key={n} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 16px', borderRadius: 12,
-                    background: `${meta.accentColor}12`,
-                    border: `1px solid ${meta.accentColor}44`,
+                    borderRadius: 12,
+                    background: isExpanded ? `${meta.accentColor}12` : '#F7FAFC',
+                    border: `1px solid ${isExpanded ? meta.accentColor + '44' : '#E2E8F0'}`,
+                    overflow: 'hidden',
+                    transition: 'all 0.2s',
                   }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                      background: `${meta.accentColor}33`,
-                      border: `1.5px solid ${meta.accentColor}88`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 800, color: meta.accentDark,
-                    }}>
-                      {n}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{meta.name}</div>
-                      <div style={{ fontSize: 11, color: '#718096', marginTop: 3, lineHeight: 1.4 }}>
+                    <button
+                      onClick={() => setExpandedLevel(isExpanded ? null : n)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', background: 'none', border: 'none',
+                        cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'left',
+                      }}
+                    >
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        background: `${meta.accentColor}33`,
+                        border: `1.5px solid ${meta.accentColor}88`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 800, color: meta.accentDark,
+                      }}>
+                        {n}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{meta.name}</span>
+                      </div>
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, color: isFastTrack ? '#D69E2E' : '#38B2AC',
+                        background: isFastTrack ? '#FEFCBF' : '#E6FFFA',
+                        borderRadius: 6, padding: '2px 7px', flexShrink: 0,
+                        textTransform: 'uppercase' as const, letterSpacing: '0.04em',
+                      }}>
+                        {isFastTrack ? 'Fast Track' : 'Full'}
+                      </div>
+                      <ChevronDown size={14} color="#A0AEC0" style={{
+                        flexShrink: 0, transition: 'transform 0.2s',
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      }} />
+                    </button>
+                    {isExpanded && (
+                      <div style={{
+                        padding: '0 14px 12px 52px',
+                        fontSize: 12, color: '#718096', lineHeight: 1.5,
+                      }}>
                         {meta.tagline}
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -659,6 +688,46 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
             >
               Go to My Journey <ArrowRight size={16} />
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════ GENERATING SCREEN ═══════════════
+  if (generating) {
+    return (
+      <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <style>{ANIM}</style>
+        <div style={{
+          display: 'flex', width: 980, maxWidth: '96vw',
+          height: 640, maxHeight: '88vh',
+          borderRadius: 20, overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06)',
+          animation: 'onbCardIn 0.4s ease both',
+        }}>
+          <LeftPanel step={step} generating={true} formData={formData} />
+          <div style={{
+            flex: 1, background: '#FFFFFF', padding: '32px 36px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ width: '100%', maxWidth: 400 }}>
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%',
+                  background: 'rgba(56, 178, 172, 0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}>
+                  <Sparkles size={24} color="#38B2AC" />
+                </div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px', letterSpacing: '-0.3px' }}>
+                  Generating your learning plan
+                </h2>
+                <p style={{ fontSize: 14, color: '#718096', margin: 0 }}>This usually takes 15–20 seconds</p>
+              </div>
+              <SurveyProcessing error={genError} onRetry={handleRetry} />
+            </div>
           </div>
         </div>
       </div>
@@ -1033,13 +1102,10 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               </div>
             </>)}
 
-            {step === 2 && generating && (
-              <SurveyProcessing error={genError} onRetry={handleRetry} />
-            )}
           </div>
 
           {/* Footer nav */}
-          {!generating && (
+          {(
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               paddingTop: 18, borderTop: '1px solid #F7FAFC', marginTop: 14,
@@ -1083,7 +1149,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               )}
             </div>
           )}
-          {!generating && genError && (
+          {genError && (
             <div style={{ fontSize: 12, color: '#E53E3E', marginTop: 8 }}>{genError}</div>
           )}
         </div>
