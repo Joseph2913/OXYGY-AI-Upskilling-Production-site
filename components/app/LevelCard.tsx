@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown, ArrowRight, Lock, Play, PenTool, FileText, BookOpen, Wrench, FolderKanban, ChevronsRight } from 'lucide-react';
 import { LEVEL_META } from '../../data/levelTopics';
-import { LEVEL_TOPICS } from '../../data/levelTopics';
 import { getPrimaryTool } from '../../data/toolkitData';
 import { LEVELS } from '../../data/content';
 import { LevelProgress } from '../../hooks/useJourneyData';
@@ -227,8 +226,6 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   const marketingData = LEVELS.find(l => l.id === level.levelNumber);
   const accent = meta.accentColor;
   const accentDark = meta.accentDark;
-  const topics = LEVEL_TOPICS[level.levelNumber] || [];
-  const topic = topics[0];
   const primaryTool = getPrimaryTool(level.levelNumber);
 
   const isCompleted = level.status === 'completed';
