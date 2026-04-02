@@ -321,7 +321,12 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
             return Array.from({ length: highest }, (_, i) => `L${i + 1}`);
           })()
         : ['L1', 'L2', 'L3', 'L4', 'L5'];
-      const assignedLevels = new Set(assignedLevelKeys.map(k => parseInt(k.replace('L', ''), 10)));
+      // Bonus unlock: L4 and L5 unlock automatically once L1, L2, and L3 are all complete
+      const bonusUnlocked = [1, 2, 3].every(l => completedLevelSet.has(l));
+      const assignedLevels = new Set(
+        assignedLevelKeys.map(k => parseInt(k.replace('L', ''), 10))
+          .concat(bonusUnlocked ? [4, 5] : [])
+      );
 
       setData({
         currentLevel,

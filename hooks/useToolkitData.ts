@@ -101,6 +101,9 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
         }
       }
 
+      // Bonus unlock: L4 and L5 unlock automatically once L1, L2, and L3 are all complete
+      const bonusUnlocked = [1, 2, 3].every(l => completedLevelSet.has(l));
+
       const levelStats: ToolLevelStats[] = [1, 2, 3, 4, 5].map(lvl => {
         const tool = getPrimaryTool(lvl);
         const primaryTopicId = 1;
@@ -108,7 +111,8 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
         const artefactsCreated = artefactCounts[lvl] || 0;
         const elearnDone = !!topicRow?.elearn_completed_at;
         const toolkitDone = artefactsCreated > 0;
-        const isAssigned = assignedLevelKeys.includes(`L${lvl}`);
+        const isAssigned = assignedLevelKeys.includes(`L${lvl}`)
+          || (bonusUnlocked && (lvl === 4 || lvl === 5));
 
         // A toolkit is unlocked if:
         // 1. The level's own elearn is done, OR

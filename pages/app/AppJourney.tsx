@@ -711,7 +711,7 @@ const AppJourney: React.FC = () => {
           const nextPlanLevel = idx < levels.length - 1
             ? planData?.levels?.[`L${levels[idx + 1].levelNumber}`]
             : null;
-          const isAssigned = !!planLevel;
+          const isAssigned = level.isAssigned;
           const nextIsAssigned = !!nextPlanLevel;
           const showConnector = isAssigned && nextIsAssigned && idx < levels.length - 1;
           const lvlMeta = LEVEL_META.find(m => m.number === level.levelNumber);

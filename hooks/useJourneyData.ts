@@ -123,6 +123,9 @@ export function useJourneyData(): {
           if (!completedLevelSet.has(lvl)) { derivedCurrentLevel = lvl; break; }
         }
 
+        // Bonus unlock: L4 and L5 unlock automatically once L1, L2, and L3 are all complete
+        const bonusUnlocked = [1, 2, 3].every(l => completedLevelSet.has(l));
+
         const levels: LevelProgress[] = [1, 2, 3, 4, 5].map(levelNumber => {
           const topics = LEVEL_TOPICS[levelNumber] || [];
           const progressForLevel = topicProgressRows.filter(r => r.level === levelNumber);
@@ -130,7 +133,8 @@ export function useJourneyData(): {
           const toolsForLevel = ALL_TOOLS.filter(t => t.levelRequired === levelNumber).length;
           const lp = lpMap.get(levelNumber);
           const ps = psMap.get(levelNumber) || null;
-          const isAssigned = assignedLevelKeys.includes(`L${levelNumber}`);
+          const isAssigned = assignedLevelKeys.includes(`L${levelNumber}`)
+            || (bonusUnlocked && (levelNumber === 4 || levelNumber === 5));
 
           let completedTopics = 0;
           let activeTopicIndex = 0;

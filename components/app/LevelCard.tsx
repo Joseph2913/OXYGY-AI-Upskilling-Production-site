@@ -189,7 +189,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
   }, [isFocused]);
   const meta = LEVEL_META.find(m => m.number === level.levelNumber)!;
 
-  // Not-applicable state: level not in learning plan
+  // Locked state: level not in learning plan
   if (!isAssigned) {
     return (
       <div style={{
@@ -197,12 +197,12 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
         borderRadius: 14,
         border: '1px solid #E2E8F0',
         padding: '16px 20px',
-        opacity: 0.55,
+        opacity: 0.6,
         position: 'relative',
         animation: `journeyFadeSlideUp 0.3s ease ${animDelay}ms both`,
       }}>
-        {/* Level badge + name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        {/* Header: level badge + name + lock icon */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             background: meta.accentColor + '40',
             color: meta.accentDark,
@@ -211,31 +211,16 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
             textTransform: 'uppercase' as const, letterSpacing: '0.06em',
           }}>Level {level.levelNumber}</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{meta.name}</span>
+          <Lock size={14} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
         </div>
 
-        {/* Phase strip — show structure but greyed */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-          {['E-Learning', 'Toolkit', 'Project'].map((label) => (
-            <span key={label} style={{
-              fontSize: 10, fontWeight: 600, color: '#A0AEC0',
-              background: '#F7FAFC', border: '1px solid #E2E8F0',
-              borderRadius: 20, padding: '3px 10px',
-            }}>{label}</span>
-          ))}
-        </div>
-
-        {/* Not applicable badge */}
+        {/* Lock message */}
         <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          fontSize: 11, fontWeight: 600, color: '#A0AEC0',
-          background: '#F7FAFC', border: '1px solid #E2E8F0',
-          borderRadius: 20, padding: '4px 10px',
+          marginTop: 12,
+          fontSize: 12, fontWeight: 500, color: '#718096',
+          lineHeight: 1.5,
         }}>
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-            <circle cx="6" cy="6" r="5" stroke="#CBD5E0" strokeWidth="1.5"/>
-            <line x1="3" y1="3" x2="9" y2="9" stroke="#CBD5E0" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          Not part of your current learning plan
+          This is a bonus level. Complete Levels 1, 2 &amp; 3 to unlock it.
         </div>
       </div>
     );
