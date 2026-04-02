@@ -754,7 +754,7 @@ const PATHWAY_SYSTEM_SUFFIX = `
 OUTPUT FORMAT (JSON only):
 {
   "pathwaySummary": "...",
-  "whyThisPlan": "Exactly 2 sentences in second person. Sentence 1: state who they are — mention their seniority/role, function, and AI experience level (use the exact labels provided). Sentence 2: a motivational statement about what this pathway will equip them to achieve, referencing their specific goal or challenge. Warm and energising tone — should feel like a coach speaking to them, not a form readback. Example: 'You told us you\\'re a Junior / early career in Consulting / Advisory with integrator AI experience, aiming to build full applications. This learning pathway is designed to equip you with the skills to [specific achievement tied to their challenge/goal].'",
+  "whyThisPlan": "Exactly 2 sentences in second person. Do NOT repeat the learner's profile information back to them. Sentence 1: how this learning pathway is specifically designed for their goal or challenge (reference their specific challenge/goal text). Sentence 2: what skills or capabilities it focuses on building and why that sets them up for success. Warm, motivational, coach tone. Example: 'This learning pathway is designed to take you from AI novice to building automated workflows that save your team hours every week. It focuses on practical prompt engineering and agent creation — the exact skills you need to start shipping reusable tools for your function.'",
   "totalEstimatedWeeks": number,
   "levels": {
     "L1": { "depth": "full|fast-track", "projectTitle": "...", "projectDescription": "...", "deliverable": "...", "challengeConnection": "...", "sessionFormat": "...", "resources": [{ "name": "...", "note": "..." }] }
