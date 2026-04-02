@@ -275,7 +275,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 800, color: accentDark,
         }}>
-          {isCompleted ? <Check size={14} color={accentDark} strokeWidth={3} /> : isAccessible ? level.levelNumber : <Lock size={14} color="#A0AEC0" />}
+          {isCompleted ? <Check size={14} color={accentDark} strokeWidth={3} /> : level.levelNumber}
         </div>
 
         {/* Title + description block */}
