@@ -411,6 +411,7 @@ export interface PathwayLevelResult {
 
 export interface PathwayApiResponse {
   pathwaySummary: string;
+  whyThisPlan?: string;
   totalEstimatedWeeks: number;
   levels: Partial<Record<string, PathwayLevelResult>>;
 }

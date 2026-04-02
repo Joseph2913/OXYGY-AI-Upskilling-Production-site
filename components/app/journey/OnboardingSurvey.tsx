@@ -3,7 +3,7 @@ import {
   ChevronDown, ArrowRight, ArrowLeft, User, Briefcase, Target,
   Sparkles, Clock, MessageSquare, Layers, Zap, BookOpen, Rocket,
   PenTool, BarChart3, Code2, Users, Check, Award, TrendingUp,
-  Star, Crown, Cpu, Wrench, Settings, GitBranch,
+  Star, Crown, Cpu, Wrench, Settings, GitBranch, Info,
 } from 'lucide-react';
 import { usePathwayApi } from '../../../hooks/usePathwayApi';
 import { useAuth } from '../../../context/AuthContext';
@@ -105,11 +105,12 @@ function classifyLevels(aiExperience: string, ambition: string): Record<string, 
 // ---- Options ----
 const FUNCTION_OPTIONS = [
   { value: 'Consulting / Advisory', icon: Users },
-  { value: 'Proposal & BD', icon: Target },
+  { value: 'Human Resources', icon: Award },
+  { value: 'Sales & Business Development', icon: Target },
   { value: 'Project Management', icon: Layers },
   { value: 'L&D / Training', icon: BookOpen },
   { value: 'Analytics & Insights', icon: BarChart3 },
-  { value: 'Ops & SOP Management', icon: Briefcase },
+  { value: 'Operations', icon: Briefcase },
   { value: 'Comms & Change', icon: MessageSquare },
   { value: 'IT & Knowledge Management', icon: Code2 },
   { value: 'Other', icon: Sparkles },
@@ -139,13 +140,12 @@ const AVAILABILITY_OPTIONS = [
   { value: '5+ hours', label: '5+ hrs/week', desc: 'Intensive \u2014 I want to move fast', icon: Rocket },
 ];
 
-// 0 = welcome, 1-3 = form steps
-const TOTAL_STEPS = 3;
+// 0 = welcome, 1-2 = form steps
+const TOTAL_STEPS = 2;
 const STEP_META = [
   { title: 'Welcome', subtitle: '' },
   { title: 'Your Role', subtitle: 'Tell us about your role and seniority so we can tailor your pathway.' },
-  { title: 'AI Experience & Goals', subtitle: 'Share your current AI skills and where you want to go.' },
-  { title: 'Challenges & Goals', subtitle: 'Describe your real-world challenge and how much time you can invest.' },
+  { title: 'Experience & Goals', subtitle: 'Share your AI experience, ambitions, challenges and time commitment.' },
 ];
 
 const ANIM = `
@@ -320,11 +320,11 @@ function LeftPanel({ step, generating, formData }: {
 
       {/* Step progress — vertical, centred */}
       <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        {[1, 2, 3].map((stepNum, i) => {
+        {[1, 2].map((stepNum, i) => {
           const meta = STEP_META[stepNum];
           const isDone = step > stepNum;
           const isActive = step === stepNum;
-          const isLast = i === 2;
+          const isLast = i === 1;
           return (
             <div key={stepNum} style={{ display: 'flex', gap: 14, marginBottom: isLast ? 0 : 32 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -537,7 +537,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
   const goNext = () => setStep(s => Math.min(s + 1, TOTAL_STEPS));
   const goBack = () => setStep(s => Math.max(s - 1, step === 1 ? 0 : 1));
 
-  const canProceed = step === 1 ? isStep1Complete : step === 2 ? isStep2Complete : isStep3Complete;
+  const canProceed = step === 1 ? isStep1Complete : (isStep2Complete && isStep3Complete);
 
   // ═══════════════ COMPLETION CARD ═══════════════
   if (completedPlan) {
@@ -589,10 +589,19 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
 
           {/* Body */}
           <div style={{ padding: '28px 40px 36px' }}>
-            <div style={{ fontSize: 14, color: '#4A5568', lineHeight: 1.7, marginBottom: 20 }}>
-              You have been assigned to <strong>{assignedLevels.length} level{assignedLevels.length !== 1 ? 's' : ''}</strong> based
-              on your experience and goals. Head to your Journey page to explore the topics, toolkit, and projects
-              waiting for you at each level.
+
+            {/* Why this plan */}
+            <div style={{
+              background: '#F0FFFC', border: '1px solid #B2F5EA', borderRadius: 12,
+              padding: '14px 16px', marginBottom: 20, display: 'flex', gap: 10,
+            }}>
+              <Info size={15} color="#38B2AC" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#2D9E99', marginBottom: 4 }}>Why this plan?</div>
+                <div style={{ fontSize: 13, color: '#2D7A75', lineHeight: 1.6 }}>
+                  {completedPlan.whyThisPlan || `You told us you're a ${formData.seniority.split('(')[0].trim() || 'professional'} in ${formData.function === 'Other' ? formData.functionOther : formData.function} with ${AI_EXPERIENCE_OPTIONS.find(o => o.value === formData.aiExperience)?.label?.toLowerCase() || 'some'} AI experience, aiming to ${AMBITION_OPTIONS.find(o => o.value === formData.ambition)?.label?.toLowerCase()}. ${completedPlan.pathwaySummary}`}
+                </div>
+              </div>
             </div>
 
             {/* Assigned level chips */}
@@ -600,6 +609,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               {assignedLevels.map(n => {
                 const meta = LEVEL_META.find(m => m.number === n)!;
                 const planLevel = completedPlan.levels[`L${n}`];
+                const isFastTrack = planLevel?.depth === 'fast-track';
                 return (
                   <div key={n} style={{
                     display: 'flex', alignItems: 'center', gap: 12,
@@ -617,10 +627,8 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
                       {n}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>
-                        {meta.name}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#718096', marginTop: 2, lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C' }}>{meta.name}</div>
+                      <div style={{ fontSize: 11, color: '#718096', marginTop: 3, lineHeight: 1.4 }}>
                         {meta.tagline}
                       </div>
                     </div>
@@ -629,10 +637,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               })}
             </div>
 
-            <div style={{
-              fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 24,
-              fontStyle: 'italic',
-            }}>
+            <div style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 24, fontStyle: 'italic' }}>
               Good luck with your learning experience – we're excited to see what you build.
             </div>
 
@@ -691,17 +696,19 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               style={{ height: 28, filter: 'brightness(0) invert(1)', opacity: 0.9, marginBottom: 16, position: 'relative', zIndex: 1 }}
             />
             <h1 style={{
-              fontSize: 26, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px',
+              fontSize: 26, fontWeight: 800, color: '#FFFFFF', margin: '0 0 16px', letterSpacing: '-0.3px',
               position: 'relative', zIndex: 1,
             }}>
               Welcome to Your AI Learning Journey
             </h1>
-            <p style={{
-              fontSize: 14, color: 'rgba(255,255,255,0.65)', margin: '8px 0 0', lineHeight: 1.5,
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'rgba(56, 178, 172, 0.15)', borderRadius: 12, padding: '8px 16px',
               position: 'relative', zIndex: 1,
             }}>
-              A personalised pathway designed around your role, skills, and ambitions.
-            </p>
+              <Clock size={15} color="#38B2AC" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#38B2AC' }}>2 minutes</span>
+            </div>
           </div>
 
           {/* Body */}
@@ -737,17 +744,6 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
                   </div>
                 );
               })}
-            </div>
-
-            <div style={{
-              background: '#F0FFFC', borderRadius: 12, padding: '14px 18px',
-              display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28,
-            }}>
-              <Clock size={18} color="#38B2AC" style={{ flexShrink: 0 }} />
-              <div style={{ fontSize: 13, color: '#2D9E99', lineHeight: 1.5 }}>
-                <strong>Takes about 2 minutes.</strong> The more specific your answers, the more relevant
-                your personalised projects and learning content will be.
-              </div>
             </div>
 
             {/* Demo mode: sample profile quick-fill buttons */}
@@ -834,9 +830,12 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
                 Step {step} of {TOTAL_STEPS}
               </span>
             </div>
-            <h2 style={{ fontSize: 21, fontWeight: 800, color: '#1A202C', margin: 0, letterSpacing: '-0.3px' }}>
+            <h2 style={{ fontSize: 21, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', letterSpacing: '-0.3px' }}>
               {STEP_META[step].title}
             </h2>
+            <p style={{ fontSize: 12, color: '#718096', margin: 0, lineHeight: 1.5 }}>
+              The more specific your answers, the more relevant your personalised projects and learning content will be.
+            </p>
           </div>
 
           {/* Step content */}
@@ -907,65 +906,61 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
 
             {/* ═══ STEP 2: Experience & Goals ═══ */}
             {step === 2 && (<>
-              <div style={{ marginBottom: 18 }}>
-                <Label icon={<Sparkles size={14} color="#38B2AC" />} text="Your AI experience level" required />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                  {AI_EXPERIENCE_OPTIONS.map(opt => {
-                    const sel = formData.aiExperience === opt.value;
-                    const EIcon = opt.icon;
-                    return (
-                      <div key={opt.value} onClick={() => updateField('aiExperience', opt.value)} style={{
-                        height: 80, background: sel ? '#F0FFFC' : '#FFFFFF',
-                        border: sel ? '2px solid #38B2AC' : '1.5px solid #E2E8F0',
-                        borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
-                        display: 'flex', alignItems: 'flex-start', gap: 10,
-                        transition: 'all 0.15s', boxSizing: 'border-box',
-                      }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                          background: sel ? '#E6FFFA' : '#F7FAFC',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <EIcon size={16} color={sel ? '#38B2AC' : '#A0AEC0'} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{opt.label}</div>
-                          <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.3, marginTop: 2 }}>{opt.desc}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* ── Section: Experience ── */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+                Experience
               </div>
 
               <div style={{ marginBottom: 18 }}>
-                <Label icon={<Rocket size={14} color="#38B2AC" />} text="What do you want to achieve with AI?" required />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {AMBITION_OPTIONS.map(opt => {
-                    const sel = formData.ambition === opt.value;
-                    const AIcon = opt.icon;
+                <Label icon={<Sparkles size={14} color="#38B2AC" />} text="Your AI experience level" required />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                  {AI_EXPERIENCE_OPTIONS.map(opt => {
+                    const sel = formData.aiExperience === opt.value;
                     return (
-                      <SelectCard key={opt.value} selected={sel} onClick={() => updateField('ambition', opt.value)}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                          background: sel ? '#E6FFFA' : '#F7FAFC',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <AIcon size={16} color={sel ? '#38B2AC' : '#A0AEC0'} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>{opt.label}</div>
-                          <div style={{ fontSize: 10, color: '#718096', lineHeight: 1.3 }}>{opt.desc}</div>
-                        </div>
-                        {sel && <Check size={15} color="#38B2AC" strokeWidth={3} style={{ flexShrink: 0 }} />}
-                      </SelectCard>
+                      <button key={opt.value} onClick={() => updateField('aiExperience', opt.value)} style={{
+                        padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: sel ? 600 : 500,
+                        cursor: 'pointer', border: sel ? '2px solid #38B2AC' : '1.5px solid #E2E8F0',
+                        background: sel ? '#F0FFFC' : '#FFFFFF', color: sel ? '#2D9E99' : '#4A5568',
+                        fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                      }}>
+                        {opt.label}
+                      </button>
                     );
                   })}
                 </div>
+                {formData.aiExperience && (
+                  <div style={{ fontSize: 11, color: '#718096', marginTop: 6 }}>
+                    {AI_EXPERIENCE_OPTIONS.find(o => o.value === formData.aiExperience)?.desc}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <Label icon={<Rocket size={14} color="#38B2AC" />} text="What is your AI ambition?" required />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                  {AMBITION_OPTIONS.map(opt => {
+                    const sel = formData.ambition === opt.value;
+                    return (
+                      <button key={opt.value} onClick={() => updateField('ambition', opt.value)} style={{
+                        padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: sel ? 600 : 500,
+                        cursor: 'pointer', border: sel ? '2px solid #38B2AC' : '1.5px solid #E2E8F0',
+                        background: sel ? '#F0FFFC' : '#FFFFFF', color: sel ? '#2D9E99' : '#4A5568',
+                        fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                      }}>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {formData.ambition && (
+                  <div style={{ fontSize: 11, color: '#718096', marginTop: 6 }}>
+                    {AMBITION_OPTIONS.find(o => o.value === formData.ambition)?.desc}
+                  </div>
+                )}
               </div>
 
               <div>
-                <Label icon={<MessageSquare size={14} color="#38B2AC" />} text="Describe your experience in more detail" required />
+                <Label icon={<MessageSquare size={14} color="#38B2AC" />} text="Describe your experience using AI in more detail" required />
                 <div style={{ fontSize: 11, color: '#718096', marginBottom: 6 }}>
                   Tell us how you've used AI tools so far, what's worked, and what hasn't. This helps us set the right starting point.
                 </div>
@@ -977,10 +972,12 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
                   onBlur={e => { e.target.style.borderColor = '#E2E8F0'; e.target.style.boxShadow = 'none'; }}
                 />
               </div>
-            </>)}
 
-            {/* ═══ STEP 3: Challenges & Goals ═══ */}
-            {step === 3 && !generating && (<>
+              {/* ── Section: Goals ── */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14, marginTop: 24, paddingTop: 20, borderTop: '1px solid #F0F4F8' }}>
+                Goals
+              </div>
+
               <div style={{ marginBottom: 18 }}>
                 <Label icon={<MessageSquare size={14} color="#38B2AC" />}
                   text="What's the biggest challenge AI could help you solve?" required />
@@ -998,7 +995,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               </div>
 
               <div style={{ marginBottom: 18 }}>
-                <Label icon={<Target size={14} color="#38B2AC" />} text="Describe your goal" required />
+                <Label icon={<Target size={14} color="#38B2AC" />} text="Describe your goal within this AI upskilling course" required />
                 <div style={{ fontSize: 11, color: '#718096', marginBottom: 6 }}>
                   What does success look like for you at the end of this programme?
                 </div>
@@ -1013,34 +1010,30 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
 
               <div>
                 <Label icon={<Clock size={14} color="#38B2AC" />} text="Weekly time commitment" required />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
                   {AVAILABILITY_OPTIONS.map(opt => {
                     const sel = formData.availability === opt.value;
-                    const AIcon = opt.icon;
                     return (
-                      <div key={opt.value} onClick={() => updateField('availability', opt.value)} style={{
-                        background: sel ? '#F0FFFC' : '#FFFFFF',
-                        border: sel ? '2px solid #38B2AC' : '1.5px solid #E2E8F0',
-                        borderRadius: 12, padding: '14px 12px', cursor: 'pointer',
-                        textAlign: 'center', transition: 'all 0.15s', boxSizing: 'border-box',
+                      <button key={opt.value} onClick={() => updateField('availability', opt.value)} style={{
+                        padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: sel ? 600 : 500,
+                        cursor: 'pointer', border: sel ? '2px solid #38B2AC' : '1.5px solid #E2E8F0',
+                        background: sel ? '#F0FFFC' : '#FFFFFF', color: sel ? '#2D9E99' : '#4A5568',
+                        fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
                       }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: 8, margin: '0 auto 6px',
-                          background: sel ? '#E6FFFA' : '#F7FAFC',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <AIcon size={16} color={sel ? '#38B2AC' : '#A0AEC0'} />
-                        </div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C' }}>{opt.label}</div>
-                        <div style={{ fontSize: 10, color: '#718096', marginTop: 2 }}>{opt.desc}</div>
-                      </div>
+                        {opt.label}
+                      </button>
                     );
                   })}
                 </div>
+                {formData.availability && (
+                  <div style={{ fontSize: 11, color: '#718096', marginTop: 6 }}>
+                    {AVAILABILITY_OPTIONS.find(o => o.value === formData.availability)?.desc}
+                  </div>
+                )}
               </div>
             </>)}
 
-            {step === 3 && generating && (
+            {step === 2 && generating && (
               <SurveyProcessing error={genError} onRetry={handleRetry} />
             )}
           </div>

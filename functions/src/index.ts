@@ -754,6 +754,7 @@ const PATHWAY_SYSTEM_SUFFIX = `
 OUTPUT FORMAT (JSON only):
 {
   "pathwaySummary": "...",
+  "whyThisPlan": "2-3 sentences explaining why THIS learner was assigned these specific levels. Reference 2-3 pieces of information from their profile — pick the most relevant: at least one from (role, function, experience level) and at least one from (ambition, challenge). Do not list everything. Written in second person. Should feel personal and transparent, not like a form readback.",
   "totalEstimatedWeeks": number,
   "levels": {
     "L1": { "depth": "full|fast-track", "projectTitle": "...", "projectDescription": "...", "deliverable": "...", "challengeConnection": "...", "sessionFormat": "...", "resources": [{ "name": "...", "note": "..." }] }

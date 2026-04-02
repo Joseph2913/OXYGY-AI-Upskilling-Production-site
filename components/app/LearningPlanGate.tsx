@@ -11,7 +11,6 @@ const LearningPlanGate: React.FC<LearningPlanGateProps> = ({ children }) => {
   const location = useLocation();
 
   // /app/journey is always accessible — it handles both states internally
-  // Check this FIRST so the journey page is never blocked during loading
   if (location.pathname === '/app/journey') return <>{children}</>;
 
   // Show a spinner while loading — never return null (causes blank white screen)
