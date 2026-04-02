@@ -761,9 +761,8 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
   if (!visible) return null;
 
   /* ─── Shared card shell style ─── */
-  const CARD_HEIGHT = 400; // Fixed height — no illustrations, consistent across all steps
   const cardStyle: React.CSSProperties = {
-    position: 'fixed', bottom: 24, right: 24, width: 400,
+    position: 'fixed', bottom: 24, right: 24, width: 380,
     maxWidth: 'calc(100vw - 48px)', zIndex: 9999,
     background: '#1A202C', borderRadius: 14,
     border: '1px solid rgba(56,178,172,0.3)',
@@ -790,11 +789,11 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
           {/* Accent bar */}
           <div style={{ height: 3, background: 'linear-gradient(90deg, #38B2AC, #A8F0E0)' }} />
 
-          <div style={{ padding: '20px 20px 16px' }}>
+          <div style={{ padding: '14px 16px 12px' }}>
             {/* Icon */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
               <div style={{
-                width: 52, height: 52, borderRadius: 14,
+                width: 44, height: 44, borderRadius: 12,
                 background: 'rgba(56,178,172,0.1)', border: '1px solid rgba(56,178,172,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
@@ -803,21 +802,21 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
             </div>
 
             {/* Title */}
-            <div style={{ textAlign: 'center', marginBottom: 6 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3 }}>
+            <div style={{ textAlign: 'center', marginBottom: 5 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3 }}>
                 Welcome to OXYGY's AI Upskilling Platform
               </div>
             </div>
 
             {/* Description */}
-            <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: 16 }}>
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55, marginBottom: 12 }}>
               Would you like a quick guided tour of the platform? We can walk you through each section with an optional voiceover to help you understand the core features.
             </div>
 
             {/* Narration opt-in */}
             <div style={{
               background: 'rgba(56,178,172,0.06)', border: '1px solid rgba(56,178,172,0.15)',
-              borderRadius: 10, padding: '10px 14px', marginBottom: 14,
+              borderRadius: 10, padding: '8px 12px', marginBottom: 10,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <Volume2 size={14} stroke="#38B2AC" strokeWidth={2} />
@@ -856,7 +855,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
             </div>
 
             {/* Skip */}
-            <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button
                 onClick={() => handleDismiss(false)}
                 style={{
@@ -916,12 +915,12 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
       )}
 
       {/* Tour Card */}
-      <div ref={cardRef} role="dialog" aria-label="Product tour" key={animKey} style={{ ...cardStyle, height: CARD_HEIGHT }}>
+      <div ref={cardRef} role="dialog" aria-label="Product tour" key={animKey} style={cardStyle}>
         {/* Accent bar */}
         <div style={{ height: 3, flexShrink: 0, background: 'linear-gradient(90deg, #38B2AC, #A8F0E0)' }} />
 
         {/* Progress dots + Skip — pinned top */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
             {TOUR_STEPS.map((_, i) => (
               <div key={i} style={{
@@ -939,71 +938,73 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
           </button>
         </div>
 
-        {/* ── Scrollable body — fills remaining space ── */}
-        <div className="tour-card-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+        {/* ── Body ── */}
+        <div className="tour-card-scroll" style={{ overflowX: 'hidden' }}>
           {/* Header: icon + eyebrow + title */}
-          <div style={{ display: 'flex', padding: '6px 16px 0', gap: 12 }}>
+          <div style={{ display: 'flex', padding: '4px 14px 0', gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#38B2AC', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 5 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#38B2AC', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 3 }}>
                 {current!.eyebrow}
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3 }}>
                 {current!.title}
               </div>
             </div>
-            <div style={{ width: 56, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+            <div style={{ width: 44, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
               <div style={{
-                width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 38, height: 38, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'rgba(56,178,172,0.08)', border: '1px solid rgba(56,178,172,0.18)',
               }}>
-                <Icon size={20} stroke="#38B2AC" strokeWidth={1.75} fill="none"
+                <Icon size={17} stroke="#38B2AC" strokeWidth={1.75} fill="none"
                   className="tour-icon-float" style={{ animationDelay: `${step * 0.25}s` }} />
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <div style={{ padding: '8px 16px 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, fontWeight: 400 }}>
+          <div style={{ padding: '6px 14px 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55, fontWeight: 400 }}>
             {current!.description}
           </div>
 
           {/* Inline illustration (if any) */}
-          <div style={{ padding: '0 16px' }}>
-            {current!.hasInlineIllustration === 'journey' && <JourneyIllustration />}
-            {current!.hasInlineIllustration === 'tiers' && <TiersIllustration />}
-            {current!.hasInlineIllustration === 'dashboard' && <DashboardIllustration />}
-            {current!.hasInlineIllustration === 'elearning' && <ElearningIllustration />}
-            {current!.hasInlineIllustration === 'toolkit' && <ToolkitIllustration />}
-            {current!.hasInlineIllustration === 'prompt' && <PromptFlowIllustration />}
-            {current!.hasInlineIllustration === 'coach' && <CoachIllustration />}
-            {current!.hasInlineIllustration === 'artefacts' && <ArtefactsIllustration />}
-            {current!.hasInlineIllustration === 'cohort' && <CohortIllustration />}
-          </div>
+          {current!.hasInlineIllustration && (
+            <div style={{ padding: '0 14px' }}>
+              {current!.hasInlineIllustration === 'journey' && <JourneyIllustration />}
+              {current!.hasInlineIllustration === 'tiers' && <TiersIllustration />}
+              {current!.hasInlineIllustration === 'dashboard' && <DashboardIllustration />}
+              {current!.hasInlineIllustration === 'elearning' && <ElearningIllustration />}
+              {current!.hasInlineIllustration === 'toolkit' && <ToolkitIllustration />}
+              {current!.hasInlineIllustration === 'prompt' && <PromptFlowIllustration />}
+              {current!.hasInlineIllustration === 'coach' && <CoachIllustration />}
+              {current!.hasInlineIllustration === 'artefacts' && <ArtefactsIllustration />}
+              {current!.hasInlineIllustration === 'cohort' && <CohortIllustration />}
+            </div>
+          )}
 
           {/* Feature chips */}
-          <div style={{ padding: '10px 16px 0', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+          <div style={{ padding: '7px 14px 0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {current!.chips.map(c => (
               <span key={c} style={{
                 background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,
-                padding: '3px 9px', fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)',
+                padding: '2px 8px', fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)',
               }}>{c}</span>
             ))}
           </div>
 
           {/* Footnote / secondary note */}
           {current!.footnote && (
-            <div style={{ padding: '6px 16px 0', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+            <div style={{ padding: '5px 14px 0', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
               {current!.footnote}
             </div>
           )}
           {current!.secondaryNote && (
-            <div style={{ padding: '6px 16px 0', fontSize: 10, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }}>
+            <div style={{ padding: '5px 14px 0', fontSize: 10, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }}>
               {current!.secondaryNote}
             </div>
           )}
 
-          {/* Bottom padding inside scroll area */}
-          <div style={{ height: 12 }} />
+          {/* Bottom padding */}
+          <div style={{ height: 10 }} />
         </div>
 
         {/* ── Audio control bar (when narration enabled) — pinned ── */}
@@ -1159,7 +1160,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
         {!narrationEnabled && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '6px 16px', flexShrink: 0,
+            padding: '4px 14px', flexShrink: 0,
             borderTop: '1px solid rgba(255,255,255,0.07)',
           }}>
             <button
@@ -1178,11 +1179,11 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
         {/* Nav row — pinned bottom */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 16px 14px', flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.07)',
+          padding: '8px 14px 12px', flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.07)',
         }}>
           <button onClick={handleBack} tabIndex={0} style={{
             background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20,
-            color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, padding: '7px 14px',
+            color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, padding: '6px 12px',
             cursor: step === 0 ? 'default' : 'pointer',
             opacity: step === 0 ? 0.3 : 1,
             pointerEvents: step === 0 ? 'none' : 'auto', fontFamily: 'inherit',
@@ -1192,7 +1193,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
           <button onClick={handleNext} tabIndex={0} style={{
             background: isLast ? '#48BB78' : '#38B2AC',
             border: 'none', borderRadius: 20,
-            color: '#FFFFFF', fontSize: 12, fontWeight: 700, padding: '7px 18px',
+            color: '#FFFFFF', fontSize: 12, fontWeight: 700, padding: '6px 16px',
             cursor: 'pointer', fontFamily: 'inherit',
           }}>
             {isLast ? 'Get started ✓' : 'Next →'}
