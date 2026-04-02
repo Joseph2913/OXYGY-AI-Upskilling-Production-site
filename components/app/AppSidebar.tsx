@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
@@ -6,13 +6,13 @@ import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',      icon: Home,         path: '/app/dashboard',              tooltip: 'Your progress overview' },
-  { label: 'My Journey',     icon: Map,          path: '/app/journey',                tooltip: 'Your personalised learning path' },
-  { label: 'Current Level',  icon: BookOpen,     path: '/app/level',                  tooltip: 'Jump straight into your active level' }, // path overridden dynamically below
-  { label: 'My Toolkit',     icon: Wrench,       path: '/app/toolkit',                tooltip: 'AI-powered tools — one per level' },
-  { label: 'Learning Coach', icon: GraduationCap, path: '/app/toolkit/learning-coach', tooltip: 'Find the right resources, tailored to how you learn' },
-  { label: 'My Artefacts',   icon: Folder,       path: '/app/artefacts',              tooltip: 'Saved outputs from across the platform' },
-  { label: 'My Cohort',      icon: Users,        path: '/app/cohort',                 tooltip: 'See how your cohort is progressing' },
+  { label: 'Dashboard',      icon: Home,         path: '/app/dashboard' },
+  { label: 'My Journey',     icon: Map,          path: '/app/journey' },
+  { label: 'Current Level',  icon: BookOpen,     path: '/app/level' }, // path overridden dynamically below
+  { label: 'My Toolkit',     icon: Wrench,       path: '/app/toolkit' },
+  { label: 'Learning Coach', icon: GraduationCap, path: '/app/toolkit/learning-coach' },
+  { label: 'My Artefacts',   icon: Folder,       path: '/app/artefacts' },
+  { label: 'My Cohort',      icon: Users,        path: '/app/cohort' },
 ];
 
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
@@ -32,8 +32,6 @@ export const AppSidebar: React.FC = () => {
   const level = userProfile?.current_level ?? 1;
   const [expanded, setExpanded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [tooltipState, setTooltipState] = useState<{ path: string; top: number } | null>(null);
-  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isActive = (path: string) => {
     if (path === '/app/toolkit/learning-coach') {
@@ -55,7 +53,7 @@ export const AppSidebar: React.FC = () => {
     <style>{HIDE_SCROLLBAR_CSS}</style>
     <div
       onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => { setExpanded(false); setTooltipState(null); }}
+      onMouseLeave={() => setExpanded(false)}
       style={{
         position: 'fixed',
         top: 0,
@@ -138,19 +136,10 @@ export const AppSidebar: React.FC = () => {
           const resolvedPath = item.path;
           const active = isActive(item.path);
           const Icon = item.icon;
-          const showTooltip = expanded && tooltipState?.path === item.path;
           return (
             <div
               key={item.path}
               style={{ position: 'relative' }}
-              onMouseEnter={(e) => {
-                if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                setTooltipState({ path: item.path, top: rect.top + rect.height / 2 });
-              }}
-              onMouseLeave={() => {
-                tooltipTimerRef.current = setTimeout(() => setTooltipState(null), 80);
-              }}
             >
               <Link
                 to={resolvedPath}
@@ -200,27 +189,6 @@ export const AppSidebar: React.FC = () => {
                   {item.label}
                 </span>
               </Link>
-              {showTooltip && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    left: SIDEBAR_EXPANDED_WIDTH + 12,
-                    top: tooltipState!.top,
-                    transform: 'translateY(-50%)',
-                    background: '#1A202C',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    color: '#FFFFFF',
-                    borderRadius: 8,
-                    padding: '6px 12px',
-                    whiteSpace: 'nowrap',
-                    zIndex: 200,
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 500 }}>{item.label}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{item.tooltip}</div>
-                </div>
-              )}
             </div>
           );
         })}
