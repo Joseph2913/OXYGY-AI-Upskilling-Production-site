@@ -9,6 +9,60 @@ import LearningPlanGate from './LearningPlanGate';
 import { ProductTour } from './ProductTour';
 
 /**
+ * Error boundary that resets when the route changes (via key prop).
+ * Prevents an unhandled render error in any page from crashing the entire
+ * app shell and leaving a blank white screen that requires a browser refresh.
+ */
+class RouteErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[RouteErrorBoundary] Page render error:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column' as const,
+          alignItems: 'center', justifyContent: 'center',
+          minHeight: '60vh', padding: 36, textAlign: 'center' as const,
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1A202C', marginBottom: 8 }}>
+            Something went wrong loading this page
+          </div>
+          <div style={{ fontSize: 14, color: '#718096', marginBottom: 24, maxWidth: 400, lineHeight: 1.6 }}>
+            There was an unexpected error. Try navigating to another page, or click below to retry.
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{
+              background: '#38B2AC', color: '#FFFFFF', border: 'none',
+              borderRadius: 24, padding: '10px 28px',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
  * Inner layout that has access to AppContext (for hasLearningPlan check).
  * Tour logic lives here so it can read context values.
  * TourModeProvider wraps everything so hooks can detect tour mode.
@@ -85,9 +139,12 @@ const AppLayoutInner: React.FC = () => {
             minHeight: 'calc(100vh - 54px)',
           }}
         >
-          <LearningPlanGate>
-            <Outlet />
-          </LearningPlanGate>
+          {/* Key by pathname so the error boundary resets on every navigation */}
+          <RouteErrorBoundary key={location.pathname}>
+            <LearningPlanGate>
+              <Outlet />
+            </LearningPlanGate>
+          </RouteErrorBoundary>
         </div>
       </div>
       {tourActive && <ProductTour onComplete={handleTourComplete} />}
