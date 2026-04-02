@@ -203,18 +203,23 @@ export function useJourneyData(): {
               : new Date(); // fallback: all topics done but no timestamp
           }
 
-          // Level status — next level only unlocks when elearn + toolkit + project all done
+          // Level status:
+          // - Assigned levels are accessible from the start — no progression gate between them.
+          // - Unassigned levels (bonus) remain locked until previous levels are complete.
           const allPreviousComplete = Array.from({ length: levelNumber - 1 }, (_, i) => i + 1)
             .every(prev => completedLevelSet.has(prev));
 
           let status: LevelProgress['status'];
           if (allTopicsDone) {
             status = 'completed';
-          } else if (!allPreviousComplete) {
-            // Previous levels not finished — keep locked regardless of any stale progress
+          } else if (!isAssigned) {
+            // Unassigned (bonus) level — always locked
+            status = 'not-started';
+          } else if (!isAssigned && !allPreviousComplete) {
+            // Unreachable but kept for clarity
             status = 'not-started';
           } else {
-            // All previous levels complete — determine state of this level
+            // Assigned level — accessible regardless of whether previous levels are complete
             const allElearnAndToolkitDone = topics.every(topic => {
               const row = progressMap.get(topic.id);
               return !!row?.elearn_completed_at;
