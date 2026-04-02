@@ -59,9 +59,14 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
       // Build project submission map
       const projectSubMap = new Map(projectSubs.map(s => [s.level, s]));
 
-      // Determine which levels are assigned from learning plan
+      // Determine which levels are assigned from learning plan.
+      // Always enforce a contiguous sequence from L1 — fill any gaps up to the highest assigned level.
       const assignedLevelKeys = learningPlanData?.plan?.levels
-        ? Object.keys(learningPlanData.plan.levels)
+        ? (() => {
+            const keys = Object.keys(learningPlanData.plan.levels);
+            const highest = Math.max(...keys.map(k => parseInt(k.replace('L', ''), 10)));
+            return Array.from({ length: highest }, (_, i) => `L${i + 1}`);
+          })()
         : ['L1', 'L2', 'L3', 'L4', 'L5'];
 
       // Build completed level set using the canonical 3-phase check

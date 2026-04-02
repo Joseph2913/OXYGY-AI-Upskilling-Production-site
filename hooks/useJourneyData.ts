@@ -85,9 +85,14 @@ export function useJourneyData(): {
         const lpMap = new Map<number, LevelProgressRow>(levelProgressRows.map(r => [r.level, r]));
         const psMap = new Map<number, ProjectSubmission>(projectSubs.map(s => [s.level, s]));
 
-        // Determine which levels are assigned from learning plan
+        // Determine which levels are assigned from learning plan.
+        // Always enforce a contiguous sequence from L1 — fill any gaps up to the highest assigned level.
         const assignedLevelKeys = learningPlanData?.plan?.levels
-          ? Object.keys(learningPlanData.plan.levels)    // e.g. ['L1', 'L2', 'L3']
+          ? (() => {
+              const keys = Object.keys(learningPlanData.plan.levels);
+              const highest = Math.max(...keys.map(k => parseInt(k.replace('L', ''), 10)));
+              return Array.from({ length: highest }, (_, i) => `L${i + 1}`);
+            })()
           : ['L1', 'L2', 'L3', 'L4', 'L5'];             // fallback: all assigned if no plan
 
         // ── Build completedLevelSet: level is complete only when ALL 3 signals are present ──

@@ -312,9 +312,14 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       // ── Build level depths from learning plan ──
       const levelDepths: Record<string, LevelDepth> = learningPlanResult?.level_depths || {};
 
-      // Determine which levels are assigned from learning plan
+      // Determine which levels are assigned from learning plan.
+      // Always enforce a contiguous sequence from L1 — fill any gaps up to the highest assigned level.
       const assignedLevelKeys = learningPlanResult?.plan?.levels
-        ? Object.keys(learningPlanResult.plan.levels)
+        ? (() => {
+            const keys = Object.keys(learningPlanResult.plan.levels);
+            const highest = Math.max(...keys.map(k => parseInt(k.replace('L', ''), 10)));
+            return Array.from({ length: highest }, (_, i) => `L${i + 1}`);
+          })()
         : ['L1', 'L2', 'L3', 'L4', 'L5'];
       const assignedLevels = new Set(assignedLevelKeys.map(k => parseInt(k.replace('L', ''), 10)));
 
