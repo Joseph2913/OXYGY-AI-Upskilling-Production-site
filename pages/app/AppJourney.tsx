@@ -654,27 +654,38 @@ const AppJourney: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                if (currentLevel.status === 'active' || currentLevel.status === 'project-pending' || currentLevel.status === 'completed') {
-                  navigate(`/app/level?level=${currentLevel.levelNumber}`);
-                } else {
-                  scrollToLevel(currentLevel.levelNumber);
-                }
-              }}
-              style={{
-                background: currentMeta.accentDark, color: '#FFFFFF', border: 'none',
-                borderRadius: 20, padding: '8px 18px', fontSize: 12, fontWeight: 600,
-                cursor: 'pointer', transition: 'opacity 0.15s',
-                display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-            >
-              {(currentLevel.status === 'active' || currentLevel.status === 'project-pending') ? 'Continue' : currentLevel.status === 'completed' ? 'Review' : 'View'}
-              <ArrowRight size={12} />
-            </button>
+            {(() => {
+              const isNotStarted = currentLevel.status === 'not-started';
+              const allPreviousComplete = levels
+                .filter(l => l.levelNumber < currentLevel.levelNumber)
+                .every(l => l.status === 'completed');
+              // Disabled only when unassigned AND previous levels not all complete (still locked)
+              const isDisabled = isNotStarted && !currentLevel.isAssigned && !allPreviousComplete;
+              const label = (currentLevel.status === 'active' || currentLevel.status === 'project-pending') ? 'Continue' : currentLevel.status === 'completed' ? 'Review' : 'View';
+              return (
+                <button
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (isDisabled) return;
+                    navigate(`/app/level?level=${currentLevel.levelNumber}`);
+                  }}
+                  style={{
+                    background: isDisabled ? '#E2E8F0' : currentMeta.accentDark,
+                    color: isDisabled ? '#A0AEC0' : '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 20, padding: '8px 18px', fontSize: 12, fontWeight: 600,
+                    cursor: isDisabled ? 'not-allowed' : 'pointer', transition: 'opacity 0.15s',
+                    display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { if (!isDisabled) e.currentTarget.style.opacity = '0.85'; }}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  {label}
+                  <ArrowRight size={12} />
+                </button>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -687,7 +698,7 @@ const AppJourney: React.FC = () => {
             ? planData?.levels?.[`L${levels[idx + 1].levelNumber}`]
             : null;
           const isAssigned = level.isAssigned;
-          const nextIsAssigned = !!nextPlanLevel;
+          const nextIsAssigned = idx < levels.length - 1 ? levels[idx + 1].isAssigned : false;
           const showConnector = isAssigned && nextIsAssigned && idx < levels.length - 1;
           const lvlMeta = LEVEL_META.find(m => m.number === level.levelNumber);
           const lvlDone = level.status === 'completed';

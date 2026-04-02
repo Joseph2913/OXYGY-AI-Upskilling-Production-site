@@ -407,7 +407,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
 
                 {connector}
 
-                <div style={{ ...chipStyle, cursor: primaryTool ? 'pointer' : 'default' }} onClick={primaryTool ? () => navigate(primaryTool.route) : undefined} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+                <div style={{ ...chipStyle, cursor: 'pointer' }} onClick={() => navigate(primaryTool?.route ?? '/app/toolkit')} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
                   <Wrench size={14} color={accentDark} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

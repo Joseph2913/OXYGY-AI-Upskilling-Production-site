@@ -26,30 +26,33 @@ const AppLayoutInner: React.FC = () => {
     // Wait until context has resolved hasLearningPlan
     if (!hasLearningPlan) return;
     if (initialLoadDoneRef.current) return;
-    initialLoadDoneRef.current = true;
 
     const completed = localStorage.getItem('oxygy_tour_completed');
 
-    // If tour was already completed/skipped, nothing to do
-    if (completed === 'true') return;
-
-    // For existing users who already have a learning plan and were active
-    // before the tour was deployed: silently mark tour as done so it doesn't
-    // auto-trigger unexpectedly. The replay option in Settings remains available.
-    const hasArtefacts = localStorage.getItem('oxygy_has_artefacts') === 'true';
-    const hasToolUsage = localStorage.getItem('oxygy_has_tool_usage') === 'true';
-    // Also check if they've visited more than once (returning user heuristic)
-    const visitCount = parseInt(localStorage.getItem('oxygy_visit_count') || '0', 10);
-    if (visitCount > 1 || hasArtefacts || hasToolUsage) {
-      localStorage.setItem('oxygy_tour_completed', 'true');
+    // If tour was already completed/skipped, nothing to do. Close the gate.
+    if (completed === 'true') {
+      initialLoadDoneRef.current = true;
       return;
     }
 
-    // Track visits for the heuristic above
+    // For existing users who were active before the tour was deployed:
+    // silently mark tour as done so it doesn't auto-trigger unexpectedly.
+    // The replay option in Settings remains available.
+    const visitCount = parseInt(localStorage.getItem('oxygy_visit_count') || '0', 10);
+    if (visitCount > 1) {
+      localStorage.setItem('oxygy_tour_completed', 'true');
+      initialLoadDoneRef.current = true;
+      return;
+    }
+
+    // Only auto-trigger on the Dashboard page (post-survey landing).
+    // Do NOT close the gate yet — keep watching until user reaches dashboard.
+    if (location.pathname !== '/app/dashboard') return;
+
+    // On dashboard and tour not yet seen — close the gate and trigger.
+    initialLoadDoneRef.current = true;
     localStorage.setItem('oxygy_visit_count', String(visitCount + 1));
 
-    // Only auto-trigger on the Dashboard page (post-survey landing)
-    if (location.pathname !== '/app/dashboard') return;
     if (tourTriggeredRef.current) return;
     tourTriggeredRef.current = true;
 
