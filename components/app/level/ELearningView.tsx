@@ -5,19 +5,14 @@ import { SlideData } from '../../../data/topicContent';
 import { useVoiceover, UseVoiceoverReturn } from '../../../hooks/useVoiceover';
 import { useTourMode } from '../../../context/TourModeContext';
 
-/* ── Glow + animation keyframe CSS (injected once) ── */
-const GLOW_STYLE_ID = 'elearn-glow-style';
-function injectGlowStyle() {
+/* ── Animation keyframe CSS (injected once) ── */
+const GLOW_STYLE_ID = 'elearn-anim-style';
+function injectAnimStyles() {
   if (document.getElementById(GLOW_STYLE_ID)) return;
   const style = document.createElement('style');
   style.id = GLOW_STYLE_ID;
   style.textContent = `
-    @keyframes fsGlow {
-      0%, 100% { box-shadow: 0 0 6px 2px rgba(56,178,172,0.35); }
-      50% { box-shadow: 0 0 14px 5px rgba(56,178,172,0.6); }
-    }
-    .fs-glow-btn { animation: fsGlow 2s ease-in-out infinite; }
-    @keyframes insightPulse {
+@keyframes insightPulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(56,178,172,0.2); }
       50% { box-shadow: 0 0 16px 4px rgba(56,178,172,0.35); }
     }
@@ -211,7 +206,7 @@ function AudioBar({ voiceover, isFullscreen, isInline, autoNarration, onToggleAu
         )}
 
         {/* Narration button — opens portal popover with settings */}
-        <div ref={narrationRef}>
+        <div ref={narrationRef} title="Audio narration adds additional commentary. All key content is also visible on screen.">
           <button
             data-tour="narration-btn"
             onClick={() => {
@@ -299,6 +294,16 @@ function AudioBar({ voiceover, isFullscreen, isInline, autoNarration, onToggleAu
                   <div style={{ position: 'absolute', top: 3, left: autoNarration ? 17 : 3, width: 12, height: 12, borderRadius: '50%', background: '#FFFFFF', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                 </div>
               </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="8" cy="8" r="7" stroke="#A0AEC0" strokeWidth="1.5" />
+                <path d="M8 7v4" stroke="#A0AEC0" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="8" cy="5" r="0.75" fill="#A0AEC0" />
+              </svg>
+              <span style={{ fontSize: 10, color: '#A0AEC0', lineHeight: 1.4, textAlign: 'left' }}>
+                Audio adds extra commentary. All key content is visible on screen.
+              </span>
             </div>
           </div>,
           document.body
@@ -497,7 +502,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const isTourMode = useTourMode();
   const voiceover = useVoiceover();
   const [autoNarration, setAutoNarration] = useState<boolean>(() => {
-    try { return localStorage.getItem('oxygy_auto_narration') !== 'false'; } catch { return true; }
+    try { return localStorage.getItem('oxygy_auto_narration') === 'true'; } catch { return false; }
   });
   const toggleAutoNarration = useCallback(() => {
     setAutoNarration(prev => {
@@ -522,7 +527,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     try { localStorage.setItem('oxygy_vo_user_paused', 'false'); } catch { /* ignore */ }
   }, []);
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([currentSlide]));
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [showFsTooltip, setShowFsTooltip] = useState(true);
   const [sjScenarioIdx, setSjScenarioIdx] = useState(0);
   /* L2 interactive slide state */
@@ -569,7 +574,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   const [reflectionA, setReflectionA] = useState('');
   const [reflectionB, setReflectionB] = useState('');
 
-  useEffect(() => { injectGlowStyle(); }, []);
+  useEffect(() => { injectAnimStyles(); }, []);
   useEffect(() => { setVisitedSlides((prev) => new Set(prev).add(currentSlide)); }, [currentSlide]);
 
   // Shuffle build-a-prompt source chips once when that slide is first reached
@@ -590,9 +595,9 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     }
   }, [currentSlide]);
 
-  // Auto-dismiss tooltip after 8s or on first fullscreen
+  // Auto-dismiss tooltip after 8s or when exiting fullscreen
   useEffect(() => {
-    if (isFullscreen) { setShowFsTooltip(false); return; }
+    if (!isFullscreen) { setShowFsTooltip(false); return; }
     const t = setTimeout(() => setShowFsTooltip(false), 8000);
     return () => clearTimeout(t);
   }, [isFullscreen]);
@@ -1613,7 +1618,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           ];
           const l2ObjIcons = ['🎯', '🏗️', '🛡️'];
           return (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
               {/* Left column */}
               <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #FEFCE8 0%, #FEF9C3 50%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#8A6A00', background: '#F7E8A4', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
@@ -1685,10 +1690,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             { label: 'OUTPUT',    color: '#F6AD55', light: '#FFFAF0', icon: '📤' },
           ];
           return (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
               {/* Left column */}
               <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#1A7A76', background: '#A8F0E0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#1A7A76', background: '#B2D8F7', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
                   LEVEL 3 · E-LEARNING
                 </span>
                 <h1 style={{ fontSize: fs ? 24 : 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
@@ -1744,7 +1749,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             { key: 'DATA SOURCES', color: '#48BB78', light: '#F0FFF4', icon: '🗄️' },
           ];
           return (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
               {/* Left column */}
               <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #FFF7F4 0%, #FDEAE0 60%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#8C3A1A', background: '#F5B8A0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
@@ -1808,11 +1813,11 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         ];
         const l1ObjIcons = ['💡', '🗂️', '🔄', '🎯'];
         return (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
             {/* Left column */}
             <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: fs ? '44px 48px' : '28px 32px', background: 'linear-gradient(160deg, #E6FFFA 0%, #EBF8FF 60%, #F7FAFC 100%)', borderRight: '1px solid #E2E8F0' }}>
               {s.levelNumber && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#1A6B5F', background: '#A8F0E0', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#2B6CB0', background: '#B2D8F7', padding: '3px 10px', borderRadius: 16, letterSpacing: '0.1em', textTransform: 'uppercase' as const, display: 'inline-block', marginBottom: 14 }}>
                   LEVEL {s.levelNumber} · E-LEARNING
                 </span>
               )}
@@ -2139,7 +2144,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         ) : null;
 
         return (
-          <div style={{ padding: fs ? '24px 44px' : '14px 22px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', overflow: 'hidden' }}>
+          <div style={{ padding: fs ? '24px 44px' : '16px 24px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: hasStat ? '48% 52%' : '1fr', gap: fs ? 20 : 16, flex: 1, alignItems: 'center', minHeight: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {s.body && <p style={{ fontSize: fs ? 17 : 15, color: '#4A5568', lineHeight: 1.75, margin: 0 }}>{s.body}</p>}
@@ -2156,10 +2161,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const outcomes = [
           { label: 'Customer support agents', sublabel: 'AI assistance for ticket resolution', gain: 14, barW: '6%', color: '#A0AEC0', textColor: '#718096' },
           { label: 'Business professionals', sublabel: 'AI-assisted writing & analysis tasks', gain: 59, barW: '22%', color: '#4FD1C5', textColor: '#2C9A94' },
-          { label: 'Software developers', sublabel: 'GitHub Copilot for coding tasks', gain: 126, barW: '45%', color: '#38B2AC', textColor: '#1A6B5F' },
+          { label: 'Software developers', sublabel: 'GitHub Copilot for coding tasks', gain: 126, barW: '45%', color: '#38B2AC', textColor: '#2B6CB0' },
         ];
         return (
-          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <div style={{ padding: fs ? '24px 28px' : '16px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, flex: 1, minHeight: 0 }}>
               {/* Left — body */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -2207,7 +2212,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const pyramidActiveColor  = ['#2E3F8F','#FFFFFF','#1A202C','#2E3F8F','#FFFFFF'][pyramidActiveIdx] ?? '#FFFFFF';
         const pyramidBaseFills   = ['#C3D0F5', '#FBCEB1', '#E6FFFA', '#FEFCE8', '#D4FAF0'];
         const pyramidBaseBorders = ['#A0B4E8', '#E8A882', '#7DD4CC', '#D4C070', '#7DD4CC'];
-        const pyramidBaseColors  = ['#2E3F8F', '#8C3A1A', '#1A7A76', '#8A6A00', '#1A6B5F'];
+        const pyramidBaseColors  = ['#2E3F8F', '#8C3A1A', '#1A7A76', '#8A6A00', '#2B6CB0'];
         const pyramidLayers = [
           { label: 'Applications', width: '38%' },
           { label: 'Dashboards',   width: '50%' },
@@ -2227,7 +2232,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           };
         });
         return (
-          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 28px' : '16px 20px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
               {/* Left */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -2580,7 +2585,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           const opts = s.predictOptions || ['Brain Dump', 'Conversational', 'Blueprint'];
           const isCorrect = predictSelected === s.predictCorrect;
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: fs ? '20px 24px' : '12px 14px', overflowY: 'auto', boxSizing: 'border-box' as const, gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: fs ? '20px 24px' : '14px 18px', overflowY: 'auto', boxSizing: 'border-box' as const, gap: 12 }}>
 
               {/* ── Persona hero card ── */}
               <div style={{ borderRadius: 14, overflow: 'hidden', border: `2px solid ${p.color}33`, flexShrink: 0 }}>
@@ -2659,7 +2664,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
 
         const toggleExpand = (id: string) => setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
         return (
-          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: fs ? '24px 28px' : '16px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flex: 1 }}>
               {/* Left — context panel */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -2744,7 +2749,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           'Structured input for consistent output',
         ];
         return (
-          <div style={{ padding: fs ? '16px 18px' : '10px 12px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', gap: 14, boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '16px 18px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', gap: 14, boxSizing: 'border-box' as const }}>
             {/* Column headers */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               {APPROACHES.map((ap, colIdx) => (
@@ -2809,7 +2814,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         const revealed = selectedOpt !== null;
         const isCorrect = revealed && selectedOpt === sj.correct;
         return (
-          <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 12, overflowY: 'auto', boxSizing: 'border-box' as const }}>
+          <div style={{ padding: fs ? '20px 24px' : '14px 18px', display: 'flex', flexDirection: 'column', height: '100%', gap: 12, overflowY: 'auto', boxSizing: 'border-box' as const }}>
 
             {/* ── Purpose banner ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(90deg, #2B4C7E 0%, #38B2AC 100%)', borderRadius: 10, padding: '10px 16px' }}>
@@ -3168,7 +3173,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Gap Diagram (annotated prompt with RCTF underlines + animated insight) ── */
       case 'gapDiagram':
         return (
-          <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '20px 24px' : '14px 18px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <div>
               {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 12px' }}>{s.body}</p>}
             </div>
@@ -3217,7 +3222,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Toolkit Overview (Blueprint + Approaches + Amplifiers) ── */
       case 'toolkitOverview':
         return (
-          <div style={{ padding: fs ? '24px 28px' : '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+          <div style={{ padding: fs ? '24px 28px' : '16px 20px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             {s.body && <p style={{ fontSize: fs ? 17 : 16, color: '#4A5568', lineHeight: 1.75, margin: '0 0 14px' }}>{s.body}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
               {s.toolkitItems?.map((item, i) => (
@@ -3362,7 +3367,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#38B2AC15', border: '1.5px solid #38B2AC55', borderRadius: 10, padding: '7px 14px' }}>
                   <span style={{ fontSize: 16 }}>👆</span>
-                  <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#1A6B5F' }}>Click each card or use Next to explore</span>
+                  <span style={{ fontSize: fs ? 13 : 12, fontWeight: 700, color: '#2B6CB0' }}>Click each card or use Next to explore</span>
                 </div>
               )}
             </div>
@@ -3565,7 +3570,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       /* ── Bridge ── */
       case 'bridge':
         return (
-          <div style={{ display: 'flex', gap: 0, height: '100%', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: 0, height: '100%' }}>
             <div style={{ flex: 1, background: '#38B2AC', padding: fs ? '36px 48px' : '22px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <h2 style={{ fontSize: fs ? 34 : 26, fontWeight: 800, color: '#FFFFFF', margin: '0 0 10px', lineHeight: 1.2 }}>{s.heading}</h2>
               <p style={{ fontSize: fs ? 18 : 16, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, margin: '0 0 16px' }}>{s.body}</p>
@@ -3592,9 +3597,12 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ padding: fs ? '32px 36px' : '20px 22px', display: 'flex', flexDirection: 'column', height: '100%' }}>
             {s.body && <p style={{ fontSize: fs ? 15 : 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 16px' }}>{s.body}</p>}
             {/* Spectrum track */}
-            <div style={{ position: 'relative', height: 8, background: 'linear-gradient(90deg, #A8F0E0, #38B2AC)', borderRadius: 4, margin: '8px 0 16px' }}>
+            <div style={{ position: 'relative', height: 8, background: 'linear-gradient(90deg, #B2D8F7, #38B2AC)', borderRadius: 4, margin: '8px 0 16px' }}>
               {[0, 1, 2].map(i => (
-                <div key={i} onClick={() => setSpectrumPos(i)} style={{
+                <div key={i} onClick={() => setSpectrumPos(i)}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)'; }}
+                  style={{
                   position: 'absolute', top: '50%', left: `${i * 50}%`, transform: 'translate(-50%, -50%)',
                   width: spectrumPos === i ? 24 : 16, height: spectrumPos === i ? 24 : 16, borderRadius: '50%',
                   background: spectrumPos === i ? '#38B2AC' : '#FFFFFF', border: `2px solid ${spectrumPos === i ? '#2C9A94' : '#38B2AC'}`,
@@ -3606,7 +3614,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
             {/* Position labels */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               {s.positions?.map((p, i) => (
-                <div key={i} onClick={() => setSpectrumPos(i)} style={{ cursor: 'pointer', textAlign: i === 0 ? 'left' : i === 2 ? 'right' : 'center', flex: 1, padding: '0 4px' }}>
+                <div key={i} onClick={() => setSpectrumPos(i)}
+                  onMouseEnter={e => { (e.currentTarget.firstChild as HTMLElement).style.textDecoration = 'underline'; }}
+                  onMouseLeave={e => { (e.currentTarget.firstChild as HTMLElement).style.textDecoration = 'none'; }}
+                  style={{ cursor: 'pointer', textAlign: i === 0 ? 'left' : i === 2 ? 'right' : 'center', flex: 1, padding: '0 4px' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: spectrumPos === i ? '#38B2AC' : '#718096', transition: 'color 0.2s' }}>{p.label}</div>
                 </div>
               ))}
@@ -3651,7 +3662,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 const isCorrect = quizAnswered && i === s.correct;
                 const isWrong = quizAnswered && isSelected && i !== s.correct;
                 return (
-                  <button key={i} onClick={() => !quizAnswered && setQuizSelected(i)} style={{
+                  <button key={i} onClick={() => !quizAnswered && setQuizSelected(i)}
+                    onMouseEnter={e => { if (!quizAnswered) { e.currentTarget.style.borderColor = '#38B2AC'; e.currentTarget.style.background = '#F7FAFC'; } }}
+                    onMouseLeave={e => { if (!quizAnswered) { e.currentTarget.style.borderColor = isSelected ? '#38B2AC' : '#E2E8F0'; e.currentTarget.style.background = isSelected ? '#E6FFFA' : '#FFFFFF'; } }}
+                    style={{
                     padding: '12px 16px', borderRadius: 10, textAlign: 'left', cursor: quizAnswered ? 'default' : 'pointer',
                     border: isCorrect ? '2px solid #48BB78' : isWrong ? '2px solid #FC8181' : isSelected ? '2px solid #38B2AC' : '1px solid #E2E8F0',
                     background: isCorrect ? '#F0FFF4' : isWrong ? '#FFF5F5' : isSelected ? '#E6FFFA' : '#FFFFFF',
@@ -3733,7 +3747,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                   const isActive = activeCompTab === i;
                   const p = TAB_PALETTE[i] ?? TAB_PALETTE[0];
                   return (
-                    <button key={i} onClick={() => setActiveCompTab(i)} style={{
+                    <button key={i} onClick={() => setActiveCompTab(i)}
+                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.textDecoration = 'underline'; }}
+                      onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}
+                      style={{
                       flex: 1, padding: '7px 8px', fontSize: fs ? 12 : 11, fontWeight: 700,
                       border: isActive ? `2px solid ${p.border}` : '2px solid #E2E8F0',
                       borderRadius: 10, background: isActive ? p.bg : '#FAFBFC',
@@ -3800,7 +3817,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 const isActive = activeCompTab === i;
                 const p = TAB_PALETTE[i] ?? TAB_PALETTE[0];
                 return (
-                  <button key={i} onClick={() => setActiveCompTab(i)} style={{
+                  <button key={i} onClick={() => setActiveCompTab(i)}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}
+                    style={{
                     flex: 1, padding: '9px 10px', fontSize: fs ? 13 : 12, fontWeight: 700,
                     border: isActive ? `2px solid ${p.border}` : '2px solid #E2E8F0',
                     borderRadius: 10, background: isActive ? p.bg : '#FAFBFC',
@@ -3865,13 +3885,15 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                   const isFlipped = flippedCards[i] || false;
                   return (
                     <div key={i} onClick={() => setFlippedCards(prev => ({ ...prev, [i]: !prev[i] }))}
+                      onMouseEnter={e => { (e.currentTarget.querySelector('.flip-card-inner .flip-card-face') as HTMLElement)?.style.setProperty('border-color', pal.accent); }}
+                      onMouseLeave={e => { (e.currentTarget.querySelector('.flip-card-inner .flip-card-face') as HTMLElement)?.style.setProperty('border-color', pal.border); }}
                       style={{ perspective: 1000, cursor: 'pointer' }}>
                       <div className={`flip-card-inner${isFlipped ? ' flipped' : ''}`}
                         style={{ position: 'relative', width: '100%', height: '100%' }}>
                         {/* Front */}
                         <div className="flip-card-face" style={{
                           position: 'absolute', inset: 0, borderRadius: 14,
-                          border: `1.5px solid ${pal.border}`, background: pal.light,
+                          border: `1.5px solid ${pal.border}`, background: pal.light, transition: 'border-color 0.15s ease',
                           padding: fs ? '18px 20px' : '12px 14px',
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                           textAlign: 'center', gap: 6,
@@ -3879,7 +3901,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                           <div style={{ fontSize: fs ? 36 : 28 }}>{card.icon}</div>
                           <div style={{ fontSize: fs ? 15 : 13, fontWeight: 800, color: pal.accent, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>{card.label}</div>
                           <div style={{ fontSize: fs ? 13 : 11, color: '#4A5568', lineHeight: 1.5, maxWidth: 200 }}>{card.tagline}</div>
-                          <div style={{ fontSize: 11, color: pal.accent, marginTop: 4, opacity: 0.8 }}>Click to flip ↺</div>
+                          <div style={{ fontSize: 11, color: '#38B2AC', marginTop: 4, fontWeight: 600 }}>Click to flip ↺</div>
                         </div>
                         {/* Back */}
                         <div className="flip-card-face flip-card-back" style={{
@@ -3916,16 +3938,19 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               {s.cards?.map((card, i) => {
                 const isFlipped = flippedCards[i] || false;
                 return (
-                  <div key={i} onClick={() => setFlippedCards(prev => ({ ...prev, [i]: !prev[i] }))} style={{ perspective: 1000, cursor: 'pointer', minHeight: 200 }}>
+                  <div key={i} onClick={() => setFlippedCards(prev => ({ ...prev, [i]: !prev[i] }))}
+                    onMouseEnter={e => { (e.currentTarget.querySelector('.flip-card-face') as HTMLElement)?.style.setProperty('border-color', '#FC8181'); }}
+                    onMouseLeave={e => { (e.currentTarget.querySelector('.flip-card-face') as HTMLElement)?.style.setProperty('border-color', '#FEB2B2'); }}
+                    style={{ perspective: 1000, cursor: 'pointer', minHeight: 200 }}>
                     <div className={`flip-card-inner${isFlipped ? ' flipped' : ''}`} style={{ position: 'relative', width: '100%', height: '100%' }}>
                       {/* Front */}
-                      <div className="flip-card-face" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #FEB2B2', background: '#FFF5F5', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
+                      <div className="flip-card-face" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #FEB2B2', background: '#FFF5F5', padding: '14px 16px', display: 'flex', flexDirection: 'column', transition: 'border-color 0.15s ease' }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: '#FC8181', background: '#FED7D7', padding: '3px 10px', borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8, letterSpacing: '0.05em' }}>{card.frontBadge}</span>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#1A202C', marginBottom: 8 }}>{card.frontLabel}</div>
                         <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderLeft: '3px solid #FC8181', borderRadius: '0 8px 8px 0', padding: fs ? '18px 20px' : '14px 16px', fontSize: fs ? 22 : 19, color: '#2D3748', lineHeight: 1.9, flex: 1 }}>
                           {card.frontPrompt}
                         </div>
-                        <div style={{ fontSize: 12, color: '#A0AEC0', textAlign: 'center', marginTop: 8 }}>Click to flip ↺</div>
+                        <div style={{ fontSize: 12, color: '#38B2AC', fontWeight: 600, textAlign: 'center', marginTop: 8 }}>Click to flip ↺</div>
                       </div>
                       {/* Back */}
                       <div className="flip-card-face flip-card-back" style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid #9AE6B4', background: '#F0FFF4', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
@@ -3976,7 +4001,10 @@ const ELearningView: React.FC<ELearningViewProps> = ({
                 const qc = qualityColors[opt.responseQuality] || qualityColors.partial;
                 return (
                   <div key={i}>
-                    <button onClick={() => setBranchingSelected(isSelected ? null : i)} style={{
+                    <button onClick={() => setBranchingSelected(isSelected ? null : i)}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      style={{
                       width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
                       border: isSelected ? `2px solid ${qc.border}` : '1px solid #E2E8F0',
                       background: isSelected ? qc.bg : '#FFFFFF', transition: 'all 0.15s ease',
@@ -4128,7 +4156,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
         if (s.visualId) {
           const wideVisual = s.visualId === 'l3-workflow-decision' || s.visualId === 'l2-agent-decision';
           return (
-            <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: fs ? '20px 24px' : '14px 18px', display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
                 {/* Left: text */}
                 <div style={{ flex: wideVisual ? '0 0 28%' : '0 0 55%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -4190,20 +4218,6 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   };
 
   /* ── Glowing fullscreen button (inline player) ── */
-  const renderFsButton = () => (
-    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      <button
-        className="fs-glow-btn"
-        onClick={() => { setIsFullscreen(true); setShowFsTooltip(false); }}
-        style={{ background: '#38B2AC', border: 'none', cursor: 'pointer', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6 }}
-        title="View fullscreen"
-      >
-        <Maximize2 size={12} color="#FFFFFF" />
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.03em' }}>Fullscreen</span>
-      </button>
-    </div>
-  );
-
   // Reset interactive state when slide changes (sjAnswers persist across slides intentionally)
   useEffect(() => {
     setSjScenarioIdx(0);
@@ -4416,7 +4430,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
   };
 
   /* ── Dynamic Next button label ── */
-  const nextLabel = isLastSlide ? 'Finish E-Learning →' : 'Next →';
+  const nextLabel = isLastSlide ? 'Finish E-Learning →' : currentSlide === 1 ? 'Start →' : 'Next →';
 
   /* ── Standardised takeaway title (shown at top of every slide that has one) ── */
   const renderTakeaway = () => {
@@ -4473,9 +4487,26 @@ const ELearningView: React.FC<ELearningViewProps> = ({
               <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#718096', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{currentSlide} / {totalSlides}</span>
               <div style={{ width: 1, height: 18, background: '#E2E8F0', flexShrink: 0 }} />
-              <button onClick={() => setIsFullscreen(false)} title="Exit fullscreen (Esc)" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096' }}>
-                <Minimize2 size={15} />
-              </button>
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <button onClick={() => { setIsFullscreen(false); setShowFsTooltip(false); }} title="Exit fullscreen (Esc)" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#718096' }}>
+                  <Minimize2 size={15} />
+                </button>
+                {showFsTooltip && (
+                  <div style={{
+                    position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+                    background: '#1A202C', color: '#FFFFFF', fontSize: 11, fontWeight: 600, lineHeight: 1.4,
+                    padding: '8px 14px', borderRadius: 8, whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)', pointerEvents: 'none',
+                    animation: 'fadeInUp 0.2s ease',
+                  }}>
+                    Press Esc or click here to exit fullscreen
+                    <div style={{
+                      position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%) rotate(45deg)',
+                      width: 10, height: 10, background: '#1A202C',
+                    }} />
+                  </div>
+                )}
+              </div>
             </div>
             {/* Next → */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
@@ -4500,7 +4531,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
       <div style={{ background: '#FFFFFF', border: '1.5px solid #CBD5E0', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
         <div style={{ height: 3, background: accentColor }} />
         <div style={{ padding: '36px 40px' }}>
-          <div style={{ display: 'inline-block', background: '#E6FFFA', borderRadius: 16, padding: '3px 12px', fontSize: 10, fontWeight: 700, color: '#1A6B5F', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
+          <div style={{ display: 'inline-block', background: '#E6FFFA', borderRadius: 16, padding: '3px 12px', fontSize: 10, fontWeight: 700, color: '#2B6CB0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
             REFLECT
           </div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', margin: '0 0 6px', lineHeight: 1.2 }}>
@@ -4570,7 +4601,7 @@ const ELearningView: React.FC<ELearningViewProps> = ({
           <div style={{ height: '100%', background: accentColor, width: `${(currentSlide / totalSlides) * 100}%`, transition: 'width 0.3s ease' }} />
         </div>
         {/* Nav bar and slide content are both inside the fixed-height container so nothing overflows */}
-        <div style={{ width: '100%', height: 'calc(100vh - 260px)', minHeight: 440, maxHeight: 740, background: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100%', height: 'calc(100vh - 260px)', minHeight: 480, maxHeight: 740, background: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
           {renderTakeaway()}
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: isStretchType ? 'stretch' : 'flex-start' }}>
             {renderSlide()}
@@ -4780,7 +4811,7 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
   /* Default colors per option slot (before selection — always colored, never white) */
   const OPTION_DEFAULT = [
     { bg: '#EBF8FF', border: '#90CDF4', text: '#2B6CB0' },
-    { bg: '#E6FFFA', border: '#81E6D9', text: '#1A6B5F' },
+    { bg: '#E6FFFA', border: '#81E6D9', text: '#2B6CB0' },
     { bg: '#FAF5FF', border: '#D6BCFA', text: '#553C9A' },
   ];
 
@@ -4792,7 +4823,7 @@ function SituationalJudgmentSlide({ slide, fs, activeScenarioIdx, onScenarioChan
   const fbLabel  = fbQ === 'strong' ? 'STRONGEST CHOICE' : fbQ === 'partial' ? 'COULD WORK' : 'NOT THE BEST FIT';
 
   return (
-    <div style={{ padding: fs ? '20px 24px' : '12px 14px', display: 'flex', flexDirection: 'column', height: '100%', gap: 8, boxSizing: 'border-box' as const }}>
+    <div style={{ padding: fs ? '20px 24px' : '14px 18px', display: 'flex', flexDirection: 'column', height: '100%', gap: 8, boxSizing: 'border-box' as const }}>
 
       {/* Scenario tabs */}
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
