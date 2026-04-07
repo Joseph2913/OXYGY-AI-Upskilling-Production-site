@@ -531,8 +531,16 @@ const ELearningView: React.FC<ELearningViewProps> = ({
     try { localStorage.setItem('oxygy_vo_user_paused', 'false'); } catch { /* ignore */ }
   }, []);
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([currentSlide]));
-  const [isFullscreen, setIsFullscreen] = useState(true);
-  const [showFsTooltip, setShowFsTooltip] = useState(true);
+  const [isFullscreen, setIsFullscreenRaw] = useState<boolean>(() => {
+    try { return localStorage.getItem('oxygy_elearn_fullscreen') !== 'false'; } catch { return true; }
+  });
+  const setIsFullscreen = useCallback((next: boolean) => {
+    setIsFullscreenRaw(next);
+    try { localStorage.setItem('oxygy_elearn_fullscreen', String(next)); } catch { /* ignore */ }
+  }, []);
+  const [showFsTooltip, setShowFsTooltip] = useState<boolean>(() => {
+    try { return localStorage.getItem('oxygy_elearn_fullscreen') !== 'false'; } catch { return true; }
+  });
   const [showStartNudge, setShowStartNudge] = useState(false);
   const [sjScenarioIdx, setSjScenarioIdx] = useState(0);
   /* L2 interactive slide state */
