@@ -392,7 +392,7 @@ export interface PathwayFormData {
   functionOther: string;
   seniority: string;
   aiExperience: string;
-  ambition: string;
+  ambition: string[];
   challenge: string;
   availability: string;
   experienceDescription: string;

@@ -776,6 +776,7 @@ export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async 
       "build-reusable-tools": "Build reusable AI tools",
       "own-ai-processes": "Design and own AI-powered processes",
       "build-full-apps": "Build full AI-powered applications",
+      "lead-ai-strategy": "Lead AI transformation and strategy",
     };
     const experienceLabels: Record<string, string> = {
       "beginner": "Beginner — rarely uses AI tools",
@@ -800,7 +801,7 @@ export const generatepathway = onRequest({ secrets: [openRouterApiKey] }, async 
 - Seniority: ${formData.seniority || "Not specified"}
 - AI Experience: ${experienceLabels[formData.aiExperience] || formData.aiExperience || "Not specified"}
 - Experience Tier (use this to select the correct Level 1 and Level 2 project scope): ${experienceTier}
-- Ambition: ${ambitionLabels[formData.ambition] || formData.ambition || "Not specified"}
+- Ambition: ${(Array.isArray(formData.ambition) ? formData.ambition : [formData.ambition]).map((a: string) => ambitionLabels[a] || a).filter(Boolean).join(', ') || "Not specified"}
 - Specific Challenge: "${formData.challenge || "Not specified"}"
 - Weekly Availability: ${formData.availability || "Not specified"}${formData.experienceDescription ? `\n- AI Experience Details: "${formData.experienceDescription}"` : ""}${formData.goalDescription ? `\n- Specific Goal: "${formData.goalDescription}"` : ""}
 

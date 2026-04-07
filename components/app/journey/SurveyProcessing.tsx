@@ -12,9 +12,10 @@ const STEPS = [
 interface SurveyProcessingProps {
   error: string | null;
   onRetry: () => void;
+  showHeader?: boolean;
 }
 
-const SurveyProcessing: React.FC<SurveyProcessingProps> = ({ error, onRetry }) => {
+const SurveyProcessing: React.FC<SurveyProcessingProps> = ({ error, onRetry, showHeader }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
@@ -35,12 +36,16 @@ const SurveyProcessing: React.FC<SurveyProcessingProps> = ({ error, onRetry }) =
           to { transform: rotate(360deg); }
         }
       `}</style>
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>
-        Generating your learning plan...
-      </div>
-      <div style={{ fontSize: 13, color: '#A0AEC0', marginTop: 4, marginBottom: 20 }}>
-        This usually takes 15–20 seconds
-      </div>
+      {showHeader !== false && (
+        <>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C' }}>
+            Generating your learning plan...
+          </div>
+          <div style={{ fontSize: 13, color: '#A0AEC0', marginTop: 4, marginBottom: 20 }}>
+            This usually takes 15–20 seconds
+          </div>
+        </>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', maxWidth: 320, margin: '0 auto' }}>
         {STEPS.map((step, idx) => {
           const isDone = idx < currentStep;

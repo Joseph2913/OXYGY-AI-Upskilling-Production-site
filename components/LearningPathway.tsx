@@ -17,7 +17,7 @@ const ACCENT = '#38B2AC';
 const ACCENT_DARK = '#2C9A94';
 
 const LEVEL_COLORS: Record<number, { accent: string; dark: string; name: string; tagline: string }> = {
-  1: { accent: '#A8F0E0', dark: '#2C7A6E', name: 'Fundamentals of AI for Everyday Use', tagline: 'Build comfort, curiosity, and foundational confidence' },
+  1: { accent: '#B2D8F7', dark: '#2C7A6E', name: 'Fundamentals of AI for Everyday Use', tagline: 'Build comfort, curiosity, and foundational confidence' },
   2: { accent: '#C3D0F5', dark: '#4A5A8A', name: 'Applied Capability', tagline: 'Design AI assistants tailored to your work' },
   3: { accent: '#F7E8A4', dark: '#C4A934', name: 'Systemic Integration', tagline: 'Scale AI through integrated, automated pipelines' },
   4: { accent: '#F5B8A0', dark: '#D47B5A', name: 'Interactive Dashboards & Tailored Front-Ends', tagline: 'Shift from data-in-a-sheet to tailored experiences' },
@@ -258,8 +258,16 @@ const DEPTH_MATRIX: DepthMatrix = {
   },
 };
 
-function classifyLevels(aiExperience: string, ambition: string): Record<string, LevelDepth> {
-  const depths = DEPTH_MATRIX[aiExperience]?.[ambition] || ['full', 'full', 'full', 'full', 'full'];
+const AMBITION_RANK: Record<string, number> = {
+  'confident-daily-use': 1,
+  'build-reusable-tools': 2,
+  'own-ai-processes': 3,
+  'build-full-apps': 4,
+  'lead-ai-strategy': 5,
+};
+function classifyLevels(aiExperience: string, ambitions: string[]): Record<string, LevelDepth> {
+  const highest = [...ambitions].sort((a, b) => (AMBITION_RANK[b] || 0) - (AMBITION_RANK[a] || 0))[0] || 'confident-daily-use';
+  const depths = DEPTH_MATRIX[aiExperience]?.[highest] || ['full', 'full', 'full', 'full', 'full'];
   return { L1: depths[0], L2: depths[1], L3: depths[2], L4: depths[3], L5: depths[4] };
 }
 
@@ -433,7 +441,7 @@ function LearningBreakdown({ applied, community, individual, accentColor }: {
 
 const EMPTY_FORM: PathwayFormData = {
   role: '', function: '', functionOther: '', seniority: '',
-  aiExperience: '', ambition: '', challenge: '', availability: '',
+  aiExperience: '', ambition: [], challenge: '', availability: '',
   experienceDescription: '', goalDescription: '',
 };
 
@@ -465,7 +473,7 @@ export const LearningPathway: React.FC = () => {
           functionOther: profileData.functionOther || '',
           seniority: profileData.seniority || '',
           aiExperience: profileData.aiExperience || '',
-          ambition: profileData.ambition || '',
+          ambition: profileData.ambition ? profileData.ambition.split(',').filter(Boolean) : [],
           challenge: profileData.challenge || '',
           availability: profileData.availability || '',
           experienceDescription: profileData.experienceDescription || '',
@@ -511,7 +519,7 @@ export const LearningPathway: React.FC = () => {
       (formData.function !== 'Other' || formData.functionOther.trim() !== '') &&
       formData.seniority !== '' &&
       formData.aiExperience !== '' &&
-      formData.ambition !== '' &&
+      formData.ambition.length > 0 &&
       formData.challenge.trim() !== '' &&
       formData.availability !== ''
     );
@@ -531,7 +539,7 @@ export const LearningPathway: React.FC = () => {
       functionOther: '',
       seniority: profile.seniority,
       aiExperience: profile.aiExperience,
-      ambition: profile.ambition,
+      ambition: [profile.ambition],
       challenge: profile.challenge,
       availability: profile.availability,
       experienceDescription: '',
@@ -587,7 +595,7 @@ export const LearningPathway: React.FC = () => {
           functionOther: formData.functionOther,
           seniority: formData.seniority,
           aiExperience: formData.aiExperience,
-          ambition: formData.ambition,
+          ambition: formData.ambition.join(','),
           challenge: formData.challenge,
           availability: formData.availability,
           experienceDescription: formData.experienceDescription,
@@ -603,7 +611,7 @@ export const LearningPathway: React.FC = () => {
   const handleReset = useCallback(() => {
     setFormData({
       role: '', function: '', functionOther: '', seniority: '',
-      aiExperience: '', ambition: '', challenge: '', availability: '',
+      aiExperience: '', ambition: [], challenge: '', availability: '',
       experienceDescription: '', goalDescription: '',
     });
     setSelectedProfile(null);
@@ -904,13 +912,18 @@ export const LearningPathway: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" role="radiogroup" aria-label="Ambition">
                   {AMBITION_OPTIONS.map(opt => {
-                    const isSelected = formData.ambition === opt.id;
+                    const isSelected = formData.ambition.includes(opt.id);
                     return (
                       <button
                         key={opt.id}
-                        role="radio"
+                        role="checkbox"
                         aria-checked={isSelected}
-                        onClick={() => updateField('ambition', isSelected ? '' : opt.id)}
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          ambition: prev.ambition.includes(opt.id)
+                            ? prev.ambition.filter(a => a !== opt.id)
+                            : [...prev.ambition, opt.id],
+                        }))}
                         className="relative text-left rounded-xl p-4 transition-colors duration-200"
                         style={{
                           backgroundColor: isSelected ? '#F0FFFC' : '#FFFFFF',

@@ -238,7 +238,14 @@ const AppJourney: React.FC = () => {
 
   useEffect(() => {
     if (profilePanelOpen && user && !demoMode) {
-      getProfile(user.id).then(p => { if (p) setProfileForm(p as Partial<PathwayFormData>); });
+      getProfile(user.id).then(p => {
+        if (p) {
+          setProfileForm({
+            ...p,
+            ambition: p.ambition ? p.ambition.split(',').filter(Boolean) : [],
+          } as Partial<PathwayFormData>);
+        }
+      });
     }
   }, [profilePanelOpen, user, demoMode]);
 
@@ -783,12 +790,12 @@ const AppJourney: React.FC = () => {
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C' }}>Edit Profile</div>
-                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Update your details to regenerate your learning plan</div>
+                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Update your profile details</div>
               </div>
               <button onClick={() => setProfilePanelOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#A0AEC0', padding: 4, lineHeight: 1 }}>×</button>
             </div>
             <div style={{ margin: '16px 24px 0', background: '#FEFCE8', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400E', lineHeight: 1.55 }}>
-              <strong>Heads up:</strong> Saving will regenerate your learning plan. Your progress and saved artefacts are not affected, but your project briefs may be updated to better reflect your new profile.
+              <strong>Note:</strong> Your progress and saved artefacts are not affected by profile changes.
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {([
@@ -824,7 +831,10 @@ const AppJourney: React.FC = () => {
                 onClick={async () => {
                   if (!user || !profileForm) return;
                   setProfileSaving(true);
-                  await upsertProfile(user.id, profileForm);
+                  await upsertProfile(user.id, {
+                    ...profileForm,
+                    ambition: Array.isArray(profileForm.ambition) ? profileForm.ambition.join(',') : profileForm.ambition,
+                  } as any);
                   setProfileSaving(false);
                   setProfilePanelOpen(false);
                 }}

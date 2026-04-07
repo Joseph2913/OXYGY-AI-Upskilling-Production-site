@@ -24,7 +24,7 @@ const DEMO_PROFILES: { label: string; emoji: string; data: PathwayFormData }[] =
       functionOther: '',
       seniority: 'mid-level',
       aiExperience: 'comfortable-user',
-      ambition: 'build-reusable-tools',
+      ambition: ['build-reusable-tools'],
       challenge: 'I spend too much time writing campaign briefs, social copy, and performance reports manually. I want AI to help me move faster on content creation while keeping our brand voice consistent. I also need better ways to analyse campaign data without waiting for the analytics team.',
       availability: '3-5 hours',
       experienceDescription: 'I use ChatGPT for brainstorming headlines and rewriting email copy. I have also tried Midjourney for social media visuals. I mostly copy-paste into the chat — I have not built any custom tools or automations yet.',
@@ -40,7 +40,7 @@ const DEMO_PROFILES: { label: string; emoji: string; data: PathwayFormData }[] =
       functionOther: '',
       seniority: 'senior',
       aiExperience: 'beginner',
-      ambition: 'own-ai-processes',
+      ambition: ['own-ai-processes'],
       challenge: 'Our people processes are overwhelmingly manual — from onboarding checklists to performance review summaries to policy questions. I want to understand how AI can streamline these workflows without compromising confidentiality or introducing bias into people decisions.',
       availability: '1-3 hours',
       experienceDescription: 'Very limited — I have tried asking ChatGPT a few general questions but have not used it for any real work tasks. I am curious but cautious about data privacy.',
@@ -56,7 +56,7 @@ const DEMO_PROFILES: { label: string; emoji: string; data: PathwayFormData }[] =
       functionOther: '',
       seniority: 'senior',
       aiExperience: 'builder',
-      ambition: 'build-full-apps',
+      ambition: ['build-full-apps'],
       challenge: 'I want to move beyond just using AI for image generation and actually build interactive prototypes and tools that our users can interact with. I am tired of creating static mockups — I want to ship real experiences powered by AI that respond to user input dynamically.',
       availability: '5+ hours',
       experienceDescription: 'I have built several custom GPTs for our design team — one that generates user persona descriptions from research notes and another that critiques UI screenshots. I have also experimented with Cursor for rapid frontend prototyping.',
@@ -97,8 +97,16 @@ const DEPTH_MATRIX: DepthMatrix = {
     'lead-ai-strategy': ['fast-track', 'fast-track', 'fast-track', 'full', 'full'],
   },
 };
-function classifyLevels(aiExperience: string, ambition: string): Record<string, LevelDepth> {
-  const depths = DEPTH_MATRIX[aiExperience]?.[ambition] || ['full', 'full', 'full', 'full', 'full'];
+const AMBITION_RANK: Record<string, number> = {
+  'confident-daily-use': 1,
+  'build-reusable-tools': 2,
+  'own-ai-processes': 3,
+  'build-full-apps': 4,
+  'lead-ai-strategy': 5,
+};
+function classifyLevels(aiExperience: string, ambitions: string[]): Record<string, LevelDepth> {
+  const highest = [...ambitions].sort((a, b) => (AMBITION_RANK[b] || 0) - (AMBITION_RANK[a] || 0))[0] || 'confident-daily-use';
+  const depths = DEPTH_MATRIX[aiExperience]?.[highest] || ['full', 'full', 'full', 'full', 'full'];
   return { L1: depths[0], L2: depths[1], L3: depths[2], L4: depths[3], L5: depths[4] };
 }
 
@@ -218,7 +226,7 @@ function LeftPanel({ step, generating, formData }: {
       { label: 'Function', value: formData.function === 'Other' ? formData.functionOther : formData.function },
       { label: 'Seniority', value: formData.seniority.split('(')[0].trim() },
       { label: 'AI Level', value: formData.aiExperience.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: 'Goal', value: AMBITION_OPTIONS.find(a => a.value === formData.ambition)?.label || formData.ambition },
+      { label: 'Goal', value: formData.ambition.map(a => AMBITION_OPTIONS.find(o => o.value === a)?.label || a).join(', ') || '—' },
       { label: 'Time', value: formData.availability },
     ];
 
@@ -306,7 +314,7 @@ function LeftPanel({ step, generating, formData }: {
       }} />
       <div style={{
         position: 'absolute', bottom: -40, left: -40, width: 140, height: 140,
-        borderRadius: '50%', background: 'rgba(168, 240, 224, 0.05)',
+        borderRadius: '50%', background: 'rgba(178, 216, 247, 0.05)',
       }} />
 
       {/* Oxygy Logo */}
@@ -410,7 +418,14 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
   const [formData, setFormData] = useState<PathwayFormData>(() => {
     try {
       const stored = sessionStorage.getItem('oxygy_survey_form');
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Migrate old string ambition to array
+        if (typeof parsed.ambition === 'string') {
+          parsed.ambition = parsed.ambition ? parsed.ambition.split(',').filter(Boolean) : [];
+        }
+        return parsed;
+      }
     } catch {}
     return {
       role: prefillData?.role || '',
@@ -418,7 +433,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
       functionOther: prefillData?.functionOther || '',
       seniority: prefillData?.seniority || '',
       aiExperience: prefillData?.aiExperience || '',
-      ambition: prefillData?.ambition || '',
+      ambition: prefillData?.ambition || [],
       challenge: prefillData?.challenge || '',
       availability: prefillData?.availability || '',
       experienceDescription: prefillData?.experienceDescription || '',
@@ -454,7 +469,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
   }, [formData.role, formData.function, formData.functionOther, formData.seniority]);
 
   const isStep2Complete = useMemo(() => {
-    return !!formData.aiExperience && !!formData.ambition && !!formData.experienceDescription.trim();
+    return !!formData.aiExperience && formData.ambition.length > 0 && !!formData.experienceDescription.trim();
   }, [formData.aiExperience, formData.ambition, formData.experienceDescription]);
 
   const isStep3Complete = useMemo(() => {
@@ -474,7 +489,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
       const depths = classifyLevels(formData.aiExperience, formData.ambition);
       const isStrategicLeader =
         (formData.seniority?.includes('Senior') || formData.seniority?.includes('Director')) &&
-        formData.ambition === 'lead-ai-strategy';
+        formData.ambition.includes('lead-ai-strategy');
       const persona: 'strategic-leader' | 'practitioner' = isStrategicLeader ? 'strategic-leader' : 'practitioner';
       const result = await generatePathway(formData, depths, persona);
       if (!result) {
@@ -494,7 +509,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
         const profileSaved = await upsertProfile(user!.id, {
           role: formData.role, function: formData.function,
           functionOther: formData.functionOther, seniority: formData.seniority,
-          aiExperience: formData.aiExperience, ambition: formData.ambition,
+          aiExperience: formData.aiExperience, ambition: formData.ambition.join(','),
           challenge: formData.challenge, availability: formData.availability,
           experienceDescription: formData.experienceDescription,
           goalDescription: formData.goalDescription,
@@ -564,7 +579,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
             }} />
             <div style={{
               position: 'absolute', bottom: -20, left: -20, width: 80, height: 80,
-              borderRadius: '50%', background: 'rgba(168, 240, 224, 0.06)',
+              borderRadius: '50%', background: 'rgba(178, 216, 247, 0.06)',
             }} />
             <div style={{
               width: 48, height: 48, borderRadius: '50%', margin: '0 auto 14px',
@@ -600,7 +615,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#2D9E99', marginBottom: 4 }}>Why this plan?</div>
                 <div style={{ fontSize: 13, color: '#2D7A75', lineHeight: 1.6 }}>
-                  {completedPlan.whyThisPlan || `You told us you're a ${formData.seniority.split('(')[0].trim() || 'professional'} in ${formData.function === 'Other' ? formData.functionOther : formData.function} with ${AI_EXPERIENCE_OPTIONS.find(o => o.value === formData.aiExperience)?.label?.toLowerCase() || 'some'} AI experience, aiming to ${AMBITION_OPTIONS.find(o => o.value === formData.ambition)?.label?.toLowerCase()}. ${completedPlan.pathwaySummary}`}
+                  {completedPlan.whyThisPlan || `You told us you're a ${formData.seniority.split('(')[0].trim() || 'professional'} in ${formData.function === 'Other' ? formData.functionOther : formData.function} with ${AI_EXPERIENCE_OPTIONS.find(o => o.value === formData.aiExperience)?.label?.toLowerCase() || 'some'} AI experience, aiming to ${formData.ambition.map(a => AMBITION_OPTIONS.find(o => o.value === a)?.label?.toLowerCase() || a).join(', ')}. ${completedPlan.pathwaySummary}`}
                 </div>
               </div>
             </div>
@@ -757,7 +772,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
             }} />
             <div style={{
               position: 'absolute', bottom: -20, left: -20, width: 80, height: 80,
-              borderRadius: '50%', background: 'rgba(168, 240, 224, 0.06)',
+              borderRadius: '50%', background: 'rgba(178, 216, 247, 0.06)',
             }} />
             <img
               src="/logos/oxygy-logo-darkgray-teal.png"
@@ -862,6 +877,54 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
             >
               Get Started <ArrowRight size={18} />
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════ GENERATING CARD ═══════════════
+  if (generating) {
+    return (
+      <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <style>{ANIM}</style>
+        <div style={{
+          width: 640, maxWidth: '92vw', borderRadius: 20, overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06)',
+          animation: 'onbCardIn 0.4s ease both',
+          background: '#FFFFFF',
+        }}>
+          {/* Dark header band */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1A202C 0%, #1C2E38 100%)',
+            padding: '36px 40px 32px', textAlign: 'center',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute', top: -40, right: -40, width: 160, height: 160,
+              borderRadius: '50%', background: 'rgba(56, 178, 172, 0.08)',
+            }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(56, 178, 172, 0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <Sparkles size={24} color="#38B2AC" />
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.3px' }}>
+                Building your learning plan
+              </h2>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                This usually takes 15–20 seconds
+              </p>
+            </div>
+          </div>
+
+          {/* Loading steps */}
+          <div style={{ padding: '32px 40px 36px' }}>
+            <SurveyProcessing error={genError} onRetry={handleRetry} showHeader={false} />
           </div>
         </div>
       </div>
@@ -1006,24 +1069,32 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
 
               <div style={{ marginBottom: 18 }}>
                 <Label icon={<Rocket size={14} color="#38B2AC" />} text="What is your AI ambition?" required />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                <div style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic', marginTop: 2, marginBottom: 6 }}>Select all that apply</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {AMBITION_OPTIONS.map(opt => {
-                    const sel = formData.ambition === opt.value;
+                    const sel = formData.ambition.includes(opt.value);
                     return (
-                      <button key={opt.value} onClick={() => updateField('ambition', opt.value)} style={{
+                      <button key={opt.value} onClick={() => setFormData(prev => ({
+                        ...prev,
+                        ambition: prev.ambition.includes(opt.value)
+                          ? prev.ambition.filter(a => a !== opt.value)
+                          : [...prev.ambition, opt.value],
+                      }))} style={{
                         padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: sel ? 600 : 500,
                         cursor: 'pointer', border: sel ? '2px solid #38B2AC' : '1.5px solid #E2E8F0',
                         background: sel ? '#F0FFFC' : '#FFFFFF', color: sel ? '#2D9E99' : '#4A5568',
                         fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                        display: 'flex', alignItems: 'center', gap: 5,
                       }}>
+                        {sel && <Check size={12} color="#2D9E99" />}
                         {opt.label}
                       </button>
                     );
                   })}
                 </div>
-                {formData.ambition && (
+                {formData.ambition.length > 0 && (
                   <div style={{ fontSize: 11, color: '#718096', marginTop: 6 }}>
-                    {AMBITION_OPTIONS.find(o => o.value === formData.ambition)?.desc}
+                    {formData.ambition.map(a => AMBITION_OPTIONS.find(o => o.value === a)?.desc).filter(Boolean).join(' · ')}
                   </div>
                 )}
               </div>
@@ -1105,50 +1176,48 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
           </div>
 
           {/* Footer nav */}
-          {(
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              paddingTop: 18, borderTop: '1px solid #F7FAFC', marginTop: 14,
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            paddingTop: 18, borderTop: '1px solid #F7FAFC', marginTop: 14,
+          }}>
+            <button onClick={goBack} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'none', border: 'none', padding: '8px 4px',
+              fontSize: 13, fontWeight: 600, color: '#718096',
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
             }}>
-              <button onClick={goBack} style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: 'none', border: 'none', padding: '8px 4px',
-                fontSize: 13, fontWeight: 600, color: '#718096',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-              }}>
-                <ArrowLeft size={15} /> Back
+              <ArrowLeft size={15} /> Back
+            </button>
+            {step < TOTAL_STEPS ? (
+              <button onClick={goNext} disabled={!canProceed} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: canProceed ? '#38B2AC' : '#E2E8F0',
+                color: canProceed ? '#FFFFFF' : '#A0AEC0',
+                border: 'none', borderRadius: 10, padding: '11px 24px',
+                fontSize: 14, fontWeight: 700,
+                cursor: canProceed ? 'pointer' : 'not-allowed',
+                transition: 'background 0.15s', fontFamily: "'DM Sans', sans-serif",
+              }}
+                onMouseEnter={e => { if (canProceed) e.currentTarget.style.background = '#2D9E99'; }}
+                onMouseLeave={e => { if (canProceed) e.currentTarget.style.background = '#38B2AC'; }}
+              >
+                Continue <ArrowRight size={15} />
               </button>
-              {step < TOTAL_STEPS ? (
-                <button onClick={goNext} disabled={!canProceed} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  background: canProceed ? '#38B2AC' : '#E2E8F0',
-                  color: canProceed ? '#FFFFFF' : '#A0AEC0',
-                  border: 'none', borderRadius: 10, padding: '11px 24px',
-                  fontSize: 14, fontWeight: 700,
-                  cursor: canProceed ? 'pointer' : 'not-allowed',
-                  transition: 'background 0.15s', fontFamily: "'DM Sans', sans-serif",
-                }}
-                  onMouseEnter={e => { if (canProceed) e.currentTarget.style.background = '#2D9E99'; }}
-                  onMouseLeave={e => { if (canProceed) e.currentTarget.style.background = '#38B2AC'; }}
-                >
-                  Continue <ArrowRight size={15} />
-                </button>
-              ) : (
-                <button onClick={handleGenerate} disabled={!canProceed} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  background: canProceed ? 'linear-gradient(135deg, #38B2AC, #2D9E99)' : '#E2E8F0',
-                  color: canProceed ? '#FFFFFF' : '#A0AEC0',
-                  border: 'none', borderRadius: 10, padding: '12px 28px',
-                  fontSize: 15, fontWeight: 700,
-                  cursor: canProceed ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.15s', fontFamily: "'DM Sans', sans-serif",
-                  boxShadow: canProceed ? '0 4px 14px rgba(56, 178, 172, 0.25)' : 'none',
-                }}>
-                  <Sparkles size={16} /> Generate My Plan
-                </button>
-              )}
-            </div>
-          )}
+            ) : (
+              <button onClick={handleGenerate} disabled={!canProceed} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: canProceed ? 'linear-gradient(135deg, #38B2AC, #2D9E99)' : '#E2E8F0',
+                color: canProceed ? '#FFFFFF' : '#A0AEC0',
+                border: 'none', borderRadius: 10, padding: '12px 28px',
+                fontSize: 15, fontWeight: 700,
+                cursor: canProceed ? 'pointer' : 'not-allowed',
+                transition: 'all 0.15s', fontFamily: "'DM Sans', sans-serif",
+                boxShadow: canProceed ? '0 4px 14px rgba(56, 178, 172, 0.25)' : 'none',
+              }}>
+                <Sparkles size={16} /> Generate My Plan
+              </button>
+            )}
+          </div>
           {genError && (
             <div style={{ fontSize: 12, color: '#E53E3E', marginTop: 8 }}>{genError}</div>
           )}
