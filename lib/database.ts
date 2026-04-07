@@ -647,6 +647,35 @@ export async function archiveArtefact(id: string, userId: string): Promise<boole
   return !error;
 }
 
+export async function restoreArtefact(id: string, userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('artefacts')
+    .update({ archived_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', userId);
+  return !error;
+}
+
+export async function getArchivedArtefacts(userId: string): Promise<Artefact[]> {
+  const { data, error } = await supabase
+    .from('artefacts')
+    .select('id, name, type, level, source_tool, preview, created_at, updated_at, last_opened_at, archived_at')
+    .eq('user_id', userId)
+    .not('archived_at', 'is', null)
+    .order('archived_at', { ascending: false });
+  if (error) { console.error('getArchivedArtefacts error:', error); return []; }
+  return (data || []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    type: row.type as ArtefactType,
+    level: row.level as number,
+    preview: (row.preview as string) || null,
+    createdAt: new Date(row.created_at as string),
+    updatedAt: new Date(row.updated_at as string),
+    lastOpenedAt: row.last_opened_at ? new Date(row.last_opened_at as string) : null,
+  }));
+}
+
 export async function duplicateArtefact(id: string, userId: string): Promise<Artefact | null> {
   // Fetch original
   const { data: original, error: fetchErr } = await supabase

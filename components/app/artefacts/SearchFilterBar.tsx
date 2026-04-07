@@ -40,6 +40,9 @@ interface Props {
   onSortChange: (s: SortMode) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  /* Optional: group-by-level toggle (list view only) */
+  groupByLevel?: boolean;
+  onToggleGroupByLevel?: () => void;
 }
 
 /* ── Dropdown wrapper (used for both Level and Type) ── */
@@ -130,6 +133,7 @@ const SearchFilterBar: React.FC<Props> = ({
   activeLevels, onToggleLevel,
   sortMode, onSortChange,
   hasActiveFilters, onClearFilters,
+  groupByLevel, onToggleGroupByLevel,
 }) => {
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -352,21 +356,57 @@ const SearchFilterBar: React.FC<Props> = ({
           </button>
         )}
 
-        {/* Sort control — pushed right */}
-        <button
-          onClick={cycleSort}
-          style={{
-            marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 12, color: '#718096', fontWeight: 600, fontFamily: 'inherit',
-            padding: '4px 0',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#1A202C'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#718096'; }}
-        >
-          <ArrowUpDown size={12} />
-          {SORT_LABELS[sortMode]}
-        </button>
+        {/* Spacer to push right-side controls */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Group by Level toggle */}
+          {onToggleGroupByLevel && (
+            <button
+              onClick={onToggleGroupByLevel}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 12px', borderRadius: 10,
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', transition: 'all 0.15s',
+                border: `1.5px solid ${groupByLevel ? '#63B3ED' : '#E2E8F0'}`,
+                background: groupByLevel ? '#EBF8FF' : '#FFFFFF',
+                color: groupByLevel ? '#2B6CB0' : '#4A5568',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              Group
+            </button>
+          )}
+
+          {/* Sort dropdown */}
+          <FilterDropdown
+            label={SORT_LABELS[sortMode]}
+            selectedCount={0}
+          >
+            {SORT_CYCLE.map((mode) => (
+              <button
+                key={mode}
+                onClick={() => onSortChange(mode)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  width: '100%', padding: '9px 14px',
+                  background: sortMode === mode ? '#EDF2F7' : 'transparent',
+                  border: 'none', cursor: 'pointer',
+                  fontSize: 13, fontFamily: 'inherit',
+                  color: '#1A202C', fontWeight: sortMode === mode ? 600 : 400,
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={(e) => { if (sortMode !== mode) e.currentTarget.style.background = '#F7FAFC'; }}
+                onMouseLeave={(e) => { if (sortMode !== mode) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <ArrowUpDown size={13} color={sortMode === mode ? '#1A202C' : '#718096'} />
+                <span style={{ flex: 1, textAlign: 'left' }}>{SORT_LABELS[mode]}</span>
+                {sortMode === mode && <Check size={14} color="#1A202C" strokeWidth={3} />}
+              </button>
+            ))}
+          </FilterDropdown>
+        </div>
       </div>
     </div>
   );

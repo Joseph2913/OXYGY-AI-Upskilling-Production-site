@@ -3275,6 +3275,7 @@ const PREFILL_FIELD_SPEC: Record<string, string> = {
   "workflow-canvas": `Return JSON: { "taskDescription": "<string: 80-200 words>", "toolsAndSystems": "<string: 80-200 words>" }`,
   "dashboard-designer": `Return JSON: { "q1_purpose": "<string: 80-200 words>", "q2_audience": "<string>", "q3_type": "<string>", "q4_metrics": "<string: 80-200 words with bullet points>", "dataSourcesText": "<string: list of data sources, APIs, databases, and tools>", "q7_visualStyle": "<string: one of 'Clean & Minimal', 'Data-Dense', 'Executive & Polished', or 'Colorful & Visual'>" }`,
   "ai-app-evaluator": `Return JSON: { "appDescription": "<string: 80-200 words>", "problemAndUsers": "<string: 80-200 words>", "dataAndContent": "<string: 80-200 words>" }`,
+  "learning-coach": `Return JSON: { "gapDescription": "<string: 80-200 words>", "selectedLevel": <number: 1-5>, "selectedObjective": "<string: exact label from objectives list, or 'Other — I'll describe it below'>", "selectedPlatforms": ["<IDs: 'notebooklm','perplexity','youtube'>"] }`,
 };
 
 function projectPrefillProxyPlugin(apiKey: string): Plugin {

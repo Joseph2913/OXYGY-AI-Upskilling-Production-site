@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Search, Send, Sparkles, ArrowRight, Lock,
   LayoutGrid, List, ChevronLeft, FolderOpen, Loader2,
-  FileText, Award,
+  FileText, Award, Star, Copy, Trash2, ExternalLink,
+  ChevronDown, ChevronUp, ChevronRight, Check, X, Pencil,
 } from 'lucide-react';
 import { TOOL_ICON_MAP } from '../../components/app/workspace/ToolIcons';
 import { useAuth } from '../../context/AuthContext';
@@ -34,38 +35,37 @@ import WorkspaceChat from '../../components/app/workspace/WorkspaceChat';
 /* ── Chat session storage key ── */
 const CHAT_STORAGE_KEY = 'oxygy_workspace_chat';
 
-/* ── Structured prompt starters — one per template tool ──
-   Brackets [] mark placeholder text the user should replace. */
+/* ── Prompt starters — one per template tool ── */
 const PROMPT_STARTERS = [
   {
     toolId: 'prompt-playground',
     label: 'Write a prompt',
-    template: 'I want to write a prompt that helps me [describe your task, e.g. summarise meeting notes into action items] for my role as a [your role].',
+    template: 'I want to write a well-structured prompt for a specific task.',
   },
   {
     toolId: 'agent-builder',
     label: 'Design an AI agent',
-    template: 'I want to build an AI agent that [describe what the agent should do, e.g. answers onboarding questions for new hires] and outputs [describe the format, e.g. a structured FAQ response].',
+    template: 'I want to design a reusable AI agent for a process in my team.',
   },
   {
     toolId: 'workflow-canvas',
     label: 'Map a workflow',
-    template: 'I want to automate a workflow where [describe the process, e.g. a client submits a brief and it gets triaged to the right team] with [number] steps and a human review checkpoint.',
+    template: 'I want to map and automate an end-to-end workflow.',
   },
   {
     toolId: 'dashboard-designer',
     label: 'Design an app',
-    template: 'I want to build a [type of app, e.g. team performance dashboard] that shows [key metrics or features] for [who will use it, e.g. project managers].',
+    template: 'I want to design and scope an application.',
   },
   {
     toolId: 'ai-app-evaluator',
     label: 'Evaluate an AI app',
-    template: 'I have an AI application idea that [describe the app, e.g. personalises learning paths for employees] and I want to evaluate its architecture and readiness.',
+    template: 'I want to evaluate the architecture and feasibility of an AI application idea.',
   },
   {
     toolId: 'learning-coach',
     label: 'Get learning guidance',
-    template: 'I want to learn about [topic, e.g. how to chain AI agents into workflows] at a [beginner / intermediate / advanced] level using [YouTube / Perplexity / NotebookLM].',
+    template: 'I want personalised learning resources on a specific AI topic.',
   },
 ];
 
@@ -109,6 +109,271 @@ const TYPE_TO_TOOL_ICON: Record<ArtefactType, string> = {
   project_proof: '',
 };
 
+/* ── ListRow — single row in the enhanced list view ── */
+interface ListRowProps {
+  artefact: Artefact;
+  isLast: boolean;
+  isSelected: boolean;
+  isFavourite: boolean;
+  isEditing: boolean;
+  editValue: string;
+  editInputRef?: React.RefObject<HTMLInputElement | null>;
+  onToggleSelect: (id: string, e: React.MouseEvent) => void;
+  onToggleFavourite: (id: string, e: React.MouseEvent) => void;
+  onOpen: (id: string) => void;
+  onStartRename: (id: string, name: string, e: React.MouseEvent) => void;
+  onCommitRename: () => void;
+  onCancelRename: () => void;
+  onEditNameChange: (v: string) => void;
+  onDuplicate: (id: string, name: string, e: React.MouseEvent) => void;
+  onArchive: (id: string, name: string, e: React.MouseEvent) => void;
+}
+
+const ListRow: React.FC<ListRowProps> = React.memo(({
+  artefact: a, isLast, isSelected, isFavourite, isEditing,
+  editValue, editInputRef,
+  onToggleSelect, onToggleFavourite, onOpen, onStartRename,
+  onCommitRename, onCancelRename, onEditNameChange,
+  onDuplicate, onArchive,
+}) => {
+  const toolIconId = TYPE_TO_TOOL_ICON[a.type];
+  const IconComp = toolIconId ? TOOL_ICON_MAP[toolIconId] : null;
+  const accent = LEVEL_ACCENT_COLORS[a.level] || '#E2E8F0';
+  const accentDark = LEVEL_ACCENT_DARK_COLORS[a.level] || '#4A5568';
+
+  return (
+    <div
+      className={`ws-list-row${isSelected ? ' ws-row-selected' : ''}`}
+      onClick={() => onOpen(a.id)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '36px 28px 1fr 130px 110px 120px 120px 100px',
+        gap: 8,
+        padding: '12px 20px',
+        borderBottom: isLast ? 'none' : '1px solid #F0F0F0',
+        cursor: 'pointer',
+        transition: 'background 0.12s',
+        alignItems: 'center',
+      }}
+    >
+      {/* Checkbox */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button
+          onClick={(e) => onToggleSelect(a.id, e)}
+          style={{
+            width: 18, height: 18, borderRadius: 4,
+            border: `1.5px solid ${isSelected ? '#38B2AC' : '#CBD5E0'}`,
+            background: isSelected ? '#38B2AC' : '#FFFFFF',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.12s',
+          }}
+        >
+          {isSelected && <Check size={12} color="#FFFFFF" />}
+        </button>
+      </div>
+
+      {/* Star */}
+      <button
+        className={`ws-star-btn${isFavourite ? ' ws-starred' : ''}`}
+        onClick={(e) => onToggleFavourite(a.id, e)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+        title={isFavourite ? 'Unpin' : 'Pin to top'}
+      >
+        <Star size={15} fill={isFavourite ? '#ECC94B' : 'none'} />
+      </button>
+
+      {/* Name + icon + preview */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: `${accent}15`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          {IconComp ? (
+            <IconComp size={20} color={accentDark} />
+          ) : a.type === 'project_proof' ? (
+            <Award size={20} color={accentDark} />
+          ) : (
+            <FileText size={20} color={accentDark} />
+          )}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {isEditing ? (
+            <input
+              ref={editInputRef as React.RefObject<HTMLInputElement>}
+              className="ws-inline-input"
+              value={editValue}
+              onChange={(e) => onEditNameChange(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); onCommitRename(); }
+                if (e.key === 'Escape') onCancelRename();
+              }}
+              onBlur={onCommitRename}
+              autoFocus
+            />
+          ) : (
+            <>
+              <div
+                onDoubleClick={(e) => onStartRename(a.id, a.name, e)}
+                style={{
+                  fontSize: 14, fontWeight: 600, color: '#1A202C',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}
+                title="Double-click to rename"
+              >
+                {a.name}
+              </div>
+              {a.preview && (
+                <div style={{
+                  fontSize: 12, color: '#A0AEC0', marginTop: 2,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {a.preview}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Type */}
+      <div style={{ fontSize: 13, color: '#4A5568' }}>
+        {TYPE_DISPLAY[a.type] || a.type}
+      </div>
+
+      {/* Level chip */}
+      <div>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center',
+          fontSize: 12, fontWeight: 600,
+          color: accentDark,
+          background: `${accent}20`,
+          padding: '3px 10px', borderRadius: 20,
+          whiteSpace: 'nowrap',
+        }}>
+          Level {a.level}
+        </span>
+      </div>
+
+      {/* Created */}
+      <div style={{ fontSize: 13, color: '#718096' }}>
+        {timeAgo(a.createdAt)}
+      </div>
+
+      {/* Last opened */}
+      <div style={{ fontSize: 13, color: '#718096' }}>
+        {a.lastOpenedAt ? timeAgo(a.lastOpenedAt) : '–'}
+      </div>
+
+      {/* Hover actions */}
+      <div className="ws-row-actions" style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <button
+          className="ws-action-btn"
+          title="Rename"
+          onClick={(e) => onStartRename(a.id, a.name, e)}
+        >
+          <Pencil size={14} />
+        </button>
+        <button
+          className="ws-action-btn"
+          title="Duplicate"
+          onClick={(e) => onDuplicate(a.id, a.name, e)}
+        >
+          <Copy size={14} />
+        </button>
+        <button
+          className="ws-action-btn"
+          title="Archive"
+          onClick={(e) => onArchive(a.id, a.name, e)}
+          style={{ color: '#E53E3E' }}
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+});
+
+/* ── ListGroup — collapsible level group ── */
+interface ListGroupProps {
+  level: number;
+  items: Artefact[];
+  selectedRows: Set<string>;
+  favourites: Set<string>;
+  editingNameId: string | null;
+  editingNameValue: string;
+  editInputRef: React.RefObject<HTMLInputElement | null>;
+  onToggleSelect: (id: string, e: React.MouseEvent) => void;
+  onToggleFavourite: (id: string, e: React.MouseEvent) => void;
+  onOpen: (id: string) => void;
+  onStartRename: (id: string, name: string, e: React.MouseEvent) => void;
+  onCommitRename: () => void;
+  onCancelRename: () => void;
+  onEditNameChange: (v: string) => void;
+  onDuplicate: (id: string, name: string, e: React.MouseEvent) => void;
+  onArchive: (id: string, name: string, e: React.MouseEvent) => void;
+}
+
+const ListGroup: React.FC<ListGroupProps> = ({ level, items, ...rowProps }) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const accent = LEVEL_ACCENT_COLORS[level] || '#E2E8F0';
+  const accentDark = LEVEL_ACCENT_DARK_COLORS[level] || '#4A5568';
+
+  return (
+    <div>
+      <div
+        className="ws-group-header"
+        onClick={() => setCollapsed((p) => !p)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 20px',
+          background: `${accent}08`,
+          borderBottom: '1px solid #E2E8F0',
+          transition: 'background 0.12s',
+        }}
+      >
+        {collapsed ? <ChevronRight size={16} color={accentDark} /> : <ChevronDown size={16} color={accentDark} />}
+        <span style={{
+          fontSize: 12, fontWeight: 700, color: accentDark,
+          background: `${accent}20`,
+          padding: '2px 10px', borderRadius: 20,
+        }}>
+          Level {level}
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1A202C' }}>
+          {LEVEL_SHORT_NAMES[level]}
+        </span>
+        <span style={{ fontSize: 12, color: '#A0AEC0', marginLeft: 'auto' }}>
+          {items.length} artefact{items.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      {!collapsed && items.map((a, idx) => (
+        <ListRow
+          key={a.id}
+          artefact={a}
+          isLast={idx === items.length - 1}
+          isSelected={rowProps.selectedRows.has(a.id)}
+          isFavourite={rowProps.favourites.has(a.id)}
+          isEditing={rowProps.editingNameId === a.id}
+          editValue={rowProps.editingNameValue}
+          editInputRef={rowProps.editingNameId === a.id ? rowProps.editInputRef : undefined}
+          onToggleSelect={rowProps.onToggleSelect}
+          onToggleFavourite={rowProps.onToggleFavourite}
+          onOpen={rowProps.onOpen}
+          onStartRename={rowProps.onStartRename}
+          onCommitRename={rowProps.onCommitRename}
+          onCancelRename={rowProps.onCancelRename}
+          onEditNameChange={rowProps.onEditNameChange}
+          onDuplicate={rowProps.onDuplicate}
+          onArchive={rowProps.onArchive}
+        />
+      ))}
+    </div>
+  );
+};
+
 /* ════════════════════════════════════════════════════════════════════
    AppWorkspace — combined Toolkit + Artefacts page
    ════════════════════════════════════════════════════════════════════ */
@@ -120,8 +385,9 @@ const AppWorkspace: React.FC = () => {
 
   /* ── Artefacts data ── */
   const {
-    artefacts, loading: artefactsLoading, loadContent,
+    artefacts, archivedArtefacts, loading: artefactsLoading, loadContent,
     renameArtefact, duplicateArtefact, archiveArtefact,
+    restoreArtefact, loadArchived,
     markOpened, updateContent,
   } = useArtefactsData();
 
@@ -178,7 +444,126 @@ const AppWorkspace: React.FC = () => {
   }, [chatInput]);
 
   /* ── View mode (grid vs list) ── */
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
+  /* ── List view enhancements ── */
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
+  const [favourites, setFavourites] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('oxygy_artefact_favourites');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [listSortCol, setListSortCol] = useState<'name' | 'type' | 'level' | 'created' | 'opened'>('created');
+  const [listSortDir, setListSortDir] = useState<'asc' | 'desc'>('desc');
+  const [groupByLevel, setGroupByLevel] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'archive' | 'duplicate';
+    ids: string[];
+    name?: string;
+  } | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Persist favourites
+  useEffect(() => {
+    localStorage.setItem('oxygy_artefact_favourites', JSON.stringify([...favourites]));
+  }, [favourites]);
+
+  const toggleFavourite = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavourites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleRowSelect = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback((ids: string[]) => {
+    setSelectedRows((prev) => {
+      if (prev.size === ids.length) return new Set();
+      return new Set(ids);
+    });
+  }, []);
+
+  const handleBulkArchive = useCallback(() => {
+    setConfirmAction({ type: 'archive', ids: [...selectedRows] });
+  }, [selectedRows]);
+
+  const handleBulkDuplicate = useCallback(() => {
+    setConfirmAction({ type: 'duplicate', ids: [...selectedRows] });
+  }, [selectedRows]);
+
+  const confirmArchiveSingle = useCallback((id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmAction({ type: 'archive', ids: [id], name });
+  }, []);
+
+  const confirmDuplicateSingle = useCallback((id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmAction({ type: 'duplicate', ids: [id], name });
+  }, []);
+
+  const executeConfirmedAction = useCallback(async () => {
+    if (!confirmAction) return;
+    const { type, ids } = confirmAction;
+    if (type === 'archive') {
+      for (const id of ids) await archiveArtefact(id);
+      setSelectedRows((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      showToast(`${ids.length} artefact${ids.length > 1 ? 's' : ''} archived.`);
+    } else {
+      for (const id of ids) await duplicateArtefact(id);
+      showToast(`${ids.length} artefact${ids.length > 1 ? 's' : ''} duplicated.`);
+    }
+    setConfirmAction(null);
+  }, [confirmAction, archiveArtefact, duplicateArtefact]);
+
+  const startInlineRename = useCallback((id: string, currentName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingNameId(id);
+    setEditingNameValue(currentName);
+    setTimeout(() => editInputRef.current?.select(), 50);
+  }, []);
+
+  const commitRename = useCallback(async () => {
+    if (editingNameId && editingNameValue.trim()) {
+      const success = await renameArtefact(editingNameId, editingNameValue.trim());
+      if (!success) showToast("Couldn't save name. Try again.", 'error');
+    }
+    setEditingNameId(null);
+    setEditingNameValue('');
+  }, [editingNameId, editingNameValue, renameArtefact]);
+
+  const cancelRename = useCallback(() => {
+    setEditingNameId(null);
+    setEditingNameValue('');
+  }, []);
+
+  const handleColumnSort = useCallback((col: 'name' | 'type' | 'level' | 'created' | 'opened') => {
+    setListSortCol((prev) => {
+      if (prev === col) {
+        setListSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+        return prev;
+      }
+      setListSortDir(col === 'name' || col === 'type' ? 'asc' : 'desc');
+      return col;
+    });
+  }, []);
 
   /* ── Filter/search state ── */
   const [searchQuery, setSearchQuery] = useState('');
@@ -220,6 +605,43 @@ const AppWorkspace: React.FC = () => {
     }
     return result;
   }, [artefacts, searchQuery, activeCategories, activeLevels, sortMode]);
+
+  /* ── List-view sorted artefacts (favourites pinned, then column sort) ── */
+  const listSortedArtefacts = useMemo(() => {
+    const result = [...filteredArtefacts];
+    // Column sort
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (listSortCol) {
+        case 'name': cmp = a.name.localeCompare(b.name); break;
+        case 'type': cmp = (TYPE_DISPLAY[a.type] || a.type).localeCompare(TYPE_DISPLAY[b.type] || b.type); break;
+        case 'level': cmp = a.level - b.level; break;
+        case 'created': cmp = a.createdAt.getTime() - b.createdAt.getTime(); break;
+        case 'opened': cmp = (a.lastOpenedAt?.getTime() || 0) - (b.lastOpenedAt?.getTime() || 0); break;
+      }
+      return listSortDir === 'asc' ? cmp : -cmp;
+    });
+    // Pin favourites to top
+    result.sort((a, b) => {
+      const af = favourites.has(a.id) ? 0 : 1;
+      const bf = favourites.has(b.id) ? 0 : 1;
+      return af - bf;
+    });
+    return result;
+  }, [filteredArtefacts, listSortCol, listSortDir, favourites]);
+
+  /* ── Grouped by level (for group view) ── */
+  const groupedArtefacts = useMemo(() => {
+    if (!groupByLevel) return null;
+    const groups: Record<number, Artefact[]> = {};
+    for (const a of listSortedArtefacts) {
+      if (!groups[a.level]) groups[a.level] = [];
+      groups[a.level].push(a);
+    }
+    return Object.entries(groups)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([level, items]) => ({ level: Number(level), items }));
+  }, [listSortedArtefacts, groupByLevel]);
 
   const hasActiveFilters = searchQuery.length > 0 || activeCategories.size > 0 || activeLevels.size > 0;
 
@@ -428,6 +850,20 @@ const AppWorkspace: React.FC = () => {
         .ws-chat-bar textarea::placeholder { color: #A0AEC0; }
         .ws-view-btn:hover { background: #EDF2F7 !important; }
         .ws-list-row:hover { background: #F7FAFC !important; }
+        .ws-list-row .ws-row-actions { opacity: 0; transition: opacity 0.15s; }
+        .ws-list-row:hover .ws-row-actions { opacity: 1; }
+        .ws-list-row.ws-row-selected { background: #EBF8FF !important; }
+        .ws-action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s; color: #718096; }
+        .ws-action-btn:hover { background: #EDF2F7; color: #1A202C; }
+        .ws-star-btn { color: #CBD5E0; transition: color 0.15s; }
+        .ws-star-btn:hover, .ws-star-btn.ws-starred { color: #ECC94B; }
+        .ws-col-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px; transition: color 0.12s; }
+        .ws-col-header:hover { color: #4A5568 !important; }
+        .ws-bulk-bar { animation: fadeSlideUp 0.2s ease-out both; }
+        .ws-group-header { cursor: pointer; user-select: none; }
+        .ws-group-header:hover { background: #F7FAFC; }
+        .ws-inline-input { border: 1.5px solid #38B2AC; border-radius: 6px; outline: none; font-size: 14px; font-weight: 600; color: #1A202C; padding: 2px 8px; font-family: 'DM Sans', sans-serif; width: 100%; }
+        .ws-inline-input:focus { box-shadow: 0 0 0 3px rgba(56,178,172,0.15); }
         @keyframes wsPrefillSpin { to { transform: rotate(360deg); } }
       `}</style>
 
@@ -890,6 +1326,8 @@ const AppWorkspace: React.FC = () => {
             onSortChange={setSortMode}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
+            groupByLevel={viewMode === 'list' ? groupByLevel : undefined}
+            onToggleGroupByLevel={viewMode === 'list' ? () => setGroupByLevel((p) => !p) : undefined}
           />
         </div>
 
@@ -908,38 +1346,230 @@ const AppWorkspace: React.FC = () => {
             onClearFilters={clearFilters}
           />
         ) : (
-          /* ── List view ── */
-          <div style={{ marginTop: 8, background: '#FFFFFF', borderRadius: 12, border: '1px solid #E2E8F0' }}>
-            {/* Table header */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 150px 130px 130px',
-              gap: 12,
-              padding: '12px 20px',
-              borderBottom: '1px solid #E2E8F0',
-            }}>
-              {['Name', 'Type', 'Level', 'Last opened'].map((col) => (
-                <div key={col} style={{
-                  fontSize: 11, fontWeight: 700, color: '#A0AEC0',
-                  textTransform: 'uppercase' as const, letterSpacing: '0.06em',
-                }}>
-                  {col}
-                </div>
-              ))}
-            </div>
-
-            {/* Rows */}
-            {filteredArtefacts.length === 0 ? (
-              <div style={{
-                padding: '40px 16px', textAlign: 'center',
-                color: '#A0AEC0', fontSize: 14,
+          /* ── Enhanced List view ── */
+          <div style={{ marginTop: 8 }}>
+            {/* Bulk action bar */}
+            {selectedRows.size > 0 && (
+              <div className="ws-bulk-bar" style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 20px', marginBottom: 8,
+                background: '#EBF8FF', borderRadius: 10, border: '1px solid #BEE3F8',
               }}>
-                {artefacts.length === 0
-                  ? 'No artefacts yet. Use a template above to create your first one.'
-                  : 'No artefacts match your filters.'}
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#2B6CB0' }}>
+                  {selectedRows.size} selected
+                </span>
+                <button onClick={handleBulkDuplicate} className="ws-action-btn" title="Duplicate selected" style={{ color: '#2B6CB0' }}>
+                  <Copy size={15} />
+                </button>
+                <button onClick={handleBulkArchive} className="ws-action-btn" title="Archive selected" style={{ color: '#E53E3E' }}>
+                  <Trash2 size={15} />
+                </button>
+                <button onClick={() => setSelectedRows(new Set())} className="ws-action-btn" title="Clear selection" style={{ marginLeft: 'auto' }}>
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+
+            <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              {/* Sticky table header */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '36px 28px 1fr 130px 110px 120px 120px 100px',
+                gap: 8,
+                padding: '12px 20px',
+                borderBottom: '1px solid #E2E8F0',
+                position: 'sticky' as const, top: 54, zIndex: 5,
+                background: '#FFFFFF', borderRadius: '12px 12px 0 0',
+              }}>
+                {/* Select all checkbox */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => toggleSelectAll(listSortedArtefacts.map((a) => a.id))}
+                    style={{
+                      width: 18, height: 18, borderRadius: 4,
+                      border: `1.5px solid ${selectedRows.size > 0 && selectedRows.size === listSortedArtefacts.length ? '#38B2AC' : '#CBD5E0'}`,
+                      background: selectedRows.size > 0 && selectedRows.size === listSortedArtefacts.length ? '#38B2AC' : '#FFFFFF',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {selectedRows.size > 0 && selectedRows.size === listSortedArtefacts.length && <Check size={12} color="#FFFFFF" />}
+                  </button>
+                </div>
+                {/* Star column header */}
+                <div />
+                {/* Sortable column headers */}
+                {([
+                  { key: 'name' as const, label: 'Name' },
+                  { key: 'type' as const, label: 'Type' },
+                  { key: 'level' as const, label: 'Level' },
+                  { key: 'created' as const, label: 'Created' },
+                  { key: 'opened' as const, label: 'Last Opened' },
+                ]).map(({ key, label }) => (
+                  <div
+                    key={key}
+                    className="ws-col-header"
+                    onClick={() => handleColumnSort(key)}
+                    style={{
+                      fontSize: 11, fontWeight: 700, color: listSortCol === key ? '#4A5568' : '#A0AEC0',
+                      textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                    }}
+                  >
+                    {label}
+                    {listSortCol === key && (
+                      listSortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                    )}
+                  </div>
+                ))}
+                {/* Actions column */}
+                <div />
+              </div>
+
+              {/* Empty state */}
+              {listSortedArtefacts.length === 0 ? (
+                <div style={{
+                  padding: '60px 20px', textAlign: 'center',
+                  display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 16,
+                }}>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: '#EDF2F7',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <FolderOpen size={32} color="#A0AEC0" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', marginBottom: 6 }}>
+                      {artefacts.length === 0 ? 'No artefacts yet' : 'No matches found'}
+                    </div>
+                    <div style={{ fontSize: 14, color: '#718096', maxWidth: 360, lineHeight: 1.6 }}>
+                      {artefacts.length === 0
+                        ? 'Use one of the templates above to create your first artefact. Every prompt, agent, workflow, or app you build will appear here.'
+                        : 'Try adjusting your search or filters to find what you\'re looking for.'}
+                    </div>
+                  </div>
+                  {artefacts.length === 0 ? (
+                    <button
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      style={{
+                        marginTop: 4, padding: '8px 20px',
+                        borderRadius: 20, border: 'none',
+                        background: '#38B2AC', color: '#FFFFFF',
+                        fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      Get started with a template
+                    </button>
+                  ) : (
+                    <button
+                      onClick={clearFilters}
+                      style={{
+                        marginTop: 4, padding: '8px 20px',
+                        borderRadius: 20, border: '1px solid #E2E8F0',
+                        background: '#FFFFFF', color: '#4A5568',
+                        fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              ) : groupByLevel && groupedArtefacts ? (
+                /* ── Grouped by level ── */
+                groupedArtefacts.map((group) => (
+                  <ListGroup
+                    key={group.level}
+                    level={group.level}
+                    items={group.items}
+                    selectedRows={selectedRows}
+                    favourites={favourites}
+                    editingNameId={editingNameId}
+                    editingNameValue={editingNameValue}
+                    editInputRef={editInputRef}
+                    onToggleSelect={toggleRowSelect}
+                    onToggleFavourite={toggleFavourite}
+                    onOpen={openPanel}
+                    onStartRename={startInlineRename}
+                    onCommitRename={commitRename}
+                    onCancelRename={cancelRename}
+                    onEditNameChange={setEditingNameValue}
+                    onDuplicate={confirmDuplicateSingle}
+                    onArchive={confirmArchiveSingle}
+                  />
+                ))
+              ) : (
+                /* ── Flat list ── */
+                listSortedArtefacts.map((a, idx) => (
+                  <ListRow
+                    key={a.id}
+                    artefact={a}
+                    isLast={idx === listSortedArtefacts.length - 1}
+                    isSelected={selectedRows.has(a.id)}
+                    isFavourite={favourites.has(a.id)}
+                    isEditing={editingNameId === a.id}
+                    editValue={editingNameValue}
+                    editInputRef={editingNameId === a.id ? editInputRef : undefined}
+                    onToggleSelect={toggleRowSelect}
+                    onToggleFavourite={toggleFavourite}
+                    onOpen={openPanel}
+                    onStartRename={startInlineRename}
+                    onCommitRename={commitRename}
+                    onCancelRename={cancelRename}
+                    onEditNameChange={setEditingNameValue}
+                    onDuplicate={confirmDuplicateSingle}
+                    onArchive={confirmArchiveSingle}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Section 4: Archived Artefacts ─── */}
+      <div style={{ marginTop: 24, animation: 'fadeSlideUp 0.3s ease-out 240ms both' }}>
+        <button
+          onClick={() => {
+            const next = !showArchived;
+            setShowArchived(next);
+            if (next) loadArchived();
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 13, fontWeight: 700, color: '#A0AEC0',
+            textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+            padding: '4px 0', transition: 'color 0.12s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#718096'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#A0AEC0'; }}
+        >
+          {showArchived ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          Archived
+          {archivedArtefacts.length > 0 && (
+            <span style={{
+              fontSize: 11, fontWeight: 600, color: '#A0AEC0',
+              background: '#EDF2F7', padding: '1px 7px', borderRadius: 10,
+            }}>
+              {archivedArtefacts.length}
+            </span>
+          )}
+        </button>
+
+        {showArchived && (
+          <div style={{
+            marginTop: 8, background: '#FFFFFF', borderRadius: 12,
+            border: '1px solid #E2E8F0',
+          }}>
+            {archivedArtefacts.length === 0 ? (
+              <div style={{ padding: '30px 20px', textAlign: 'center', color: '#A0AEC0', fontSize: 14 }}>
+                No archived artefacts.
               </div>
             ) : (
-              filteredArtefacts.map((a, idx) => {
+              archivedArtefacts.map((a, idx) => {
                 const toolIconId = TYPE_TO_TOOL_ICON[a.type];
                 const IconComp = toolIconId ? TOOL_ICON_MAP[toolIconId] : null;
                 const accent = LEVEL_ACCENT_COLORS[a.level] || '#E2E8F0';
@@ -949,23 +1579,23 @@ const AppWorkspace: React.FC = () => {
                   <div
                     key={a.id}
                     className="ws-list-row"
-                    onClick={() => openPanel(a.id)}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 150px 130px 130px',
-                      gap: 12,
-                      padding: '14px 20px',
-                      borderBottom: idx < filteredArtefacts.length - 1 ? '1px solid #F0F0F0' : 'none',
-                      cursor: 'pointer',
-                      transition: 'background 0.12s',
+                      gridTemplateColumns: '1fr 130px 110px 100px',
+                      gap: 8,
+                      padding: '12px 20px',
+                      borderBottom: idx < archivedArtefacts.length - 1 ? '1px solid #F0F0F0' : 'none',
                       alignItems: 'center',
+                      opacity: 0.7,
+                      transition: 'background 0.12s, opacity 0.12s',
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
                   >
-                    {/* Name + icon + preview */}
+                    {/* Name + icon */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                       <div style={{
-                        width: 36, height: 36,
-                        borderRadius: 10,
+                        width: 36, height: 36, borderRadius: 10,
                         background: `${accent}15`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0,
@@ -980,8 +1610,9 @@ const AppWorkspace: React.FC = () => {
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{
-                          fontSize: 14, fontWeight: 600, color: '#1A202C',
+                          fontSize: 14, fontWeight: 600, color: '#718096',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          textDecoration: 'line-through',
                         }}>
                           {a.name}
                         </div>
@@ -997,28 +1628,50 @@ const AppWorkspace: React.FC = () => {
                     </div>
 
                     {/* Type */}
-                    <div style={{ fontSize: 13, color: '#4A5568' }}>
+                    <div style={{ fontSize: 13, color: '#718096' }}>
                       {TYPE_DISPLAY[a.type] || a.type}
                     </div>
 
-                    {/* Level — chip format */}
+                    {/* Level chip */}
                     <div>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center',
                         fontSize: 12, fontWeight: 600,
                         color: accentDark,
                         background: `${accent}20`,
-                        padding: '3px 10px',
-                        borderRadius: 20,
+                        padding: '3px 10px', borderRadius: 20,
                         whiteSpace: 'nowrap',
                       }}>
                         Level {a.level}
                       </span>
                     </div>
 
-                    {/* Last opened */}
-                    <div style={{ fontSize: 13, color: '#718096' }}>
-                      {a.lastOpenedAt ? timeAgo(a.lastOpenedAt) : '–'}
+                    {/* Restore button */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={async () => {
+                          const ok = await restoreArtefact(a.id);
+                          if (ok) showToast('Artefact restored.');
+                          else showToast('Failed to restore.', 'error');
+                        }}
+                        style={{
+                          padding: '5px 14px', borderRadius: 20,
+                          border: '1px solid #38B2AC', background: '#FFFFFF',
+                          color: '#2C9A94', fontSize: 12, fontWeight: 600,
+                          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                          transition: 'background 0.12s, color 0.12s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#38B2AC';
+                          e.currentTarget.style.color = '#FFFFFF';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#FFFFFF';
+                          e.currentTarget.style.color = '#2C9A94';
+                        }}
+                      >
+                        Restore
+                      </button>
                     </div>
                   </div>
                 );
@@ -1040,6 +1693,73 @@ const AppWorkspace: React.FC = () => {
         filteredArtefacts={filteredArtefacts}
         onNavigate={openPanel}
       />
+
+      {/* ── Confirmation Dialog ── */}
+      {confirmAction && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeSlideUp 0.15s ease-out',
+          }}
+          onClick={() => setConfirmAction(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF', borderRadius: 16,
+              padding: '28px 32px', maxWidth: 420, width: '90%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#1A202C', marginBottom: 10 }}>
+              {confirmAction.type === 'archive' ? 'Archive' : 'Duplicate'} artefact{confirmAction.ids.length > 1 ? 's' : ''}?
+            </div>
+            <div style={{ fontSize: 14, color: '#718096', lineHeight: 1.6, marginBottom: 24 }}>
+              {confirmAction.type === 'archive'
+                ? confirmAction.ids.length > 1
+                  ? `Are you sure you want to archive ${confirmAction.ids.length} artefacts? You can restore them later from the Archived section.`
+                  : `Are you sure you want to archive "${confirmAction.name}"? You can restore it later from the Archived section.`
+                : confirmAction.ids.length > 1
+                  ? `Are you sure you want to duplicate ${confirmAction.ids.length} artefacts? This will create a copy of each.`
+                  : `Are you sure you want to duplicate "${confirmAction.name}"? This will create a copy.`}
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmAction(null)}
+                style={{
+                  padding: '9px 20px', borderRadius: 10,
+                  border: '1.5px solid #E2E8F0', background: '#FFFFFF',
+                  color: '#4A5568', fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                  transition: 'background 0.12s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#F7FAFC'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#FFFFFF'; }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeConfirmedAction}
+                style={{
+                  padding: '9px 20px', borderRadius: 10,
+                  border: 'none',
+                  background: confirmAction.type === 'archive' ? '#E53E3E' : '#38B2AC',
+                  color: '#FFFFFF', fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                  transition: 'opacity 0.12s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+              >
+                {confirmAction.type === 'archive' ? 'Archive' : 'Duplicate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ToastContainer />
     </div>

@@ -7,6 +7,8 @@ import {
   renameArtefact as dbRenameArtefact,
   duplicateArtefact as dbDuplicateArtefact,
   archiveArtefact as dbArchiveArtefact,
+  restoreArtefact as dbRestoreArtefact,
+  getArchivedArtefacts as dbGetArchivedArtefacts,
   updateArtefactContent as dbUpdateArtefactContent,
 } from '../lib/database';
 import type { Artefact as DbArtefact, ArtefactContent as DbArtefactContent, ArtefactType as DbArtefactType } from '../lib/database';
@@ -138,6 +140,7 @@ export function useArtefactsData() {
   const { user } = useAuth();
   const isTourMode = useTourMode();
   const [artefacts, setArtefacts] = useState<Artefact[]>([]);
+  const [archivedArtefacts, setArchivedArtefacts] = useState<Artefact[]>([]);
   const [loading, setLoading] = useState(true);
   const contentCache = useRef<Record<string, ArtefactContent>>({});
 
@@ -170,6 +173,13 @@ export function useArtefactsData() {
     load();
     return () => { cancelled = true; };
   }, [user, isTourMode]);
+
+  // Load archived artefacts on demand
+  const loadArchived = useCallback(async () => {
+    if (!user) return;
+    const data = await dbGetArchivedArtefacts(user.id);
+    setArchivedArtefacts(data);
+  }, [user]);
 
   // Load content for a single artefact
   const loadContent = useCallback(async (id: string): Promise<ArtefactContent | null> => {
@@ -211,7 +221,25 @@ export function useArtefactsData() {
     if (!user) return false;
     const ok = await dbArchiveArtefact(id, user.id);
     if (ok) {
-      setArtefacts((prev) => prev.filter((a) => a.id !== id));
+      setArtefacts((prev) => {
+        const archived = prev.find((a) => a.id === id);
+        if (archived) setArchivedArtefacts((ap) => [archived, ...ap]);
+        return prev.filter((a) => a.id !== id);
+      });
+    }
+    return ok;
+  }, [user]);
+
+  // Restore artefact
+  const restoreArtefact = useCallback(async (id: string): Promise<boolean> => {
+    if (!user) return false;
+    const ok = await dbRestoreArtefact(id, user.id);
+    if (ok) {
+      setArchivedArtefacts((prev) => {
+        const restored = prev.find((a) => a.id === id);
+        if (restored) setArtefacts((ap) => [{ ...restored, updatedAt: new Date() }, ...ap]);
+        return prev.filter((a) => a.id !== id);
+      });
     }
     return ok;
   }, [user]);
@@ -238,11 +266,14 @@ export function useArtefactsData() {
 
   return {
     artefacts,
+    archivedArtefacts,
     loading,
     loadContent,
     renameArtefact,
     duplicateArtefact,
     archiveArtefact,
+    restoreArtefact,
+    loadArchived,
     markOpened,
     updateContent,
   };

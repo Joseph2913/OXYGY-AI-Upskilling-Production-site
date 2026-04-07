@@ -4265,6 +4265,24 @@ Format each field value like this:
 ⚠️ Assumptions to validate:
 - [Assumption 1]
 - [Assumption 2]`,
+  "learning-coach": `Return JSON: { "gapDescription": "<string: 80-200 words>", "selectedLevel": <number: 1-5>, "selectedObjective": "<string: exact label match or 'Other'>", "selectedPlatforms": ["<platform IDs: 'notebooklm', 'perplexity', 'youtube'>"] }
+gapDescription: Write a detailed description of what the user wants to learn, their current knowledge gaps, and what specific skills or concepts they want to build.
+selectedLevel: Pick the level (1-5) that best matches the topic. L1=Fundamentals/prompting, L2=Agents/custom GPTs, L3=Workflows/automation, L4=Dashboards/apps, L5=Full-stack AI applications.
+selectedObjective: Match to one of these exact labels if possible. If no match, use "Other — I'll describe it below".
+  L1: "Prompt Engineering", "Context Engineering", "Responsible AI Use", "Multimodal AI (Image / Video / Audio)", "Learning How to Learn with AI"
+  L2: "What AI Agents Are & Why They Matter", "Custom GPT / Agent Building", "System Prompt & Instruction Design", "Human-in-the-Loop Design", "Sharing & Standardising Agents"
+  L3: "AI Workflow Mapping", "Agent Chaining & Orchestration", "Input Logic & Role Mapping", "Automated Output Generation", "Human-in-the-Loop at Scale", "Performance & Feedback Loops"
+  L4: "UX Design for AI Outputs", "Dashboard Prototyping", "User Journey Mapping", "Data Visualisation Principles", "Role-Specific Front-Ends"
+  L5: "Application Architecture", "Personalisation Engines", "Knowledge Base Applications", "Custom Learning Platforms", "Full-Stack AI Integration", "User Testing & Scaling"
+selectedPlatforms: Pick 1-2 platforms based on the user's stated preference.
+
+Format gapDescription like this:
+[Concrete content]
+
+---
+⚠️ Assumptions to validate:
+- [Assumption 1]
+- [Assumption 2]`,
 };
 
 export const projectprefill = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 30 }, async (req, res) => {

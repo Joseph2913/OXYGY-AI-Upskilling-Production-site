@@ -237,6 +237,36 @@ const AppLearningCoach: React.FC = () => {
   const step1Done = allInputsDone;
   const step2Done = !!result || !!notebookResult || !!perplexityResult || !!youtubeResult;
 
+  /* ── Workspace prefill: read sessionStorage from workspace chat flow ── */
+  useEffect(() => {
+    const raw = sessionStorage.getItem('workspace_prefill');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      const f = data.fields;
+      if (f) {
+        if (f.gapDescription) setGapDescription(f.gapDescription);
+        if (f.selectedLevel && typeof f.selectedLevel === 'number') {
+          setSelectedLevel(f.selectedLevel);
+          // Set the objective — match to a valid label for this level, or fall back to "Other"
+          if (f.selectedObjective) {
+            const validObjectives = LEVEL_OBJECTIVES[f.selectedLevel]?.map((o: { label: string }) => o.label) || [];
+            if (validObjectives.includes(f.selectedObjective)) {
+              setSelectedObjective(f.selectedObjective);
+            } else {
+              setSelectedObjective('Other — I\'ll describe it below');
+            }
+          }
+        }
+        if (f.selectedPlatforms && Array.isArray(f.selectedPlatforms)) setSelectedPlatforms(f.selectedPlatforms);
+        // Skip card 1 (level + topic) since it's pre-filled — go to step 2 (learning method)
+        setCurrentStep(2);
+        sessionStorage.removeItem('workspace_prefill');
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   /* ── Load coach profile on mount (for Edit Profile panel, no pre-selection) ── */
   useEffect(() => {
     if (!user) return;
@@ -246,8 +276,9 @@ const AppLearningCoach: React.FC = () => {
     })();
   }, [user]);
 
-  /* ── Draft + result persistence ── */
+  /* ── Draft + result persistence (skip if workspace prefill active) ── */
   useEffect(() => {
+    if (sessionStorage.getItem('workspace_prefill')) return;
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
