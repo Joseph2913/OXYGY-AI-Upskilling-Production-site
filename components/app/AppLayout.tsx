@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AppProvider, useAppContext } from '../../context/AppContext';
+import { AppProvider } from '../../context/AppContext';
 import { OrgProvider } from '../../context/OrgContext';
 import { TourModeProvider } from '../../context/TourModeContext';
 import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH } from './AppSidebar';
@@ -63,8 +63,8 @@ class RouteErrorBoundary extends React.Component<
 }
 
 /**
- * Inner layout that has access to AppContext (for hasLearningPlan check).
- * Tour logic lives here so it can read context values.
+ * Inner layout wrapping the app shell.
+ * Tour logic lives here, triggered by navigation state from onboarding.
  * TourModeProvider wraps everything so hooks can detect tour mode.
  */
 const AppLayoutInner: React.FC = () => {
