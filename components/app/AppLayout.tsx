@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppProvider } from '../../context/AppContext';
 import { OrgProvider } from '../../context/OrgContext';
 import { TourModeProvider } from '../../context/TourModeContext';
@@ -69,14 +69,18 @@ class RouteErrorBoundary extends React.Component<
  */
 const AppLayoutInner: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
+  // showTourPrompt = welcome card visible (real data still shown behind it)
+  // tourActive     = user accepted the tour, mock data injected via TourModeProvider
+  const [showTourPrompt, setShowTourPrompt] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const tourTriggeredRef = useRef(false);
 
-  /* ── Auto-trigger tour after onboarding ──
+  /* ── Auto-trigger tour welcome prompt after onboarding ──
    * The onboarding survey passes { showTour: true } via navigation state
-   * when redirecting to the dashboard. We check for that signal AND that
-   * the user hasn't already completed/skipped the tour previously.
+   * when redirecting to the dashboard. We show the welcome prompt only —
+   * tour mode (with mock data) activates only when the user clicks "Start".
    */
   useEffect(() => {
     if (tourTriggeredRef.current) return;
@@ -90,7 +94,7 @@ const AppLayoutInner: React.FC = () => {
 
     tourTriggeredRef.current = true;
 
-    const timer = setTimeout(() => setTourActive(true), 1500);
+    const timer = setTimeout(() => setShowTourPrompt(true), 1500);
     return () => clearTimeout(timer);
   }, [location.pathname, location.state]);
 
@@ -99,14 +103,23 @@ const AppLayoutInner: React.FC = () => {
     const handler = () => {
       tourTriggeredRef.current = true;
       setTourActive(true);
+      setShowTourPrompt(true);
     };
     window.addEventListener('oxygy:replay-tour', handler);
     return () => window.removeEventListener('oxygy:replay-tour', handler);
   }, []);
 
+  // Called by ProductTour when user clicks "Start tour"
+  const handleTourStart = useCallback(() => {
+    setTourActive(true);
+  }, []);
+
+  // Called by ProductTour when tour ends (completed or skipped)
   const handleTourComplete = useCallback(() => {
     setTourActive(false);
-  }, []);
+    setShowTourPrompt(false);
+    navigate('/app/dashboard', { replace: true });
+  }, [navigate]);
 
   return (
     <TourModeProvider active={tourActive}>
@@ -127,7 +140,9 @@ const AppLayoutInner: React.FC = () => {
           </RouteErrorBoundary>
         </div>
       </div>
-      {tourActive && <ProductTour onComplete={handleTourComplete} />}
+      {showTourPrompt && (
+        <ProductTour onComplete={handleTourComplete} onTourStart={handleTourStart} />
+      )}
     </TourModeProvider>
   );
 };

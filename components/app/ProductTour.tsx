@@ -20,6 +20,7 @@ interface TourStep {
 
 interface ProductTourProps {
   onComplete: () => void;
+  onTourStart?: () => void;
 }
 
 /* ─── Step Data ─── */
@@ -541,7 +542,7 @@ const WaveformBars: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => (
 );
 
 /* ─── Main Component ─── */
-export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
+export const ProductTour: React.FC<ProductTourProps> = ({ onComplete, onTourStart }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -725,6 +726,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
   const startTourWithNarration = () => {
     setNarrationEnabled(true);
     setPhase('touring');
+    onTourStart?.();
     navigate(TOUR_STEPS[0].route);
     // Play welcome clip first, then step 1 audio will play when step effect fires
     playAudio('/audio/tour-welcome.mp3');
@@ -733,6 +735,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
   const startTourWithoutNarration = () => {
     setNarrationEnabled(false);
     setPhase('touring');
+    onTourStart?.();
     navigate(TOUR_STEPS[0].route);
   };
 
