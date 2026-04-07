@@ -3266,6 +3266,116 @@ function curatedVideosProxyPlugin(supabaseUrl: string, supabaseKey: string): Plu
   };
 }
 
+// ─── Project Pre-fill proxy ───
+
+// Field specs are kept short here — the system prompt does the heavy lifting
+const PREFILL_FIELD_SPEC: Record<string, string> = {
+  "prompt-playground": `Return JSON: { "userInput": "<string: complete ready-to-use prompt, 80-200 words>" }`,
+  "agent-builder": `Return JSON: { "taskDescription": "<string: 80-200 words>", "inputDataDescription": "<string: 80-200 words>" }`,
+  "workflow-canvas": `Return JSON: { "taskDescription": "<string: 80-200 words>", "toolsAndSystems": "<string: 80-200 words>" }`,
+  "dashboard-designer": `Return JSON: { "q1_purpose": "<string: 80-200 words>", "q2_audience": "<string>", "q3_type": "<string>", "q4_metrics": "<string: 80-200 words with bullet points>", "dataSourcesText": "<string: list of data sources, APIs, databases, and tools>", "q7_visualStyle": "<string: one of 'Clean & Minimal', 'Data-Dense', 'Executive & Polished', or 'Colorful & Visual'>" }`,
+  "ai-app-evaluator": `Return JSON: { "appDescription": "<string: 80-200 words>", "problemAndUsers": "<string: 80-200 words>", "dataAndContent": "<string: 80-200 words>" }`,
+};
+
+function projectPrefillProxyPlugin(apiKey: string): Plugin {
+  return {
+    name: 'project-prefill-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/project-prefill', (req: Connect.IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') { res.statusCode = 503; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'API key not configured' })); return; }
+
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', async () => {
+          try {
+            const { toolId, projectTitle, projectDescription, deliverable, userRole, userChallenge } = JSON.parse(body);
+            if (!toolId || !projectTitle) { res.statusCode = 400; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: 'toolId and projectTitle required' })); return; }
+
+            const fieldSpec = PREFILL_FIELD_SPEC[toolId];
+            if (!fieldSpec) { res.statusCode = 400; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ error: `Unknown toolId: ${toolId}` })); return; }
+
+            const systemPrompt = `You are an expert AI assistant that generates rich, detailed pre-filled form values for toolkit pages.
+
+Your job is to make the user feel that the time they spent answering questions was worth it. The pre-fill values should be SO specific and insightful that the user thinks "wow, this actually understands what I'm trying to build."
+
+RULES:
+1. EXTRAPOLATE aggressively from the conversation. If the user mentions "meeting transcripts", describe what those transcripts typically contain (attendees, timestamps, action items, discussion points). If they mention a tool like CircleBack or Otter.ai, describe that tool's typical output format.
+2. Include HYPOTHETICAL EXAMPLES where useful — sample input data, sample output templates, example scenarios.
+3. Every field value MUST end with an assumptions section separated by a markdown divider:
+   [Your detailed content here]
+
+   ---
+   Assumptions to validate:
+   - [Specific assumption]
+   - [Another assumption]
+4. Write in a professional, direct tone. No filler phrases.
+5. Each field should be 80-200 words. Longer is better than shorter.
+6. Think about the BROADER IMPLICATIONS — who reads the output? what decisions depend on it? what format makes it most actionable?
+
+${fieldSpec}
+
+Return ONLY valid JSON, no markdown fences.`;
+            const userMessage = `Here is the full conversation between the user and the workspace assistant:\n\n${projectDescription || 'N/A'}\n\nBased on this conversation, generate pre-fill values for the "${toolId}" toolkit page.`;
+
+            const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: 'google/gemini-2.0-flash-001',
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userMessage },
+                ],
+                max_tokens: 3000,
+                temperature: 0.6,
+                response_format: { type: 'json_object' },
+              }),
+            }, 'project-prefill');
+
+            if (!openRouterResponse.ok) {
+              res.statusCode = 502;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'AI service error', retryable: true }));
+              return;
+            }
+
+            const data = await openRouterResponse.json();
+            const text = data?.choices?.[0]?.message?.content || '';
+            const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+            // Try parsing as-is first; if it fails, fix newlines inside string values
+            let parsed: any;
+            try {
+              parsed = JSON.parse(cleaned);
+            } catch {
+              // Escape control chars only inside JSON string values (between quotes)
+              const fixed = cleaned.replace(/"([^"]*?)"/g, (_match: string, inner: string) => {
+                const escaped = inner
+                  .replace(/\\/g, '\\\\')
+                  .replace(/\n/g, '\\n')
+                  .replace(/\r/g, '\\r')
+                  .replace(/\t/g, '\\t')
+                  .replace(/[\x00-\x1F\x7F]/g, '');
+                return `"${escaped}"`;
+              });
+              parsed = JSON.parse(fixed);
+            }
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ fields: parsed }));
+          } catch (err) {
+            console.error('Proxy error (project-prefill):', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Internal server error', retryable: true }));
+          }
+        });
+      });
+    },
+  };
+}
+
 // ─── Review Project proxy (PRD 18) ───
 
 const REVIEW_PROJECT_SYSTEM_BASE = `You are the OXYGY AI Project Reviewer — a supportive, experienced mentor who evaluates project submissions from professionals completing an AI upskilling programme.
@@ -3577,6 +3687,7 @@ export default defineConfig(({ mode }) => {
       perplexityGuideProxyPlugin(env.OpenRouter_API, geminiModel),
       reviewProjectProxyPlugin(env.OpenRouter_API, geminiModel),
       curatedVideosProxyPlugin(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
+      projectPrefillProxyPlugin(env.OpenRouter_API),
     ],
     resolve: {
       alias: {

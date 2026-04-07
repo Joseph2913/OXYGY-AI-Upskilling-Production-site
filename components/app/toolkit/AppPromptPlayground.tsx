@@ -84,6 +84,21 @@ const AppPromptPlayground: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
 
+  /* ── Workspace prefill: read sessionStorage from project help flow ── */
+  useEffect(() => {
+    const raw = sessionStorage.getItem('workspace_prefill');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (data.fields?.userInput) {
+        setUserInput(data.fields.userInput);
+        sessionStorage.removeItem('workspace_prefill');
+        // Clear any stale draft so it doesn't overwrite us
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   /* ── Tour mode: pre-populate with demo result ── */
   useEffect(() => {
     if (!isTourMode) return;
@@ -132,8 +147,9 @@ const AppPromptPlayground: React.FC = () => {
     window.history.replaceState({}, '');
   }, []);
 
-  /* ── Draft persistence ── */
+  /* ── Draft persistence (skip if workspace prefill is active) ── */
   useEffect(() => {
+    if (sessionStorage.getItem('workspace_prefill')) return; // prefill takes priority
     const draft = localStorage.getItem(DRAFT_KEY);
     if (draft) {
       setUserInput(draft);

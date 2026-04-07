@@ -746,8 +746,22 @@ const AppWorkflowCanvas: React.FC = () => {
     window.history.replaceState({}, '');
   }, []);
 
-  /* ── Draft persistence ── */
+  // Workspace prefill: read sessionStorage from project help flow
   useEffect(() => {
+    const raw = sessionStorage.getItem('workspace_prefill');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (data.fields?.taskDescription) setTaskDescription(data.fields.taskDescription);
+      if (data.fields?.toolsAndSystems) setToolsAndSystems(data.fields.toolsAndSystems);
+      sessionStorage.removeItem('workspace_prefill');
+      localStorage.removeItem(DRAFT_KEY);
+    } catch { /* ignore */ }
+  }, []);
+
+  /* ── Draft persistence (skip if workspace prefill is active) ── */
+  useEffect(() => {
+    if (sessionStorage.getItem('workspace_prefill')) return;
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {

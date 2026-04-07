@@ -560,8 +560,9 @@ const AppDashboardDesigner: React.FC = () => {
 
   const canGenerate = brief.q1_purpose.trim().length > 0;
 
-  // ─── Draft persistence ───
+  // ─── Draft persistence (skip if workspace prefill is active) ───
   useEffect(() => {
+    if (sessionStorage.getItem('workspace_prefill')) return;
     const draft = localStorage.getItem('oxygy_dashboard-designer_draft');
     if (draft) {
       try {
@@ -833,6 +834,29 @@ const AppDashboardDesigner: React.FC = () => {
     }
     if (state.sourceArtefactId) setSourceArtefactId(state.sourceArtefactId);
     window.history.replaceState({}, '');
+  }, []);
+
+  // Workspace prefill: read sessionStorage from project help flow
+  useEffect(() => {
+    const raw = sessionStorage.getItem('workspace_prefill');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      const f = data.fields;
+      if (f) {
+        setBrief((prev) => ({
+          ...prev,
+          ...(f.q1_purpose ? { q1_purpose: f.q1_purpose } : {}),
+          ...(f.q2_audience ? { q2_audience: f.q2_audience } : {}),
+          ...(f.q3_type ? { q3_type: f.q3_type } : {}),
+          ...(f.q4_metrics ? { q4_metrics: f.q4_metrics } : {}),
+          ...(f.q7_visualStyle ? { q7_visualStyle: f.q7_visualStyle } : {}),
+        }));
+        if (f.dataSourcesText) setDataSourcesText(f.dataSourcesText);
+        sessionStorage.removeItem('workspace_prefill');
+        localStorage.removeItem('oxygy_dashboard-designer_draft');
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // ─── Step-back navigation ───

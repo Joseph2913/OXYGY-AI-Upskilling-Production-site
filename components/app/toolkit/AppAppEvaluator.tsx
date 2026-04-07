@@ -912,6 +912,19 @@ const AppAppEvaluator: React.FC = () => {
     window.history.replaceState({}, '');
   }, []);
 
+  // Workspace prefill: read sessionStorage from project help flow
+  useEffect(() => {
+    const raw = sessionStorage.getItem('workspace_prefill');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (data.fields?.appDescription) setAppDescription(data.fields.appDescription);
+      if (data.fields?.problemAndUsers) setProblemAndUsers(data.fields.problemAndUsers);
+      if (data.fields?.dataAndContent) setDataAndContent(data.fields.dataAndContent);
+      sessionStorage.removeItem('workspace_prefill');
+    } catch { /* ignore */ }
+  }, []);
+
   // Staggered block appearance — Step 2 (score card + matrix card + summary + refinement)
   useEffect(() => {
     if (!result) return;

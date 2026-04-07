@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap } from 'lucide-react';
+import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap, LayoutDashboard } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',      icon: Home,         path: '/app/dashboard' },
-  { label: 'My Journey',     icon: Map,          path: '/app/journey' },
-  { label: 'Current Level',  icon: BookOpen,     path: '/app/level' }, // path overridden dynamically below
-  { label: 'My Toolkit',     icon: Wrench,       path: '/app/toolkit' },
-  { label: 'Learning Coach', icon: GraduationCap, path: '/app/toolkit/learning-coach' },
-  { label: 'My Artefacts',   icon: Folder,       path: '/app/artefacts' },
-  { label: 'My Cohort',      icon: Users,        path: '/app/cohort' },
+  { label: 'Dashboard',      icon: Home,            path: '/app/dashboard' },
+  { label: 'My Journey',     icon: Map,             path: '/app/journey' },
+  { label: 'Current Level',  icon: BookOpen,        path: '/app/level' }, // path overridden dynamically below
+  { label: 'Workspace',      icon: LayoutDashboard, path: '/app/workspace' },
+  { label: 'My Cohort',      icon: Users,           path: '/app/cohort' },
 ];
 
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
@@ -34,11 +32,10 @@ export const AppSidebar: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isActive = (path: string) => {
-    if (path === '/app/toolkit/learning-coach') {
-      return location.pathname === '/app/toolkit/learning-coach';
-    }
-    if (path === '/app/toolkit') {
-      return location.pathname.startsWith('/app/toolkit') && location.pathname !== '/app/toolkit/learning-coach';
+    if (path === '/app/workspace') {
+      return location.pathname.startsWith('/app/workspace')
+        || location.pathname.startsWith('/app/toolkit')
+        || location.pathname.startsWith('/app/artefacts');
     }
     if (path === '/app/journey') {
       return location.pathname.startsWith('/app/journey');

@@ -601,7 +601,32 @@ export async function createArtefactFromTool(
     .select('id')
     .single();
   if (error) { console.error('createArtefactFromTool error:', error); return null; }
+
+  // Generate an AI title in the background (non-blocking)
+  generateArtefactTitle(data.id, artefact.type, artefact.preview || artefact.name);
+
   return { id: data.id };
+}
+
+/** Fire-and-forget: calls the Cloud Function to generate a better title, then updates the artefact. */
+async function generateArtefactTitle(artefactId: string, type: string, preview: string): Promise<void> {
+  try {
+    const res = await fetch('/api/generate-artefact-title', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, preview }),
+    });
+    if (!res.ok) return;
+    const { title } = await res.json();
+    if (!title) return;
+
+    await supabase
+      .from('artefacts')
+      .update({ name: title, updated_at: new Date().toISOString() })
+      .eq('id', artefactId);
+  } catch {
+    // Silently fail — the fallback name is already saved
+  }
 }
 
 export async function renameArtefact(id: string, userId: string, newName: string): Promise<boolean> {

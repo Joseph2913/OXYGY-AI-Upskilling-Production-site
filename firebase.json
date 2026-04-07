@@ -36,6 +36,9 @@
       { "source": "/api/generate-notebook-guide", "function": { "functionId": "generatenotebookguide" } },
       { "source": "/api/generate-perplexity-guide", "function": { "functionId": "generateperplexityguide" } },
       { "source": "/api/curated-videos", "function": { "functionId": "curatedvideos" } },
+      { "source": "/api/project-prefill", "function": { "functionId": "projectprefill" } },
+      { "source": "/api/generate-artefact-title", "function": { "functionId": "generateartefacttitle" } },
+      { "source": "/api/backfill-artefact-titles", "function": { "functionId": "backfillartefacttitles" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [

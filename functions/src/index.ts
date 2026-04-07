@@ -4201,6 +4201,151 @@ REMINDER: Do NOT use "Level 1", "Level 2", etc. anywhere in your output. Describ
 // CURATED VIDEOS — Serve human-approved YouTube recommendations
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// PROJECT PRE-FILL — Generate smart pre-fill values for toolkit pages
+// based on the user's assigned project from their learning plan.
+// ═══════════════════════════════════════════════════════════════
+
+const PREFILL_FIELD_SPEC: Record<string, string> = {
+  "prompt-playground": `Return JSON: { "userInput": "<string>" }
+userInput: Write a complete, ready-to-use prompt (3-6 sentences) that the user can paste directly into an AI assistant. Include specific role framing, task description, constraints, and expected output format. Extrapolate realistic details from the conversation — if they mentioned meeting notes, include a hypothetical structure of what those notes look like. End with a divider and assumptions section.
+
+Format each field value like this:
+[Concrete, specific content based on the conversation]
+
+---
+⚠️ Assumptions to validate:
+- [Assumption 1 the AI inferred from context]
+- [Assumption 2]
+- [Assumption 3]`,
+  "agent-builder": `Return JSON: { "taskDescription": "<string>", "inputDataDescription": "<string>" }
+taskDescription: Write a detailed description (4-8 sentences) of what the agent should do. Be specific about the trigger, the processing steps, the decision logic, and the output. Extrapolate from the conversation — if they mentioned meeting transcripts, describe what those transcripts contain, how they should be parsed, and what the structured output template should look like. Include hypothetical examples of input/output.
+inputDataDescription: Describe the data format in detail — what fields are present, what format (markdown, JSON, CSV), typical length, frequency of input. If the user mentioned a tool (e.g. CircleBack), describe what that tool's output typically looks like.
+
+Format each field value like this:
+[Concrete, specific content based on the conversation]
+
+---
+⚠️ Assumptions to validate:
+- [Assumption 1]
+- [Assumption 2]`,
+  "workflow-canvas": `Return JSON: { "taskDescription": "<string>", "toolsAndSystems": "<string>" }
+taskDescription: Write a detailed end-to-end process description (5-8 sentences). Name each step, describe what happens at each stage, who is involved, and what data flows between steps. If the user described a vague process, flesh it out into concrete steps with realistic details.
+toolsAndSystems: List every tool and system involved, including ones the user likely uses but didn't mention. For each tool, briefly note its role in the workflow.
+
+Format each field value like this:
+[Concrete, specific content]
+
+---
+⚠️ Assumptions to validate:
+- [Assumption 1]
+- [Assumption 2]`,
+  "dashboard-designer": `Return JSON: { "q1_purpose": "<string>", "q2_audience": "<string>", "q3_type": "<string>", "q4_metrics": "<string>", "dataSourcesText": "<string>", "q7_visualStyle": "<string: one of 'Clean & Minimal', 'Data-Dense', 'Executive & Polished', or 'Colorful & Visual' — pick the best fit>" }
+q1_purpose: Write 3-5 sentences describing the app's purpose — what problem it solves, what value it delivers, what it replaces (e.g. "currently done in spreadsheets"). Be specific.
+q2_audience: Name the specific roles and how often they'll use it.
+q3_type: Suggest the most appropriate app type with brief rationale.
+q4_metrics: List 6-10 specific features, screens, or metrics as bullet points. Extrapolate from the conversation — if they mentioned KPIs, suggest which specific KPIs make sense for their context.
+
+Format each field value like this:
+[Concrete, specific content]
+
+---
+⚠️ Assumptions to validate:
+- [Assumption 1]
+- [Assumption 2]`,
+  "ai-app-evaluator": `Return JSON: { "appDescription": "<string>", "problemAndUsers": "<string>", "dataAndContent": "<string>" }
+appDescription: Write 4-6 sentences describing the full application — its core loop, personalisation logic, key screens, and technical approach. Extrapolate architecture details from what the user described.
+problemAndUsers: Describe the user personas, their pain points, and how the app addresses each one. Be specific about use frequency and context.
+dataAndContent: List all data entities, their relationships, and how content is created/curated/personalised. Include data volumes and update frequency estimates.
+
+Format each field value like this:
+[Concrete, specific content]
+
+---
+⚠️ Assumptions to validate:
+- [Assumption 1]
+- [Assumption 2]`,
+};
+
+export const projectprefill = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 30 }, async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { toolId, projectTitle, projectDescription, deliverable, userRole, userChallenge } = req.body;
+
+    if (!toolId || !projectTitle) {
+      res.status(400).json({ error: "toolId and projectTitle are required" }); return;
+    }
+
+    const fieldSpec = PREFILL_FIELD_SPEC[toolId];
+    if (!fieldSpec) {
+      res.status(400).json({ error: `Unknown toolId: ${toolId}` }); return;
+    }
+
+    const systemPrompt = `You are an expert AI assistant that generates rich, detailed pre-filled form values for toolkit pages.
+
+Your job is to make the user feel that the time they spent answering questions was worth it. The pre-fill values should be SO specific and insightful that the user thinks "wow, this actually understands what I'm trying to build."
+
+RULES:
+1. EXTRAPOLATE aggressively from the conversation. If the user mentions "meeting transcripts", describe what those transcripts typically contain (attendees, timestamps, action items, discussion points). If they mention a tool like CircleBack or Otter.ai, describe that tool's typical output format.
+2. Include HYPOTHETICAL EXAMPLES where useful — sample input data, sample output templates, example scenarios. These make the pre-fill dramatically more useful.
+3. Every field value MUST end with an assumptions section separated by a markdown divider:
+   [Your detailed, specific content here]
+
+   ---
+   ⚠️ Assumptions to validate:
+   - [Specific assumption you made]
+   - [Another assumption]
+   This tells the user which parts to verify or adjust.
+4. Write in a professional, direct tone. No filler phrases like "This tool will help you..." — just describe the thing itself.
+5. Each field should be 80-200 words. Longer is better than shorter. The user can always trim — but they can't add what isn't there.
+6. Think about the BROADER IMPLICATIONS of what the user described. If they want to automate meeting notes, think about: who reads those notes? what decisions depend on them? what format makes them most actionable?
+
+${fieldSpec}
+
+Return ONLY valid JSON, no markdown fences or explanation.`;
+
+    const userMessage = `Project title: ${projectTitle}
+Project description: ${projectDescription || "Not provided"}
+Expected deliverable: ${deliverable || "Not provided"}
+User role: ${userRole || "Not provided"}
+User challenge: ${userChallenge || "Not provided"}
+
+Generate the pre-fill values for the "${toolId}" toolkit page that will help this user complete their project.`;
+
+    const result = await callGemini({
+      apiKey,
+      model,
+      systemPrompt,
+      userMessage,
+      label: "project-prefill",
+      temperature: 0.6,
+      maxTokens: 3000,
+    });
+
+    if (!result.ok) {
+      res.status(result.status).json({ error: result.message, retryable: result.retryable }); return;
+    }
+
+    res.status(200).json({ fields: result.data });
+  } catch (err) {
+    console.error("project-prefill error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CURATED VIDEOS — Serve human-approved YouTube recommendations
+// ═══════════════════════════════════════════════════════════════
+
 export const curatedvideos = onRequest(
   { secrets: [supabaseUrl, supabaseServiceKey], cors: true },
   async (req, res) => {
@@ -4251,6 +4396,184 @@ export const curatedvideos = onRequest(
       res.status(200).json({ videos });
     } catch (err) {
       console.error("curated-videos error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/* ════════════════════════════════════════════════════════════════
+   Generate Artefact Title — creates a concise, descriptive title
+   for an artefact based on its type and content/preview.
+   ════════════════════════════════════════════════════════════════ */
+export const generateartefacttitle = onRequest(
+  { secrets: [openRouterApiKey], timeoutSeconds: 15 },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "POST") { res.status(405).json({ error: "POST only" }); return; }
+
+    const { type, preview, name } = req.body || {};
+    if (!type) { res.status(400).json({ error: "type is required" }); return; }
+
+    const contextText = preview || name || "";
+
+    try {
+      const result = await callOpenRouter({
+        apiKey: openRouterApiKey.value(),
+        model: "google/gemini-2.0-flash-001",
+        systemPrompt: `You generate short, descriptive titles for AI artefacts saved by consultants on a learning platform.
+
+Rules:
+- Return a JSON object: { "title": "..." }
+- The title should be 4-8 words, concise and descriptive
+- Do NOT include the artefact type prefix (no "Prompt:", "Agent:", "Workflow:" etc.)
+- Focus on WHAT the artefact does or is about
+- Use title case
+- Examples of good titles:
+  - "Exit Interview Theme Summariser"
+  - "Client Onboarding Automation Flow"
+  - "Training Programme Effectiveness Report"
+  - "Consultant Insights Analysis Agent"
+  - "Employee Retention Risk Dashboard"`,
+        userMessage: `Artefact type: ${type}\nContent/description: ${contextText.slice(0, 500)}`,
+        label: "generate-artefact-title",
+        temperature: 0.4,
+        maxTokens: 100,
+      });
+
+      if (!result.ok) {
+        res.status(result.status).json({ error: result.message });
+        return;
+      }
+
+      const title = result.data?.title || contextText.slice(0, 60);
+      res.status(200).json({ title });
+    } catch (err) {
+      console.error("generate-artefact-title error:", err);
+      res.status(500).json({ error: "Failed to generate title" });
+    }
+  }
+);
+
+/* ════════════════════════════════════════════════════════════════
+   Backfill Artefact Titles — retroactively generates AI titles
+   for all existing artefacts that have generic/truncated names.
+   One-time use endpoint, call manually or via curl.
+   ════════════════════════════════════════════════════════════════ */
+export const backfillartefacttitles = onRequest(
+  { secrets: [openRouterApiKey, supabaseUrl, supabaseServiceKey], timeoutSeconds: 300 },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "POST") { res.status(405).json({ error: "POST only" }); return; }
+
+    const sbUrl = supabaseUrl.value();
+    const sbKey = supabaseServiceKey.value();
+
+    try {
+      // Fetch all non-archived artefacts
+      const fetchRes = await fetchWithRetry(
+        `${sbUrl}/rest/v1/artefacts?archived_at=is.null&select=id,name,type,preview&order=created_at.asc`,
+        {
+          headers: {
+            apikey: sbKey,
+            Authorization: `Bearer ${sbKey}`,
+          },
+        },
+        "backfill-fetch"
+      );
+
+      if (!fetchRes.ok) {
+        const errText = await fetchRes.text();
+        console.error("backfill fetch error:", errText);
+        res.status(502).json({ error: "Failed to fetch artefacts" });
+        return;
+      }
+
+      const artefacts: Array<{ id: string; name: string; type: string; preview: string }> = await fetchRes.json();
+      const results: Array<{ id: string; oldName: string; newName: string }> = [];
+      const errors: Array<{ id: string; error: string }> = [];
+
+      for (const art of artefacts) {
+        try {
+          // Generate a new title
+          const genResult = await callOpenRouter({
+            apiKey: openRouterApiKey.value(),
+            model: "google/gemini-2.0-flash-001",
+            systemPrompt: `You generate short, descriptive titles for AI artefacts saved by consultants on a learning platform.
+
+Rules:
+- Return a JSON object: { "title": "..." }
+- The title should be 4-8 words, concise and descriptive
+- Do NOT include the artefact type prefix (no "Prompt:", "Agent:", "Workflow:" etc.)
+- Focus on WHAT the artefact does or is about
+- Use title case
+- Examples of good titles:
+  - "Exit Interview Theme Summariser"
+  - "Client Onboarding Automation Flow"
+  - "Training Programme Effectiveness Report"
+  - "Consultant Insights Analysis Agent"
+  - "Employee Retention Risk Dashboard"`,
+            userMessage: `Artefact type: ${art.type}\nCurrent name: ${art.name}\nContent/description: ${(art.preview || art.name).slice(0, 500)}`,
+            label: "backfill-title",
+            temperature: 0.4,
+            maxTokens: 100,
+          });
+
+          if (!genResult.ok) {
+            errors.push({ id: art.id, error: genResult.message });
+            continue;
+          }
+
+          const newTitle = genResult.data?.title;
+          if (!newTitle) {
+            errors.push({ id: art.id, error: "Empty title returned" });
+            continue;
+          }
+
+          // Update the artefact name in Supabase
+          const updateRes = await fetchWithRetry(
+            `${sbUrl}/rest/v1/artefacts?id=eq.${art.id}`,
+            {
+              method: "PATCH",
+              headers: {
+                apikey: sbKey,
+                Authorization: `Bearer ${sbKey}`,
+                "Content-Type": "application/json",
+                Prefer: "return=minimal",
+              },
+              body: JSON.stringify({ name: newTitle, updated_at: new Date().toISOString() }),
+            },
+            "backfill-update"
+          );
+
+          if (!updateRes.ok) {
+            errors.push({ id: art.id, error: `Update failed: ${updateRes.status}` });
+            continue;
+          }
+
+          results.push({ id: art.id, oldName: art.name, newName: newTitle });
+
+          // Small delay to avoid rate limiting
+          await new Promise((r) => setTimeout(r, 300));
+        } catch (err) {
+          errors.push({ id: art.id, error: String(err) });
+        }
+      }
+
+      res.status(200).json({
+        total: artefacts.length,
+        updated: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      });
+    } catch (err) {
+      console.error("backfill error:", err);
       res.status(500).json({ error: "Internal server error" });
     }
   }

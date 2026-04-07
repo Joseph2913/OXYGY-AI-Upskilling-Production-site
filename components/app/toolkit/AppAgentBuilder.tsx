@@ -441,6 +441,19 @@ const AppAgentBuilder: React.FC = () => {
     window.history.replaceState({}, '');
   }, []);
 
+  // Workspace prefill: read sessionStorage from project help flow
+  useEffect(() => {
+    const raw = sessionStorage.getItem('workspace_prefill');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (data.fields?.taskDescription) setTaskDescription(data.fields.taskDescription);
+      if (data.fields?.inputDataDescription) setInputDataDescription(data.fields.inputDataDescription);
+      sessionStorage.removeItem('workspace_prefill');
+      localStorage.removeItem(DRAFT_KEY);
+    } catch { /* ignore */ }
+  }, []);
+
   // Loading step progression (per PRD §9.5)
   useEffect(() => {
     if (!isLoading) {
@@ -529,8 +542,9 @@ const AppAgentBuilder: React.FC = () => {
     return () => clearTimeout(t);
   }, [toastMessage]);
 
-  // Draft persistence
+  // Draft persistence (skip if workspace prefill is active)
   useEffect(() => {
+    if (sessionStorage.getItem('workspace_prefill')) return;
     try {
       const draft = localStorage.getItem(DRAFT_KEY);
       if (draft) {

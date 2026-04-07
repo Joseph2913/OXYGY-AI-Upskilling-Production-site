@@ -39,6 +39,7 @@ const AppProjectProof = lazyRetry(() => import('./pages/app/AppProjectProof'));
 const AppCurrentLevel = lazyRetry(() => import('./pages/app/AppCurrentLevel'));
 const AppToolkit = lazyRetry(() => import('./pages/app/AppToolkit'));
 const AppArtefacts = lazyRetry(() => import('./pages/app/AppArtefacts'));
+const AppWorkspace = lazyRetry(() => import('./pages/app/AppWorkspace'));
 const AppCohort = lazyRetry(() => import('./pages/app/AppCohort'));
 const PromptLibraryPage = lazyRetry(() => import('./pages/app/AppPromptLibrary'));
 const AppPromptPlayground = lazyRetry(() => import('./components/app/toolkit/AppPromptPlayground'));
@@ -190,7 +191,12 @@ function App() {
           <Route path="journey/project/:level" element={<AppSuspense><AppProjectProof /></AppSuspense>} />
           <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
 
-          <Route path="toolkit" element={<AppSuspense><AppToolkit /></AppSuspense>} />
+          {/* Workspace — combined Toolkit + Artefacts */}
+          <Route path="workspace" element={<AppSuspense><AppWorkspace /></AppSuspense>} />
+          <Route path="workspace/:artefactId" element={<AppSuspense><AppWorkspace /></AppSuspense>} />
+
+          {/* Legacy toolkit index redirects to workspace */}
+          <Route path="toolkit" element={<Navigate to="/app/workspace" replace />} />
           <Route path="toolkit/prompt-playground" element={<AppSuspense><AppPromptPlayground /></AppSuspense>} />
           <Route path="toolkit/prompt-library" element={<AppSuspense><PromptLibraryPage /></AppSuspense>} />
           <Route path="toolkit/agent-builder" element={<AppSuspense><AppAgentBuilder /></AppSuspense>} />
@@ -203,8 +209,9 @@ function App() {
           <Route path="toolkit/workflow-designer" element={<Navigate to="/app/toolkit/workflow-canvas" replace />} />
           <Route path="toolkit/dashboard-design" element={<Navigate to="/app/toolkit/dashboard-designer" replace />} />
           <Route path="toolkit/product-architecture" element={<Navigate to="/app/toolkit/app-builder" replace />} />
-          <Route path="artefacts" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
-          <Route path="artefacts/:artefactId" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
+          {/* Legacy artefacts routes redirect to workspace */}
+          <Route path="artefacts" element={<Navigate to="/app/workspace" replace />} />
+          <Route path="artefacts/:artefactId" element={<Navigate to="/app/workspace" replace />} />
           <Route path="artefacts/:id/build-guide" element={<AppSuspense><BuildGuideView /></AppSuspense>} />
           <Route path="cohort" element={<AppSuspense><AppCohort /></AppSuspense>} />
           <Route path="audio-review" element={<AppSuspense><AudioReview /></AppSuspense>} />

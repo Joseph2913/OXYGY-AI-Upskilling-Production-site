@@ -123,9 +123,23 @@ export async function callOpenRouter(opts: {
   let parsed: any;
   try {
     parsed = JSON.parse(cleaned);
-  } catch (parseErr) {
-    console.error(`JSON parse error (${opts.label}):`, parseErr, "Raw:", cleaned.slice(0, 500));
-    return { ok: false, status: 502, message: "AI service returned an invalid response. Please try again.", retryable: true };
+  } catch {
+    // Escape control chars only inside JSON string values (between quotes)
+    try {
+      const fixed = cleaned.replace(/"([^"]*?)"/g, (_match: string, inner: string) => {
+        const escaped = inner
+          .replace(/\\/g, "\\\\")
+          .replace(/\n/g, "\\n")
+          .replace(/\r/g, "\\r")
+          .replace(/\t/g, "\\t")
+          .replace(/[\x00-\x1F\x7F]/g, "");
+        return `"${escaped}"`;
+      });
+      parsed = JSON.parse(fixed);
+    } catch (parseErr) {
+      console.error(`JSON parse error (${opts.label}):`, parseErr, "Raw:", cleaned.slice(0, 500));
+      return { ok: false, status: 502, message: "AI service returned an invalid response. Please try again.", retryable: true };
+    }
   }
 
   return { ok: true, data: parsed };
