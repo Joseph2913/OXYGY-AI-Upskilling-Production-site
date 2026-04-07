@@ -292,6 +292,56 @@ USING (user_id IN (SELECT get_org_colleague_ids()));
 ```
 Never defer this to a later PR — a missing policy is invisible until someone notices wrong numbers in production.
 
+## Data Shape Changes — Full-Stack Trace Required (CRITICAL)
+
+**When changing the type, format, or shape of ANY data field, you MUST trace the full journey of that data through every layer of the system BEFORE writing any code.** A field change is never just a frontend change — it touches the database, API, validation rules, and every consumer.
+
+### Background (2026-04-07 incident)
+The `ambition` field was changed from single-select (string) to multi-select (array). The frontend was updated, but the database had a CHECK constraint that only accepted single enum values. The comma-separated string from the multi-select was rejected by the database, causing profile saves to fail silently in production.
+
+### Mandatory checklist for ANY data shape change
+
+Before changing a field's type or format, complete this checklist in order:
+
+1. **Database column type** — Is the column `text`, `jsonb`, `integer`, etc.? Will the new format fit?
+2. **Database constraints** — Run: `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'TABLE_NAME'::regclass;` Check for CHECK constraints, ENUM types, NOT NULL rules, foreign keys.
+3. **Database defaults** — Does the column have a default that conflicts with the new format?
+4. **Write path** — Trace every function that writes to this column. What format does it send? Will the new format pass validation?
+5. **Read path** — Trace every function that reads this column. Will they parse the new format correctly? Do any do `=== 'value'` comparisons that would break with comma-separated strings?
+6. **API layer** — Does the backend API (Cloud Functions) reference this field? Does it need to handle both old and new formats for backward compatibility?
+7. **Other consumers** — Search the entire codebase with `Grep` for the field name. Check every file that references it.
+
+### Rules
+1. **Always check database constraints first** — before writing any frontend code. Run the SQL query above.
+2. **Migration before code** — if a constraint needs to change, apply the database migration FIRST, then change the code.
+3. **Handle backward compatibility** — existing data in the old format must still work. If the column has `'build-full-apps'` (old single value) and new code expects an array, add parsing logic for both formats.
+4. **Never assume a field is frontend-only** — every field that touches a form is stored somewhere. Trace it.
+
+## End-to-End Flow Verification (CRITICAL)
+
+**When editing code inside a user-facing flow (onboarding, project submission, toolkit save, etc.), you MUST verify that the entire flow completes successfully — not just the specific lines you changed.**
+
+### Background (2026-04-07 incident)
+The onboarding survey was edited to change the ambition selector. The code changes were correct in isolation, but the broader onboarding flow had a pre-existing bug: the `onboarding_completed` flag was never being set to `true` after plan generation. This meant every user who completed onboarding was shown the survey again on page reload. The bug existed before the edit but should have been caught while working in the same file.
+
+### Mandatory checklist for flow-critical code changes
+
+When editing code inside any of these flows, verify the FULL cycle works:
+
+| Flow | What to verify |
+|------|---------------|
+| **Onboarding** | Survey → Generate → Profile saved → Plan saved → `onboarding_completed = true` → Reload → Dashboard shown (not survey) |
+| **E-Learning completion** | Finish module → `topic_progress` updated → Dashboard/Journey reflect completion → Phase shows "Done" |
+| **Toolkit save** | Create artefact → `artefacts` table updated → Toolkit phase marked complete → Progress rings update |
+| **Project submission** | Submit → `project_submissions` updated → Status shows "Submitted" → After review, level advances |
+| **Profile update** | Edit profile → `profiles` table updated → All pages reflect new data |
+
+### Rules
+1. **Read the surrounding flow, not just the lines you're changing.** If you're editing line 500 of OnboardingSurvey.tsx, also read what happens at line 510, 520, 530 — what runs after your edit? Does the flow reach its intended conclusion?
+2. **Check that every "success" state is actually persisted.** If a flow ends with a success card shown to the user, verify that the database reflects that success too. A success message without a database write is a lie.
+3. **Verify the re-entry path.** After a flow completes, what happens when the user refreshes or comes back later? Does the app know the flow was completed, or does it show the flow again?
+4. **If you find a pre-existing bug while editing a flow, flag it.** Don't silently move past it. Tell the user: "I noticed that [X] isn't working correctly in this flow — should I fix it as part of this change?"
+
 ## Component Import Safety
 
 **Every icon or component used in a file MUST be imported.** A missing import (e.g. using `FileText` without importing it from `lucide-react`) will cause a `ReferenceError` at runtime that crashes the entire React tree — the user sees a blank page with no visible error unless they open the console.
@@ -450,6 +500,7 @@ When any button or link is intended to scroll the user to a specific section wit
 - PDF content source: OXYGY_AI_Upskilling.pdf
 - RLS recursion guide: SUPABASE_RLS_RECURSION_GUIDE.md
 - Journey page post-mortem: docs/JOURNEY_BLANK_PAGE_POSTMORTEM.md
+- Change safety guide: docs/CHANGE_SAFETY_GUIDE.md
 
 ## Skills
 

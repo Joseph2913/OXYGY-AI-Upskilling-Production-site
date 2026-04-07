@@ -69,50 +69,30 @@ class RouteErrorBoundary extends React.Component<
  */
 const AppLayoutInner: React.FC = () => {
   const location = useLocation();
-  const { hasLearningPlan } = useAppContext();
 
   const [tourActive, setTourActive] = useState(false);
   const tourTriggeredRef = useRef(false);
-  const initialLoadDoneRef = useRef(false);
 
-  /* ── Auto-trigger logic ── */
+  /* ── Auto-trigger tour after onboarding ──
+   * The onboarding survey passes { showTour: true } via navigation state
+   * when redirecting to the dashboard. We check for that signal AND that
+   * the user hasn't already completed/skipped the tour previously.
+   */
   useEffect(() => {
-    // Wait until context has resolved hasLearningPlan
-    if (!hasLearningPlan) return;
-    if (initialLoadDoneRef.current) return;
-
-    const completed = localStorage.getItem('oxygy_tour_completed');
-
-    // If tour was already completed/skipped, nothing to do. Close the gate.
-    if (completed === 'true') {
-      initialLoadDoneRef.current = true;
-      return;
-    }
-
-    // For existing users who were active before the tour was deployed:
-    // silently mark tour as done so it doesn't auto-trigger unexpectedly.
-    // The replay option in Settings remains available.
-    const visitCount = parseInt(localStorage.getItem('oxygy_visit_count') || '0', 10);
-    if (visitCount > 1) {
-      localStorage.setItem('oxygy_tour_completed', 'true');
-      initialLoadDoneRef.current = true;
-      return;
-    }
-
-    // Only auto-trigger on the Dashboard page (post-survey landing).
-    // Do NOT close the gate yet — keep watching until user reaches dashboard.
+    if (tourTriggeredRef.current) return;
     if (location.pathname !== '/app/dashboard') return;
 
-    // On dashboard and tour not yet seen — close the gate and trigger.
-    initialLoadDoneRef.current = true;
-    localStorage.setItem('oxygy_visit_count', String(visitCount + 1));
+    const navState = location.state as { showTour?: boolean } | null;
+    if (!navState?.showTour) return;
 
-    if (tourTriggeredRef.current) return;
+    // Don't show again if already completed/skipped in a prior session
+    if (localStorage.getItem('oxygy_tour_completed') === 'true') return;
+
     tourTriggeredRef.current = true;
 
     const timer = setTimeout(() => setTourActive(true), 1500);
     return () => clearTimeout(timer);
-  }, [hasLearningPlan, location.pathname]);
+  }, [location.pathname, location.state]);
 
   /* ── Replay listener (from AppSidebar settings) ── */
   useEffect(() => {

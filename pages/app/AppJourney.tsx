@@ -342,7 +342,7 @@ const AppJourney: React.FC = () => {
     // Fade out then redirect to dashboard
     setTransitioning(true);
     setTimeout(() => {
-      navigate('/app/dashboard', { replace: true });
+      navigate('/app/dashboard', { replace: true, state: { showTour: true } });
     }, 400);
   }, [navigate]);
 

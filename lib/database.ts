@@ -34,6 +34,7 @@ function profileToDb(profile: Partial<UserProfile>): Record<string, unknown> {
   if (profile.availability !== undefined) row.availability = profile.availability;
   if (profile.experienceDescription !== undefined) row.experience_description = profile.experienceDescription;
   if (profile.goalDescription !== undefined) row.goal_description = profile.goalDescription;
+  if ((profile as any).onboardingCompleted !== undefined) row.onboarding_completed = (profile as any).onboardingCompleted;
   return row;
 }
 
@@ -125,6 +126,16 @@ export async function saveLearningPlan(
         generated_at: new Date().toISOString(),
       });
     if (error) { console.error('saveLearningPlan error:', error); return false; }
+
+    // Mark onboarding as complete on the profile.
+    // This is the authoritative write — if the earlier upsertProfile missed it,
+    // this ensures the flag is set once the plan is successfully saved.
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (profileError) console.error('saveLearningPlan: failed to mark onboarding complete:', profileError);
+
     return true;
   } catch (err) { console.error('saveLearningPlan error:', err); return false; }
 }
