@@ -64,7 +64,7 @@ const FontStyle = () => (
 /* ── Brand Tokens ── */
 const C = {
   navy: "#1A202C", navyMid: "#2D3748", teal: "#38B2AC", tealDark: "#2C9A94",
-  tealLight: "#E6FFFA", mint: "#A8F0E0", border: "#E2E8F0", bg: "#F7FAFC",
+  tealLight: "#E6FFFA", mint: "#B2D8F7", border: "#E2E8F0", bg: "#F7FAFC",
   body: "#4A5568", light: "#718096", muted: "#A0AEC0",
   success: "#48BB78", successLight: "#F0FFF4", successBorder: "#9AE6B4",
   error: "#FC8181", errorLight: "#FFF5F5", errorBorder: "#FEB2B2",
@@ -502,7 +502,7 @@ export default function Level1Page() {
                 {[
                   { accent: "#C3D0F5", type: "Recurring \u00B7 High-stakes \u00B7 Needs to be reusable", approach: "Blueprint", modifier: "+ Quality Checks", example: "Proposal template, weekly client update, analysis report" },
                   { accent: "#F7E8A4", type: "One-off \u00B7 Complex \u00B7 Lots of nuance", approach: "Brain Dump", modifier: "+ Chain of Thought", example: "Stakeholder message, sensitive email, judgment call" },
-                  { accent: "#A8F0E0", type: "Format-critical \u00B7 Tone matters \u00B7 Hard to describe", approach: "Blueprint or Brain Dump", modifier: "+ Few-Shot Examples", example: "Slide deck, exec summary, specific document style" },
+                  { accent: "#B2D8F7", type: "Format-critical \u00B7 Tone matters \u00B7 Hard to describe", approach: "Blueprint or Brain Dump", modifier: "+ Few-Shot Examples", example: "Slide deck, exec summary, specific document style" },
                   { accent: "#F5B8A0", type: "Exploratory \u00B7 Creative \u00B7 Open-ended", approach: "Brain Dump", modifier: "+ Iterative Refinement", example: "Strategy framing, ideation, first draft of anything new" },
                 ].map((card, i) => (
                   <div key={i} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", borderTop: `4px solid ${card.accent}` }}>

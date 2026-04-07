@@ -117,7 +117,7 @@ textUnderlineOffset: 5,
 **Content:**
 ```
 Top-left: Level badge
-  background: "#A8F0E0", color: "#1A6B5F"
+  background: "#B2D8F7", color: "#2B6CB0"
   pill shape, padding: "3px 10px", borderRadius: 16
   text: "LEVEL 1 · E-LEARNING" (fontSize: 10, fontWeight: 700, uppercase)
 

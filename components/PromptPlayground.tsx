@@ -219,7 +219,7 @@ export const PromptPlayground: React.FC = () => {
         <div ref={inputAreaRef} className="mb-8 text-center">
           <div
             className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full mb-6"
-            style={{ backgroundColor: '#E6FFFA', color: '#2C7A6E', border: '1px solid #A8F0E0' }}
+            style={{ backgroundColor: '#E6FFFA', color: '#2C7A6E', border: '1px solid #B2D8F7' }}
           >
             Level 1 &mdash; Fundamentals &amp; Awareness
           </div>
@@ -241,14 +241,14 @@ export const PromptPlayground: React.FC = () => {
           <div
             className="relative rounded-2xl px-8 md:px-12 py-8 text-center overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(168,240,224,0.15) 0%, rgba(43,168,156,0.08) 50%, rgba(168,240,224,0.12) 100%)',
-              border: '1.5px solid #A8F0E0',
+              background: 'linear-gradient(135deg, rgba(178,216,247,0.15) 0%, rgba(43,168,156,0.08) 50%, rgba(178,216,247,0.12) 100%)',
+              border: '1.5px solid #B2D8F7',
             }}
           >
             {/* Decorative accent dots */}
             <div className="absolute top-3 left-4 flex gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-40" />
-              <span className="w-2 h-2 rounded-full bg-[#A8F0E0] opacity-60" />
+              <span className="w-2 h-2 rounded-full bg-[#B2D8F7] opacity-60" />
               <span className="w-2 h-2 rounded-full bg-[#2BA89C] opacity-30" />
             </div>
 

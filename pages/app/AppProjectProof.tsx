@@ -64,6 +64,54 @@ const LEVEL_DESCRIPTIONS: Record<number, string> = {
   5: 'Present your full-stack AI application as a structured case study. This is your capstone — document the problem, your solution, the outcome, and what you learned across the entire programme.',
 };
 
+const LEVEL_SCORING_GUIDANCE: Record<number, { dimensions: { name: string; desc: string }[]; levelNote: string }> = {
+  1: {
+    dimensions: [
+      { name: 'Application Quality', desc: 'How well you applied AI prompting to a real work task. You don\'t need to build a discrete tool — using AI in the context of your existing job is exactly what this level is about.' },
+      { name: 'Evidence Quality', desc: 'The specificity of your examples and description. Screenshots are optional for Level 1 — a detailed written description is sufficient.' },
+      { name: 'Reflection Depth', desc: 'How thoughtfully you described what worked, what you learned, and how your approach evolved through iteration.' },
+      { name: 'Real-World Impact', desc: 'The tangible value created — time saved, quality improved, or new capability gained. Describe who benefits beyond just yourself.' },
+    ],
+    levelNote: 'At Level 1, a substantive written reflection describing a real use case is the most important element. You can submit proof for any task where you applied prompting — it doesn\'t need to match the assigned project brief.',
+  },
+  2: {
+    dimensions: [
+      { name: 'Application Quality', desc: 'Did you build a custom AI agent, GPT, Claude Project, or configured AI tool with a clear name and purpose?' },
+      { name: 'Evidence Quality', desc: 'A screenshot showing the tool in action (conversation or output) is strong evidence. A screenshot of the builder view or project list is sufficient. A detailed written description works too.' },
+      { name: 'Reflection Depth', desc: 'How you designed the agent\'s instructions, what trade-offs you made, and how you iterated on its behaviour.' },
+      { name: 'Real-World Impact', desc: 'Is this tool reusable? Could a colleague use it? Describe the team-level benefit, not just personal convenience.' },
+    ],
+    levelNote: 'At Level 2, the key question is: did you build something a colleague could pick up and use? Name your tool, describe what it does, and reflect on the build process.',
+  },
+  3: {
+    dimensions: [
+      { name: 'Application Quality', desc: 'Did you design a multi-step automated workflow or process integration? This could be in Make, Zapier, n8n, or even a manual process you systematised with AI.' },
+      { name: 'Evidence Quality', desc: 'Screenshots of your workflow canvas or process diagram are helpful. A detailed written description of each step is equally valid.' },
+      { name: 'Reflection Depth', desc: 'Your design decisions — why you chose this trigger, these steps, these handoff points. What would you change next time?' },
+      { name: 'Real-World Impact', desc: 'Does this workflow save time, reduce errors, or scale a process? Quantify where possible.' },
+    ],
+    levelNote: 'At Level 3, describe a real multi-step workflow and reflect on your design decisions. The workflow doesn\'t need to be fully automated — a clearly mapped process counts.',
+  },
+  4: {
+    dimensions: [
+      { name: 'Application Quality', desc: 'Did you build a dashboard, data visualisation, or front-end interface that presents information to a specific audience?' },
+      { name: 'Evidence Quality', desc: 'Screenshots showing the actual dashboard with real data are strong evidence. Wireframes or mockups are acceptable but count as developing.' },
+      { name: 'Reflection Depth', desc: 'Design thinking: who is the audience, what decisions does this dashboard support, and what trade-offs did you make in the layout?' },
+      { name: 'Real-World Impact', desc: 'Who uses this dashboard and what changes for them? Describe the audience experience, not just the build.' },
+    ],
+    levelNote: 'At Level 4, a link and/or screenshots of the actual dashboard are expected. Describe who the audience is and what they can do with it.',
+  },
+  5: {
+    dimensions: [
+      { name: 'Application Quality', desc: 'Did you build and deploy a full application? This is the capstone — the reviewer looks for a real, working product.' },
+      { name: 'Evidence Quality', desc: 'A link to the deployed app and multiple screenshots are expected. A structured case study (Problem, Solution, Outcome, Learnings) strengthens your evidence significantly.' },
+      { name: 'Reflection Depth', desc: 'Your full build journey — architecture decisions, what you learned, what you\'d do differently. The case study format is ideal here.' },
+      { name: 'Real-World Impact', desc: 'Who uses this app and how? Individual users, a team, or a client? Describe the real-world deployment, not just the prototype.' },
+    ],
+    levelNote: 'At Level 5, the reviewer expects a deployed app with a substantive reflection. The optional case study sections (Problem, Solution, Outcome, Learnings) significantly strengthen your submission.',
+  },
+};
+
 /* ── Shared step-card primitives (toolkit pattern) ── */
 
 const StepBadge: React.FC<{ number: number; done: boolean; locked?: boolean; accentColor: string; accentDark: string }> = ({ number, done, locked, accentColor, accentDark }) => (
@@ -713,7 +761,7 @@ const AppProjectProof: React.FC = () => {
 
       {/* Scoring Criteria Panel */}
       <div style={{
-        maxHeight: showScoringCriteria ? 500 : 0,
+        maxHeight: showScoringCriteria ? 700 : 0,
         opacity: showScoringCriteria ? 1 : 0,
         overflow: 'hidden',
         transition: 'max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease',
@@ -723,31 +771,41 @@ const AppProjectProof: React.FC = () => {
           background: '#FFFFFF', borderRadius: 14, border: '1px solid #E2E8F0',
           padding: '20px 24px',
         }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 6 }}>
-            How your project is scored
-          </div>
-          <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 16px', fontFamily: FONT }}>
-            Your project is reviewed by an AI scoring agent across four dimensions. Each dimension is rated as Strong, Developing, or Needs Attention.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {[
-              { name: 'Application Quality', desc: 'How well you applied the level\u2019s core skills to a real work situation' },
-              { name: 'Evidence Quality', desc: 'The specificity and credibility of your examples, screenshots, and outcomes' },
-              { name: 'Reflection Depth', desc: 'How thoughtfully you described what worked, what didn\u2019t, and what you learned' },
-              { name: 'Real-World Impact', desc: 'The tangible value created — for you, your team, or your organisation' },
-            ].map(d => (
-              <div key={d.name} style={{
-                borderLeft: `3px solid ${LEVEL_ACCENT}`,
-                background: '#F7FAFC', borderRadius: 8, padding: '12px 16px',
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{d.name}</div>
-                <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginTop: 4, fontFamily: FONT }}>{d.desc}</div>
-              </div>
-            ))}
-          </div>
-          <p style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic', margin: '14px 0 0', fontFamily: FONT }}>
-            Scoring is fully automated — no human reviewer is involved. You can resubmit as many times as you like.
-          </p>
+          {(() => {
+            const scoringData = LEVEL_SCORING_GUIDANCE[validLevel] || LEVEL_SCORING_GUIDANCE[1];
+            return (
+              <>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1A202C', fontFamily: FONT, marginBottom: 6 }}>
+                  How your Level {validLevel} project is scored
+                </div>
+                <p style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, margin: '0 0 16px', fontFamily: FONT }}>
+                  Your project is reviewed by an AI scoring agent across four dimensions. Each dimension is rated as Strong, Developing, or Needs Attention.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {scoringData.dimensions.map(d => (
+                    <div key={d.name} style={{
+                      borderLeft: `3px solid ${LEVEL_ACCENT}`,
+                      background: '#F7FAFC', borderRadius: 8, padding: '12px 16px',
+                    }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1A202C', fontFamily: FONT }}>{d.name}</div>
+                      <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.5, marginTop: 4, fontFamily: FONT }}>{d.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{
+                  marginTop: 14, padding: '10px 14px', borderRadius: 8,
+                  background: `${LEVEL_ACCENT}12`, border: `1px solid ${LEVEL_ACCENT}40`,
+                }}>
+                  <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.6, fontFamily: FONT }}>
+                    {scoringData.levelNote}
+                  </div>
+                </div>
+                <p style={{ fontSize: 11, color: '#A0AEC0', fontStyle: 'italic', margin: '14px 0 0', fontFamily: FONT }}>
+                  Scoring is fully automated — no human reviewer is involved. You can resubmit as many times as you like.
+                </p>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -1026,6 +1084,19 @@ const AppProjectProof: React.FC = () => {
               )}
             </>
           )}
+
+          {/* Submission visibility note */}
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8,
+            padding: '12px 16px', borderRadius: 10,
+            background: '#F7FAFC', border: '1px solid #E2E8F0',
+            marginTop: 12, marginBottom: 4,
+          }}>
+            <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>ℹ️</span>
+            <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
+              Your submission is reviewed by an AI agent — not the Oxygy team. Your facilitator can see your score and tier to track cohort progress, but will not review your written responses.
+            </div>
+          </div>
 
           {/* Submit controls (inside Step 1) */}
           <div style={{

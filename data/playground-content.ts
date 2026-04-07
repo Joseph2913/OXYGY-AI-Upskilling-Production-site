@@ -27,7 +27,7 @@ export const PROMPT_BLUEPRINT = [
     label: 'Format & Structure',
     icon: '\u{1F4D0}', // 📐
     description: 'How the output should be organized — length, layout, tone, structure',
-    color: '#A8F0E0',
+    color: '#B2D8F7',
   },
   {
     key: 'steps',
@@ -254,7 +254,7 @@ export const STRATEGY_DEFINITIONS: StrategyDefinition[] = [
     id: 'PERSONA_EXPERT_ROLE',
     name: 'Persona / Expert Role',
     icon: '🎭',
-    color: '#A8F0E0',
+    color: '#B2D8F7',
     definition: 'Assigns the AI a specific expert identity before the task. The persona anchors vocabulary, tone, assumed knowledge, and perspective for the entire response.',
     whenToUse: 'Almost every professional task benefits from a persona. Communication tasks, advisory tasks, creative tasks.',
     whenNotToUse: 'Purely mechanical tasks where identity is irrelevant — e.g., "Convert this list into a table."',
@@ -316,7 +316,7 @@ export const STRATEGY_DEFINITIONS: StrategyDefinition[] = [
 export const STRATEGY_ACCENT_COLORS: Record<StrategyId, string> = {
   STRUCTURED_BLUEPRINT: '#C3D0F5',
   CHAIN_OF_THOUGHT: '#FBE8A6',
-  PERSONA_EXPERT_ROLE: '#A8F0E0',
+  PERSONA_EXPERT_ROLE: '#B2D8F7',
   OUTPUT_FORMAT_SPECIFICATION: '#38B2AC',
   CONSTRAINT_FRAMING: '#FBCEB1',
   FEW_SHOT_EXAMPLES: '#E6FFFA',

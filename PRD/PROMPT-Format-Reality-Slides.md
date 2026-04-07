@@ -70,7 +70,7 @@ The stat visual (dotGrid, barComparison, weekBlocks, etc.) should take up the fu
 ### Level 1 (Slides 2–3)
 
 **Current state:**
-- Slide 2: `valueColour: "#1A6B5F"` (correct, already updated), default large number card visual, pull quote = `"75% of your colleagues, clients, and competitors. The tools are already in the room."` (narrative — needs update)
+- Slide 2: `valueColour: "#2B6CB0"` (correct, already updated), default large number card visual, pull quote = `"75% of your colleagues, clients, and competitors. The tools are already in the room."` (narrative — needs update)
 - Slide 3: `type: "chart"` (not evidenceHero — leave as-is), pull quote = `"The bar keeps moving. Being an AI user isn't enough — being a skilled one is what creates the gap."` (narrative — needs update)
 
 **Changes needed:**
@@ -168,7 +168,7 @@ The stat visual (dotGrid, barComparison, weekBlocks, etc.) should take up the fu
 
 | Level | `valueColour` to use | Status |
 |-------|---------------------|--------|
-| L1 | `#1A6B5F` (mint dark) | Already correct |
+| L1 | `#2B6CB0` (mint dark) | Already correct |
 | L2 | `#C4A934` (gold) | Already correct (reference) |
 | L3 | `#38B2AC` (teal) | Already correct |
 | L4 | `#8C3A1A` (peach dark) | Already correct |

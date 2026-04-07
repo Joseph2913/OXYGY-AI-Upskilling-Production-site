@@ -129,7 +129,7 @@ These must sit behind all text content (`z-index: 0` on blobs, `position: relati
   - Line 2: `"{completed} / {total}"` — font-size: 11px, color: `#718096`, margin-top: 2px
 
 **Level accent colours (for ring track):**
-- Level 1: `#A8F0E0` (mint)
+- Level 1: `#B2D8F7` (mint)
 - Level 2: `#F7E8A4` (yellow)
 - Level 3: `#38B2AC` (teal)
 - Level 4: `#F5B8A0` (peach)
@@ -215,7 +215,7 @@ Last activity line:
 - Calculate from `sessions` table `created_at` of the most recent session for this user
 
 **Level accent dark colours (for badge text):**
-- Level 1: `#1A6B5F`
+- Level 1: `#2B6CB0`
 - Level 2: `#8A6A00`
 - Level 3: `#1A7A76`
 - Level 4: `#8C3A1A`
@@ -282,7 +282,7 @@ padding: 18px 20px
 - Each avatar: 26×26px circle, `border: 2px solid #FFFFFF`
 - From index 1 onwards: `margin-left: -7px`
 - Use `z-index: {4 - index}` so first avatar is on top
-- Avatar background colour: cycle through `['#A8F0E0', '#C3D0F5', '#F5B8A0', '#F7E8A4']`
+- Avatar background colour: cycle through `['#B2D8F7', '#C3D0F5', '#F5B8A0', '#F7E8A4']`
 - Avatar content: 2-letter initials, font-size: 9px, font-weight: 700, color: `#1A202C`
 - Margin-bottom: 8px
 
@@ -595,8 +595,8 @@ export const ALL_TOOLS: Tool[] = [
     levelName: "Fundamentals",
     description: "A live sandbox to write, test, and refine prompts. Experiment with different structures and see real AI responses instantly.",
     route: "/app/toolkit/prompt-playground",
-    accentColor: "#A8F0E0",
-    accentDark: "#1A6B5F",
+    accentColor: "#B2D8F7",
+    accentDark: "#2B6CB0",
   },
   {
     id: "prompt-library",
@@ -606,8 +606,8 @@ export const ALL_TOOLS: Tool[] = [
     levelName: "Fundamentals",
     description: "Your personal collection of saved, tagged prompts. Build a reusable bank of your best work, organised by use case.",
     route: "/app/toolkit/prompt-library",
-    accentColor: "#A8F0E0",
-    accentDark: "#1A6B5F",
+    accentColor: "#B2D8F7",
+    accentDark: "#2B6CB0",
   },
   {
     id: "agent-builder",

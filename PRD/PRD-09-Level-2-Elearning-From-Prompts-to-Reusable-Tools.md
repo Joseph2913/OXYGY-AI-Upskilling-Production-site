@@ -508,7 +508,7 @@ section: "YOUR NEXT STEP"
 | **id** | `t3` |
 | **name** | `HITL Prompt Additions` |
 | **tag** | `Accountability` |
-| **tagColor** | `#A8F0E0` (mint) |
+| **tagColor** | `#B2D8F7` (mint) |
 | **template** | `HUMAN-IN-THE-LOOP PROMPT ADDITIONS\n\nAdd these instructions to your system prompt (Layer 2) to build accountability into every output:\n\n1. SOURCE CITATION:\n   "For each conclusion or insight, cite the specific input data that informed it. Reference the source type and location (e.g., 'meeting notes, paragraph 3' or 'email from [sender], [date]')."\n\n2. CONFIDENCE SCORING:\n   "Rate your confidence in each conclusion on a scale of 0–1. Flag any conclusion with confidence below 0.7 with a warning note."\n\n3. REASONING TRAIL:\n   "For each major conclusion, provide a one-sentence explanation of your reasoning — not just the conclusion itself."\n\n4. EXCEPTION FLAGGING:\n   "Explicitly call out: inputs you could not process, contradictions between sources, missing data that would improve the analysis, and any assumptions you made."\n\n5. VERIFICATION PROMPTS:\n   "At the end of each output, suggest 1–2 specific things the human reviewer should check to verify the most important conclusions."` |
 
 **Template 4:**

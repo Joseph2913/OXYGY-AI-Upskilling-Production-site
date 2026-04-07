@@ -155,7 +155,7 @@ All states share the same outer dimensions and border-radius. What changes is co
 **Level accent colours:**
 | Level | Accent | Accent Dark | Accent Text |
 |---|---|---|---|
-| 1 | `#A8F0E0` (mint) | `#1A6B5F` | `#1A6B5F` |
+| 1 | `#B2D8F7` (mint) | `#2B6CB0` | `#2B6CB0` |
 | 2 | `#F7E8A4` (yellow) | `#8A6A00` | `#8A6A00` |
 | 3 | `#38B2AC` (teal) | `#1A7A76` | `#1A7A76` |
 | 4 | `#F5B8A0` (peach) | `#8C3A1A` | `#8C3A1A` |
@@ -474,8 +474,8 @@ export const LEVEL_META: LevelMeta[] = [
     name: "AI Fundamentals & Awareness",
     shortName: "Fundamentals",
     tagline: "Build comfort and curiosity with AI. Learn how large language models work, how to prompt them well, and how to apply them to everyday work — responsibly.",
-    accentColor: "#A8F0E0",
-    accentDark: "#1A6B5F",
+    accentColor: "#B2D8F7",
+    accentDark: "#2B6CB0",
   },
   {
     number: 2,

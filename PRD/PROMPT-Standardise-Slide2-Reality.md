@@ -45,7 +45,7 @@ For each level, ensure every `evidenceHero` slide's `stats[].valueColour` matche
 
 | Level | Correct `valueColour` | Current status |
 |-------|----------------------|----------------|
-| L1 | `#1A6B5F` (mint dark) | Currently `#38B2AC` — **NEEDS UPDATE** |
+| L1 | `#2B6CB0` (mint dark) | Currently `#38B2AC` — **NEEDS UPDATE** |
 | L2 | `#C4A934` (gold) | Already correct |
 | L3 | `#38B2AC` (teal) | Already correct (teal IS L3's accent) |
 | L4 | `#8C3A1A` (peach dark) | Already correct |
@@ -54,7 +54,7 @@ For each level, ensure every `evidenceHero` slide's `stats[].valueColour` matche
 **Steps:**
 1. Open `data/topicContent.ts`
 2. Find all `evidenceHero` slides for Level 1 (search for the L1 slide data — slides 2-3 in the `"1-1"` key)
-3. Change `valueColour: "#38B2AC"` to `valueColour: "#1A6B5F"` on every stat object in L1's evidenceHero slides
+3. Change `valueColour: "#38B2AC"` to `valueColour: "#2B6CB0"` on every stat object in L1's evidenceHero slides
 4. Verify L3 and L4 are already correct (they should be — L3 uses `#38B2AC`, L4 uses `#8C3A1A`)
 
 ### Task 2: Ensure all slide 2s have `section: "THE REALITY"`
@@ -132,7 +132,7 @@ Run a search across `data/topicContent.ts` for any remaining `valueColour: "#38B
 
 | Level | Light (`accentColor`) | Dark (`accentDark` / `valueColour`) |
 |-------|----------------------|------------------------------------|
-| L1 | `#A8F0E0` (Mint) | `#1A6B5F` |
+| L1 | `#B2D8F7` (Sky Blue) | `#2B6CB0` |
 | L2 | `#F7E8A4` (Pale Yellow) | `#8A6A00` (use `#C4A934` for stat fills) |
 | L3 | `#38B2AC` (Teal) | `#1A7A76` (use `#38B2AC` for stat fills) |
 | L4 | `#F5B8A0` (Soft Peach) | `#8C3A1A` |

@@ -24,7 +24,7 @@ const TOOLS = [
     label: 'Level 1 — Fundamentals',
     name: 'Prompt Playground',
     color: '#2C9A94',
-    colorLight: '#A8F0E0',
+    colorLight: '#B2D8F7',
     icon: Zap,
     description:
       'A live sandbox where you write, test, and refine AI prompts in real time. Experiment with different structures, tones, and constraints — and see how the AI responds instantly.',
@@ -38,7 +38,7 @@ const TOOLS = [
     mockupIcon: Terminal,
     mockupLabel: 'Live prompt testing sandbox',
     mockupElements: [
-      { label: 'System Prompt', color: '#A8F0E0' },
+      { label: 'System Prompt', color: '#B2D8F7' },
       { label: 'User Message', color: '#E6FFFA' },
       { label: 'AI Response', color: '#F0FFF4' },
     ],

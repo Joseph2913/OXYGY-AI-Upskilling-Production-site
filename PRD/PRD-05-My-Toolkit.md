@@ -599,8 +599,8 @@ export const ALL_TOOLS: Tool[] = [
       "Experiment with system prompts and user messages",
     ],
     route: "/app/toolkit/prompt-playground",
-    accentColor: "#A8F0E0",
-    accentDark: "#1A6B5F",
+    accentColor: "#B2D8F7",
+    accentDark: "#2B6CB0",
   },
   {
     id: "prompt-library",
@@ -617,8 +617,8 @@ export const ALL_TOOLS: Tool[] = [
       "Share prompts with your team's shared library",
     ],
     route: "/app/toolkit/prompt-library",
-    accentColor: "#A8F0E0",
-    accentDark: "#1A6B5F",
+    accentColor: "#B2D8F7",
+    accentDark: "#2B6CB0",
   },
 
   // ── LEVEL 2 ──────────────────────────────────────────────────────

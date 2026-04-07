@@ -16,14 +16,13 @@ import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
-import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 
 /* ── Level 1 accent colours ── */
-const LEVEL_ACCENT = '#A8F0E0';
-const LEVEL_ACCENT_DARK = '#1A6B5F';
+const LEVEL_ACCENT = '#B2D8F7';
+const LEVEL_ACCENT_DARK = '#2B6CB0';
 
 /* ── Strategy accent colour — consistent LEVEL_ACCENT per toolkit standard §1.5 ── */
 const STRATEGY_COLOR = LEVEL_ACCENT;
@@ -867,13 +866,6 @@ const AppPromptPlayground: React.FC = () => {
           ) : result ? (
             /* ── Generated output ── */
             <div>
-              {/* Next Step Banner (§4.8) */}
-              <NextStepBanner
-                accentColor={LEVEL_ACCENT}
-                accentDark={LEVEL_ACCENT_DARK}
-                text="Copy your prompt and test it in your AI tool of choice. Come back and refine it based on what you learn."
-              />
-
               {/* Top action row — toggle + actions on one line */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -1370,13 +1362,17 @@ const AppPromptPlayground: React.FC = () => {
               {/* Bottom navigation row (per PRD §4.2) */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8, marginTop: 20,
-                flexWrap: 'wrap',
+                flexWrap: 'wrap', justifyContent: 'space-between',
               }}>
                 <ActionBtn
                   icon={<RotateCcw size={13} />}
                   label="Start Over"
                   onClick={handleStartOver}
                 />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <a href="/app/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Back to My Dashboard</a>
+                  <a href="/app/journey/project/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: LEVEL_ACCENT_DARK, color: '#FFFFFF', border: 'none', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Continue to Level 1 Project <ArrowRight size={13} /></a>
+                </div>
               </div>
             </div>
           ) : null}

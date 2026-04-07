@@ -23,7 +23,6 @@ import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
-import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const LEVEL_ACCENT = '#C3D0F5';
@@ -2513,9 +2512,15 @@ const AppAppEvaluator: React.FC = () => {
               </div>
 
               {/* Bottom navigation */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <ActionBtn icon={<ArrowRight size={13} style={{ transform: 'rotate(180deg)' }} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
-                <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleReset} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ActionBtn icon={<ArrowRight size={13} style={{ transform: 'rotate(180deg)' }} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
+                  <ActionBtn icon={<RotateCcw size={13} />} label="Start Over" onClick={handleReset} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <a href="/app/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Back to My Dashboard</a>
+                  <a href="/app/journey/project/5" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: LEVEL_ACCENT_DARK, color: '#FFFFFF', border: 'none', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Continue to Level 5 Project <ArrowRight size={13} /></a>
+                </div>
               </div>
             </>
           )}

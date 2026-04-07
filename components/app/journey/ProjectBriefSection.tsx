@@ -22,7 +22,7 @@ function getProjectStatus(sub: ProjectSubmission | null): ProjectStatus {
 const STATUS_STYLES: Record<ProjectStatus, { bg: string; border: string; color: string; label: string }> = {
   'not-started': { bg: '#F7FAFC', border: '1px solid #E2E8F0', color: '#A0AEC0', label: 'Not Started' },
   'draft': { bg: '#FEFCE8', border: '1px solid #FDE68A', color: '#92400E', label: 'Draft Saved' },
-  'submitted': { bg: '#F0FFFC', border: '1px solid #A8F0E0', color: '#1A6B5F', label: 'Submitted' },
+  'submitted': { bg: '#F0FFFC', border: '1px solid #B2D8F7', color: '#2B6CB0', label: 'Submitted' },
   'passed': { bg: '', border: '', color: '', label: 'Completed ✓' },
   'needs_revision': { bg: '#FFF7ED', border: '1px solid #FDBA74', color: '#9A3412', label: 'Needs Revision' },
 };
@@ -37,7 +37,7 @@ const CTA_CONFIG: Record<ProjectStatus, { text: string; style: 'secondary' | 'li
 
 // Level-specific soft background tints
 const LEVEL_BG_TINTS: Record<number, string> = {
-  1: 'rgba(168, 240, 224, 0.10)',  // light teal
+  1: 'rgba(178, 216, 247, 0.10)',  // light teal
   2: 'rgba(247, 232, 164, 0.12)',  // light yellow
   3: 'rgba(56, 178, 172, 0.08)',   // light green
   4: 'rgba(245, 184, 160, 0.10)',  // light pink

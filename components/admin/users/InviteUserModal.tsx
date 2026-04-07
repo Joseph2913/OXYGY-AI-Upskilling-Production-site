@@ -154,7 +154,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ preSelectedOrgId, onC
                     padding: '8px 14px', borderRadius: 8,
                     border: `1px solid ${role === r ? '#38B2AC' : '#E2E8F0'}`,
                     background: role === r ? '#E6FFFA' : '#FFFFFF',
-                    fontSize: 13, fontWeight: 600, color: role === r ? '#1A6B5F' : '#4A5568',
+                    fontSize: 13, fontWeight: 600, color: role === r ? '#2B6CB0' : '#4A5568',
                     transition: 'all 0.15s',
                   }}
                 >

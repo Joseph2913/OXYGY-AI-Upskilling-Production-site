@@ -1,0 +1,44 @@
+[
+  {
+    "filename": "l1t1-s01-setup.mp3",
+    "issue": "Mispronunciation",
+    "word": "Oxygen",
+    "severity": "medium"
+  },
+  {
+    "filename": "l2t1-s03-setup.mp3",
+    "issue": "Mispronunciation",
+    "word": "McKinns'",
+    "severity": "medium"
+  },
+  {
+    "filename": "l3t1-s03-setup.mp3",
+    "issue": "Mispronunciation",
+    "word": "McKinns'",
+    "severity": "medium"
+  },
+  {
+    "filename": "l4t1-s03-setup.mp3",
+    "issue": "Mispronunciation",
+    "word": "Carpathy",
+    "severity": "medium"
+  },
+  {
+    "filename": "l4t1-s06-setup.mp3",
+    "issue": "Acronym Spelled Out",
+    "word": "P-R-D",
+    "severity": "high"
+  },
+  {
+    "filename": "l5t1-s04-setup.mp3",
+    "issue": "Mispronunciation",
+    "word": "OXYGY",
+    "severity": "medium"
+  },
+  {
+    "filename": "tour-step-6.mp3",
+    "issue": "Mispronunciation",
+    "word": "Poplexity",
+    "severity": "medium"
+  }
+]

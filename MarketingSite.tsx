@@ -54,6 +54,7 @@ export function MarketingSite() {
   return (
     <div className="min-h-screen bg-white font-sans text-navy-900 selection:bg-teal selection:text-white">
       <Navbar />
+      <div style={{ height: 68 }} />
       {currentPage === 'home' && (
         <>
           <Hero />

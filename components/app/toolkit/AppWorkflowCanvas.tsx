@@ -23,7 +23,6 @@ import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
 import PlatformSelector from '../workflow/PlatformSelector';
 import ExportSummaryCard from '../workflow/ExportSummaryCard';
 import OutputActionsPanel from '../workflow/OutputActionsPanel';
-import NextStepBanner from './NextStepBanner';
 
 /* ─── Constants ─── */
 
@@ -1620,13 +1619,6 @@ const AppWorkflowCanvas: React.FC = () => {
           ) : buildGuideMarkdown && buildGuideIntermediate ? (
             /* ── Generated output (matches L1 pattern) ── */
             <div>
-              {/* Next Step Banner (§4.8) */}
-              <NextStepBanner
-                accentColor={LEVEL_ACCENT}
-                accentDark={LEVEL_ACCENT_DARK}
-                text="Copy your Build Guide or save it to artefacts, then follow the steps in your chosen platform. Use the test checklist to verify each step."
-              />
-
               {/* Top row: View toggle (left) + Copy (right) */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1862,9 +1854,15 @@ const AppWorkflowCanvas: React.FC = () => {
               )}
 
               {/* Bottom navigation row (per PRD §4.2) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
-                <ActionBtn icon={<ArrowLeft size={14} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
-                <ActionBtn icon={<RotateCcw size={14} />} label="Start Over" onClick={handleStartOver} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ActionBtn icon={<ArrowLeft size={14} />} label="Back to Step 3" onClick={handleGoBackToStep3} />
+                  <ActionBtn icon={<RotateCcw size={14} />} label="Start Over" onClick={handleStartOver} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <a href="/app/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Back to My Dashboard</a>
+                  <a href="/app/journey/project/3" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: LEVEL_ACCENT_DARK, color: '#FFFFFF', border: 'none', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Continue to Level 3 Project <ArrowRight size={13} /></a>
+                </div>
               </div>
             </div>
           ) : null}

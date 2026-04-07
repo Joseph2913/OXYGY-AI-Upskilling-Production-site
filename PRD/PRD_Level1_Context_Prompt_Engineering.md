@@ -77,7 +77,7 @@ Item row:
   hover: background #F7FAFC, color #38B2AC
   fontSize: 14px, fontWeight: 500, color: #2D3748
 
-  Left: Level badge pill (mint bg #A8F0E0, teal text #2C9A94, 
+  Left: Level badge pill (mint bg #B2D8F7, teal text #2C9A94, 
         fontSize 11px, fontWeight 700, padding 3px 8px, 
         borderRadius 12px) — shows "L1"
   Centre: 

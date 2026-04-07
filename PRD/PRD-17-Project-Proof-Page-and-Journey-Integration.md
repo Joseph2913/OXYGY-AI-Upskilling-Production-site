@@ -284,7 +284,7 @@ A vertical stack (flex column, align-items: flex-end, gap: 8px):
 |---|---|---|---|---|
 | Not Started | `#F7FAFC` | `1px solid #E2E8F0` | `#A0AEC0` | "Not Started" |
 | Draft Saved | `#FEFCE8` | `1px solid #FDE68A` | `#92400E` | "Draft Saved" |
-| Submitted | `#F0FFFC` | `1px solid #A8F0E0` | `#1A6B5F` | "Submitted" |
+| Submitted | `#F0FFFC` | `1px solid #B2D8F7` | `#2B6CB0` | "Submitted" |
 | Passed | `{levelAccent}22` | `1px solid {levelAccent}` | `{levelAccentDark}` | "Completed ✓" |
 | Needs Revision | `#FFF7ED` | `1px solid #FDBA74` | `#9A3412` | "Needs Revision" |
 
@@ -797,7 +797,7 @@ Add a fourth column: **Project**.
 |---|---|
 | No submission exists | Grey dash `—` (same as current "N/A" treatment) |
 | Draft saved | Amber dot + "Draft" text — `fontSize: 11px`, `color: #92400E` |
-| Submitted | Teal dot + "Submitted" — `fontSize: 11px`, `color: #1A6B5F` |
+| Submitted | Teal dot + "Submitted" — `fontSize: 11px`, `color: #2B6CB0` |
 | Passed | Green checkmark (same as existing "complete" indicator) |
 | Needs Revision | Amber dot + "Revision" — `fontSize: 11px`, `color: #9A3412` |
 

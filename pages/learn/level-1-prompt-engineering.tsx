@@ -23,7 +23,7 @@ const FontStyle = () => (
 /* ── Brand Tokens ── */
 const C = {
   navy: "#1A202C", navyMid: "#2D3748", teal: "#38B2AC", tealDark: "#2C9A94",
-  tealLight: "#E6FFFA", mint: "#A8F0E0", border: "#E2E8F0", bg: "#F7FAFC",
+  tealLight: "#E6FFFA", mint: "#B2D8F7", border: "#E2E8F0", bg: "#F7FAFC",
   body: "#4A5568", light: "#718096", muted: "#A0AEC0",
   success: "#48BB78", successLight: "#F0FFF4", successBorder: "#9AE6B4",
   error: "#FC8181", errorLight: "#FFF5F5", errorBorder: "#FEB2B2",

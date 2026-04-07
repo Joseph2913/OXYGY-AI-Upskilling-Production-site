@@ -742,7 +742,7 @@ export const MyProgress: React.FC<Props> = ({ showToast }) => {
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}
                     >
                       <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#38B2AC', marginTop: 5 }} />
-                      <span style={{ fontSize: 11, color: '#1A6B5F', fontWeight: 500 }}>Submitted</span>
+                      <span style={{ fontSize: 11, color: '#2B6CB0', fontWeight: 500 }}>Submitted</span>
                     </div>
                   ) : row.projectStatus === 'needs_revision' ? (
                     <div

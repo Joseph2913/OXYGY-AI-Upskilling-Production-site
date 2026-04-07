@@ -29,7 +29,7 @@ Charts use the Oxygy colour palette exclusively. The primary data colour is teal
 
 ```typescript
 const LEVEL_COLOURS: Record<number, string> = {
-  1: '#A8F0E0',  // Mint
+  1: '#B2D8F7',  // Sky Blue
   2: '#C3D0F5',  // Lavender
   3: '#F7E8A4',  // Pale Yellow
   4: '#F5B8A0',  // Soft Peach

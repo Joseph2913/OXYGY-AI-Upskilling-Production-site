@@ -17,7 +17,6 @@ import { useAppContext } from '../../../context/AppContext';
 import LearningPlanBlocker from '../LearningPlanBlocker';
 import { upsertToolUsed, createArtefactFromTool, updateArtefactContent } from '../../../lib/database';
 import { TOOL_TOPIC_MAPPING } from '../../../data/toolkitData';
-import NextStepBanner from './NextStepBanner';
 
 const FONT = "'DM Sans', sans-serif";
 const MONO = "'JetBrains Mono', 'Fira Code', monospace";
@@ -289,7 +288,7 @@ function renderJSONLine(line: string): React.ReactNode {
         parts.push(<span key={key++} style={{ color: '#38B2AC' }}>{match[1]}</span>);
         parts.push(<span key={key++} style={{ color: '#718096' }}>{match[2]}</span>);
       } else {
-        parts.push(<span key={key++} style={{ color: '#A8F0E0' }}>{match[1]}</span>);
+        parts.push(<span key={key++} style={{ color: '#B2D8F7' }}>{match[1]}</span>);
       }
     } else if (match[3]) {
       parts.push(<span key={key++} style={{ color: '#FBE8A6' }}>{match[3]}</span>);
@@ -1778,19 +1777,6 @@ const AppAgentBuilder: React.FC = () => {
 
                 return (
                   <>
-                    {/* §2.2 Next Step Banner */}
-                    <div style={{
-                      opacity: buildPlanVisibleBlocks >= 1 ? 1 : 0,
-                      transform: buildPlanVisibleBlocks >= 1 ? 'translateY(0)' : 'translateY(8px)',
-                      transition: 'opacity 0.3s, transform 0.3s',
-                    }}>
-                      <NextStepBanner
-                        accentColor={LEVEL_ACCENT}
-                        accentDark={LEVEL_ACCENT_DARK}
-                        text={`Follow each step in ${platformLabel}. Copy the system prompt below and paste it into your agent setup.`}
-                      />
-                    </div>
-
                     {/* §2.3 Top Action Row */}
                     <div style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2262,29 +2248,35 @@ const AppAgentBuilder: React.FC = () => {
 
                     {/* §2.7 Bottom Navigation Row */}
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap',
+                      display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap', justifyContent: 'space-between',
                     }}>
-                      <ActionBtn
-                        icon={<ArrowLeft size={14} />}
-                        label="Back to Step 3"
-                        onClick={() => {
-                          setSetupGuide(null);
-                          setBuildPlanVisibleBlocks(0);
-                          setBuildPlanViewMode('cards');
-                          setBuildPlanSaved(false);
-                          setBuildPlanCopied(false);
-                          setExpandedBuildSteps(new Set());
-                          setBuildPlanRefineExpanded(false);
-                          setBuildPlanRefinementAnswers({});
-                          setBuildPlanAdditionalContext('');
-                          setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                        }}
-                      />
-                      <ActionBtn
-                        icon={<RotateCcw size={14} />}
-                        label="Start Over"
-                        onClick={handleReset}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <ActionBtn
+                          icon={<ArrowLeft size={14} />}
+                          label="Back to Step 3"
+                          onClick={() => {
+                            setSetupGuide(null);
+                            setBuildPlanVisibleBlocks(0);
+                            setBuildPlanViewMode('cards');
+                            setBuildPlanSaved(false);
+                            setBuildPlanCopied(false);
+                            setExpandedBuildSteps(new Set());
+                            setBuildPlanRefineExpanded(false);
+                            setBuildPlanRefinementAnswers({});
+                            setBuildPlanAdditionalContext('');
+                            setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                          }}
+                        />
+                        <ActionBtn
+                          icon={<RotateCcw size={14} />}
+                          label="Start Over"
+                          onClick={handleReset}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <a href="/app/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFFFF', color: '#4A5568', border: '1px solid #E2E8F0', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Back to My Dashboard</a>
+                        <a href="/app/journey/project/2" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: LEVEL_ACCENT_DARK, color: '#FFFFFF', border: 'none', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: FONT, cursor: 'pointer', transition: 'opacity 0.15s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>Continue to Level 2 Project <ArrowRight size={13} /></a>
+                      </div>
                     </div>
                   </>
                 );

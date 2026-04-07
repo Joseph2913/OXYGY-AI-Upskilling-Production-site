@@ -386,7 +386,7 @@ export const MyProfile: React.FC<Props> = () => {
 
         <div style={{ marginTop: 24, padding: '14px 18px', borderRadius: 10, backgroundColor: '#E6FFFA', border: '1px solid #38B2AC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <p style={{ fontSize: 13, color: '#2D3748', margin: 0, lineHeight: 1.5 }}>
-            Want to update your answers or regenerate your learning plan?
+            Want to update your profile details?
           </p>
           <a href="/app/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#38B2AC', textDecoration: 'none', flexShrink: 0 }}>
             Go to Learning Plan Generator <ArrowRight size={14} />

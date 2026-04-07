@@ -935,7 +935,7 @@ export interface ScoredMember {
 }
 
 const LEADERBOARD_PALETTE = [
-  '#A8F0E0', '#C3D0F5', '#F5B8A0', '#F7E8A4', '#38B2AC',
+  '#B2D8F7', '#C3D0F5', '#F5B8A0', '#F7E8A4', '#38B2AC',
   '#E9D5FF', '#FED7AA', '#FECACA', '#D1FAE5', '#E0E7FF',
 ];
 

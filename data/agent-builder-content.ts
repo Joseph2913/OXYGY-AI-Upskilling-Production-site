@@ -80,7 +80,7 @@ export const PROMPT_SECTION_COLORS: Record<string, { bg: string; label: string; 
   ROLE: { bg: 'rgba(195, 208, 245, 0.3)', label: 'ROLE', emoji: '\u{1F3AD}' },
   CONTEXT: { bg: 'rgba(251, 232, 166, 0.3)', label: 'CONTEXT', emoji: '\u{1F4CD}' },
   TASK: { bg: 'rgba(56, 178, 172, 0.15)', label: 'TASK', emoji: '\u{1F3AF}' },
-  'OUTPUT FORMAT': { bg: 'rgba(168, 240, 224, 0.3)', label: 'OUTPUT FORMAT', emoji: '\u{1F4D0}' },
+  'OUTPUT FORMAT': { bg: 'rgba(178, 216, 247, 0.3)', label: 'OUTPUT FORMAT', emoji: '\u{1F4D0}' },
   STEPS: { bg: 'rgba(251, 206, 177, 0.3)', label: 'STEPS', emoji: '\u{1F9E9}' },
   'QUALITY CHECKS': { bg: 'rgba(230, 255, 250, 0.5)', label: 'QUALITY', emoji: '\u{2705}' },
 };

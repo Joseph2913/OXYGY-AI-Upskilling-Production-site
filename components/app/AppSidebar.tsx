@@ -314,7 +314,7 @@ export const AppSidebar: React.FC = () => {
               <div style={{ fontSize: 10, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>Account</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {[
-                  { label: 'Edit Profile & Regenerate Plan', desc: 'Update your role, goals, and availability', action: () => { setSettingsOpen(false); window.location.href = '/app/journey'; } },
+                  { label: 'Edit Profile', desc: 'Update your role, goals, and availability', action: () => { setSettingsOpen(false); window.location.href = '/app/journey'; } },
                   { label: 'Replay product tour', desc: 'Revisit the guided walkthrough of the platform', action: () => { setSettingsOpen(false); localStorage.removeItem('oxygy_tour_completed'); sidebarNavigate('/app/dashboard'); window.dispatchEvent(new CustomEvent('oxygy:replay-tour')); } },
                   { label: 'Sign Out', desc: 'Sign out of your Oxygy account', action: () => { setSettingsOpen(false); signOut(); } },
                 ].map((item, i) => (

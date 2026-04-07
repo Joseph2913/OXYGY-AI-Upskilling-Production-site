@@ -101,7 +101,7 @@ border-radius:      14px
 border:             1px solid rgba(56,178,172,0.3)
 box-shadow:         0 8px 32px rgba(0,0,0,0.25)
 
-Accent bar:         background: linear-gradient(90deg, #38B2AC, #A8F0E0), height: 3px
+Accent bar:         background: linear-gradient(90deg, #38B2AC, #B2D8F7), height: 3px
 
 Eyebrow:            font-size: 10px, font-weight: 700, color: #38B2AC,
                     letter-spacing: 1.5px, text-transform: uppercase, margin-bottom: 5px
@@ -389,8 +389,8 @@ Three stacked artefact row items, showing the variety of artefact types.
 Container: margin-top: 8px, display: flex, flex-direction: column, gap: 5px
 
 Row 1 — Prompt artefact:
-  Left dot: 8×8px circle, background #A8F0E0
-  Type label: "Prompt" (9px, #A8F0E0, font-weight 700, width: 52px)
+  Left dot: 8×8px circle, background #B2D8F7
+  Type label: "Prompt" (9px, #B2D8F7, font-weight 700, width: 52px)
   Name: "Stakeholder briefing prompt" (10px, rgba(255,255,255,0.6), font-weight 500)
   Right: "↗" link icon (10px, rgba(56,178,172,0.6))
 

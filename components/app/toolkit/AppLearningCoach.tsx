@@ -897,12 +897,12 @@ const AppLearningCoach: React.FC = () => {
             {validationFlash === 'objective' && <span style={{ color: '#E53E3E', marginLeft: 8 }}>← Select an objective</span>}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, opacity: selectedLevel ? 1 : 0.4 }}>
-            {(selectedLevel ? LEVEL_OBJECTIVES[selectedLevel] : []).map(obj => {
-              const sel = selectedObjective === obj;
+            {(selectedLevel ? LEVEL_OBJECTIVES[selectedLevel] : []).map(objData => {
+              const sel = selectedObjective === objData.label;
               return (
                 <button
-                  key={obj}
-                  onClick={() => selectedLevel && setSelectedObjective(obj)}
+                  key={objData.label}
+                  onClick={() => selectedLevel && setSelectedObjective(objData.label)}
                   disabled={!selectedLevel}
                   style={{
                     background: sel ? LEVEL_ACCENT : '#F7FAFC',
@@ -917,7 +917,7 @@ const AppLearningCoach: React.FC = () => {
                     transition: 'all 0.15s',
                   }}
                 >
-                  {obj}
+                  {objData.label}
                 </button>
               );
             })}
@@ -949,6 +949,21 @@ const AppLearningCoach: React.FC = () => {
                 Select a level first
               </span>
             )}
+            {selectedObjective && selectedObjective !== 'Other' && (() => {
+              const objData = (LEVEL_OBJECTIVES[selectedLevel!] || []).find(o => o.label === selectedObjective);
+              if (!objData) return null;
+              return (
+                <div style={{
+                  width: '100%', marginTop: 4,
+                  fontSize: 12, color: '#718096', lineHeight: 1.5,
+                  background: `${LEVEL_ACCENT}15`, padding: '8px 14px',
+                  borderRadius: 8, borderLeft: `3px solid ${LEVEL_ACCENT}`,
+                  fontFamily: FONT,
+                }}>
+                  {objData.hint}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

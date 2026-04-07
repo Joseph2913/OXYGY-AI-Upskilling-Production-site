@@ -147,7 +147,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    return () => { subscription.unsubscribe(); };
+    // Safety net — never leave the user on a white screen for more than 10 seconds
+    const safetyTimeout = setTimeout(() => {
+      setLoading((current) => {
+        if (current) {
+          console.warn('[AuthContext] Auth init timed out after 10s — forcing load completion');
+          return false;
+        }
+        return current;
+      });
+    }, 10000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   async function loadUserContext(userId: string) {

@@ -97,7 +97,7 @@ function renderJSONLine(line: string): React.ReactNode {
         parts.push(<span key={key++} style={{ color: '#38B2AC' }}>{match[1]}</span>);
         parts.push(<span key={key++} style={{ color: '#718096' }}>{match[2]}</span>);
       } else {
-        parts.push(<span key={key++} style={{ color: '#A8F0E0' }}>{match[1]}</span>);
+        parts.push(<span key={key++} style={{ color: '#B2D8F7' }}>{match[1]}</span>);
       }
     } else if (match[3]) {
       parts.push(<span key={key++} style={{ color: '#FBE8A6' }}>{match[3]}</span>);
@@ -829,7 +829,7 @@ export const AgentBuilder: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 mb-5">
             {GOOD_EXAMPLES.map((ex) => (
               <button key={ex.name} onClick={() => handleExampleClick(ex.task, ex.inputData)}
-                className="px-3 py-1 rounded-full text-[13px] border border-[#A8F0E0] bg-[rgba(168,240,224,0.08)] text-[#2C7A7B] hover:border-[#38B2AC] hover:bg-[rgba(168,240,224,0.2)] transition-colors"
+                className="px-3 py-1 rounded-full text-[13px] border border-[#B2D8F7] bg-[rgba(178,216,247,0.08)] text-[#2C7A7B] hover:border-[#38B2AC] hover:bg-[rgba(178,216,247,0.2)] transition-colors"
               >
                 {ex.name}
               </button>

@@ -431,7 +431,7 @@ const AppDashboard: React.FC = () => {
                   let bg = '#F7FAFC';
                   let border = '1px dashed #E2E8F0';
                   let checkColor = '';
-                  if ((isPast || isToday) && isActive) { bg = isToday ? '#38B2AC' : '#A8F0E0'; border = 'none'; checkColor = isToday ? '#FFFFFF' : '#085041'; }
+                  if ((isPast || isToday) && isActive) { bg = isToday ? '#38B2AC' : '#B2D8F7'; border = 'none'; checkColor = isToday ? '#FFFFFF' : '#085041'; }
                   else if (isPast) { bg = '#F1F5F9'; border = '1px solid #E2E8F0'; }
                   return (
                     <div key={i} style={{ width: 18, height: 18, borderRadius: '50%', background: bg, border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

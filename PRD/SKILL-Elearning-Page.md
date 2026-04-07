@@ -49,8 +49,8 @@ A **Topic Outline** document must be provided alongside this skill before author
   level: number,             // 1–5
   name: string,              // e.g. "Prompt Engineering"
   tagline: string,           // short descriptor shown on level card
-  accentColor: string,       // e.g. "#A8F0E0"
-  accentDark: string,        // e.g. "#1A6B5F" — for text on accent bg
+  accentColor: string,       // e.g. "#B2D8F7"
+  accentDark: string,        // e.g. "#2B6CB0" — for text on accent bg
   topics: [
     {
       id: string,            // e.g. "2-3" (level-topic)
@@ -75,7 +75,7 @@ The accent colors are defined in `data/levelTopics.ts`:
 
 | Level | Light (`accentColor`) | Dark (`accentDark`) | Use for |
 |-------|----------------------|--------------------|----|
-| L1 | `#A8F0E0` (Mint) | `#1A6B5F` | Underlines, pull-quote borders, stat highlights |
+| L1 | `#B2D8F7` (Sky Blue) | `#2B6CB0` | Underlines, pull-quote borders, stat highlights |
 | L2 | `#F7E8A4` (Pale Yellow) | `#8A6A00` | Same — yellow theme, NOT teal |
 | L3 | `#38B2AC` (Teal) | `#1A7A76` | Same — teal is only correct for L3 |
 | L4 | `#F5B8A0` (Soft Peach) | `#8C3A1A` | Same — peach/terracotta theme |
@@ -253,7 +253,7 @@ const C = {
   teal:          "#38B2AC",
   tealDark:      "#2C9A94",
   tealLight:     "#E6FFFA",
-  mint:          "#A8F0E0",
+  mint:          "#B2D8F7",
   border:        "#E2E8F0",
   bg:            "#F7FAFC",
   body:          "#4A5568",
@@ -352,7 +352,7 @@ Use multiples of 4px: 4, 8, 12, 16, 20, 24, 28, 32, 40, 48.
 ```
 // Breadcrumb: Learning › Level N › [Topic Name]
 // Left column (flex: 1, minWidth 320):
-//   - Level badge: mint bg (#A8F0E0), teal text, pill, UPPERCASE
+//   - Level badge: mint bg (#B2D8F7), teal text, pill, UPPERCASE
 //   - Eyebrow descriptor
 //   - h1 with teal accent underline on key word
 //   - Description paragraph (14px, body colour, max 600px)
@@ -392,6 +392,8 @@ The player content area **must always be exactly 460px tall** with `overflowY: "
 
 Nav bar inline: `[← Previous]` — `[dots · counter]` — `[⛶ fullscreen] [Next →]`
 Nav bar fullscreen: `[← Previous]` — `[dots · counter (centred)]` — `[Next →]`
+
+**Slide 1 (courseIntro) exception:** On the first slide, the "← Previous" button is hidden (no previous slide exists) and the primary action button ("Start →") is placed on the **left** side of the nav bar. The centre controls remain centred, and the right side is an empty spacer. This puts the primary action where the eye naturally goes first. On slide 2+, the layout reverts to the standard Previous/Controls/Next arrangement. The "Start →" button in the courseIntro slide content is removed to avoid duplication.
 
 ### Fullscreen vs Inline Differences
 | Element | Inline | Fullscreen |
@@ -545,7 +547,7 @@ Appears when Next is clicked on the last slide. Replaces the slide — does not 
 ```
 Outer card: border 1.5px solid #CBD5E0, borderRadius 16
 Accent line (top): 3px solid accentColor
-"REFLECT" badge: #E6FFFA bg, #1A6B5F text, uppercase, 10px
+"REFLECT" badge: #E6FFFA bg, #2B6CB0 text, uppercase, 10px
 Heading: "Before you move on" — 20px fontWeight 800
 Subtext: "Take 60 seconds. Two questions — no right answers." — 13px #718096
 
@@ -964,7 +966,7 @@ Keep it high-level — one sentence per takeaway, no elaboration. The visual car
 
 | Level | `color` (accentDark) | `light` (card bg) |
 |-------|---------------------|-------------------|
-| L1 | `#1A6B5F` | `#A8F0E018` |
+| L1 | `#2B6CB0` | `#B2D8F718` |
 | L2 | `#C4A934` | `#FEFCE8` |
 | L3 | `#1A7A76` | `#E6FFFA` |
 | L4 | `#8C3A1A` | `#FFF7F4` |

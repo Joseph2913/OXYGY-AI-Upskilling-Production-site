@@ -108,7 +108,7 @@ Uses the existing `ToolOverview` pattern from the Toolkit Page Standard.
 | Level | LEVEL_ACCENT | LEVEL_ACCENT_DARK |
 |-------|-------------|-------------------|
 | Default (none selected) | `#38B2AC` | `#1A7A76` |
-| 1 | `#A8F0E0` | `#1A6B5F` |
+| 1 | `#B2D8F7` | `#2B6CB0` |
 | 2 | `#F7E8A4` | `#8A6A00` |
 | 3 | `#38B2AC` | `#1A7A76` |
 | 4 | `#F5B8A0` | `#8C3A1A` |

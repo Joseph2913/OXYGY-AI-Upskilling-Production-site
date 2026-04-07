@@ -50,7 +50,7 @@ The two paths converge at the same Approve gate. After approval, both paths hit 
 ## 3. Content Specification
 
 ### Page header (persistent, above all steps)
-- **Level badge:** `LEVEL 3` — pill, background `#A8F0E0`, text `#1A7A76`, 11px, 700 weight
+- **Level badge:** `LEVEL 3` — pill, background `#B2D8F7`, text `#1A7A76`, 11px, 700 weight
 - **Tool name:** `Workflow Canvas` — 22px, 800 weight, navy `#1A202C`
 - **Eyebrow above tool name:** `n8n Workflow Generator` — 10px, 700, teal `#38B2AC`, uppercase, letter-spacing 2px
 - **Step indicator:** Three-step strip (Describe / Design & Refine / Export) — see Section 6

@@ -3,7 +3,7 @@ import AdminCard from '../AdminCard';
 import InsightLine from './InsightLine';
 
 const LEVEL_COLOURS: Record<number, string> = {
-  1: '#A8F0E0',
+  1: '#B2D8F7',
   2: '#C3D0F5',
   3: '#F7E8A4',
   4: '#F5B8A0',

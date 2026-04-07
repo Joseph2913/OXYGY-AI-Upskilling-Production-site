@@ -14,7 +14,7 @@ The **Prompt Playground** is the Level 1 toolkit tool at `/app/toolkit/prompt-pl
 4. **Output — Markdown view**: Shows the raw prompt ready to copy/paste into any AI tool
 5. **Refinement loop**: User can answer AI-generated refinement questions or add freeform context, then regenerate for an improved prompt
 
-**Level 1 accent colors:** `LEVEL_ACCENT = '#A8F0E0'` (mint), `LEVEL_ACCENT_DARK = '#1A6B5F'` (dark teal)
+**Level 1 accent colors:** `LEVEL_ACCENT = '#B2D8F7'` (mint), `LEVEL_ACCENT_DARK = '#2B6CB0'` (dark teal)
 
 ---
 
@@ -73,7 +73,7 @@ The old single-strategy highlight system (`activeHighlight` state + "highlighted
 
 ### 3.4 Unified Strategy Colors
 
-**Decision:** All strategy cards use a single `STRATEGY_COLOR = LEVEL_ACCENT` (#A8F0E0) instead of per-strategy colors. This follows TOOLKIT-PAGE-STANDARD.md §1.5 (level-themed accent colors). The `STRATEGY_ACCENT_COLORS` map in `data/playground-content.ts` is no longer imported.
+**Decision:** All strategy cards use a single `STRATEGY_COLOR = LEVEL_ACCENT` (#B2D8F7) instead of per-strategy colors. This follows TOOLKIT-PAGE-STANDARD.md §1.5 (level-themed accent colors). The `STRATEGY_ACCENT_COLORS` map in `data/playground-content.ts` is no longer imported.
 
 ### 3.5 Loading Progress Indicator
 
@@ -117,7 +117,7 @@ Below the main output, an `OutputActionsPanel` component (shared across toolkit 
 - Added loading progress indicator with staggered step animations
 
 ### Session 2 — Polish Round 1 (3 changes)
-1. **Unified strategy card colors** — Replaced per-strategy `STRATEGY_COLORS` map with single `STRATEGY_COLOR = LEVEL_ACCENT`. All strategy cards, educational cards, and highlight accents now use `#A8F0E0`.
+1. **Unified strategy card colors** — Replaced per-strategy `STRATEGY_COLORS` map with single `STRATEGY_COLOR = LEVEL_ACCENT`. All strategy cards, educational cards, and highlight accents now use `#B2D8F7`.
 2. **Fixed excerpt highlighting** — Replaced simple `indexOf` with `findExcerptRange()` fuzzy matching (4-level fallback). Also strengthened the backend system prompt to emphasize verbatim excerpts.
 3. **Merged layout** — Moved Cards/Markdown toggle to same row as Copy/Download/Save buttons using flex layout with spacer.
 

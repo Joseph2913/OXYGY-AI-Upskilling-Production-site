@@ -142,7 +142,7 @@ Always reference this PDF content when brainstorming or writing PRDs. The websit
 - **Soft Lavender:** `#C3D0F5` to `#B8C9F0` — colored feature cards
 - **Pale Yellow:** `#F7E8A4` to `#FBE8A6` — value cards, feature cards
 - **Soft Peach:** `#F5B8A0` to `#FBCEB1` — value cards
-- **Mint/Light Teal:** `#A8F0E0` to `#B2F5EA` — value cards, career card borders, light panels
+- **Mint/Light Teal:** `#B2D8F7` to `#B2F5EA` — value cards, career card borders, light panels
 - **Ice Blue background:** `#E6FFFA` to `#F0FFF4` — subtle content panel tint
 
 **Neutrals:**

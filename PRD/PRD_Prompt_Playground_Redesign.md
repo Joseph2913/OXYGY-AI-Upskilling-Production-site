@@ -84,7 +84,7 @@ The AI is not a search engine — it reasons. You can control how it reasons by 
 
 ### Strategy 3: Persona / Expert Role
 **Icon:** 🎭  
-**Colour tag:** Mint `#A8F0E0`
+**Colour tag:** Mint `#B2D8F7`
 
 **Definition:**  
 Assigns the AI a specific expert identity before the task. Not a generic instruction ("act as an expert") but a precise framing ("You are a senior L&D facilitator who specialises in executive education for sceptical audiences"). The persona anchors vocabulary, tone, assumed knowledge, and perspective for the entire response.
@@ -638,7 +638,7 @@ This tool is the experiential anchor for Level 1, Topic 2: Prompting Basics. It 
 |---|---|---|
 | Structured Blueprint | Soft Lavender | `#C3D0F5` |
 | Chain-of-Thought | Pale Yellow | `#FBE8A6` |
-| Persona / Expert Role | Mint | `#A8F0E0` |
+| Persona / Expert Role | Mint | `#B2D8F7` |
 | Output Format Specification | Teal | `#38B2AC` |
 | Constraint Framing | Soft Peach | `#FBCEB1` |
 | Few-Shot Examples | Ice Blue | `#E6FFFA` with `#38B2AC` border strip |

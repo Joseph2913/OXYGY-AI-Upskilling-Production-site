@@ -22,8 +22,8 @@ const AppCurrentLevel: React.FC = () => {
   const currentLevel = levelParam ? parseInt(levelParam, 10) : (userProfile?.currentLevel ?? 1);
 
   const levelMeta = LEVEL_META.find((l) => l.number === currentLevel);
-  const accentColor = levelMeta?.accentColor ?? '#A8F0E0';
-  const accentDark = levelMeta?.accentDark ?? '#1A6B5F';
+  const accentColor = levelMeta?.accentColor ?? '#B2D8F7';
+  const accentDark = levelMeta?.accentDark ?? '#2B6CB0';
   const levelName = levelMeta?.name ?? 'Fundamentals';
   const topics = LEVEL_TOPICS[currentLevel] || [];
 

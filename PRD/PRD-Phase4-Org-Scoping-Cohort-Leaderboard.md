@@ -543,7 +543,7 @@ export async function getOrgLeaderboard(
   userDaySets.forEach((days, userId) => activeDaysMap.set(userId, days.size));
 
   // AVATAR COLORS — rotate through a palette
-  const PALETTE = ['#A8F0E0', '#C3D0F5', '#F5B8A0', '#F7E8A4', '#38B2AC', '#E9D5FF', '#FED7AA', '#FECACA', '#D1FAE5', '#E0E7FF'];
+  const PALETTE = ['#B2D8F7', '#C3D0F5', '#F5B8A0', '#F7E8A4', '#38B2AC', '#E9D5FF', '#FED7AA', '#FECACA', '#D1FAE5', '#E0E7FF'];
 
   const scored: ScoredMember[] = userIds.map((userId, idx) => {
     const profile = profileMap.get(userId);

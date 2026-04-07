@@ -10,42 +10,65 @@ import { MarketingSite } from './MarketingSite';
 import { PromptPlayground } from './components/PromptPlayground';
 import { AgentBuilder } from './components/AgentBuilder';
 
-// Lazy-load app pages
-const AppDashboard = React.lazy(() => import('./pages/app/AppDashboard'));
-const AppJourney = React.lazy(() => import('./pages/app/AppJourney'));
-const AppProjectProof = React.lazy(() => import('./pages/app/AppProjectProof'));
-const AppCurrentLevel = React.lazy(() => import('./pages/app/AppCurrentLevel'));
-const AppToolkit = React.lazy(() => import('./pages/app/AppToolkit'));
-const AppArtefacts = React.lazy(() => import('./pages/app/AppArtefacts'));
-const AppCohort = React.lazy(() => import('./pages/app/AppCohort'));
-const PromptLibraryPage = React.lazy(() => import('./pages/app/AppPromptLibrary'));
-const AppPromptPlayground = React.lazy(() => import('./components/app/toolkit/AppPromptPlayground'));
-const AppAgentBuilder = React.lazy(() => import('./components/app/toolkit/AppAgentBuilder'));
-const AppWorkflowCanvas = React.lazy(() => import('./components/app/toolkit/AppWorkflowCanvas'));
-const AppDashboardDesigner = React.lazy(() => import('./components/app/toolkit/AppDashboardDesigner'));
-const AppAppEvaluator = React.lazy(() => import('./components/app/toolkit/AppAppEvaluator'));
-const AppLearningCoach = React.lazy(() => import('./components/app/toolkit/AppLearningCoach'));
-const BuildGuideView = React.lazy(() => import('./pages/app/BuildGuideView'));
+/**
+ * Wrapper around React.lazy that retries failed dynamic imports.
+ * Handles post-deploy chunk hash mismatches by retrying, then reloading.
+ */
+function lazyRetry<T extends React.ComponentType<unknown>>(
+  factory: () => Promise<{ default: T }>,
+  retries = 2,
+): React.LazyExoticComponent<T> {
+  return React.lazy(() =>
+    factory().catch((err) => {
+      if (retries > 0) {
+        return new Promise<{ default: T }>((resolve) => {
+          setTimeout(() => resolve(lazyRetry(factory, retries - 1) as unknown as { default: T }), 1000);
+        });
+      }
+      console.error('[lazyRetry] Chunk load failed after retries:', err);
+      window.location.reload();
+      return factory(); // never resolves — page reloads first
+    })
+  );
+}
 
-const AppAdmin = React.lazy(() => import('./pages/app/AppAdmin'));
-const JoinPage = React.lazy(() => import('./pages/app/JoinPage'));
-const AppJoinCode = React.lazy(() => import('./pages/app/AppJoinCode'));
-const OrgCheckGuard = React.lazy(() => import('./components/app/OrgCheckGuard'));
+// Lazy-load app pages
+const AppDashboard = lazyRetry(() => import('./pages/app/AppDashboard'));
+const AppJourney = lazyRetry(() => import('./pages/app/AppJourney'));
+const AppProjectProof = lazyRetry(() => import('./pages/app/AppProjectProof'));
+const AppCurrentLevel = lazyRetry(() => import('./pages/app/AppCurrentLevel'));
+const AppToolkit = lazyRetry(() => import('./pages/app/AppToolkit'));
+const AppArtefacts = lazyRetry(() => import('./pages/app/AppArtefacts'));
+const AppCohort = lazyRetry(() => import('./pages/app/AppCohort'));
+const PromptLibraryPage = lazyRetry(() => import('./pages/app/AppPromptLibrary'));
+const AppPromptPlayground = lazyRetry(() => import('./components/app/toolkit/AppPromptPlayground'));
+const AppAgentBuilder = lazyRetry(() => import('./components/app/toolkit/AppAgentBuilder'));
+const AppWorkflowCanvas = lazyRetry(() => import('./components/app/toolkit/AppWorkflowCanvas'));
+const AppDashboardDesigner = lazyRetry(() => import('./components/app/toolkit/AppDashboardDesigner'));
+const AppAppEvaluator = lazyRetry(() => import('./components/app/toolkit/AppAppEvaluator'));
+const AppLearningCoach = lazyRetry(() => import('./components/app/toolkit/AppLearningCoach'));
+const BuildGuideView = lazyRetry(() => import('./pages/app/BuildGuideView'));
+
+const AudioReview = lazyRetry(() => import('./pages/app/AudioReview'));
+const AppAdmin = lazyRetry(() => import('./pages/app/AppAdmin'));
+const JoinPage = lazyRetry(() => import('./pages/app/JoinPage'));
+const AppJoinCode = lazyRetry(() => import('./pages/app/AppJoinCode'));
+const OrgCheckGuard = lazyRetry(() => import('./components/app/OrgCheckGuard'));
 
 // Admin shell (PRD-10/11 — platform administration)
-const AdminAuthGuard = React.lazy(() => import('./components/admin/AdminAuthGuard'));
-const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
-const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminOrgList = React.lazy(() => import('./pages/admin/AdminOrgList'));
-const AdminOrgCreate = React.lazy(() => import('./pages/admin/AdminOrgCreate'));
-const AdminOrgDetail = React.lazy(() => import('./pages/admin/AdminOrgDetail'));
-const AdminOrgEdit = React.lazy(() => import('./pages/admin/AdminOrgEdit'));
-const AdminUsers = React.lazy(() => import('./pages/admin/AdminUsers'));
-const AdminContent = React.lazy(() => import('./pages/admin/AdminContent'));
-const AdminSettings = React.lazy(() => import('./pages/admin/AdminSettings'));
+const AdminAuthGuard = lazyRetry(() => import('./components/admin/AdminAuthGuard'));
+const AdminLayout = lazyRetry(() => import('./components/admin/AdminLayout'));
+const AdminDashboardPage = lazyRetry(() => import('./pages/admin/AdminDashboard'));
+const AdminOrgList = lazyRetry(() => import('./pages/admin/AdminOrgList'));
+const AdminOrgCreate = lazyRetry(() => import('./pages/admin/AdminOrgCreate'));
+const AdminOrgDetail = lazyRetry(() => import('./pages/admin/AdminOrgDetail'));
+const AdminOrgEdit = lazyRetry(() => import('./pages/admin/AdminOrgEdit'));
+const AdminUsers = lazyRetry(() => import('./pages/admin/AdminUsers'));
+const AdminContent = lazyRetry(() => import('./pages/admin/AdminContent'));
+const AdminSettings = lazyRetry(() => import('./pages/admin/AdminSettings'));
 
 // Login page (renders AuthModal as full-page view)
-const LoginPage = React.lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const LoginPage = lazyRetry(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
 
 function AppSuspense({ children }: { children: React.ReactNode }) {
   return (
@@ -184,6 +207,7 @@ function App() {
           <Route path="artefacts/:artefactId" element={<AppSuspense><AppArtefacts /></AppSuspense>} />
           <Route path="artefacts/:id/build-guide" element={<AppSuspense><BuildGuideView /></AppSuspense>} />
           <Route path="cohort" element={<AppSuspense><AppCohort /></AppSuspense>} />
+          <Route path="audio-review" element={<AppSuspense><AudioReview /></AppSuspense>} />
           <Route path="admin" element={<AppSuspense><AppAdmin /></AppSuspense>} />
 
         </Route>

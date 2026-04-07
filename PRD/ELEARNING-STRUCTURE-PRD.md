@@ -41,8 +41,8 @@ Each level entry requires:
   level: number,             // 1–5
   name: string,              // e.g. "AI Fundamentals & Awareness"
   tagline: string,           // short descriptor shown on level card
-  accentColor: string,       // e.g. "#A8F0E0" — mint for Level 1
-  accentDark: string,        // e.g. "#1A6B5F" — used for text on accent bg
+  accentColor: string,       // e.g. "#B2D8F7" — mint for Level 1
+  accentDark: string,        // e.g. "#2B6CB0" — used for text on accent bg
   topics: Topic[]
 }
 ```
@@ -151,6 +151,8 @@ overflow: hidden;
 | Base font sizes | base | base + 2–4px |
 
 **Nav bar layout — inline:** `[← Previous]` — `[dots · counter]` — `[⛶ fullscreen] [Next →]`
+
+**Slide 1 (courseIntro) exception:** On slide 1, the "← Previous" button is hidden and the "Start →" button is placed on the **left** of the nav bar. The centre controls stay centred; the right side is an empty spacer. On slide 2+, the standard layout resumes. The in-slide "Start →" button is not rendered — the nav bar button is the sole call to action.
 
 **Nav bar layout — fullscreen:** `[← Previous]` — `[dots · counter (centred)]` — `[Next →]`
 
@@ -376,7 +378,7 @@ Appears when Next is clicked on the last slide. Replaces the slide — does not 
 ```
 Outer card: border 1.5px solid #CBD5E0, borderRadius 16, boxShadow 0 4px 24px rgba(0,0,0,0.07)
 Accent line (top): 3px solid accentColor
-"REFLECT" badge: #E6FFFA bg, #1A6B5F text, uppercase, 10px
+"REFLECT" badge: #E6FFFA bg, #2B6CB0 text, uppercase, 10px
 Heading: "Before you move on" — 20px fontWeight 800
 Subtext: "Take 60 seconds. Two questions — no right answers." — 13px #718096
 ```
@@ -1050,7 +1052,7 @@ border: 1.5px solid {accentColor}55;
 border-radius: 10–12px;
 padding: 7–8px 14–16px;
 /* 👆 icon + instruction text */
-font-size: 13px bold, color: #1A6B5F;
+font-size: 13px bold, color: #2B6CB0;
 ```
 
 **After all items complete:**
@@ -1154,7 +1156,7 @@ const C = {
   teal:          "#38B2AC",
   tealDark:      "#2C9A94",
   tealLight:     "#E6FFFA",
-  mint:          "#A8F0E0",
+  mint:          "#B2D8F7",
   border:        "#E2E8F0",
   bg:            "#F7FAFC",
   body:          "#4A5568",

@@ -13,7 +13,7 @@ artifact page derive from these two values.
 
 | Level | Name | Accent Color | Dark Accent Color | Hash Route |
 |-------|------|-------------|-------------------|------------|
-| 1 | Fundamentals & Awareness | #A8F0E0 (Mint) | #2BA89C (Dark Mint) | `#playground` |
+| 1 | Fundamentals & Awareness | #B2D8F7 (Sky Blue) | #2BA89C (Dark Mint) | `#playground` |
 | 2 | Applied Capability | #C3D0F5 (Lavender) | #5B6DC2 (Dark Lavender) | `#agent-builder` |
 | 3 | Systemic Integration | #F7E8A4 (Pale Yellow) | #C4A934 (Dark Gold) | `#workflow-designer` |
 | 4 | Interactive Dashboards | #F5B8A0 (Soft Peach) | #D47B5A (Dark Peach) | `#dashboard-design` |

@@ -127,7 +127,7 @@ const LearningCoachChat: React.FC<LearningCoachChatProps> = ({
     };
 
     // Add topic selection prompt with "Other" option
-    const topics = LEVEL_OBJECTIVES[level] || [];
+    const topics = (LEVEL_OBJECTIVES[level] || []).map(t => t.label);
     const topicPrompt: DisplayMessage = {
       id: `topic-prompt-${Date.now()}`,
       role: 'assistant',

@@ -664,7 +664,7 @@ export const Hero: React.FC = () => {
             maxWidth: '1200px',
             margin: '0 auto',
             width: '100%',
-            padding: isMobile ? '100px 24px 48px' : '0 48px',
+            padding: isMobile ? '32px 24px 48px' : '0 48px',
           }}
         >
           {/* Left column — Text (~40%) */}

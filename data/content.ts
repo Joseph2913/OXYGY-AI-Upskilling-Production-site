@@ -20,7 +20,7 @@ export const LEVELS: LevelData[] = [
     id: 1,
     name: "Fundamentals & Awareness",
     tagline: "Build comfort, curiosity, and confidence",
-    accentColor: "#A8F0E0", // Mint
+    accentColor: "#B2D8F7", // Sky Blue
     darkAccentColor: "#2BA89C", // Dark Mint
     icon: Compass,
     descriptionCollapsed: "The starting point for any AI journey. Your teams learn what AI is, how it works, and where it fits into their daily work — building the foundations of confident, responsible AI use.",
@@ -253,7 +253,7 @@ export const DEPARTMENTS: DepartmentData[] = [
       "Personalized Outreach",
       "Win/Loss Analysis"
     ],
-    accentColor: "#A8F0E0", // mint
+    accentColor: "#B2D8F7", // sky blue
     iconName: "Target",
     link: "/departments/sales"
   },

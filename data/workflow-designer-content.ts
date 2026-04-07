@@ -17,7 +17,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
 
 // ─── Layer colors ──────────────────────────────────────────────────
 export const LAYER_COLORS = {
-  input:      { band: '#A8F0E0', dark: '#2BA89C', bg: 'rgba(168,240,224,0.2)', border: '#A8F0E0' },
+  input:      { band: '#B2D8F7', dark: '#2BA89C', bg: 'rgba(178,216,247,0.2)', border: '#B2D8F7' },
   processing: { band: '#C3D0F5', dark: '#5B6DC2', bg: 'rgba(195,208,245,0.2)', border: '#C3D0F5' },
   output:     { band: '#FBE8A6', dark: '#C4A934', bg: 'rgba(251,232,166,0.2)', border: '#FBE8A6' },
 } as const;

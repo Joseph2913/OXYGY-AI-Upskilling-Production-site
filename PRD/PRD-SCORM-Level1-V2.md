@@ -152,7 +152,7 @@ Define ALL of the following in `:root {}` in `course.css` before any component s
   --color-teal:           #38B2AC;
   --color-teal-dark:      #2C9A94;
   --color-teal-light:     #E6FFFA;
-  --color-mint:           #A8F0E0;
+  --color-mint:           #B2D8F7;
   --color-mint-dark:      #2BA89C;
 
   /* RCTF Element Colors — used consistently across all slides */

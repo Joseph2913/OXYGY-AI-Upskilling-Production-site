@@ -45,7 +45,7 @@ Each tool inherits the accent color of its level. This color is used **everywher
 
 | Level | Name | Accent | Accent Dark |
 |-------|------|--------|-------------|
-| 1 | Fundamentals & Awareness | `#A8F0E0` | `#1A6B5F` |
+| 1 | Fundamentals & Awareness | `#B2D8F7` | `#2B6CB0` |
 | 2 | Applied Capability | `#F7E8A4` | `#8A6A00` |
 | 3 | Systemic Integration | `#38B2AC` | `#1A7A76` |
 | 4 | Interactive Dashboards | `#F5B8A0` | `#8C3A1A` |
@@ -636,25 +636,35 @@ const toggleSection = (key: string) => {
 
 **Applies to:** Agent Builder (4 sections), App Designer (11 PRD sections), App Evaluator (4 sections). Prompt Playground and Workflow Canvas have different output structures — assess case by case.
 
-### 4.8 Next Step Banner
+### 4.8 Bottom Navigation Row — Project & Dashboard Links
 
-After output generates, a **Next Step Banner** appears immediately above the output sections (below the top action row). This single, prominent card tells the user the most important next action and eliminates decision paralysis.
+The bottom navigation row of every toolkit output card includes two right-aligned navigation links alongside the existing left-aligned action buttons (Back to Step N, Start Over).
 
-**Specifications:**
-- Background: `${LEVEL_ACCENT}15`
-- `borderLeft: 4px solid ${LEVEL_ACCENT_DARK}`
-- `borderRadius: 10`, `padding: 14px 18px`
-- Icon (Lucide) + bold headline (13px, 700) + one sentence body (13px, 400, `#4A5568`)
+**Layout:** `display: flex; justify-content: space-between` — left side has action buttons, right side has navigation links.
 
-**Per-page content:**
+**Right-side links (per page):**
 
-| Page | Banner Text |
-|------|-------------|
-| L1 Prompt Playground | "Copy your prompt and test it in your AI tool of choice. Come back and refine it based on what you learn." |
-| L2 Agent Builder | "Copy the Full System Prompt below and paste it into your AI platform. The sections below break down how it was built." |
-| L3 Workflow Canvas | "Download your Build Guide and follow the steps in your chosen platform. Use the test checklist to verify each step." |
-| L4 App Designer | "Copy the PRD and paste it into an AI coding tool (Cursor, Lovable, Bolt.new) to start building. The mockup above is your visual reference." |
-| L5 App Evaluator | "Review your Design Score, then use the Architecture and Implementation Plan sections to plan your build. Start with the highest-priority components." |
+| Page | Primary CTA (pill button) | Secondary link |
+|------|---------------------------|----------------|
+| L1 Prompt Playground | Continue to Level 1 Project → | Back to My Dashboard |
+| L2 Agent Builder | Continue to Level 2 Project → | Back to My Dashboard |
+| L3 Workflow Canvas | Continue to Level 3 Project → | Back to My Dashboard |
+| L4 Dashboard Designer | Continue to Level 4 Project → | Back to My Dashboard |
+| L5 App Evaluator | Continue to Level 5 Project → | Back to My Dashboard |
+
+**Primary CTA specs** (matches ActionBtn shape):
+- `<a>` tag linking to `/app/journey/project/{levelNumber}`
+- `background: LEVEL_ACCENT_DARK`, `color: #FFFFFF`, `border: none`, `borderRadius: 24`, `padding: 9px 18px`
+- `fontSize: 13`, `fontWeight: 600`, includes `<ArrowRight size={13} />` after label
+- Hover: `opacity: 0.85`
+
+**Secondary button specs** (matches ActionBtn outlined shape):
+- `<a>` tag linking to `/app/dashboard`
+- `background: #FFFFFF`, `color: #4A5568`, `border: 1px solid #E2E8F0`, `borderRadius: 24`, `padding: 9px 18px`
+- `fontSize: 13`, `fontWeight: 600`
+- Hover: `opacity: 0.85`
+
+The `NextStepBanner` component is no longer used on toolkit pages.
 
 ### 4.9 CollapsibleOutputCard Component
 
@@ -741,7 +751,7 @@ The AI sometimes returns excerpts with slightly different whitespace or casing t
 
 This ensures strategy highlighting works reliably even when the AI's excerpt isn't character-perfect.
 
-**Level accent:** `#A8F0E0` (light) / `#1A6B5F` (dark)
+**Level accent:** `#B2D8F7` (light) / `#2B6CB0` (dark)
 
 ### 5.2 Agent Builder (Level 2)
 

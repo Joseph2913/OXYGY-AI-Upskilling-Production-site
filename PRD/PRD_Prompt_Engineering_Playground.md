@@ -30,7 +30,7 @@ This is the core teaching framework underpinning the entire page. Every output v
 | 1 | **Role** | Who the AI should act as — the expertise, perspective, or persona it should adopt | Soft Lavender | `#C3D0F5` |
 | 2 | **Context** | The background, situation, constraints, and relevant details the AI needs to understand | Pale Yellow | `#FBE8A6` |
 | 3 | **Task** | The specific instruction — what exactly the AI should produce or do | Oxygy Teal | `#38B2AC` |
-| 4 | **Format & Structure** | How the output should be organized — length, layout, tone, structure | Mint | `#A8F0E0` |
+| 4 | **Format & Structure** | How the output should be organized — length, layout, tone, structure | Mint | `#B2D8F7` |
 | 5 | **Steps & Process** | Explicit reasoning steps, sequence, or methodology the AI should follow | Soft Peach | `#FBCEB1` |
 | 6 | **Quality Checks** | Validation rules, constraints, things to avoid, accuracy requirements | Ice Blue | `#E6FFFA` |
 
@@ -217,7 +217,7 @@ Each step follows an identical layout structure:
 
 ---
 
-**Step 4 — Format & Structure** (maps to Mint `#A8F0E0`)
+**Step 4 — Format & Structure** (maps to Mint `#B2D8F7`)
 
 - Question: `"How should the output be structured?"`
 - Helper text: `"Select any that apply, or describe your preferred format"`
@@ -233,7 +233,7 @@ Each step follows an identical layout structure:
   - `Executive summary`
 - Chip styling:
   - Default: `background: #F7FAFC`, `border: 1px solid #E2E8F0`, `border-radius: 20px`, padding `6px 14px`, font 13px `#4A5568`
-  - Selected: `background: #A8F0E0`, `border-color: #38B2AC`, `color: #1A202C`, font-weight 600
+  - Selected: `background: #B2D8F7`, `border-color: #38B2AC`, `color: #1A202C`, font-weight 600
   - On hover (unselected): `border-color: #38B2AC`
 - Below chips: Small textarea (1–2 lines) with placeholder: `"Any other formatting preferences? e.g., Keep it under 300 words, use professional tone..."`
 

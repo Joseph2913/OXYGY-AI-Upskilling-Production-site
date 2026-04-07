@@ -11,7 +11,7 @@ export const PERSONAS: PersonaCardData[] = [
     },
     back: {
       pathway: [
-        { level: 'L1', depth: 'full', color: '#A8F0E0' },
+        { level: 'L1', depth: 'full', color: '#B2D8F7' },
         { level: 'L2', depth: 'awareness', color: '#C3D0F5' },
         { level: 'L3', depth: 'skip', color: '#F7E8A4' },
         { level: 'L4', depth: 'skip', color: '#F5B8A0' },
@@ -25,14 +25,14 @@ export const PERSONAS: PersonaCardData[] = [
   {
     id: 2,
     title: 'The Everyday User',
-    accentColor: '#A8F0E0',
+    accentColor: '#B2D8F7',
     front: {
       whereIAm: "I use ChatGPT regularly for drafting and brainstorming \u2014 it saves me time every day. But I know I\u2019m barely scratching the surface of what\u2019s possible.",
       whereImGoing: "I want to move beyond basic prompting and start building tools my team can actually reuse without needing me.",
     },
     back: {
       pathway: [
-        { level: 'L1', depth: 'fast-track', color: '#A8F0E0' },
+        { level: 'L1', depth: 'fast-track', color: '#B2D8F7' },
         { level: 'L2', depth: 'full', color: '#C3D0F5' },
         { level: 'L3', depth: 'awareness', color: '#F7E8A4' },
         { level: 'L4', depth: 'skip', color: '#F5B8A0' },
@@ -53,7 +53,7 @@ export const PERSONAS: PersonaCardData[] = [
     },
     back: {
       pathway: [
-        { level: 'L1', depth: 'full', color: '#A8F0E0' },
+        { level: 'L1', depth: 'full', color: '#B2D8F7' },
         { level: 'L2', depth: 'full', color: '#C3D0F5' },
         { level: 'L3', depth: 'awareness', color: '#F7E8A4' },
         { level: 'L4', depth: 'skip', color: '#F5B8A0' },
@@ -74,7 +74,7 @@ export const PERSONAS: PersonaCardData[] = [
     },
     back: {
       pathway: [
-        { level: 'L1', depth: 'skip', color: '#A8F0E0' },
+        { level: 'L1', depth: 'skip', color: '#B2D8F7' },
         { level: 'L2', depth: 'fast-track', color: '#C3D0F5' },
         { level: 'L3', depth: 'full', color: '#F7E8A4' },
         { level: 'L4', depth: 'awareness', color: '#F5B8A0' },
@@ -95,7 +95,7 @@ export const PERSONAS: PersonaCardData[] = [
     },
     back: {
       pathway: [
-        { level: 'L1', depth: 'skip', color: '#A8F0E0' },
+        { level: 'L1', depth: 'skip', color: '#B2D8F7' },
         { level: 'L2', depth: 'fast-track', color: '#C3D0F5' },
         { level: 'L3', depth: 'full', color: '#F7E8A4' },
         { level: 'L4', depth: 'full', color: '#F5B8A0' },
@@ -116,7 +116,7 @@ export const PERSONAS: PersonaCardData[] = [
     },
     back: {
       pathway: [
-        { level: 'L1', depth: 'skip', color: '#A8F0E0' },
+        { level: 'L1', depth: 'skip', color: '#B2D8F7' },
         { level: 'L2', depth: 'skip', color: '#C3D0F5' },
         { level: 'L3', depth: 'fast-track', color: '#F7E8A4' },
         { level: 'L4', depth: 'full', color: '#F5B8A0' },

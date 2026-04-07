@@ -459,11 +459,6 @@ export const CaseStudiesPage: React.FC = () => {
             border: '1.5px solid #38B2AC',
           }}
         >
-          <div className="absolute top-3 left-4 flex gap-1.5">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#2C9A94', opacity: 0.4 }} />
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#B2F5EA', opacity: 0.6 }} />
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#2C9A94', opacity: 0.3 }} />
-          </div>
           <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: '#2C9A94' }}>
             Did you know?
           </p>

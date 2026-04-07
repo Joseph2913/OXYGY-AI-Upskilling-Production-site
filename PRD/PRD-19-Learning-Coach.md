@@ -2,7 +2,7 @@
 
 **Status:** Ready for implementation  
 **Level:** 1 (Fundamentals & Awareness)  
-**Level Accent:** `#A8F0E0` / `#1A6B5F`  
+**Level Accent:** `#B2D8F7` / `#2B6CB0`  
 **Route:** `/app/toolkit/learning-coach`  
 **File location:** `components/app/toolkit/AppLearningCoach.tsx`
 
@@ -54,7 +54,7 @@ Follows the standard `ToolOverview` component pattern.
 **Outcome bar:**
 > "A personalised learning guide — a ready-to-use prompt and platform-specific instructions — tailored to your gap, your learning style, and your chosen AI tool."
 
-Step badges use `LEVEL_ACCENT` (`#A8F0E0`) / `LEVEL_ACCENT_DARK` (`#1A6B5F`).
+Step badges use `LEVEL_ACCENT` (`#B2D8F7`) / `LEVEL_ACCENT_DARK` (`#2B6CB0`).
 
 ---
 
@@ -73,7 +73,7 @@ A single auto-growing textarea. No other fields.
 - Placeholder: `"e.g. I understand what prompting is but I don't know how to structure prompts that get consistent results. I keep getting vague or off-topic responses."`
 - `fontSize: 14`, `color: #1A202C`, `lineHeight: 1.7`
 - `border: 1px solid #E2E8F0`, `borderRadius: 12`, `padding: 14px 16px`
-- Focus: `border-color: #A8F0E0`, `outline: none`, `box-shadow: 0 0 0 3px rgba(168,240,224,0.2)`
+- Focus: `border-color: #B2D8F7`, `outline: none`, `box-shadow: 0 0 0 3px rgba(168,240,224,0.2)`
 
 **Example chips** (below the textarea, labelled "Try an example:"):
 - `"I keep forgetting when to use few-shot prompting vs chain-of-thought"`
@@ -82,7 +82,7 @@ A single auto-growing textarea. No other fields.
 - `"I'm unsure how to structure a workflow when multiple AI steps are involved"`
 - `"I understand the concepts but can't translate them into prompts that actually work"`
 
-Chips follow standard spec: `background: #F7FAFC`, `border: 1px solid #E2E8F0`, `borderRadius: 20px`, `padding: 6px 14px`, `fontSize: 12`, `color: #4A5568`. Hover: `background: #A8F0E020`, `borderColor: #A8F0E0`, `color: #1A6B5F`.
+Chips follow standard spec: `background: #F7FAFC`, `border: 1px solid #E2E8F0`, `borderRadius: 20px`, `padding: 6px 14px`, `fontSize: 12`, `color: #4A5568`. Hover: `background: #B2D8F720`, `borderColor: #B2D8F7`, `color: #2B6CB0`.
 
 **Validation:** If the user clicks "Continue" with an empty or <20-character input, flash a red border on the textarea for 600ms and show inline error text: `"Please describe your gap in a bit more detail — the more specific, the better your guide."`
 
@@ -115,8 +115,8 @@ Six method cards in a 2×3 grid. Single-select.
 **Card spec (each method card):**
 - `padding: 16px 18px`, `borderRadius: 12`, `border: 1px solid #E2E8F0`
 - Default: `background: #FFFFFF`
-- Selected: `background: #A8F0E020`, `border: 1.5px solid #A8F0E0`
-- Icon: 32px circle, `background: #F7FAFC` (default) / `#A8F0E040` (selected), geometric unicode character at 16px in `#1A6B5F`
+- Selected: `background: #B2D8F720`, `border: 1.5px solid #B2D8F7`
+- Icon: 32px circle, `background: #F7FAFC` (default) / `#B2D8F740` (selected), geometric unicode character at 16px in `#2B6CB0`
 - Label: `fontSize: 14`, `fontWeight: 700`, `color: #1A202C`, `marginBottom: 4`
 - Description: `fontSize: 12`, `color: #718096`, `lineHeight: 1.55`
 - Hover (unselected): `background: #F7FAFC`, `border-color: #CBD5E0`
@@ -148,10 +148,10 @@ Six platform tiles in a 2×3 grid. Single-select.
 | `gemini` | Gemini / AI Studio | Prompting sandbox | `/logos/brands/gemini.svg` |
 | `youtube` | YouTube | Optimised search queries | `/logos/brands/youtube.svg` |
 
-**Tile spec:** Identical to the existing `PlatformSelector` card pattern in `components/app/workflow/PlatformSelector.tsx`, but using Level 1 accent colours for selected state (`background: #A8F0E020`, `border: 1.5px solid #A8F0E0`).
+**Tile spec:** Identical to the existing `PlatformSelector` card pattern in `components/app/workflow/PlatformSelector.tsx`, but using Level 1 accent colours for selected state (`background: #B2D8F720`, `border: 1.5px solid #B2D8F7`).
 
 **Platform capability badges** (shown below each tile's sub-label, only on the selected tile):
-A one-line contextual note in `#1A6B5F` at `fontSize: 11` confirming what the guide will focus on:
+A one-line contextual note in `#2B6CB0` at `fontSize: 11` confirming what the guide will focus on:
 - NotebookLM: `"Guide focuses on: Deep Research → output format"`
 - Claude: `"Guide focuses on: Visualiser prompts + concept maps"`
 - ChatGPT: `"Guide focuses on: Canvas collaborative build"`
@@ -197,7 +197,7 @@ Steps (tool-specific labels, ~5 steps, standard timing pattern):
 **Output layout — two sections:**
 
 **Section A: Your Deep Research Prompt**
-- Eyebrow: `"STEP 1 — DEEP RESEARCH PROMPT"` in `#1A6B5F`
+- Eyebrow: `"STEP 1 — DEEP RESEARCH PROMPT"` in `#2B6CB0`
 - Description text (13px, #718096): `"Paste this into NotebookLM's Deep Research field. It will search the web for sources on your gap and produce a structured, source-backed report."`
 - Prompt box (standard prompt-box style, teal left border): The generated Deep Research prompt
 - Copy button (right-aligned above the box): `"Copy Prompt"` — copies prompt text only
@@ -236,7 +236,7 @@ Numbered list (1–5) of exact steps to follow in the NotebookLM interface. Refe
   - `"Can you add examples to each part of the diagram?"`
   - `"Show me a simpler version — just the core concept"`
   - `"What's the most common mistake people make with this?"`
-  - Each chip: bordered pill, click to copy, `fontSize: 12`, `color: #1A6B5F`
+  - Each chip: bordered pill, click to copy, `fontSize: 12`, `color: #2B6CB0`
 - Feature note card (light bg, `#F7FAFC`, `borderRadius: 10`, `padding: 14px 16px`):
   - Icon + `"About the Visualiser"` label
   - `"Claude's Visualiser renders inline interactive diagrams directly in the conversation — not images, but explorable SVGs you can examine and ask questions about. It's available on all Claude plans."`
@@ -321,7 +321,7 @@ Numbered list (1–5) of exact steps to follow in the NotebookLM interface. Refe
   - **Experiment 1:** "Run this prompt as-is and read the output"
   - **Experiment 2:** "Change the temperature from 0.5 to 1.0 and run again. Notice how the output changes."
   - **Experiment 3:** "Edit the System Instructions to remove one section, then run again. What's missing?"
-  - Each card: light `#F7FAFC` background, `borderLeft: 3px solid #A8F0E0`, numbered badge, short description
+  - Each card: light `#F7FAFC` background, `borderLeft: 3px solid #B2D8F7`, numbered badge, short description
 
 **Step-by-step instructions:** "Go to aistudio.google.com → Create new prompt → Set type to 'Chat' → Paste the prompt text into the System Instructions field → Add your test message in the user turn → Click Run."
 
@@ -706,6 +706,6 @@ function findCuratedMatches(gap: string, learningMethod: string): CuratedVideo[]
 5. **AI Studio "userTurnMessage"** — this extra field from the Gemini platform path is not part of the standard `LearningGuideResult` interface. Add it as an optional field: `userTurnMessage?: string`.
 6. **Curated video database** — start with a manually curated set of 20-30 videos in `data/learningCoachVideos.ts`. Topic IDs should map to the same topic identifier system used in `data/levelTopics.ts`.
 7. **Tool usage tracking** — call `upsertToolUsed(user.id, 1)` when the learner generates their first guide in a session.
-8. **Focus Mode badge for Perplexity** — the `focusMode` field from the API response drives which badge is shown below the platform selection confirmation and in the instructions. Map: `"Academic"` → badge `#C3D0F5`, `"Writing"` → badge `#A8F0E0`, `"YouTube"` → badge `#F5B8A0`.
+8. **Focus Mode badge for Perplexity** — the `focusMode` field from the API response drives which badge is shown below the platform selection confirmation and in the instructions. Map: `"Academic"` → badge `#C3D0F5`, `"Writing"` → badge `#B2D8F7`, `"YouTube"` → badge `#F5B8A0`.
 9. **YouTube platform — prompt field is empty** — the standard "Copy Guide" action for YouTube should copy the three search queries formatted as plain text, not an empty string. Build a `buildYouTubeGuide()` function that composes the three queries + watchGuidance into a clean copyable format.
 10. **Error handling** — if the API call fails, display the error within the Step 4 card (not as a toast). Provide a "Try again" button that retries the same request.

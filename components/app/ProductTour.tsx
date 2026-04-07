@@ -237,7 +237,7 @@ const DashboardIllustration: React.FC = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <span style={{ ...illLabel, color: '#38B2AC', fontSize: 8 }}>Overall</span>
       <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)' }}>
-        <div style={{ width: '35%', height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #38B2AC, #A8F0E0)' }} />
+        <div style={{ width: '35%', height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #38B2AC, #B2D8F7)' }} />
       </div>
       <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>35%</span>
     </div>
@@ -417,7 +417,7 @@ const ArtefactsIllustration: React.FC = () => {
     { color: '#5B6DC2', type: 'Agent',      name: 'Weekly report assistant' },
     { color: '#C4A934', type: 'Workflow',   name: 'Client onboarding flow' },
     { color: '#D97B4A', type: 'Build Guide',name: 'AI adoption roadmap' },
-    { color: '#A8F0E0', type: 'PRD',        name: 'Product requirements doc' },
+    { color: '#B2D8F7', type: 'PRD',        name: 'Product requirements doc' },
     { color: '#FBCEB1', type: 'App Spec',   name: 'Internal tool evaluation' },
     { color: '#C3D0F5', type: 'Project',    name: 'Level 1 — Prompt Engineering' },
   ];
@@ -787,7 +787,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
         `}</style>
         <div role="dialog" aria-label="Product tour welcome" style={cardStyle}>
           {/* Accent bar */}
-          <div style={{ height: 3, background: 'linear-gradient(90deg, #38B2AC, #A8F0E0)' }} />
+          <div style={{ height: 3, background: 'linear-gradient(90deg, #38B2AC, #B2D8F7)' }} />
 
           <div style={{ padding: '14px 16px 12px' }}>
             {/* Icon */}
@@ -917,7 +917,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ onComplete }) => {
       {/* Tour Card */}
       <div ref={cardRef} role="dialog" aria-label="Product tour" key={animKey} style={cardStyle}>
         {/* Accent bar */}
-        <div style={{ height: 3, flexShrink: 0, background: 'linear-gradient(90deg, #38B2AC, #A8F0E0)' }} />
+        <div style={{ height: 3, flexShrink: 0, background: 'linear-gradient(90deg, #38B2AC, #B2D8F7)' }} />
 
         {/* Progress dots + Skip — pinned top */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', flexShrink: 0 }}>

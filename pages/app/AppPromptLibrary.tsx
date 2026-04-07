@@ -35,7 +35,7 @@ const AppPromptLibrary: React.FC = () => {
       }}>
         <div style={{
           width: 48, height: 48, borderRadius: 12,
-          background: '#A8F0E055',
+          background: '#B2D8F755',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 24,
         }}>
@@ -62,10 +62,10 @@ const AppPromptLibrary: React.FC = () => {
       }}>
         <div style={{
           width: 64, height: 64, borderRadius: 16,
-          background: '#A8F0E022', margin: '0 auto 16px',
+          background: '#B2D8F722', margin: '0 auto 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Library size={28} color="#1A6B5F" />
+          <Library size={28} color="#2B6CB0" />
         </div>
         <h2 style={{
           fontSize: 18, fontWeight: 700, color: '#1A202C', margin: 0, marginBottom: 8,
@@ -81,7 +81,7 @@ const AppPromptLibrary: React.FC = () => {
         <button
           onClick={() => navigate('/app/toolkit/prompt-playground')}
           style={{
-            background: '#A8F0E0', color: '#1A6B5F', border: 'none',
+            background: '#B2D8F7', color: '#2B6CB0', border: 'none',
             borderRadius: 24, padding: '10px 22px',
             fontSize: 13, fontWeight: 700, cursor: 'pointer',
             transition: 'opacity 0.15s',

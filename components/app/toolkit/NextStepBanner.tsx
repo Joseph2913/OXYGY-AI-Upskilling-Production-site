@@ -9,6 +9,8 @@ interface NextStepBannerProps {
   text: string;
   title?: string;
   visible?: boolean;
+  primaryCta?: { label: string; href: string };
+  secondaryCta?: { label: string; href: string };
 }
 
 const NextStepBanner: React.FC<NextStepBannerProps> = ({
@@ -17,6 +19,8 @@ const NextStepBanner: React.FC<NextStepBannerProps> = ({
   text,
   title = "What's next",
   visible = true,
+  primaryCta,
+  secondaryCta,
 }) => (
   <div
     style={{
@@ -27,6 +31,7 @@ const NextStepBanner: React.FC<NextStepBannerProps> = ({
       display: 'flex',
       alignItems: 'flex-start',
       gap: 12,
+      marginTop: 20,
       marginBottom: 16,
       opacity: visible ? 1 : 0,
       transform: visible ? 'translateY(0)' : 'translateY(8px)',
@@ -57,6 +62,45 @@ const NextStepBanner: React.FC<NextStepBannerProps> = ({
       >
         {text}
       </div>
+      {(primaryCta || secondaryCta) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
+          flexWrap: 'wrap',
+        }}>
+          {primaryCta && (
+            <a
+              href={primaryCta.href}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: accentDark, color: '#FFFFFF',
+                borderRadius: 20, padding: '7px 18px',
+                fontSize: 12, fontWeight: 700,
+                textDecoration: 'none', fontFamily: FONT,
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              {primaryCta.label} <ArrowRight size={12} />
+            </a>
+          )}
+          {secondaryCta && (
+            <a
+              href={secondaryCta.href}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                color: accentDark, fontSize: 12, fontWeight: 600,
+                textDecoration: 'none', fontFamily: FONT,
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              {secondaryCta.label}
+            </a>
+          )}
+        </div>
+      )}
     </div>
   </div>
 );

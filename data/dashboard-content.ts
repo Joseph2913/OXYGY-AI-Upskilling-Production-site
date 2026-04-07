@@ -106,7 +106,7 @@ export const IMPACT_TOOLTIP_TEXT =
 // ─── Level Accent Colors ───
 
 export const LEVEL_ACCENTS: Record<number, { light: string; dark: string }> = {
-  1: { light: '#A8F0E0', dark: '#2BA89C' },
+  1: { light: '#B2D8F7', dark: '#2BA89C' },
   2: { light: '#C3D0F5', dark: '#5B6DC2' },
   3: { light: '#F7E8A4', dark: '#C4A934' },
   4: { light: '#F5B8A0', dark: '#D47B5A' },
@@ -116,7 +116,7 @@ export const LEVEL_ACCENTS: Record<number, { light: string; dark: string }> = {
 // ─── Level Tag Pill Styles ───
 
 export const LEVEL_PILL_STYLES: Record<number, LevelPillStyle> = {
-  1: { bg: '#A8F0E0', text: '#1A202C' },
+  1: { bg: '#B2D8F7', text: '#1A202C' },
   2: { bg: '#C3D0F5', text: '#1A202C' },
   3: { bg: '#F7E8A4', text: '#1A202C' },
   4: { bg: '#F5B8A0', text: '#1A202C' },

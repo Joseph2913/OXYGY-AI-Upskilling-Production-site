@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import type { Organisation } from '../../types';
 
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  foundation: { bg: '#E6FFFA', text: '#1A6B5F', label: 'Foundation' },
+  foundation: { bg: '#E6FFFA', text: '#2B6CB0', label: 'Foundation' },
   accelerator: { bg: '#EBF4FF', text: '#2B6CB0', label: 'Accelerator' },
   catalyst: { bg: '#FAF5FF', text: '#6B46C1', label: 'Catalyst' },
 };

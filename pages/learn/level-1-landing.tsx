@@ -21,14 +21,14 @@ const FontStyle = () => (
 /* ── Brand Tokens ── */
 const C = {
   navy: "#1A202C", navyMid: "#2D3748", teal: "#38B2AC", tealDark: "#2C9A94",
-  tealLight: "#E6FFFA", mint: "#A8F0E0", border: "#E2E8F0", bg: "#F7FAFC",
+  tealLight: "#E6FFFA", mint: "#B2D8F7", border: "#E2E8F0", bg: "#F7FAFC",
   body: "#4A5568", light: "#718096", muted: "#A0AEC0",
 };
 const F = { h: "'DM Sans', system-ui, sans-serif", b: "'Plus Jakarta Sans', system-ui, sans-serif" };
 
 /* ── Level Accent Colors ── */
 const LC: Record<number, { accent: string; dark: string; light: string }> = {
-  1: { accent: "#A8F0E0", dark: "#2C9A94", light: "#E6FFFA" },
+  1: { accent: "#B2D8F7", dark: "#2C9A94", light: "#E6FFFA" },
   2: { accent: "#C3D0F5", dark: "#5B6DC2", light: "#EBF4FF" },
   3: { accent: "#F7E8A4", dark: "#C4A934", light: "#FFFBEB" },
   4: { accent: "#F5B8A0", dark: "#D47B5A", light: "#FFF5F0" },

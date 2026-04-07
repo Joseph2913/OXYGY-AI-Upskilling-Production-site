@@ -520,7 +520,7 @@ const ORG_ROLE_STYLES = {
 const PLATFORM_ROLE_STYLES = {
   learner:      { bg: '#EDF2F7', text: '#4A5568' },
   client_admin: { bg: '#FAF5FF', text: '#6B46C1' },
-  oxygy_admin:  { bg: '#E6FFFA', text: '#1A6B5F' },
+  oxygy_admin:  { bg: '#E6FFFA', text: '#2B6CB0' },
   super_admin:  { bg: '#FED7D7', text: '#9B2C2C' },
 };
 ```

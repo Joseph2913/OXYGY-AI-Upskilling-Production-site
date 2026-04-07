@@ -111,7 +111,7 @@ export const LEVEL_SHORT_NAMES: Record<number, string> = {
 };
 
 export const LEVEL_ACCENT_COLORS: Record<number, string> = {
-  1: "#A8F0E0",
+  1: "#B2D8F7",
   2: "#F7E8A4",
   3: "#38B2AC",
   4: "#F5B8A0",
@@ -119,7 +119,7 @@ export const LEVEL_ACCENT_COLORS: Record<number, string> = {
 };
 
 export const LEVEL_ACCENT_DARK_COLORS: Record<number, string> = {
-  1: "#1A6B5F",
+  1: "#2B6CB0",
   2: "#8A6A00",
   3: "#1A7A76",
   4: "#8C3A1A",
@@ -141,8 +141,8 @@ export const LEVEL_META: LevelMeta[] = [
     name: "AI Fundamentals & Awareness",
     shortName: "Fundamentals",
     tagline: "Build comfort and curiosity with AI. Learn how large language models work, how to prompt them well, and how to apply them to everyday work — responsibly.",
-    accentColor: "#A8F0E0",
-    accentDark: "#1A6B5F",
+    accentColor: "#B2D8F7",
+    accentDark: "#2B6CB0",
   },
   {
     number: 2,

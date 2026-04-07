@@ -21,7 +21,7 @@ Interactive multi-section website for Oxygy's AI Centre of Excellence. Showcases
 - Lavender: #C3D0F5 to #B8C9F0
 - Pale Yellow: #F7E8A4 to #FBE8A6
 - Soft Peach: #F5B8A0 to #FBCEB1
-- Mint: #A8F0E0 to #B2F5EA
+- Sky Blue: #B2D8F7 to #B2F5EA
 - Ice Blue bg: #E6FFFA to #F0FFF4
 - White: #FFFFFF (dominant bg)
 - Light Gray: #F7FAFC to #EDF2F7 (alt section bg)
@@ -80,6 +80,19 @@ The required workflow is:
 5. **Only after the user says to push**, run `git push origin main`
 
 If the user has not reviewed the localhost and explicitly approved the push, **do not push under any circumstances** — even if previous instructions say to push automatically. This rule takes absolute priority.
+
+### STRICT RULE — NEVER LEAVE FILES UNCOMMITTED ACROSS SESSIONS
+
+**Every change MUST be committed before or alongside a push.** Uncommitted files are invisible to GitHub Actions and will be overwritten on the next CI/CD deploy. This has caused real regressions where deployed features disappeared.
+
+**Rules:**
+1. **Before every `git push`**, run `git status` and check for modified files. If ANY source files are modified but not staged, they MUST be committed first — either in the same commit or a separate one.
+2. **Never end a session with uncommitted code changes.** If work is done for the day and there are modified files, commit them (even as a WIP commit) before closing.
+3. **Never deploy locally (`npx firebase-tools deploy`) as the primary deploy method.** Always push to `main` and let GitHub Actions handle the deploy. Local deploys get overwritten by GA within minutes.
+4. **The ONLY deployment path is:** commit → push to `main` → GitHub Actions deploys automatically. No exceptions.
+5. After pushing, spot-check that the GA workflow succeeds in the GitHub Actions tab.
+
+**Why this matters:** GitHub Actions triggers on every push to `main` and builds from committed code only. Any file that exists locally but isn't committed will be missing from the GA build, causing the deploy to silently roll back those changes. This is invisible until someone notices features have disappeared.
 
 If a task involves multiple related changes, commit them together as one logical unit. If a task involves unrelated changes, use separate commits.
 

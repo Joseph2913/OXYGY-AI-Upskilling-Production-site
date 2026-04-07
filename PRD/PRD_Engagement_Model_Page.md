@@ -29,7 +29,7 @@ Read these rules before writing a single line of code. Violations of these rules
 --color-lavender: #C3D0F5
 --color-yellow: #F7E8A4
 --color-peach: #F5B8A0
---color-mint: #A8F0E0
+--color-mint: #B2D8F7
 --color-ice-blue-bg: #E6FFFA
 --color-white: #FFFFFF
 --color-light-gray: #F7FAFC
