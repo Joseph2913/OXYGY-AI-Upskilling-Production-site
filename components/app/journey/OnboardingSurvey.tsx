@@ -701,7 +701,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
-              Go to My Journey <ArrowRight size={16} />
+              Go to My Dashboard <ArrowRight size={16} />
             </button>
           </div>
         </div>

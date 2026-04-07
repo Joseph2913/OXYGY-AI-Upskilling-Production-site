@@ -339,6 +339,9 @@ const AppJourney: React.FC = () => {
       );
     }
 
+    // Clear any stale tour flag so a fresh onboarding always offers the tour
+    localStorage.removeItem('oxygy_tour_completed');
+
     // Fade out then redirect to dashboard
     setTransitioning(true);
     setTimeout(() => {
