@@ -754,10 +754,12 @@ const AppWorkspace: React.FC = () => {
       if (data.intent === 'tool' && data.toolId) {
         // Route to the guided toolkit flow
         setChatMode({ active: true, toolId: data.toolId, prompt: text });
+      } else if (data.intent === 'ambiguous' && data.followUpQuestion) {
+        // Ambiguous — show the clarifying question
+        setChatMode({ active: true, toolId: 'general', prompt: text, initialReply: data.followUpQuestion });
       } else {
-        // General or ambiguous — enter general chat
-        const initialReply = data.reply || data.followUpQuestion || undefined;
-        setChatMode({ active: true, toolId: 'general', prompt: text, initialReply });
+        // General — let the assistant generate a proper reply with full user context
+        setChatMode({ active: true, toolId: 'general', prompt: text });
       }
     } catch {
       // Fallback: enter general chat
