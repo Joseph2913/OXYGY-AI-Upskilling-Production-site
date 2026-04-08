@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, ArrowRight, ChevronLeft, Loader2, FolderOpen, Sparkles } from 'lucide-react';
+import { Send, ArrowRight, ChevronLeft, Loader2, FolderOpen, Sparkles, RotateCcw } from 'lucide-react';
 import { TOOL_ICON_MAP } from './ToolIcons';
 import { ALL_TOOLS, PRIMARY_TOOL_IDS } from '../../../data/toolkitData';
 import {
@@ -473,6 +473,31 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
             {headerLabel}
           </span>
         </div>
+
+        {/* Restart button — top right */}
+        <button
+          onClick={onBack}
+          style={{
+            marginLeft: 'auto',
+            display: 'flex', alignItems: 'center', gap: 6,
+            border: '1px solid #E2E8F0', background: '#FFFFFF',
+            borderRadius: 8, padding: '6px 12px',
+            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+            fontSize: 13, fontWeight: 500, color: '#718096',
+            transition: 'all 0.12s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#38B2AC';
+            e.currentTarget.style.color = '#1A202C';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#E2E8F0';
+            e.currentTarget.style.color = '#718096';
+          }}
+        >
+          <RotateCcw size={14} />
+          New chat
+        </button>
       </div>
 
       {/* ── Messages area ── */}
@@ -499,13 +524,48 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
                   lineHeight: 1.6,
                   whiteSpace: 'pre-wrap',
                 }}>
-                  {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
-                    part.startsWith('**') && part.endsWith('**')
-                      ? <strong key={j}>{part.slice(2, -2)}</strong>
-                      : <span key={j}>{part}</span>
-                  )}
+                  {/* Render content with bold markdown + inline tool CTAs */}
+                  {(() => {
+                    // Extract [TOOL_CTA:name:route] tags
+                    const ctaMatch = msg.content.match(/\[TOOL_CTA:([^:]+):([^\]]+)\]/);
+                    const cleanContent = msg.content.replace(/\[TOOL_CTA:[^\]]+\]/g, '').trim();
+                    const toolLabel = ctaMatch ? ctaMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : null;
+                    const toolRoute = ctaMatch ? ctaMatch[2] : null;
 
-                  {msg.toolCta && (
+                    return (
+                      <>
+                        {cleanContent.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
+                          part.startsWith('**') && part.endsWith('**')
+                            ? <strong key={j}>{part.slice(2, -2)}</strong>
+                            : <span key={j}>{part}</span>
+                        )}
+                        {toolRoute && (
+                          <div style={{ marginTop: 14 }}>
+                            <button
+                              className="ws-cta-btn"
+                              onClick={() => navigate(toolRoute)}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8,
+                                padding: '10px 20px',
+                                borderRadius: 24,
+                                border: 'none',
+                                background: '#38B2AC',
+                                color: '#FFFFFF',
+                                fontSize: 14, fontWeight: 600,
+                                fontFamily: "'DM Sans', sans-serif",
+                                cursor: 'pointer',
+                                transition: 'filter 0.15s, transform 0.15s',
+                              }}
+                            >
+                              Open {toolLabel} <ArrowRight size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  {msg.toolCta && !msg.content.includes('[TOOL_CTA:') && (
                     <div style={{ marginTop: 14 }}>
                       <button
                         className="ws-cta-btn"

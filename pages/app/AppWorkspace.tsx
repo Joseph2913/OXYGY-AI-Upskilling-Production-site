@@ -722,52 +722,14 @@ const AppWorkspace: React.FC = () => {
     });
   }, [toolkitData]);
 
-  /* ── Chat submit: route freeform input via intent classifier ── */
-  const handleChatSubmit = useCallback(async () => {
+  /* ── Chat submit: all freeform input goes to the general assistant ── */
+  const handleChatSubmit = useCallback(() => {
     if (!chatInput.trim()) return;
     const text = chatInput.trim();
     setChatInput('');
-    setPrefillLoading(true);
     setDropdownOpen(false);
-
-    try {
-      const res = await fetch('/api/workspace-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: text }],
-          userData: {
-            name: userProfile?.fullName || '',
-            role: userProfile?.role || '',
-            level: userProfile?.currentLevel || 1,
-            aiExperience: userProfile?.aiExperience || '',
-            orgName: orgContext?.orgName || '',
-            assignedLevels: assignedLevels,
-          },
-          isRouting: true,
-        }),
-      });
-
-      if (!res.ok) throw new Error('routing failed');
-      const data = await res.json();
-
-      if (data.intent === 'tool' && data.toolId) {
-        // Route to the guided toolkit flow
-        setChatMode({ active: true, toolId: data.toolId, prompt: text });
-      } else if (data.intent === 'ambiguous' && data.followUpQuestion) {
-        // Ambiguous — show the clarifying question
-        setChatMode({ active: true, toolId: 'general', prompt: text, initialReply: data.followUpQuestion });
-      } else {
-        // General — let the assistant generate a proper reply with full user context
-        setChatMode({ active: true, toolId: 'general', prompt: text });
-      }
-    } catch {
-      // Fallback: enter general chat
-      setChatMode({ active: true, toolId: 'general', prompt: text });
-    } finally {
-      setPrefillLoading(false);
-    }
-  }, [chatInput, userProfile, orgContext, assignedLevels]);
+    setChatMode({ active: true, toolId: 'general', prompt: text });
+  }, [chatInput]);
 
   /* ── Project help: call Cloud Function to get pre-fill, then navigate ── */
   const handleProjectHelp = useCallback(async (level: number) => {
