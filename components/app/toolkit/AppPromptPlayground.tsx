@@ -613,30 +613,6 @@ const AppPromptPlayground: React.FC = () => {
         done={step1Done}
         collapsed={step1Done}
       >
-        {/* Your Project chip */}
-        {projectChip && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 600, marginBottom: 6, fontFamily: FONT }}>
-              ◆ Your Project
-            </div>
-            <button
-              onClick={() => handleChipClick(projectChip.task)}
-              style={{
-                width: '100%', textAlign: 'left', background: `${LEVEL_ACCENT}18`,
-                border: `1.5px solid ${LEVEL_ACCENT_DARK}44`,
-                borderRadius: 10, padding: '10px 14px',
-                fontSize: 12, color: LEVEL_ACCENT_DARK, fontWeight: 500,
-                cursor: 'pointer', fontFamily: FONT, lineHeight: 1.5,
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}30`)}
-              onMouseLeave={e => (e.currentTarget.style.background = `${LEVEL_ACCENT}18`)}
-            >
-              {projectChip.task}
-            </button>
-          </div>
-        )}
-
         {/* Example chips */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 12, color: '#718096', marginBottom: 8, fontFamily: FONT }}>Try an example:</div>
@@ -666,6 +642,33 @@ const AppPromptPlayground: React.FC = () => {
                 {chip}
               </button>
             ))}
+            {projectChip && (
+              <button
+                onClick={() => handleChipClick(projectChip.task)}
+                className="project-chip-sparkle"
+                style={{
+                  padding: '7px 14px', borderRadius: 10,
+                  fontSize: 13, color: '#92600A',
+                  background: 'linear-gradient(135deg, #FFF8E1, #FFF0C2)',
+                  border: '1.5px solid #E2B93B',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s',
+                  textAlign: 'left', lineHeight: 1.4, fontFamily: FONT,
+                  fontWeight: 600,
+                  boxShadow: '0 0 0 0 rgba(226, 185, 59, 0)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = '#C4A020';
+                  e.currentTarget.style.boxShadow = '0 0 8px 2px rgba(226, 185, 59, 0.3)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = '#E2B93B';
+                  e.currentTarget.style.boxShadow = '0 0 0 0 rgba(226, 185, 59, 0)';
+                }}
+              >
+                ✦ Try with your project
+              </button>
+            )}
           </div>
         </div>
 

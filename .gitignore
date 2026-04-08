@@ -40,3 +40,9 @@ functions/node_modules/
 data/channel-catalogue-*.json
 data/pass1-*.json
 data/scores-*.json
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+tests/.auth/
+tests/screenshots/
