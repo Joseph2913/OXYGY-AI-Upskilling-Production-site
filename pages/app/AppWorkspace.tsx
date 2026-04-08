@@ -828,6 +828,14 @@ const AppWorkspace: React.FC = () => {
         toolId={chatMode.toolId}
         initialPrompt={chatMode.prompt}
         onBack={() => setChatMode({ active: false, toolId: '', prompt: '' })}
+        {...(chatMode.toolId === 'project-help' ? {
+          projectMode: {
+            assignedLevels,
+            learningPlanLevels,
+            userRole: userProfile?.role || '',
+            userChallenge: userProfile?.challenge || '',
+          },
+        } : {})}
       />
     );
   }
@@ -1029,7 +1037,11 @@ const AppWorkspace: React.FC = () => {
                     })}
                     {/* Project help pill */}
                     <button
-                      onClick={() => setDropdownView('levels')}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        setDropdownView('prompts');
+                        setChatMode({ active: true, toolId: 'project-help', prompt: 'I need help with my project.' });
+                      }}
                       className="ws-dropdown-pill"
                       style={{
                         padding: '7px 16px',

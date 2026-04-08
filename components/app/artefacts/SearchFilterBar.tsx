@@ -50,11 +50,13 @@ function FilterDropdown({
   label,
   selectedCount,
   accentColor,
+  alignRight,
   children,
 }: {
   label: string;
   selectedCount: number;
   accentColor?: string;
+  alignRight?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -112,7 +114,8 @@ function FilterDropdown({
       {open && (
         <div
           style={{
-            position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+            position: 'absolute', top: 'calc(100% + 6px)',
+            ...(alignRight ? { right: 0 } : { left: 0 }),
             minWidth: 220, background: '#FFFFFF',
             border: '1px solid #E2E8F0', borderRadius: 12,
             boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
@@ -383,6 +386,7 @@ const SearchFilterBar: React.FC<Props> = ({
           <FilterDropdown
             label={SORT_LABELS[sortMode]}
             selectedCount={0}
+            alignRight
           >
             {SORT_CYCLE.map((mode) => (
               <button
