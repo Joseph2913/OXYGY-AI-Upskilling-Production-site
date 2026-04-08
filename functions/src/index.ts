@@ -1,6 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { callGemini, fetchWithRetry, callOpenRouterRaw, callOpenRouter } from "./gemini";
+import { searchContent, getContentByLevel, getLevelOverview } from "./elearningContent";
 
 const openRouterApiKey = defineSecret("OPEN_ROUTER_API");
 const resendApiKey = defineSecret("RESEND_API_KEY");
@@ -4677,6 +4678,274 @@ Rules:
       });
     } catch (err) {
       console.error("backfill error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/* ════════════════════════════════════════════════════════════════
+   Workspace Chat — Intent Router + General Assistant
+   ════════════════════════════════════════════════════════════════ */
+
+const INTENT_ROUTER_SYSTEM = `You are an intent classifier for an AI upskilling platform. The platform has these tools:
+
+1. **Prompt Playground** (prompt-playground): Write, refine, and test AI prompts. Use when the user wants to craft a prompt, write something specific, summarise, draft, generate text.
+2. **Agent Builder** (agent-builder): Design a reusable AI agent. Use when the user wants to build a bot, automate a repeating task, create a tool others can use.
+3. **Workflow Canvas** (workflow-canvas): Map and automate multi-step processes. Use when the user mentions connecting tools, automating a process end-to-end, triggers, or multiple steps.
+4. **App Designer** (dashboard-designer): Scope and design an AI-powered application. Use when the user wants to build an app, dashboard, or front-end tool.
+5. **App Evaluator** (ai-app-evaluator): Evaluate the architecture and feasibility of an AI app idea. Use when the user wants to assess, evaluate, or review an AI application concept.
+6. **Learning Coach** (learning-coach): Get personalised learning resources. Use when the user wants to learn about an AI topic, understand a concept, or get study materials.
+
+Also detect:
+- **Project help**: User mentions "my project", "level project", "project submission", or wants help with a specific level's deliverable.
+- **General**: User asks about the app itself (navigation, features, how things work), asks conceptual AI questions, or has a general conversation.
+- **Ambiguous**: Could map to multiple tools — ask a natural follow-up question.
+
+Return JSON:
+{
+  "intent": "tool" | "project" | "general" | "ambiguous",
+  "toolId": "prompt-playground" | "agent-builder" | "workflow-canvas" | "dashboard-designer" | "ai-app-evaluator" | "learning-coach" | null,
+  "followUpQuestion": "A natural conversational question to clarify what they need (only if ambiguous)" | null,
+  "reply": "A helpful first response (only if general intent)" | null,
+  "confidence": 0.0 to 1.0
+}
+
+RULES:
+- If confidence > 0.75 for a specific tool, return intent "tool" with the toolId
+- If the user clearly wants to learn/understand a topic (not build something), route to "general" — the general assistant can look up e-learning content
+- If genuinely ambiguous, ask ONE natural follow-up question (not a list of options)
+- Keep followUpQuestion conversational and concise (1-2 sentences)
+- Keep reply concise (2-3 sentences max)`;
+
+const GENERAL_ASSISTANT_SYSTEM = `You are the OXYGY AI Assistant — a helpful guide for the OXYGY AI Upskilling platform.
+
+## What you know
+
+### The Platform
+OXYGY is a 5-level AI upskilling programme for professionals. Each level has 3 phases:
+1. **E-Learning**: Interactive lesson with slides, personas, quizzes (~45-55 min per level)
+2. **Toolkit**: Hands-on tool where users build an artefact (prompt, agent, workflow, app spec, or evaluation)
+3. **Project**: Real-world project submission reviewed by AI, graded into tiers (A/B/C)
+
+Users complete all 3 phases to advance to the next level. Progress is tracked on the Dashboard and My Journey pages.
+
+### The 5 Levels
+- **Level 1 — Fundamentals**: Prompt engineering using the RCTF+ Blueprint (Role, Context, Task, Format, Steps, Quality). Three approaches: Brain Dump, Structured, Blueprint.
+- **Level 2 — Applied**: Building reusable AI agents using the Three-Layer Model (Input, Processing, Output). Platforms: Custom GPTs, Claude Skills, Google Gems.
+- **Level 3 — Systemic**: Mapping multi-step AI workflows. Six Node Types: Trigger, AI Action, Human Review, Condition, Integration, Output.
+- **Level 4 — Dashboards**: Scoping AI tools with PRDs. Four Brief Components: Purpose, Audience, Features, Data. Brief Readiness Framework.
+- **Level 5 — Applications**: Full-stack AI apps. Five-Stage Pipeline: Define, Design, Build, Connect, Deploy.
+
+### The Toolkit Tools
+- **Prompt Playground** (L1): Write and refine prompts with AI feedback
+- **Agent Builder** (L2): Design AI agents with system prompts, accountability checks, and output formats
+- **Workflow Canvas** (L3): Map workflows with nodes, generate n8n-compatible JSON
+- **App Designer** (L4): Scope apps with a guided brief, generate PRDs and build guides
+- **App Evaluator** (L5): Evaluate AI app architecture with scoring and build plans
+- **Learning Coach**: AI-powered learning resource finder across YouTube, Perplexity, NotebookLM
+
+### App Navigation
+- **Dashboard** (/app/dashboard): Progress overview, current level, resume card, journey table
+- **My Journey** (/app/journey): All 5 levels with phase completion status
+- **Current Level** (/app/level): E-learning player, toolkit access, project submission
+- **Workspace** (/app/workspace): Chat interface, templates, artefact library
+- **Cohort** (/app/cohort): Leaderboard, colleague progress
+
+### How scoring works
+- Each level's completion requires all 3 phases done
+- Project submissions are reviewed by AI across dimensions (clarity, depth, real-world application)
+- Tiers: A (strong), B (developing), C (needs attention)
+- Leaderboard ranks by: levels completed, project tiers, artefact count, active days
+
+## Your behaviour
+- Be concise and helpful (2-4 paragraphs max)
+- Use the user's name when you have it
+- When answering conceptual AI questions, use the e-learning content tool to reference actual course material
+- When asked about navigation, give the specific page/section
+- Don't proactively suggest e-learning — only reference it when directly relevant to the question
+- If the user wants to build something specific, suggest which toolkit tool would be best and offer to help them get started
+- You can use markdown formatting: **bold**, *italic*, bullet lists`;
+
+const ELEARNING_TOOL_DEFINITION = {
+  type: "function" as const,
+  function: {
+    name: "lookup_elearning_content",
+    description: "Look up e-learning course content from the OXYGY AI upskilling programme. Use this when the user asks conceptual questions about AI topics covered in the curriculum (prompt engineering, agents, workflows, app scoping, full-stack AI applications). Also use it when the user asks what a specific level covers.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        level: { type: "number" as const, description: "Level number 1-5 to search within. Use 0 or omit to search all levels." },
+        query: { type: "string" as const, description: "Search query for specific content (e.g. 'three layer model', 'blueprint components', 'workflow nodes')" },
+      },
+      required: ["query"],
+    },
+  },
+};
+
+export const workspacechat = onRequest(
+  { secrets: [openRouterApiKey], timeoutSeconds: 60 },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "POST") { res.status(405).json({ error: "POST only" }); return; }
+
+    const { apiKey, model } = getEnv();
+    if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+    try {
+      const { messages, userData, isRouting } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        res.status(400).json({ error: "Missing messages array" }); return;
+      }
+
+      /* ── INTENT ROUTING MODE ── */
+      if (isRouting) {
+        const userMessage = messages[messages.length - 1]?.content || "";
+        const result = await callOpenRouter({
+          apiKey,
+          model,
+          systemPrompt: INTENT_ROUTER_SYSTEM,
+          userMessage,
+          label: "workspace-intent-router",
+          temperature: 0.3,
+          maxTokens: 300,
+        });
+
+        if (!result.ok) {
+          res.status(200).json({ intent: "general", reply: "How can I help you today?", confidence: 0 });
+          return;
+        }
+
+        res.status(200).json(result.data);
+        return;
+      }
+
+      /* ── GENERAL CHAT MODE ── */
+      let systemPrompt = GENERAL_ASSISTANT_SYSTEM;
+      if (userData) {
+        systemPrompt += `\n\n## CURRENT USER`;
+        if (userData.name) systemPrompt += `\n- Name: ${userData.name}`;
+        if (userData.role) systemPrompt += `\n- Role: ${userData.role}`;
+        if (userData.level) systemPrompt += `\n- Current Level: ${userData.level}`;
+        if (userData.aiExperience) systemPrompt += `\n- AI Experience: ${userData.aiExperience}`;
+        if (userData.orgName) systemPrompt += `\n- Organisation: ${userData.orgName}`;
+        if (userData.assignedLevels?.length) systemPrompt += `\n- Assigned Levels: ${userData.assignedLevels.join(", ")}`;
+        if (userData.levelPhaseCompletion) {
+          const progress = Object.entries(userData.levelPhaseCompletion)
+            .map(([lvl, phases]: [string, any]) => {
+              const labels = ["E-Learning", "Toolkit", "Project"];
+              const status = (phases as boolean[]).map((done: boolean, i: number) => `${labels[i]}: ${done ? "Done" : "To do"}`).join(", ");
+              return `Level ${lvl}: ${status}`;
+            }).join("\n  ");
+          systemPrompt += `\n- Progress:\n  ${progress}`;
+        }
+        if (userData.learningPlan) {
+          const planEntries = Object.entries(userData.learningPlan)
+            .map(([lvl, info]: [string, any]) => `  Level ${lvl}: "${info.projectTitle}" (${info.depth})`)
+            .join("\n");
+          if (planEntries) systemPrompt += `\n- Learning Plan:\n${planEntries}`;
+        }
+      }
+
+      // Trim messages if > 20
+      let trimmedMessages = messages;
+      if (messages.length > 20) {
+        trimmedMessages = [...messages.slice(0, 2), ...messages.slice(-16)];
+      }
+
+      const openRouterMessages: Array<Record<string, any>> = [
+        { role: "system", content: systemPrompt },
+        ...trimmedMessages,
+      ];
+
+      // First API call with tool definition
+      const firstResponse = await fetchWithRetry(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: openRouterMessages,
+            tools: [ELEARNING_TOOL_DEFINITION],
+            temperature: 0.6,
+            max_tokens: 1000,
+          }),
+        },
+        "workspace-chat",
+      );
+
+      if (!firstResponse.ok) {
+        const errText = await firstResponse.text();
+        console.error("workspace-chat API error:", errText);
+        res.status(502).json({ error: "AI service error" }); return;
+      }
+
+      const firstData = await firstResponse.json();
+      const firstChoice = firstData?.choices?.[0]?.message;
+
+      // Check if the model wants to call the e-learning tool
+      if (firstChoice?.tool_calls?.length > 0) {
+        const toolCall = firstChoice.tool_calls[0];
+        let args: { level?: number; query?: string } = {};
+        try { args = JSON.parse(toolCall.function.arguments || "{}"); } catch { /* empty */ }
+
+        let toolResult: string;
+        if (args.level && args.level > 0 && !args.query) {
+          toolResult = getContentByLevel(args.level);
+        } else if (args.query) {
+          toolResult = searchContent(args.query, args.level && args.level > 0 ? args.level : undefined);
+        } else {
+          toolResult = getLevelOverview();
+        }
+
+        // Second API call with tool result
+        const secondMessages = [
+          ...openRouterMessages,
+          { role: "assistant", content: null, tool_calls: firstChoice.tool_calls },
+          { role: "tool", content: toolResult, tool_call_id: toolCall.id },
+        ];
+
+        const secondResponse = await fetchWithRetry(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              messages: secondMessages,
+              temperature: 0.6,
+              max_tokens: 1000,
+            }),
+          },
+          "workspace-chat-tool-followup",
+        );
+
+        if (!secondResponse.ok) {
+          res.status(200).json({ reply: toolResult, intent: "general" });
+          return;
+        }
+
+        const secondData = await secondResponse.json();
+        const reply = secondData?.choices?.[0]?.message?.content || toolResult;
+        res.status(200).json({ reply, intent: "general" });
+        return;
+      }
+
+      // No tool call — return direct response
+      const reply = firstChoice?.content || "I'm sorry, I couldn't process that. Could you try rephrasing?";
+      res.status(200).json({ reply, intent: "general" });
+
+    } catch (err) {
+      console.error("workspace-chat error:", err);
       res.status(500).json({ error: "Internal server error" });
     }
   }

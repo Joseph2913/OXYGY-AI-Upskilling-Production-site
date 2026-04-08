@@ -40,6 +40,7 @@
       { "source": "/api/generate-artefact-title", "function": { "functionId": "generateartefacttitle" } },
       { "source": "/api/generate-project-chips", "function": { "functionId": "generateprojectchips" } },
       { "source": "/api/backfill-artefact-titles", "function": { "functionId": "backfillartefacttitles" } },
+      { "source": "/api/workspace-chat", "function": { "functionId": "workspacechat" } },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [

@@ -381,7 +381,7 @@ const AppWorkspace: React.FC = () => {
   const { artefactId } = useParams<{ artefactId?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { hasLearningPlan, learningPlanLoading, userProfile } = useAppContext();
+  const { hasLearningPlan, learningPlanLoading, userProfile, orgContext } = useAppContext();
 
   /* ── Artefacts data ── */
   const {
@@ -395,9 +395,9 @@ const AppWorkspace: React.FC = () => {
   const { data: toolkitData } = useToolkitData();
 
   /* ── Chat mode state (workspace vs chat view) ── */
-  const [chatMode, setChatMode] = useState<{ active: boolean; toolId: string; prompt: string }>(
-    { active: false, toolId: '', prompt: '' }
-  );
+  const [chatMode, setChatMode] = useState<{
+    active: boolean; toolId: string; prompt: string; initialReply?: string;
+  }>({ active: false, toolId: '', prompt: '' });
 
   /* ── Chat state (persisted to sessionStorage) ── */
   const [chatInput, setChatInput] = useState('');
@@ -714,12 +714,50 @@ const AppWorkspace: React.FC = () => {
     showToast('Changes saved.');
   }, [updateContent]);
 
-  /* ── Chat submit: enter chat mode with freeform input ── */
-  const handleChatSubmit = useCallback(() => {
+  /* ── Chat submit: route freeform input via intent classifier ── */
+  const handleChatSubmit = useCallback(async () => {
     if (!chatInput.trim()) return;
-    // Default to prompt-playground for freeform text input
-    setChatMode({ active: true, toolId: 'prompt-playground', prompt: chatInput.trim() });
-  }, [chatInput]);
+    const text = chatInput.trim();
+    setChatInput('');
+    setPrefillLoading(true);
+    setDropdownOpen(false);
+
+    try {
+      const res = await fetch('/api/workspace-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: text }],
+          userData: {
+            name: userProfile?.fullName || '',
+            role: userProfile?.role || '',
+            level: userProfile?.currentLevel || 1,
+            aiExperience: userProfile?.aiExperience || '',
+            orgName: orgContext?.orgName || '',
+            assignedLevels: assignedLevels,
+          },
+          isRouting: true,
+        }),
+      });
+
+      if (!res.ok) throw new Error('routing failed');
+      const data = await res.json();
+
+      if (data.intent === 'tool' && data.toolId) {
+        // Route to the guided toolkit flow
+        setChatMode({ active: true, toolId: data.toolId, prompt: text });
+      } else {
+        // General or ambiguous — enter general chat
+        const initialReply = data.reply || data.followUpQuestion || undefined;
+        setChatMode({ active: true, toolId: 'general', prompt: text, initialReply });
+      }
+    } catch {
+      // Fallback: enter general chat
+      setChatMode({ active: true, toolId: 'general', prompt: text });
+    } finally {
+      setPrefillLoading(false);
+    }
+  }, [chatInput, userProfile, orgContext, assignedLevels]);
 
   /* ── Project help: call Cloud Function to get pre-fill, then navigate ── */
   const handleProjectHelp = useCallback(async (level: number) => {
@@ -834,6 +872,20 @@ const AppWorkspace: React.FC = () => {
             learningPlanLevels,
             userRole: userProfile?.role || '',
             userChallenge: userProfile?.challenge || '',
+          },
+        } : {})}
+        {...(chatMode.toolId === 'general' ? {
+          generalMode: {
+            initialReply: chatMode.initialReply,
+            userData: {
+              name: userProfile?.fullName || '',
+              role: userProfile?.role || '',
+              level: userProfile?.currentLevel || 1,
+              aiExperience: userProfile?.aiExperience || '',
+              orgName: orgContext?.orgName || '',
+              assignedLevels,
+              learningPlanLevels,
+            },
           },
         } : {})}
       />

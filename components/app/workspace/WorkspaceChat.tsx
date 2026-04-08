@@ -134,6 +134,19 @@ interface ChatMessage {
    WorkspaceChat component
    ══════════════════════════════════════════════════════════════ */
 
+interface GeneralModeData {
+  initialReply?: string;
+  userData: {
+    name: string;
+    role: string;
+    level: number;
+    aiExperience: string;
+    orgName: string;
+    assignedLevels: number[];
+    learningPlanLevels: Record<string, any>;
+  };
+}
+
 interface Props {
   toolId: string;
   initialPrompt: string;
@@ -145,17 +158,28 @@ interface Props {
     userRole?: string;
     userChallenge?: string;
   };
+  /** General assistant mode — freeform conversation with AI */
+  generalMode?: GeneralModeData;
 }
 
-const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, projectMode }) => {
+const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, projectMode, generalMode }) => {
   const navigate = useNavigate();
   const isProjectMode = !!projectMode;
+  const isGeneralMode = toolId === 'general' && !!generalMode;
 
   // For regular mode, use the tool questions
   const tool = TOOL_QUESTIONS[toolId];
 
   /* ── State ── */
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (isGeneralMode) {
+      // General mode: user message + optional initial reply from intent router
+      const initial: ChatMessage[] = [{ role: 'user', content: initialPrompt }];
+      if (generalMode.initialReply) {
+        initial.push({ role: 'assistant', content: generalMode.initialReply });
+      }
+      return initial;
+    }
     if (isProjectMode) {
       // Project mode: start with level selection
       return [
@@ -209,6 +233,38 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
     el.style.height = `${el.scrollHeight}px`;
   }, [inputValue]);
 
+  // General mode: fetch initial reply if not provided by intent router
+  useEffect(() => {
+    if (!isGeneralMode || generalMode?.initialReply) return;
+    let cancelled = false;
+    setIsGenerating(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/workspace-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: initialPrompt }],
+            userData: generalMode?.userData,
+            isRouting: false,
+          }),
+        });
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled) {
+          const reply = data?.reply || "How can I help you today?";
+          setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+        }
+      } catch {
+        if (!cancelled) {
+          setMessages((prev) => [...prev, { role: 'assistant', content: "How can I help you today?" }]);
+        }
+      } finally {
+        if (!cancelled) setIsGenerating(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ── Handle level selection (project mode only) ── */
   const handleLevelSelect = useCallback((level: number) => {
     const levelPlan = projectMode?.learningPlanLevels[`L${level}`];
@@ -238,6 +294,31 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
 
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: text }];
     setMessages(nextMessages);
+
+    /* ── General mode: send to workspace-chat API ── */
+    if (isGeneralMode) {
+      setIsGenerating(true);
+      try {
+        const apiMessages = nextMessages.map((m) => ({ role: m.role, content: m.content }));
+        const res = await fetch('/api/workspace-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: apiMessages,
+            userData: generalMode?.userData,
+            isRouting: false,
+          }),
+        });
+        const data = res.ok ? await res.json() : null;
+        const reply = data?.reply || "I'm sorry, I couldn't process that. Could you try again?";
+        setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      } catch {
+        setMessages((prev) => [...prev, { role: 'assistant', content: "Something went wrong. Please try again." }]);
+      } finally {
+        setIsGenerating(false);
+      }
+      return;
+    }
 
     const nextQIdx = currentQuestionIndex + 1;
     const totalQuestions = activeQuestions.length;
@@ -318,18 +399,24 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
         setIsGenerating(false);
       }
     }
-  }, [inputValue, messages, currentQuestionIndex, activeQuestions, activeToolId, isProjectMode, selectedLevel, projectMode, initialPrompt, isGenerating, waitingForLevelSelect]);
+  }, [inputValue, messages, currentQuestionIndex, activeQuestions, activeToolId, isProjectMode, isGeneralMode, generalMode, selectedLevel, projectMode, initialPrompt, isGenerating, waitingForLevelSelect]);
 
-  const currentPlaceholder = activeQuestions[currentQuestionIndex]?.placeholder || 'Type your answer...';
+  const currentPlaceholder = isGeneralMode
+    ? 'Ask me anything about the platform, AI concepts, or what to do next...'
+    : activeQuestions[currentQuestionIndex]?.placeholder || 'Type your answer...';
   const allQuestionsAnswered = !waitingForLevelSelect && currentQuestionIndex >= activeQuestions.length;
 
   // Header display
-  const headerLabel = isProjectMode
-    ? (selectedLevel ? `Project Help – L${selectedLevel} ${LEVEL_SHORT_NAMES[selectedLevel]}` : 'Project Help')
-    : (tool?.toolName || 'Chat');
-  const headerAccent = isProjectMode && selectedLevel
-    ? LEVEL_ACCENT_DARK_COLORS[selectedLevel]
-    : (activeToolMeta as any).accentDark || '#38B2AC';
+  const headerLabel = isGeneralMode
+    ? 'AI Assistant'
+    : isProjectMode
+      ? (selectedLevel ? `Project Help – L${selectedLevel} ${LEVEL_SHORT_NAMES[selectedLevel]}` : 'Project Help')
+      : (tool?.toolName || 'Chat');
+  const headerAccent = isGeneralMode
+    ? '#38B2AC'
+    : isProjectMode && selectedLevel
+      ? LEVEL_ACCENT_DARK_COLORS[selectedLevel]
+      : (activeToolMeta as any).accentDark || '#38B2AC';
 
   return (
     <div style={{
@@ -376,9 +463,11 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
         </button>
         <div style={{ width: 1, height: 20, background: '#E2E8F0' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {isProjectMode
-            ? <FolderOpen size={18} color={headerAccent} />
-            : ActiveIcon && <ActiveIcon size={18} color={headerAccent} />
+          {isGeneralMode
+            ? <Sparkles size={18} color={headerAccent} />
+            : isProjectMode
+              ? <FolderOpen size={18} color={headerAccent} />
+              : ActiveIcon && <ActiveIcon size={18} color={headerAccent} />
           }
           <span style={{ fontSize: 14, fontWeight: 600, color: '#1A202C' }}>
             {headerLabel}
@@ -514,7 +603,7 @@ const WorkspaceChat: React.FC<Props> = ({ toolId, initialPrompt, onBack, project
       </div>
 
       {/* ── Input bar (hidden during level selection and after all questions) ── */}
-      {!waitingForLevelSelect && !allQuestionsAnswered && (
+      {(isGeneralMode || (!waitingForLevelSelect && !allQuestionsAnswered)) && (
         <div style={{
           padding: '16px 36px',
           borderTop: '1px solid #E2E8F0',
