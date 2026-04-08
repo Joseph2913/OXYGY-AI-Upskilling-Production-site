@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, ArrowRight, ChevronLeft, Loader2, FolderOpen } from 'lucide-react';
+import { Send, ArrowRight, ChevronLeft, Loader2, FolderOpen, Sparkles } from 'lucide-react';
 import { TOOL_ICON_MAP } from './ToolIcons';
 import { ALL_TOOLS, PRIMARY_TOOL_IDS } from '../../../data/toolkitData';
 import {

@@ -714,6 +714,14 @@ const AppWorkspace: React.FC = () => {
     showToast('Changes saved.');
   }, [updateContent]);
 
+  /* ── Assigned levels (needed by chat submit + project help) ── */
+  const assignedLevels = useMemo(() => {
+    return [1, 2, 3, 4, 5].filter((lvl) => {
+      const levelData = toolkitData?.levelStats.find((l) => l.levelNumber === lvl);
+      return levelData?.isAssigned;
+    });
+  }, [toolkitData]);
+
   /* ── Chat submit: route freeform input via intent classifier ── */
   const handleChatSubmit = useCallback(async () => {
     if (!chatInput.trim()) return;
@@ -819,14 +827,6 @@ const AppWorkspace: React.FC = () => {
       navigate(toolRoute);
     }
   }, [learningPlanLevels, userProfile, navigate]);
-
-  /* ── Assigned levels for project help dropdown ── */
-  const assignedLevels = useMemo(() => {
-    return [1, 2, 3, 4, 5].filter((lvl) => {
-      const levelData = toolkitData?.levelStats.find((l) => l.levelNumber === lvl);
-      return levelData?.isAssigned;
-    });
-  }, [toolkitData]);
 
   /* ── Unlock check for templates ──
      A template is accessible if the level is assigned in the user's learning plan.
