@@ -42,6 +42,45 @@ This document captures lessons learned from production incidents and establishes
 
 ---
 
+### 2026-04-08: Artefact title generation silently failing
+
+**What happened:** When a user saves an artefact from any toolkit page, the system saves it with a long fallback name (e.g. "Build Plan: The AI-powered knowledge platform will serve as a..."), then calls an AI function to generate a short, clean title and update the artefact. The AI correctly generated the title, but the database update silently failed. Users always saw the long, ugly name.
+
+**Root cause:** The `generateArtefactTitle()` function in `lib/database.ts` updated the artefact record without including `user_id` in the query filter. The `artefacts` table has RLS requiring `auth.uid() = user_id`. Without the filter, Supabase silently rejected the update (0 rows affected, no error thrown). The function also didn't have access to `userId` — it wasn't in the function signature. The error was caught and silently swallowed, making the failure completely invisible.
+
+**Why it wasn't caught:**
+1. RLS failures are silent by design — Supabase returns no error, just 0 rows affected
+2. The primary save worked correctly, so the feature appeared to work on first glance
+3. The title update was fire-and-forget with a silent catch — no logging, no user feedback
+4. The function was treated as a "cosmetic enhancement" and built to a lower standard than the primary save
+
+**Fix applied:** Added `userId` parameter to `generateArtefactTitle()`, passed it from `createArtefactFromTool()`, and added `.eq('user_id', userId)` to the update query. Added error logging to the catch block.
+
+**Rules created:** "Secondary Database Writes" and "Silent RLS Failure Prevention" in CLAUDE.md.
+
+---
+
+### 2026-04-08: generateProjectChips calling Anthropic API directly from browser
+
+**What happened:** The browser console showed repeated CORS errors (`Fetch API cannot load https://api.anthropic.com/v1/messages due to access control checks`) and `TypeError: Load failed` for levels 1–5 every time the app loaded. The `generateProjectChips()` function in `lib/generateProjectChips.ts` was calling the Anthropic API directly from the browser instead of routing through a Firebase Cloud Function via OpenRouter.
+
+**Root cause:** The function was written to call `https://api.anthropic.com/v1/messages` directly from client-side code. This violated two established rules simultaneously:
+1. **All AI calls must go through OpenRouter** — the project uses a single OpenRouter API key (`OPEN_ROUTER_API` Firebase secret) to access all AI models. There is no Anthropic API key configured anywhere.
+2. **All AI calls must go through Firebase Cloud Functions** — browser-side code cannot call AI provider APIs directly because (a) CORS blocks it, (b) it would expose API keys in the browser, and (c) the project architecture routes all AI through server-side functions.
+
+The function used the Anthropic-native request format (`model: 'claude-sonnet-4-20250514'`, `content[0].text` response shape) instead of the OpenRouter/OpenAI-compatible format (`choices[0].message.content`), confirming it was written without consulting the existing API patterns in the codebase.
+
+**Why it wasn't caught:**
+1. The errors only appeared in the browser console — no visible UI failure (the feature silently fell back to no chips)
+2. The function was added as a "background enhancement" and wasn't tested against the established API architecture
+3. No automated check exists to flag direct provider API URLs in client-side code
+
+**Fix applied:** (Pending) Route the call through a new Firebase Cloud Function that uses the existing `callOpenRouter()` helper in `functions/src/gemini.ts`.
+
+**Rules created:** "No Direct Provider API Calls — Ever" added to both CLAUDE.md and this guide.
+
+---
+
 ## Mandatory Practices
 
 ### 1. Trace data changes through every layer
@@ -83,6 +122,43 @@ If you're editing a file and notice that the surrounding code has a bug (even on
 
 Never leave modified files uncommitted. GitHub Actions builds from committed code only. Any uncommitted file will be missing from the production deploy.
 
-### 5. Check backward compatibility for stored data
+### 5. Every Supabase write must include `user_id` in the filter
+
+Every `update` and `delete` query on an RLS-protected table must include `.eq('user_id', userId)` — not just the row's primary key. RLS requires this filter to match `auth.uid()`. Without it, the operation silently fails (0 rows affected, no error). If a function needs to write to a table but doesn't have access to `userId`, that's a design smell — either pass it through or move the write to a Cloud Function with service keys.
+
+### 6. Never silently catch database write errors
+
+A silent `catch {}` on a database write is never acceptable. The user believes their data was saved, but it wasn't. At minimum:
+- Log the error with `console.error`
+- Include the function name and the operation that failed
+- Consider surfacing the failure to the user if the write affects visible state
+
+Silent catches on reads are sometimes acceptable (show empty state, retry later). Silent catches on writes create invisible data loss.
+
+### 7. Secondary writes get the same rigour as primary writes
+
+When a function does "save X, then also update Y in the background," the secondary write (Y) must be built to the same standard as the primary write (X):
+- Same `user_id` filtering
+- Same error handling
+- Same RLS awareness
+
+If the secondary write affects something the user will see (like a title, a status, or a count), it's not optional — it's a first-class operation.
+
+### 8. No direct provider API calls — ever
+
+**Never call AI provider APIs (Anthropic, OpenAI, Google) directly — not from the browser, not from Cloud Functions.** Every AI call in this project MUST:
+
+1. **Go through a Firebase Cloud Function** — never from client-side code. Browser-side `fetch()` to any AI provider will fail (CORS) and would expose API keys.
+2. **Use OpenRouter as the single gateway** — the only AI endpoint is `https://openrouter.ai/api/v1/chat/completions`. The only API key is `OPEN_ROUTER_API` (Firebase secret). No other AI API keys exist or should be created.
+3. **Use the shared helpers** — `callOpenRouter()` or `callOpenRouterRaw()` from `functions/src/gemini.ts`. Never write raw `fetch()` calls to any AI endpoint.
+4. **Use OpenRouter model IDs** — e.g. `anthropic/claude-sonnet-4`, `google/gemini-2.0-flash-001`. Never use provider-native model IDs like `claude-sonnet-4-20250514`.
+
+**How to verify before committing:** Search for direct provider URLs in any new or modified `.ts`/`.tsx` file:
+```
+grep -rn "api.anthropic.com\|api.openai.com\|generativelanguage.googleapis" --include="*.ts" --include="*.tsx"
+```
+If this returns any matches outside of documentation files, the code must be refactored before merging.
+
+### 9. Check backward compatibility for stored data
 
 When changing how data is formatted, existing rows in the database still have the old format. Code that reads this data must handle both old and new formats gracefully. For example, if `ambition` used to be `"build-full-apps"` (string) and is now stored as `"build-full-apps,lead-ai-strategy"` (comma-separated), every read path must handle both cases.

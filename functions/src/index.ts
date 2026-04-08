@@ -4480,6 +4480,91 @@ Rules:
    for all existing artefacts that have generic/truncated names.
    One-time use endpoint, call manually or via curl.
    ════════════════════════════════════════════════════════════════ */
+// ═══════════════════════════════════════════════════════════════
+// GENERATE PROJECT CHIPS — AI-generated toolkit pre-fill chips
+// ═══════════════════════════════════════════════════════════════
+
+const CHIP_TOOL_IDS: Record<number, string> = {
+  1: "prompt-playground",
+  2: "agent-builder",
+  3: "workflow-canvas",
+  4: "dashboard-designer",
+  5: "ai-app-evaluator",
+};
+
+const CHIP_INSTRUCTIONS: Record<string, string> = {
+  "prompt-playground": `Return a JSON object with one key: "task". The value is a 1-2 sentence task description the user would type into a prompt engineering tool to get AI help implementing this project. Write it in first person ("I need to..."). Make it specific to the project title, deliverable, and context. Do not mention the tool name. Example format: { "task": "I need to draft a structured summary of our weekly L&D programme performance data, highlighting completion rates by cohort and flagging any learners who are more than 5 days behind schedule, formatted for a line manager audience." }`,
+  "agent-builder": `Return a JSON object with two keys: "task" and "inputData". "task" is a 1-2 sentence description of what the AI agent should do repeatedly for this project (the repeatable, automatable part). "inputData" is a 1 sentence description of what data the agent would receive each time it runs. Both should be specific to the project. Example format: { "task": "Analyse weekly training completion exports to identify learners at risk of falling behind and generate a personalised nudge message for each line manager.", "inputData": "Weekly CSV export from the LMS with columns: learner name, cohort, modules completed, last active date, and assessment scores." }`,
+  "workflow-canvas": `Return a JSON object with two keys: "task" and "tools". "task" is a 2-3 sentence description of the end-to-end workflow to automate for this project — including trigger, AI processing steps, human review point, and final output destination. "tools" is a 1 sentence description of the platforms/systems involved based on the project context. Example format: { "task": "When a new cohort completes their final assessment, automatically extract scores and written responses, generate a programme effectiveness summary with module-level breakdowns, flag any learners below threshold for HRBP follow-up, and email the report to the L&D lead.", "tools": "Assessment data from the LMS, stored in SharePoint, distributed via Outlook, with a Teams notification to the programme manager." }`,
+  "dashboard-designer": `Return a JSON object with five keys: "q1_purpose", "q2_audience", "q3_type", "q4_metrics", "q5_dataSources". Each should be a concise, specific value (1-2 sentences max) tailored to the project. "q1_purpose" explains what decision or action the dashboard enables. "q2_audience" names the specific roles who would use it. "q3_type" describes the layout style. "q4_metrics" lists the 4-6 most relevant KPIs. "q5_dataSources" describes where the data comes from.`,
+  "ai-app-evaluator": `Return a JSON object with three keys: "appDescription", "problemAndUsers", "dataAndContent". Each is 2-3 sentences. "appDescription" describes the full AI application to be built for this project. "problemAndUsers" describes the specific problem it solves and who uses it, with realistic numbers. "dataAndContent" describes the data inputs, content types, and any integrations required.`,
+};
+
+export const generateprojectchips = onRequest({ secrets: [openRouterApiKey], timeoutSeconds: 120 }, async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+  const { apiKey, model } = getEnv();
+  if (!apiKey) { res.status(503).json({ error: "API key not configured" }); return; }
+
+  try {
+    const { levels } = req.body;
+    if (!levels || typeof levels !== "object") {
+      res.status(400).json({ error: "levels object is required" }); return;
+    }
+
+    const chips: Array<{ level: number; toolId: string; chipData: Record<string, string> }> = [];
+
+    for (const lvl of [1, 2, 3, 4, 5]) {
+      const levelData = levels[`L${lvl}`];
+      if (!levelData || !levelData.projectTitle) continue;
+
+      const toolId = CHIP_TOOL_IDS[lvl];
+      const instruction = CHIP_INSTRUCTIONS[toolId];
+      if (!instruction) continue;
+
+      try {
+        const result = await callGemini({
+          apiKey,
+          model,
+          systemPrompt: "You are helping pre-populate an AI toolkit tool with project-specific context. Respond ONLY with the JSON object. No preamble, no explanation, no markdown fences.",
+          userMessage: `The user has been assigned this project for Level ${lvl}:
+- Project title: ${levelData.projectTitle}
+- Description: ${levelData.projectDescription || ""}
+- Deliverable: ${levelData.deliverable || ""}
+- Their challenge: ${levelData.challengeConnection || ""}
+
+${instruction}`,
+          label: `project-chips-L${lvl}`,
+          temperature: 0.5,
+          maxTokens: 400,
+        });
+
+        if (result.ok) {
+          chips.push({ level: lvl, toolId, chipData: result.data });
+        } else {
+          console.error(`generateprojectchips L${lvl} error:`, result.message);
+        }
+      } catch (err) {
+        console.error(`generateprojectchips L${lvl} error:`, err);
+      }
+    }
+
+    res.status(200).json({ chips });
+  } catch (err) {
+    console.error("generateprojectchips error:", err);
+    res.status(500).json({ error: "Internal server error", retryable: true });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// BACKFILL ARTEFACT TITLES — Admin tool to regenerate all titles
+// ═══════════════════════════════════════════════════════════════
+
 export const backfillartefacttitles = onRequest(
   { secrets: [openRouterApiKey, supabaseUrl, supabaseServiceKey], timeoutSeconds: 300 },
   async (req, res) => {

@@ -224,9 +224,25 @@ Firebase applies the **last matching** header for conflicts, so rules 2 & 3 over
 3. Call it from the frontend as `fetch('/api/your-endpoint', ...)`
 4. **Do NOT create files in the `api/` directory** — those are legacy Vercel artifacts
 
-## API Calls — OpenRouter Only
+## API Calls — OpenRouter Only (CRITICAL)
 
-**All AI API calls MUST go through OpenRouter** — never call provider APIs (Anthropic, Google, OpenAI) directly.
+**All AI API calls MUST go through OpenRouter via Firebase Cloud Functions.** This is a hard, non-negotiable rule. There is only ONE AI API key in this project (`OPEN_ROUTER_API`), and it lives as a Firebase secret — never in client-side code.
+
+### The only allowed pattern
+
+```
+Browser → fetch('/api/your-endpoint') → Firebase Cloud Function → callOpenRouter() → OpenRouter → AI provider
+```
+
+### What is NEVER allowed
+
+1. **Never call provider APIs directly** — no `fetch('https://api.anthropic.com/...')`, no `fetch('https://api.openai.com/...')`, no `fetch('https://generativelanguage.googleapis.com/...')`. Not from the browser, not from Cloud Functions. OpenRouter is the single gateway.
+2. **Never call ANY AI endpoint from browser-side code** — all AI calls must go through a Firebase Cloud Function. Browser-side calls will fail (CORS) and would expose API keys.
+3. **Never create or use provider-specific API keys** — no Anthropic API keys, no OpenAI API keys, no Google AI API keys. The OpenRouter key handles all providers.
+4. **Never use provider-native model IDs** — use OpenRouter model IDs (e.g. `anthropic/claude-sonnet-4`, not `claude-sonnet-4-20250514`).
+5. **Never write raw `fetch()` calls to AI endpoints in Cloud Functions** — use the shared helpers.
+
+### Configuration
 
 - **Endpoint:** `https://openrouter.ai/api/v1/chat/completions`
 - **Auth:** `Authorization: Bearer <OPEN_ROUTER_API_KEY>`
@@ -237,6 +253,16 @@ Firebase applies the **last matching** header for conflicts, so rules 2 & 3 over
   - Choose the best model for the use case; the key is the same regardless of provider
 - **Firebase secret:** `OPEN_ROUTER_API` (set via `firebase functions:secrets:set OPEN_ROUTER_API`)
 - **Shared helpers:** `functions/src/gemini.ts` exports `callGemini()` / `callOpenRouter()` / `callOpenRouterRaw()`
+
+### Verification before committing
+
+Before committing any new AI-related code, grep for direct provider URLs:
+```
+grep -rn "api.anthropic.com\|api.openai.com\|generativelanguage.googleapis" --include="*.ts" --include="*.tsx"
+```
+If this returns matches in any non-documentation file, the code must be refactored to use the Cloud Function + OpenRouter pattern before merging.
+
+See `docs/CHANGE_SAFETY_GUIDE.md` → "No direct provider API calls — ever" for the full incident that prompted this rule.
 
 ## Supabase RLS Policies — Recursion Prevention
 
@@ -341,6 +367,22 @@ When editing code inside any of these flows, verify the FULL cycle works:
 2. **Check that every "success" state is actually persisted.** If a flow ends with a success card shown to the user, verify that the database reflects that success too. A success message without a database write is a lie.
 3. **Verify the re-entry path.** After a flow completes, what happens when the user refreshes or comes back later? Does the app know the flow was completed, or does it show the flow again?
 4. **If you find a pre-existing bug while editing a flow, flag it.** Don't silently move past it. Tell the user: "I noticed that [X] isn't working correctly in this flow — should I fix it as part of this change?"
+
+## Secondary Database Writes & Silent RLS Failures (CRITICAL)
+
+**Every database write — including "background" or "fire-and-forget" writes — MUST follow the same rules as primary writes.** A secondary write that updates user-visible state (titles, statuses, counts) is not optional — it's a first-class operation.
+
+### Background (2026-04-08 incident)
+The `generateArtefactTitle()` function updated an artefact's name after saving, but the Supabase update query was missing `.eq('user_id', userId)`. RLS silently rejected the update (0 rows affected, no error). The error was caught and swallowed. Users always saw long, ugly fallback titles instead of AI-generated short titles. The bug was invisible for weeks.
+
+### Rules
+1. **Every Supabase `update` and `delete` must include `.eq('user_id', userId)`** — not just the row's primary key. RLS requires this to match `auth.uid()`. Without it, the operation silently fails.
+2. **If a function writes to a table but doesn't have `userId`, that's a design smell.** Either pass `userId` through the call chain or move the write to a Cloud Function with service keys.
+3. **Never use silent `catch {}` on database writes.** At minimum `console.error` the failure with the function name and operation. Silent catches on writes create invisible data loss.
+4. **"Fire-and-forget" does not mean "failure is acceptable."** If the write affects something the user will see, treat it with the same rigour as the primary save — same `user_id` filtering, same error handling.
+5. **RLS failures are silent by design** — Supabase returns no error, just 0 rows affected. Always verify your write succeeded if the result matters.
+
+See `docs/CHANGE_SAFETY_GUIDE.md` for the full incident log.
 
 ## Component Import Safety
 
