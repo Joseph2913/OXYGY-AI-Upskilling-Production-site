@@ -5,7 +5,6 @@ import LearningPlanBlocker from '../../components/app/LearningPlanBlocker';
 import { LEVEL_TOPICS, LEVEL_META } from '../../data/levelTopics';
 import { getTopicContent } from '../../data/topicContent';
 import { useLevelData, TOTAL_PHASES } from '../../hooks/useLevelData';
-import { ALL_TOOLS } from '../../data/toolkitData';
 import TopicHeader from '../../components/app/level/TopicHeader';
 import ELearningView from '../../components/app/level/ELearningView';
 import CompletedTopicView from '../../components/app/level/CompletedTopicView';
@@ -27,7 +26,7 @@ const AppCurrentLevel: React.FC = () => {
   const levelName = levelMeta?.name ?? 'Fundamentals';
   const topics = LEVEL_TOPICS[currentLevel] || [];
 
-  const { levelData, loading, advanceSlide, completePhase, completeTopic } =
+  const { levelData, loading, advanceSlide, completePhase } =
     useLevelData(currentLevel);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [viewingPhase, setViewingPhase] = useState<number | null>(null);
@@ -83,13 +82,6 @@ const AppCurrentLevel: React.FC = () => {
     [completePhase, topics, navigate, scrollToTop],
   );
 
-  const handleCompleteTopic = useCallback(
-    (topicId: number) => {
-      completeTopic(topicId);
-      setShowLevelCompletion(true);
-    },
-    [completeTopic],
-  );
 
   const handleContinueToNextLevel = useCallback(() => {
     const nextLevel = Math.min(currentLevel + 1, 5);
@@ -127,16 +119,16 @@ const AppCurrentLevel: React.FC = () => {
   if (!selectedTopic || !selectedProgress) return null;
 
   const topicIndex = topics.findIndex((t) => t.id === selectedTopicId);
-  const isCompleted = !!selectedProgress.completedAt;
+  const isElearnCompleted = !!selectedProgress.elearnCompletedAt;
   const displayPhase = viewingPhase ?? selectedProgress.phase;
-  const completedPhases = isCompleted
+  const completedPhases = isElearnCompleted
     ? TOTAL_PHASES
     : selectedProgress.phaseCompletions.filter(Boolean).length;
 
   // Look up topic-specific content (slides, articles, videos)
   const topicContent = getTopicContent(currentLevel, selectedTopicId);
 
-  const showPhaseStrip = !showLevelCompletion && !(isCompleted && !isReviewMode);
+  const showPhaseStrip = false; // Phase tabs removed — only e-learning matters
 
   const renderContent = () => {
     // Level completion takes over
@@ -151,12 +143,12 @@ const AppCurrentLevel: React.FC = () => {
       );
     }
 
-    // Completed topic — not reviewing
-    if (isCompleted && !isReviewMode) {
+    // E-learning completed — show completion screen (unless reviewing)
+    if (isElearnCompleted && !isReviewMode) {
       return (
         <CompletedTopicView
           topic={selectedTopic}
-          completedDate={selectedProgress.completedAt!}
+          completedDate={selectedProgress.elearnCompletedAt!}
           accentColor={accentColor}
           accentDark={accentDark}
           onReviewELearning={() => {
@@ -198,50 +190,6 @@ const AppCurrentLevel: React.FC = () => {
           </div>
         )}
 
-        {displayPhase === 2 && (
-          <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 24 }}>
-            <div style={{ maxWidth: 520, width: '100%', background: '#FFFFFF', border: `1.5px solid ${accentColor}44`, borderRadius: 16, padding: '32px 28px', textAlign: 'center' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${accentColor}18`, border: `2px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 16px' }}>◈</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: accentDark, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 6 }}>PRACTICE — PHASE 2</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#1A202C', marginBottom: 10 }}>
-                {selectedTopic.toolkitToolId
-                  ? `Practice with the ${ALL_TOOLS.find(t => t.id === selectedTopic.toolkitToolId)?.name ?? 'toolkit'}`
-                  : 'Apply it with the toolkit'}
-              </div>
-              <div style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, marginBottom: 24 }}>
-                {selectedTopic.phases[1]?.detail ?? 'Open the toolkit and work through the exercise. Your practice is complete once you have used the tool.'}
-              </div>
-              {selectedProgress.phaseCompletions[1] ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ background: '#F0FFF4', border: '1px solid #C6F6D5', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#276749', fontWeight: 600 }}>
-                    ✓ Practice complete
-                  </div>
-                  <button
-                    onClick={() => navigate(selectedTopic.toolkitToolPath)}
-                    style={{ display: 'block', background: 'none', border: `1px solid ${accentColor}`, color: accentDark, fontSize: 14, fontWeight: 600, padding: '11px 28px', borderRadius: 24, cursor: 'pointer', width: '100%' }}
-                  >
-                    Open {ALL_TOOLS.find(t => t.id === selectedTopic.toolkitToolId)?.name ?? 'Toolkit'} again →
-                  </button>
-                  {!selectedProgress.completedAt && (
-                    <button
-                      onClick={() => handleCompleteTopic(selectedTopicId)}
-                      style={{ background: accentColor, color: '#FFFFFF', border: 'none', borderRadius: 24, padding: '13px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      Mark topic as complete →
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={() => navigate(selectedTopic.toolkitToolPath)}
-                  style={{ display: 'block', background: accentColor, color: '#FFFFFF', fontSize: 14, fontWeight: 700, padding: '13px 28px', borderRadius: 24, border: 'none', cursor: 'pointer', width: '100%' }}
-                >
-                  Open {ALL_TOOLS.find(t => t.id === selectedTopic.toolkitToolId)?.name ?? 'Toolkit'} →
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </>
     );
   };
