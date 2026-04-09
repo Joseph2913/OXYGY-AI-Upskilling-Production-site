@@ -96,7 +96,7 @@ export function useJourneyData(): {
           : ['L1', 'L2', 'L3', 'L4', 'L5'];             // fallback: all assigned if no plan
 
         // ── Build completedLevelSet: level is complete only when ALL 3 signals are present ──
-        // elearn + toolkit (tool_used_at) + project (status === 'passed')
+        // elearn + toolkit (tool_used_at) + project (reviewPassed === true)
         // MUST match useDashboardData.ts logic exactly.
         const completedLevelSet = new Set<number>();
         for (let lvl = 1; lvl <= 5; lvl++) {
@@ -105,7 +105,7 @@ export function useJourneyData(): {
           const progressForLvl = topicProgressRows.filter(r => r.level === lvl);
           const progressMapLvl = new Map(progressForLvl.map(r => [r.topic_id, r]));
           const lvlToolkitDone = !!lpMap.get(lvl)?.tool_used_at;
-          const lvlProjectPassed = psMap.get(lvl)?.status === 'passed';
+          const lvlProjectPassed = psMap.get(lvl)?.reviewPassed === true;
           let completedCount = 0;
           lvlTopics.forEach(topic => {
             const row = progressMapLvl.get(topic.id);
@@ -143,7 +143,7 @@ export function useJourneyData(): {
           let foundActive = false;
 
           // All 3 signals required for topic/level completion
-          const levelProjectPassed = ps?.status === 'passed';
+          const levelProjectPassed = ps?.reviewPassed === true;
           const levelToolkitDone = !!lp?.tool_used_at;
 
           topics.forEach((topic, idx) => {
@@ -151,7 +151,7 @@ export function useJourneyData(): {
             // A topic is complete only when all 3 signals are present:
             //   1. E-Learning: elearn_completed_at is set
             //   2. Practice/Toolkit: tool_used_at set in level_progress
-            //   3. Project: project submission status === 'passed'
+            //   3. Project: project submission reviewPassed === true
             // NEVER use completed_at — it may be set prematurely in the DB.
             const isTopicComplete = !!row?.elearn_completed_at && levelToolkitDone && levelProjectPassed;
             if (isTopicComplete) {

@@ -417,8 +417,8 @@ const AppProjectProof: React.FC = () => {
           summary: submission.reviewSummary || '',
           encouragement: submission.reviewEncouragement || '',
         });
-        // If status is 'passed', the submission was previously confirmed
-        if (submission.status === 'passed') {
+        // Only treat as confirmed if both status is 'passed' AND review actually passed
+        if (submission.status === 'passed' && submission.reviewPassed === true) {
           setIsConfirmed(true);
           setPageView('picker'); // Show the landing picker, not the locked form
           // Repair: if confirmed but no artefact linked, create one now

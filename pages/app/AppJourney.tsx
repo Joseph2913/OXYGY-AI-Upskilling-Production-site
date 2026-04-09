@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown, MoveDown } from 'lucide-react';
+import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown, MoveDown, ClipboardList, FileText, Lightbulb, ExternalLink } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useJourneyData } from '../../hooks/useJourneyData';
 import type { JourneyData } from '../../hooks/useJourneyData';
-import { getProfile, getLatestLearningPlan, upsertProfile } from '../../lib/database';
+import { getProfile, getLatestLearningPlan, upsertProfile, getAllProjectSubmissions } from '../../lib/database';
+import type { ProjectSubmission } from '../../lib/database';
 import { LevelCard } from '../../components/app/LevelCard';
 import { LEVEL_META } from '../../data/levelTopics';
 import { LEVEL_TOPICS } from '../../data/levelTopics';
@@ -233,6 +234,8 @@ const AppJourney: React.FC = () => {
 
   // Edit Profile panel state
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+  const [projectPanelOpen, setProjectPanelOpen] = useState(false);
+  const [projectSubmissions, setProjectSubmissions] = useState<ProjectSubmission[]>([]);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileForm, setProfileForm] = useState<Partial<PathwayFormData> | null>(null);
 
@@ -535,21 +538,48 @@ const AppJourney: React.FC = () => {
           </p>
         </div>
         {!demoMode && (
-          <button
-            onClick={() => setProfilePanelOpen(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: '#FFFFFF', border: '1px solid #E2E8F0',
-              borderRadius: 20, padding: '8px 16px',
-              fontSize: 13, fontWeight: 600, color: '#4A5568',
-              cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
-              transition: 'border-color 0.15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = '#38B2AC')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
-          >
-            ✎ Edit Profile
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            {planData && (
+              <button
+                onClick={async () => {
+                  setProjectPanelOpen(true);
+                  if (user) {
+                    const subs = await getAllProjectSubmissions(user.id);
+                    setProjectSubmissions(subs);
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: '#FFFFFF', border: '1px solid #E2E8F0',
+                  borderRadius: 20, padding: '8px 16px',
+                  fontSize: 13, fontWeight: 600, color: '#4A5568',
+                  cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+                  transition: 'border-color 0.15s',
+                }}
+                data-tour="project-overview-btn"
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#38B2AC')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+              >
+                <ClipboardList size={14} />
+                My Project Overview
+              </button>
+            )}
+            <button
+              onClick={() => setProfilePanelOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: '#FFFFFF', border: '1px solid #E2E8F0',
+                borderRadius: 20, padding: '8px 16px',
+                fontSize: 13, fontWeight: 600, color: '#4A5568',
+                cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+                transition: 'border-color 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#38B2AC')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+            >
+              ✎ Edit Profile
+            </button>
+          </div>
         )}
       </div>
 
@@ -633,7 +663,7 @@ const AppJourney: React.FC = () => {
           </div>
 
           {/* Current level detail card */}
-          <div style={{
+          <div data-tour="currently-on-card" style={{
             background: `${currentMeta.accentColor}15`,
             border: `1px solid ${currentMeta.accentColor}55`,
             borderRadius: 10, padding: '14px 18px',
@@ -774,6 +804,147 @@ const AppJourney: React.FC = () => {
             Download Certificate →
           </button>
         </div>
+      )}
+
+      {/* My Project Overview slide-in panel */}
+      {!demoMode && projectPanelOpen && planData && (
+        <>
+          <div
+            onClick={() => setProjectPanelOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 200 }}
+          />
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, width: 520,
+            background: '#FFFFFF', borderLeft: '1px solid #E2E8F0',
+            zIndex: 201, display: 'flex', flexDirection: 'column',
+            fontFamily: "'DM Sans', sans-serif",
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.08)',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#1A202C', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ClipboardList size={18} color="#38B2AC" />
+                  My Project Overview
+                </div>
+                <div style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>Your assigned projects across all levels</div>
+              </div>
+              <button onClick={() => setProjectPanelOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#A0AEC0', padding: 4, lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* Scrollable project list */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+              {[1, 2, 3, 4, 5].map(lvl => {
+                const levelKey = `L${lvl}`;
+                const levelResult = planData.levels?.[levelKey];
+                const meta = LEVEL_META.find(m => m.number === lvl);
+                const sub = projectSubmissions.find(s => s.level === lvl);
+                const isAssigned = journeyData?.levels.find(l => l.levelNumber === lvl)?.isAssigned;
+
+                if (!isAssigned || !levelResult?.projectTitle) return null;
+
+                const projectReviewPassed = sub?.reviewPassed === true;
+                const projectNeedsRevision = sub?.status === 'needs_revision' || (sub?.status === 'passed' && !projectReviewPassed);
+                const statusLabel = (sub?.status === 'passed' && projectReviewPassed) ? 'Passed' : projectNeedsRevision ? 'Revise' : sub?.status === 'submitted' ? 'Submitted' : sub?.status === 'draft' ? 'Draft' : 'Not Started';
+                const statusColor = (sub?.status === 'passed' && projectReviewPassed) ? '#48BB78' : projectNeedsRevision ? '#E53E3E' : sub?.status === 'submitted' ? '#4299E1' : sub?.status === 'draft' ? '#A0AEC0' : '#CBD5E0';
+
+                return (
+                  <div key={lvl} style={{
+                    marginBottom: 16, borderRadius: 14, border: '1px solid #E2E8F0',
+                    borderLeft: `4px solid ${meta?.accentDark || '#38B2AC'}`,
+                    overflow: 'hidden',
+                  }}>
+                    {/* Level header */}
+                    <div style={{
+                      padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: `${meta?.accentColor || '#E2E8F0'}12`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: `${meta?.accentColor || '#E2E8F0'}25`, border: `1.5px solid ${meta?.accentColor || '#E2E8F0'}50`,
+                          fontSize: 13, fontWeight: 800, color: meta?.accentDark || '#1A202C',
+                        }}>
+                          L{lvl}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: meta?.accentDark || '#1A202C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            {meta?.name || `Level ${lvl}`}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Status pill */}
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, color: statusColor,
+                        background: `${statusColor}15`, border: `1px solid ${statusColor}30`,
+                        borderRadius: 12, padding: '3px 10px',
+                      }}>
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    {/* Project content */}
+                    <div style={{ padding: '14px 18px' }}>
+                      {/* Title */}
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1A202C', marginBottom: 8, lineHeight: 1.3 }}>
+                        {levelResult.projectTitle}
+                      </div>
+
+                      {/* Description */}
+                      {levelResult.projectDescription && (
+                        <div style={{ fontSize: 13, color: '#4A5568', lineHeight: 1.6, marginBottom: 12 }}>
+                          {levelResult.projectDescription}
+                        </div>
+                      )}
+
+                      {/* Deliverable */}
+                      {levelResult.deliverable && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
+                          <FileText size={14} color={meta?.accentDark || '#38B2AC'} style={{ marginTop: 2, flexShrink: 0 }} />
+                          <div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#1A202C' }}>Deliverable: </span>
+                            <span style={{ fontSize: 12, color: '#4A5568' }}>{levelResult.deliverable}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Challenge connection */}
+                      {levelResult.challengeConnection && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
+                          <Lightbulb size={14} color={meta?.accentDark || '#38B2AC'} style={{ marginTop: 2, flexShrink: 0 }} />
+                          <div style={{ fontSize: 12, color: '#718096', fontStyle: 'italic', lineHeight: 1.5 }}>
+                            {levelResult.challengeConnection}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action button */}
+                      <button
+                        onClick={() => {
+                          setProjectPanelOpen(false);
+                          navigate(`/app/journey/project/${lvl}`);
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          background: 'none', border: `1px solid ${meta?.accentDark || '#38B2AC'}`,
+                          borderRadius: 20, padding: '6px 14px',
+                          fontSize: 12, fontWeight: 600, color: meta?.accentDark || '#38B2AC',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = `${meta?.accentDark || '#38B2AC'}`; e.currentTarget.style.color = '#FFFFFF'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = meta?.accentDark || '#38B2AC'; }}
+                      >
+                        {sub?.status === 'draft' ? 'Continue Draft' : sub?.status === 'passed' ? 'View Submission' : sub?.status === 'submitted' ? 'View Submission' : 'Start Project'}
+                        <ExternalLink size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Edit Profile slide-in panel */}

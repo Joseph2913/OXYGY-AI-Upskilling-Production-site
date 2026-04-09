@@ -120,8 +120,11 @@ export const ProjectBriefSection: React.FC<ProjectBriefSectionProps> = ({
     );
   }
 
-  const statusStyle = status === 'passed'
+  const reviewPassed = projectSubmission?.reviewPassed === true;
+  const statusStyle = (status === 'passed' && reviewPassed)
     ? { bg: `${accentColor}22`, border: `1px solid ${accentColor}`, color: accentDark, label: 'Completed ✓' }
+    : (status === 'passed' && !reviewPassed)
+    ? { bg: '#FED7D7', border: '1px solid #FEB2B2', color: '#9B2C2C', label: 'Revise' }
     : STATUS_STYLES[status];
 
   const ctaConfig = CTA_CONFIG[status];

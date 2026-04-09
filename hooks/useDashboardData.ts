@@ -168,7 +168,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
         const phasesCompleted: boolean[] = [false, false]; // [elearn, practice]
         let completedTopics = 0;
 
-        const levelProjectPassed = projectSubMap.get(lvl)?.status === 'passed';
+        const levelProjectPassed = projectSubMap.get(lvl)?.reviewPassed === true;
 
         // Practice completion = toolkit tool opened/used for this level (tool_used_at)
         const levelLpRow = levelProgressRows.find(r => r.level === lvl);
@@ -230,7 +230,7 @@ export function useDashboardData(): { data: DashboardData | null; loading: boole
       const currentLevelProgress = topicProgressRows.filter(r => r.level === currentLevel);
       const currentLevelLpRow = levelProgressRows.find(r => r.level === currentLevel);
       const currentLevelToolkitDone = !!currentLevelLpRow?.tool_used_at;
-      const currentLevelProjectPassed = projectSubMap.get(currentLevel)?.status === 'passed';
+      const currentLevelProjectPassed = projectSubMap.get(currentLevel)?.reviewPassed === true;
 
       // Same 3-signal check as the per-level loop above.
       // NEVER use completed_at — it may be stale/premature.

@@ -2753,11 +2753,9 @@ export async function submitProject(
     const review: ReviewProjectResponse = await response.json();
 
     // 3. Store the review results
-    // If the project was previously passed, never regress to 'needs_revision'.
-    // A passed level stays passed — the user is just iterating on their work.
-    const newStatus = review.overallPassed
-      ? 'passed'
-      : (rollbackStatus === 'passed' ? 'passed' : 'needs_revision');
+    // Status reflects the actual review outcome — if the review didn't pass,
+    // set status to 'needs_revision' regardless of prior status.
+    const newStatus = review.overallPassed ? 'passed' : 'needs_revision';
     const updateData: Record<string, unknown> = {
       status: newStatus,
       review_dimensions: review.dimensions,

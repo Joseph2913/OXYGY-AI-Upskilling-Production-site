@@ -325,7 +325,7 @@ const AppDashboard: React.FC = () => {
   const currentLevelProgress = data.levelProgress[level];
   const eLearnDone = currentLevelProgress?.phasesCompleted?.[0] ?? false;
   const toolkitDone = !!data.levelPhaseCompletion[level]?.toolkit;
-  const projectDone = data.projectSubmissions[level]?.status === 'passed';
+  const projectDone = data.projectSubmissions[level]?.reviewPassed === true;
   const phaseDoneCount = [eLearnDone, toolkitDone, projectDone].filter(Boolean).length;
   const totalPhases = 3;
 
@@ -577,6 +577,7 @@ const AppDashboard: React.FC = () => {
                     transition: 'background 0.15s',
                     whiteSpace: 'nowrap',
                   }}
+                  data-tour="resume-btn"
                   onMouseEnter={e => (e.currentTarget.style.background = '#2D3748')}
                   onMouseLeave={e => (e.currentTarget.style.background = '#1A202C')}
                 >
@@ -744,7 +745,9 @@ const AppDashboard: React.FC = () => {
                 const toolkitStatus = isSkipped ? 'n/a' : lvlToolkitDone ? 'done' : 'not-started';
 
                 const projectSub = data.projectSubmissions[lvl];
-                const projectStatus = isSkipped ? 'n/a' : projectSub?.status === 'passed' ? 'done' : (projectSub?.status === 'submitted' || projectSub?.status === 'needs_revision' || projectSub?.status === 'draft') ? 'progress' : 'not-started';
+                const projectReviewPassed = projectSub?.reviewPassed === true;
+                const projectNeedsRevision = projectSub?.status === 'needs_revision' || (projectSub?.status === 'passed' && !projectReviewPassed);
+                const projectStatus = isSkipped ? 'n/a' : projectReviewPassed ? 'done' : projectNeedsRevision ? 'revise' : (projectSub?.status === 'submitted' || projectSub?.status === 'draft') ? 'progress' : 'not-started';
 
                 const levelNames: Record<number, string> = { 1: 'AI Fundamentals', 2: 'Applied Capability', 3: 'Systemic Integration', 4: 'Interactive Dashboards', 5: 'Full AI Applications' };
                 const toolkitRouteMap: Record<number, string> = { 1: '/app/toolkit/prompt-playground', 2: '/app/toolkit/agent-builder', 3: '/app/toolkit/workflow-canvas', 4: '/app/toolkit/dashboard-designer', 5: '/app/toolkit/ai-app-evaluator' };
@@ -775,11 +778,12 @@ const AppDashboard: React.FC = () => {
                   const isClickable = onClick && status !== 'n/a';
                   const styles: Record<string, React.CSSProperties> = {
                     'done': { background: '#C6F6D5', color: '#276749' },
+                    'revise': { background: '#FED7D7', color: '#9B2C2C', border: '1px solid #FEB2B2' },
                     'progress': { background: lvlAccent + '33', color: lvlAccentDark },
                     'not-started': { background: '#F7FAFC', color: '#A0AEC0', border: '1px solid #E2E8F0' },
                     'n/a': { background: 'transparent', color: '#CBD5E0' },
                   };
-                  const labels: Record<string, string> = { 'done': 'Done', 'progress': 'In progress', 'not-started': 'Not started', 'n/a': '—' };
+                  const labels: Record<string, string> = { 'done': 'Done', 'revise': 'Revise', 'progress': 'In progress', 'not-started': 'Not started', 'n/a': '—' };
                   return (
                     <div
                       title={isClickable ? tooltip : undefined}

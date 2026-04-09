@@ -346,11 +346,15 @@ export const LevelCard: React.FC<LevelCardProps> = ({ level, animDelay, projectT
               : { bg: '#F7FAFC', color: '#A0AEC0', border: '1px solid #E2E8F0' };
 
             const ps = level.projectSubmission?.status;
-            const projectDone = ps === 'passed';
-            const projectInProgress = ps === 'submitted' || ps === 'needs_revision' || ps === 'draft';
-            const projectLabel = projectDone ? 'Done' : ps === 'submitted' ? 'Review' : ps === 'needs_revision' ? 'Revise' : ps === 'draft' ? 'Draft' : 'To do';
+            const projectReviewPassed = level.projectSubmission?.reviewPassed === true;
+            const projectNeedsRevision = ps === 'needs_revision' || (ps === 'passed' && !projectReviewPassed);
+            const projectDone = ps === 'passed' && projectReviewPassed;
+            const projectInProgress = ps === 'submitted' || ps === 'draft';
+            const projectLabel = projectDone ? 'Done' : projectNeedsRevision ? 'Revise' : ps === 'submitted' ? 'Review' : ps === 'draft' ? 'Draft' : 'To do';
             const projectBadge = projectDone
               ? { bg: '#F0FFF4', color: '#276749', border: '1px solid #C6F6D5' }
+              : projectNeedsRevision
+              ? { bg: '#FED7D7', color: '#9B2C2C', border: '1px solid #FEB2B2' }
               : projectInProgress
               ? { bg: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }
               : { bg: '#F7FAFC', color: '#A0AEC0', border: '1px solid #E2E8F0' };
