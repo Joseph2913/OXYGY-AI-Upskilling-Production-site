@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Map, BookOpen, Wrench, Folder, Users, Settings, Shield, GraduationCap, LayoutDashboard } from 'lucide-react';
+import { Home, Map, Wrench, Folder, Users, Settings, Shield, GraduationCap, LayoutDashboard } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +8,6 @@ import { useAuth } from '../../context/AuthContext';
 const NAV_ITEMS = [
   { label: 'Dashboard',      icon: Home,            path: '/app/dashboard' },
   { label: 'My Journey',     icon: Map,             path: '/app/journey' },
-  { label: 'Current Level',  icon: BookOpen,        path: '/app/level' }, // path overridden dynamically below
   { label: 'Workspace',      icon: LayoutDashboard, path: '/app/workspace' },
   { label: 'My Cohort',      icon: Users,           path: '/app/cohort' },
 ];

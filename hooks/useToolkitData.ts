@@ -110,7 +110,7 @@ export function useToolkitData(): { data: ToolkitData | null; loading: boolean }
         const topicRow = topicRows.find(r => r.level === lvl && r.topic_id === primaryTopicId);
         const artefactsCreated = artefactCounts[lvl] || 0;
         const elearnDone = !!topicRow?.elearn_completed_at;
-        const toolkitDone = artefactsCreated > 0;
+        const toolkitDone = !!levelProgressRows.find(r => r.level === lvl)?.tool_used_at;
         const isAssigned = assignedLevelKeys.includes(`L${lvl}`)
           || (bonusUnlocked && (lvl === 4 || lvl === 5));
 

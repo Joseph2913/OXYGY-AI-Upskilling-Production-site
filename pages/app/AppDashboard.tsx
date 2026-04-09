@@ -324,9 +324,7 @@ const AppDashboard: React.FC = () => {
   // Derive current-level phase completion (matches journey section logic)
   const currentLevelProgress = data.levelProgress[level];
   const eLearnDone = currentLevelProgress?.phasesCompleted?.[0] ?? false;
-  const toolKeyMap: Record<number, string> = { 1: 'prompt-playground', 2: 'agent-builder', 3: 'workflow-canvas', 4: 'dashboard-designer', 5: 'ai-app-evaluator' };
-  const currentLevelArtefacts = data.toolUsage[toolKeyMap[level]]?.artefactsCreated ?? 0;
-  const toolkitDone = currentLevelArtefacts > 0;
+  const toolkitDone = !!data.levelPhaseCompletion[level]?.toolkit;
   const projectDone = data.projectSubmissions[level]?.status === 'passed';
   const phaseDoneCount = [eLearnDone, toolkitDone, projectDone].filter(Boolean).length;
   const totalPhases = 3;
@@ -354,7 +352,7 @@ const AppDashboard: React.FC = () => {
       return hasStartedElearn ? 'Resume E-Learning' : 'Start E-Learning';
     }
     if (!toolkitDone) {
-      return currentLevelArtefacts > 0 ? 'Resume Toolkit' : 'Start Toolkit';
+      return 'Start Toolkit';
     }
     if (!projectDone) {
       return projectStarted ? 'Resume Project' : 'Start Project';
@@ -739,10 +737,11 @@ const AppDashboard: React.FC = () => {
                 const eLearnDone = progress?.phasesCompleted?.[0] ?? false;
                 const eLearnStatus = isSkipped ? 'n/a' : eLearnDone ? 'done' : phasesCompleted >= 1 ? 'progress' : 'not-started';
 
+                const lvlToolkitDone = !!data.levelPhaseCompletion[lvl]?.toolkit;
                 const toolKeyMap: Record<number, string> = { 1: 'prompt-playground', 2: 'agent-builder', 3: 'workflow-canvas', 4: 'dashboard-designer', 5: 'ai-app-evaluator' };
                 const toolUsageKey = toolKeyMap[lvl];
                 const artefacts = data.toolUsage[toolUsageKey]?.artefactsCreated ?? 0;
-                const toolkitStatus = isSkipped ? 'n/a' : artefacts > 0 ? 'done' : 'not-started';
+                const toolkitStatus = isSkipped ? 'n/a' : lvlToolkitDone ? 'done' : 'not-started';
 
                 const projectSub = data.projectSubmissions[lvl];
                 const projectStatus = isSkipped ? 'n/a' : projectSub?.status === 'passed' ? 'done' : (projectSub?.status === 'submitted' || projectSub?.status === 'needs_revision' || projectSub?.status === 'draft') ? 'progress' : 'not-started';
