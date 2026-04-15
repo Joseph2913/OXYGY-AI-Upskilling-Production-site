@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown, MoveDown, ClipboardList, FileText, Lightbulb, ExternalLink } from 'lucide-react';
+import { ArrowRight, Check, Clock, Sparkles, Zap, ChevronDown, MoveDown, ClipboardList, FileText, Lightbulb, ExternalLink, X } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useJourneyData } from '../../hooks/useJourneyData';
@@ -231,6 +231,7 @@ const AppJourney: React.FC = () => {
   // Track which level was clicked from overview to auto-expand its card
   // (must be declared here, before any conditional returns, per Rules of Hooks)
   const [expandedFromOverview, setExpandedFromOverview] = useState<number | null>(null);
+  const [showBonusModal, setShowBonusModal] = useState(false);
 
   // Edit Profile panel state
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
@@ -351,6 +352,18 @@ const AppJourney: React.FC = () => {
       navigate('/app/dashboard', { replace: true, state: { showTour: true } });
     }, 400);
   }, [navigate]);
+
+  // One-time bonus unlock popup: fire when data loads and bonus levels are newly accessible
+  useEffect(() => {
+    if (!data || !user) return;
+    const { levels: lvls } = data;
+    const bonusActive = lvls.some(l => (l.levelNumber === 4 || l.levelNumber === 5) && l.isAssigned);
+    if (!bonusActive) return;
+    const seenKey = `oxygy_bonus_unlocked_seen_${user.id}`;
+    if (!localStorage.getItem(seenKey)) {
+      setShowBonusModal(true);
+    }
+  }, [data, user]);
 
   // Show loading skeleton while learning plan status is loading (skip in demo mode)
   if (!demoMode && learningPlanLoading) {
@@ -501,9 +514,92 @@ const AppJourney: React.FC = () => {
     }, 50);
   };
 
+  const dismissBonusModal = () => {
+    if (user) localStorage.setItem(`oxygy_bonus_unlocked_seen_${user.id}`, '1');
+    setShowBonusModal(false);
+  };
+
   return (
     <div ref={contentRef} style={{ padding: '28px 36px', fontFamily: "'DM Sans', sans-serif" }}>
       <style>{pulseStyle}</style>
+
+      {/* Bonus levels unlocked — one-time modal */}
+      {showBonusModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(26, 32, 44, 0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }}
+          onClick={dismissBonusModal}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: 20,
+              padding: '36px 36px 32px',
+              maxWidth: 440,
+              width: '100%',
+              position: 'relative',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+              animation: 'journeyFadeSlideUp 0.25s ease both',
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={dismissBonusModal}
+              style={{
+                position: 'absolute', top: 16, right: 16,
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 4, display: 'flex', opacity: 0.5,
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.5'; }}
+            >
+              <X size={18} color="#1A202C" />
+            </button>
+
+            {/* Emoji */}
+            <div style={{ fontSize: 40, marginBottom: 16, textAlign: 'center' }}>🎉</div>
+
+            {/* Title */}
+            <div style={{
+              fontSize: 22, fontWeight: 800, color: '#1A202C',
+              textAlign: 'center', marginBottom: 12, lineHeight: 1.25,
+            }}>
+              Bonus Levels Unlocked
+            </div>
+
+            {/* Body */}
+            <div style={{
+              fontSize: 15, color: '#4A5568', textAlign: 'center',
+              lineHeight: 1.7, marginBottom: 28,
+            }}>
+              You've completed all your assigned levels — Levels 1–3.
+              Levels 4 & 5 are now unlocked as bonus content and are
+              part of your journey.
+            </div>
+
+            {/* CTA */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={dismissBonusModal}
+                style={{
+                  background: '#38B2AC', color: '#FFFFFF',
+                  border: 'none', borderRadius: 24,
+                  padding: '11px 28px', fontSize: 14, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Demo mode banner */}
       {demoMode && (

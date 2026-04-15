@@ -2752,6 +2752,23 @@ export async function submitProject(
 
     const review: ReviewProjectResponse = await response.json();
 
+    // Part A — Decouple screenshot quality from completion status.
+    // If the only failing dimension is evidence_quality (needs_attention) while
+    // all written-content dimensions are developing or strong, override
+    // overallPassed to true. The grade is still lowered by evidence_quality via
+    // calculateTier — the user just won't be blocked from completing the level.
+    if (!review.overallPassed && Array.isArray(review.dimensions)) {
+      const writtenPass = review.dimensions
+        .filter(d => d.id !== 'evidence_quality')
+        .every(d => d.status === 'strong' || d.status === 'developing');
+      const evidenceNeedsAttention = review.dimensions.some(
+        d => d.id === 'evidence_quality' && d.status === 'needs_attention',
+      );
+      if (writtenPass && evidenceNeedsAttention) {
+        review.overallPassed = true;
+      }
+    }
+
     // 3. Store the review results
     // Status reflects the actual review outcome — if the review didn't pass,
     // set status to 'needs_revision' regardless of prior status.

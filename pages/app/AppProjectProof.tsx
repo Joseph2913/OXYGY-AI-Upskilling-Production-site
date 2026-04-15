@@ -1022,6 +1022,32 @@ const AppProjectProof: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Return to Journey */}
+          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => navigate('/app/journey')}
+              style={{
+                background: LEVEL_ACCENT_DARK,
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 24,
+                padding: '10px 22px',
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.opacity = '0.85';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+              }}
+            >
+              Return to My Journey →
+            </button>
+          </div>
         </div>
       )}
 
@@ -1094,7 +1120,7 @@ const AppProjectProof: React.FC = () => {
           }}>
             <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>ℹ️</span>
             <div style={{ fontSize: 12, color: '#718096', lineHeight: 1.6, fontFamily: FONT }}>
-              Your submission is reviewed by an AI agent — not the Oxygy team. Your facilitator can see your score and tier to track cohort progress, but will not review your written responses.
+              Your submission is reviewed by an AI agent — not the OXYGY team. Your facilitator can see your score and tier to track cohort progress, but will not review your written responses.
             </div>
           </div>
 

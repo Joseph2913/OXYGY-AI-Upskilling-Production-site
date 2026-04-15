@@ -165,6 +165,7 @@ const AppToolkit: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [showScoring, setShowScoring] = useState(false);
+  const [hoveredToolId, setHoveredToolId] = useState<string | null>(null);
 
   useEffect(() => {
     const unlocked = searchParams.get('unlocked');
@@ -205,6 +206,9 @@ const AppToolkit: React.FC = () => {
   const primaryTools = levels.map(lvl => getPrimaryTool(lvl)).filter(Boolean) as Tool[];
   const unlockedCount = tkData ? tkData.levelStats.filter(s => s.unlocked || s.isAssigned).length : 0;
   const currentMeta = LEVEL_META.find(m => m.number === currentLevel)!;
+  const bonusUnlocked = tkData
+    ? tkData.levelStats.some(s => (s.levelNumber === 4 || s.levelNumber === 5) && s.isAssigned)
+    : false;;
 
   // Banner
   const bannerMeta = unlockedLevel ? LEVEL_META.find(m => m.number === unlockedLevel) : null;
@@ -425,7 +429,8 @@ const AppToolkit: React.FC = () => {
           if (!tool) return null;
           const meta = LEVEL_META.find(m => m.number === lvl)!;
           const stats = tkData.levelStats.find(s => s.levelNumber === lvl);
-          const isNotAssigned = stats ? !stats.isAssigned : false;
+          const isBonusLevel = bonusUnlocked && (lvl === 4 || lvl === 5);
+          const isNotAssigned = stats ? (!stats.isAssigned && !isBonusLevel) : false;
           // Assigned levels are always accessible — never locked
           const isLocked = false;
           const isAccessible = stats ? (stats.isAssigned || stats.unlocked) : false;
@@ -440,6 +445,8 @@ const AppToolkit: React.FC = () => {
             return (
               <div
                 key={lvl}
+                onMouseEnter={() => setHoveredToolId(tool.id)}
+                onMouseLeave={() => setHoveredToolId(null)}
                 style={{
                   borderRadius: 14,
                   border: '1px solid #E2E8F0',
@@ -447,8 +454,19 @@ const AppToolkit: React.FC = () => {
                   padding: '20px 24px',
                   opacity: 0.55,
                   animation: `tkFadeSlideUp 0.3s ease ${60 + idx * 60}ms both`,
+                  position: 'relative' as const,
                 }}
               >
+                {hoveredToolId === tool.id && (
+                  <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '5px solid #1A202C' }} />
+                      <div style={{ background: '#1A202C', color: '#FFFFFF', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontWeight: 500, lineHeight: 1.5, whiteSpace: 'nowrap' as const }}>
+                        Not part of your current learning journey
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{
                     width: 48, height: 48, borderRadius: 12, flexShrink: 0,
@@ -544,6 +562,23 @@ const AppToolkit: React.FC = () => {
                     <div style={{ fontSize: 12, color: isLocked ? '#A0AEC0' : '#4A5568', lineHeight: 1.65 }}>
                       {tool.description}
                     </div>
+
+                    {/* Bonus unlock banner */}
+                    {isBonusLevel && (
+                      <div style={{
+                        background: '#F0FFF4',
+                        border: '1px solid #C6F6D5',
+                        borderRadius: 8,
+                        padding: '8px 14px',
+                        fontSize: 12,
+                        color: '#276749',
+                        lineHeight: 1.55,
+                        marginTop: 10,
+                      }}>
+                        <span style={{ marginRight: 6 }}>🎉</span>
+                        Bonus level unlocked — you've completed Levels 1–3. Levels 4 & 5 are now part of your journey.
+                      </div>
+                    )}
                   </div>
                 </div>
 

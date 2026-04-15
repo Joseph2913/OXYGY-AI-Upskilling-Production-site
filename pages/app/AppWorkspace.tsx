@@ -575,6 +575,7 @@ const AppWorkspace: React.FC = () => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelContent, setPanelContent] = useState<ArtefactContent | null>(null);
+  const [hoveredToolId, setHoveredToolId] = useState<string | null>(null);
 
   const availableLevels = useMemo(() => [1, 2, 3, 4, 5], []);
 
@@ -901,7 +902,7 @@ const AppWorkspace: React.FC = () => {
             Workspace
           </h1>
           <p style={{ fontSize: 14, color: '#718096', marginTop: 5, margin: '5px 0 0' }}>
-            Describe what you want to build, or pick a template to get started.
+            Describe what you want to build, or pick a toolkit to get started.
           </p>
         </div>
 
@@ -1187,7 +1188,7 @@ const AppWorkspace: React.FC = () => {
           textTransform: 'uppercase' as const, letterSpacing: '0.06em',
           marginBottom: 12,
         }}>
-          Templates
+          Toolkits
         </div>
         <div style={{
           display: 'grid',
@@ -1201,27 +1202,41 @@ const AppWorkspace: React.FC = () => {
             const IconComponent = TOOL_ICON_MAP[tool.id];
 
             return (
-              <div
-                key={tool.id}
-                className="ws-template-card"
-                onClick={() => {
-                  if (unlocked) navigate(tool.route);
-                }}
-                style={{
-                  background: '#FFFFFF',
-                  border: `1.5px solid ${unlocked ? accent : '#E2E8F0'}`,
-                  borderRadius: 14,
-                  padding: '20px 16px 16px',
-                  cursor: unlocked ? 'pointer' : 'default',
-                  opacity: unlocked ? 1 : 0.5,
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                  position: 'relative' as const,
-                  display: 'flex',
-                  flexDirection: 'column' as const,
-                  gap: 10,
-                  color: unlocked ? accentDark : '#A0AEC0',
-                }}
-              >
+              <div key={tool.id} style={{ position: 'relative' as const, overflow: 'visible', height: '100%' }}>
+                {!unlocked && hoveredToolId === tool.id && (
+                  <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '5px solid #1A202C' }} />
+                      <div style={{ background: '#1A202C', color: '#FFFFFF', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontWeight: 500, lineHeight: 1.5, whiteSpace: 'nowrap' as const }}>
+                        Not part of your current learning journey
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div
+                  className="ws-template-card"
+                  onMouseEnter={() => { if (!unlocked) setHoveredToolId(tool.id); }}
+                  onMouseLeave={() => setHoveredToolId(null)}
+                  onClick={() => {
+                    if (unlocked) navigate(tool.route);
+                  }}
+                  style={{
+                    background: '#FFFFFF',
+                    border: `1.5px solid ${unlocked ? accent : '#E2E8F0'}`,
+                    borderRadius: 14,
+                    padding: '20px 16px 16px',
+                    cursor: unlocked ? 'pointer' : 'default',
+                    opacity: unlocked ? 1 : 0.5,
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    position: 'relative' as const,
+                    display: 'flex',
+                    flexDirection: 'column' as const,
+                    gap: 10,
+                    color: unlocked ? accentDark : '#A0AEC0',
+                    height: '100%',
+                    boxSizing: 'border-box' as const,
+                  }}
+                >
                 {/* Lock overlay */}
                 {!unlocked && (
                   <div style={{ position: 'absolute', top: 12, right: 12 }}>
@@ -1276,6 +1291,7 @@ const AppWorkspace: React.FC = () => {
                     Open <ArrowRight size={13} />
                   </div>
                 )}
+                </div>
               </div>
             );
           })}
