@@ -5117,7 +5117,7 @@ export const submitfeedback = onRequest(
       await appendFeedbackRow(auth, row);
 
       // 3. Send email notification via Resend
-      const resendKey = resendApiKey.value();
+      const resendKey = resendApiKey.value() || process.env.RESEND_API_KEY || "";
       console.log("[submitfeedback] resendKey present:", !!resendKey, "| sheet row appended OK");
       if (resendKey) {
         const subject = type === "bug"
@@ -5129,7 +5129,6 @@ export const submitfeedback = onRequest(
             <h2 style="color: #1A202C; margin-bottom: 4px;">${subject}</h2>
             <p style="color: #718096; font-size: 14px; margin-top: 0;">Submitted via the OXYGY AI Upskilling platform</p>
             <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
-
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
               <tr>
                 <td style="padding: 8px 0; color: #718096; width: 140px; vertical-align: top;">Type</td>
@@ -5151,24 +5150,23 @@ export const submitfeedback = onRequest(
                 <td style="padding: 8px 0; color: #718096; vertical-align: top;">Description</td>
                 <td style="padding: 8px 0; color: #1A202C; white-space: pre-line;">${description}</td>
               </tr>
-              ${screenshotUrl ? `
-              <tr>
+              ${screenshotUrl ? `<tr>
                 <td style="padding: 8px 0; color: #718096; vertical-align: top;">Screenshot</td>
                 <td style="padding: 8px 0;"><a href="${screenshotUrl}" style="color: #38B2AC;">View screenshot</a></td>
               </tr>` : ""}
             </table>
-
             <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
             <p style="color: #718096; font-size: 13px;">
               View all submissions in the
               <a href="https://docs.google.com/spreadsheets/d/${FEEDBACK_SPREADSHEET_ID}" style="color: #38B2AC;">Feedback Google Sheet</a>.
-              Set Priority and Status directly in the sheet.
             </p>
           </div>
         `;
 
         try {
-          const emailRes = await fetchWithRetry("https://api.resend.com/emails", {
+          const controller = new AbortController();
+          const emailTimeout = setTimeout(() => controller.abort(), 8000);
+          const emailRes = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -5180,9 +5178,11 @@ export const submitfeedback = onRequest(
               subject,
               html: emailBody,
             }),
-          }, "submit-feedback-email");
+            signal: controller.signal,
+          });
+          clearTimeout(emailTimeout);
           const emailJson = await emailRes.json().catch(() => ({}));
-          console.log("[submitfeedback] Email sent:", JSON.stringify(emailJson));
+          console.log("[submitfeedback] Email result:", emailRes.status, JSON.stringify(emailJson));
         } catch (emailErr) {
           console.error("[submitfeedback] Email send failed:", emailErr);
         }
