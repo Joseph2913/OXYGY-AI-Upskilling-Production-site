@@ -5174,7 +5174,7 @@ export const submitfeedback = onRequest(
               Authorization: `Bearer ${resendKey}`,
             },
             body: JSON.stringify({
-              from: "OXYGY AI Upskilling <onboarding@resend.dev>",
+              from: "OXYGY AI Upskilling <noreply@oxygyconsulting.com>",
               to: [FEEDBACK_NOTIFICATION_EMAIL],
               subject,
               html: emailBody,
