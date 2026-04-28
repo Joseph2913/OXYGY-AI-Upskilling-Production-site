@@ -5118,6 +5118,7 @@ export const submitfeedback = onRequest(
 
       // 3. Send email notification via Resend
       const resendKey = resendApiKey.value();
+      console.log("[submitfeedback] resendKey present:", !!resendKey, "| sheet row appended OK");
       if (resendKey) {
         const subject = type === "bug"
           ? `[Bug Report] ${title || "New bug reported"}`
