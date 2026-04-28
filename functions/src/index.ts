@@ -5166,19 +5166,27 @@ export const submitfeedback = onRequest(
           </div>
         `;
 
-        await fetchWithRetry("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resendKey}`,
-          },
-          body: JSON.stringify({
-            from: "OXYGY AI Upskilling <onboarding@resend.dev>",
-            to: [FEEDBACK_NOTIFICATION_EMAIL],
-            subject,
-            html: emailBody,
-          }),
-        }, "submit-feedback-email");
+        try {
+          const emailRes = await fetchWithRetry("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${resendKey}`,
+            },
+            body: JSON.stringify({
+              from: "OXYGY AI Upskilling <onboarding@resend.dev>",
+              to: [FEEDBACK_NOTIFICATION_EMAIL],
+              subject,
+              html: emailBody,
+            }),
+          }, "submit-feedback-email");
+          const emailJson = await emailRes.json().catch(() => ({}));
+          console.log("[submitfeedback] Email sent:", JSON.stringify(emailJson));
+        } catch (emailErr) {
+          console.error("[submitfeedback] Email send failed:", emailErr);
+        }
+      } else {
+        console.warn("[submitfeedback] RESEND_API_KEY not set — skipping email");
       }
 
       res.status(200).json({ success: true });
