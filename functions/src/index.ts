@@ -4,6 +4,7 @@ import { callGemini, fetchWithRetry, callOpenRouterRaw, callOpenRouter } from ".
 import { searchContent, getContentByLevel, getLevelOverview } from "./elearningContent";
 import { google } from "googleapis";
 import * as admin from "firebase-admin";
+import { Resend } from "resend";
 
 // Initialise Firebase Admin (safe to call multiple times — no-ops if already initialised)
 if (!admin.apps.length) {
@@ -5164,25 +5165,14 @@ export const submitfeedback = onRequest(
         `;
 
         try {
-          const controller = new AbortController();
-          const emailTimeout = setTimeout(() => controller.abort(), 8000);
-          const emailRes = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${resendKey}`,
-            },
-            body: JSON.stringify({
-              from: "OXYGY AI Upskilling <noreply@oxygyconsulting.com>",
-              to: [FEEDBACK_NOTIFICATION_EMAIL],
-              subject,
-              html: emailBody,
-            }),
-            signal: controller.signal,
+          const resendClient = new Resend(resendKey);
+          const emailResult = await resendClient.emails.send({
+            from: "OXYGY AI Upskilling <noreply@oxygyconsulting.com>",
+            to: [FEEDBACK_NOTIFICATION_EMAIL],
+            subject,
+            html: emailBody,
           });
-          clearTimeout(emailTimeout);
-          const emailJson = await emailRes.json().catch(() => ({}));
-          console.log("[submitfeedback] Email result:", emailRes.status, JSON.stringify(emailJson));
+          console.log("[submitfeedback] Email result:", JSON.stringify(emailResult));
         } catch (emailErr) {
           console.error("[submitfeedback] Email send failed:", emailErr);
         }
