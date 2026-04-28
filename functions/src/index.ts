@@ -5180,7 +5180,7 @@ export const submitfeedback = onRequest(
         console.warn("[submitfeedback] RESEND_API_KEY not set — skipping email");
       }
 
-      res.status(200).json({ success: true });
+      res.status(200).json({ success: true, _dbg_keyPresent: !!resendKey });
     } catch (err) {
       console.error("[submitfeedback] Error:", err);
       res.status(500).json({ error: "Failed to submit feedback. Please try again." });
