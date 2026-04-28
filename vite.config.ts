@@ -3663,6 +3663,13 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      proxy: {
+        '/api/submit-feedback': {
+          target: 'https://us-central1-oxygy-ai-upskilling-site.cloudfunctions.net',
+          changeOrigin: true,
+          rewrite: () => '/submitfeedback',
+        },
+      },
     },
     plugins: [
       react(),

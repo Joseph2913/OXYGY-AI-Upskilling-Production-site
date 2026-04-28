@@ -2,11 +2,19 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { callGemini, fetchWithRetry, callOpenRouterRaw, callOpenRouter } from "./gemini";
 import { searchContent, getContentByLevel, getLevelOverview } from "./elearningContent";
+import { google } from "googleapis";
+import * as admin from "firebase-admin";
+
+// Initialise Firebase Admin (safe to call multiple times — no-ops if already initialised)
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const openRouterApiKey = defineSecret("OPEN_ROUTER_API");
 const resendApiKey = defineSecret("RESEND_API_KEY");
 const supabaseUrl = defineSecret("SUPABASE_URL");
 const supabaseServiceKey = defineSecret("SUPABASE_SERVICE_KEY");
+const googleServiceAccount = defineSecret("GOOGLE_SERVICE_ACCOUNT");
 // Note: All API calls go through OpenRouter. Use the appropriate model ID
 // (e.g. "anthropic/claude-sonnet-4-20250514") to access different providers.
 
@@ -4959,6 +4967,224 @@ export const workspacechat = onRequest(
     } catch (err) {
       console.error("workspace-chat error:", err);
       res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════
+// SUBMIT FEEDBACK / BUG REPORT
+// Appends to Google Sheet "feedback" tab + uploads screenshot to
+// Google Drive + sends email notification via Resend.
+// Only callable from authenticated Oxygy Consulting users (enforced
+// client-side; no sensitive data is gated behind this endpoint).
+// ═══════════════════════════════════════════════════════════════
+
+const FEEDBACK_SPREADSHEET_ID = "1Z-QsHJwo15sAciiXG7XWdNWho33Paj_1omI6JL6lsR8";
+const FEEDBACK_SHEET_NAME = "internal live feedback";
+const FEEDBACK_NOTIFICATION_EMAIL = "marisha.boyd@oxygyconsulting.com";
+
+function buildGoogleAuth(serviceAccountJson: string) {
+  const credentials = JSON.parse(serviceAccountJson);
+  return new google.auth.GoogleAuth({
+    credentials,
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive.file",
+    ],
+  });
+}
+
+async function uploadScreenshotToStorage(
+  base64Data: string,
+  filename: string,
+): Promise<string> {
+  const base64 = base64Data.replace(/^data:image\/[a-z+]+;base64,/, "");
+  const imageBuffer = Buffer.from(base64, "base64");
+  const mimeType = base64Data.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+
+  const bucket = admin.storage().bucket();
+  const file = bucket.file(`feedback-screenshots/${filename}`);
+
+  await file.save(imageBuffer, {
+    metadata: { contentType: mimeType },
+    public: true,
+  });
+
+  // Return the public URL
+  const encodedPath = encodeURIComponent(`feedback-screenshots/${filename}`);
+  return `https://storage.googleapis.com/${bucket.name}/${encodedPath}`;
+}
+
+async function appendFeedbackRow(
+  auth: ReturnType<typeof buildGoogleAuth>,
+  row: string[],
+): Promise<void> {
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: FEEDBACK_SPREADSHEET_ID,
+    range: `${FEEDBACK_SHEET_NAME}!A:J`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [row] },
+  });
+}
+
+export const submitfeedback = onRequest(
+  { secrets: [resendApiKey, googleServiceAccount], cors: true, memory: "256MiB", cpu: 0.083, minInstances: 1, maxInstances: 5 },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const {
+      type,          // "bug" | "feedback"
+      participantName,
+      userEmail,
+      title,         // short title / summary
+      section,       // category selected by user
+      pageUrl,       // auto-captured page URL (bugs only)
+      description,   // full text
+      screenshot,    // optional base64 image string
+    } = req.body as {
+      type: string;
+      participantName: string;
+      userEmail: string;
+      title: string;
+      section: string;
+      pageUrl?: string;
+      description: string;
+      screenshot?: string;
+    };
+
+    if (!type || !description) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    // Debug: log what arrived
+    console.log("[submitfeedback] received:", {
+      type,
+      hasScreenshot: !!screenshot,
+      screenshotLength: screenshot ? screenshot.length : 0,
+      screenshotPrefix: screenshot ? screenshot.substring(0, 30) : "none",
+    });
+
+    const saJson = googleServiceAccount.value();
+    if (!saJson) {
+      console.error("[submitfeedback] GOOGLE_SERVICE_ACCOUNT secret not set");
+      res.status(503).json({ error: "Service not configured" });
+      return;
+    }
+
+    try {
+      const auth = buildGoogleAuth(saJson);
+
+      // 1. Upload screenshot to Drive (if provided)
+      let screenshotUrl = "";
+      if (screenshot) {
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        const filename = `screenshot-${ts}.png`;
+        try {
+          screenshotUrl = await uploadScreenshotToStorage(screenshot, filename);
+          console.log("[submitfeedback] Drive upload succeeded:", screenshotUrl);
+        } catch (driveErr) {
+          console.error("[submitfeedback] Drive upload failed:", driveErr);
+          // Non-fatal — continue without screenshot URL
+        }
+      }
+
+      // 2. Build sheet row matching feedback sheet headers:
+      // session_id | participant_name | call_date | call_duration_minutes |
+      // platform_area | category | insight | quote | sentiment |
+      // Owner | Status | Priority | Implementation Notes
+      const sessionId = `APP-${Date.now()}`;
+      const callDate = new Date().toLocaleString("en-GB", { timeZone: "Europe/London" });
+      const category = type === "bug" ? "Bug Report" : "Feedback";
+
+      const row = [
+        sessionId,                                    // A: ID
+        participantName || userEmail || "Unknown",    // B: User name
+        callDate,                                     // C: Date
+        pageUrl || "",                                // D: Platform location
+        category,                                     // E: Type (Bug Report / Feedback)
+        section || "",                                // F: Category (dropdown value)
+        title || "",                                  // G: Title
+        description,                                  // H: Description
+        screenshotUrl || "",                          // I: Screenshot (optional)
+        "New",                                        // J: Status
+      ];
+
+      await appendFeedbackRow(auth, row);
+
+      // 3. Send email notification via Resend
+      const resendKey = resendApiKey.value();
+      if (resendKey) {
+        const subject = type === "bug"
+          ? `[Bug Report] ${title || "New bug reported"}`
+          : `[Feedback] ${title || "New feedback received"}`;
+
+        const emailBody = `
+          <div style="font-family: sans-serif; max-width: 600px; padding: 24px;">
+            <h2 style="color: #1A202C; margin-bottom: 4px;">${subject}</h2>
+            <p style="color: #718096; font-size: 14px; margin-top: 0;">Submitted via the OXYGY AI Upskilling platform</p>
+            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="padding: 8px 0; color: #718096; width: 140px; vertical-align: top;">Type</td>
+                <td style="padding: 8px 0; color: #1A202C; font-weight: 600;">${category}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #718096; vertical-align: top;">Submitted by</td>
+                <td style="padding: 8px 0; color: #1A202C;">${participantName || "Unknown"} (${userEmail || "no email"})</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #718096; vertical-align: top;">${type === "bug" ? "Page / Location" : "Section"}</td>
+                <td style="padding: 8px 0; color: #1A202C;">${section || "—"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #718096; vertical-align: top;">Title</td>
+                <td style="padding: 8px 0; color: #1A202C;">${title || "—"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #718096; vertical-align: top;">Description</td>
+                <td style="padding: 8px 0; color: #1A202C; white-space: pre-line;">${description}</td>
+              </tr>
+              ${screenshotUrl ? `
+              <tr>
+                <td style="padding: 8px 0; color: #718096; vertical-align: top;">Screenshot</td>
+                <td style="padding: 8px 0;"><a href="${screenshotUrl}" style="color: #38B2AC;">View screenshot</a></td>
+              </tr>` : ""}
+            </table>
+
+            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
+            <p style="color: #718096; font-size: 13px;">
+              View all submissions in the
+              <a href="https://docs.google.com/spreadsheets/d/${FEEDBACK_SPREADSHEET_ID}" style="color: #38B2AC;">Feedback Google Sheet</a>.
+              Set Priority and Status directly in the sheet.
+            </p>
+          </div>
+        `;
+
+        await fetchWithRetry("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${resendKey}`,
+          },
+          body: JSON.stringify({
+            from: "OXYGY AI Upskilling <onboarding@resend.dev>",
+            to: [FEEDBACK_NOTIFICATION_EMAIL],
+            subject,
+            html: emailBody,
+          }),
+        }, "submit-feedback-email");
+      }
+
+      res.status(200).json({ success: true });
+    } catch (err) {
+      console.error("[submitfeedback] Error:", err);
+      res.status(500).json({ error: "Failed to submit feedback. Please try again." });
     }
   }
 );

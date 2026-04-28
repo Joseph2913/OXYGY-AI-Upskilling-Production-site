@@ -7,6 +7,7 @@ import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH } from './AppSidebar';
 import { AppTopBar } from './AppTopBar';
 import LearningPlanGate from './LearningPlanGate';
 import { ProductTour } from './ProductTour';
+import { FeedbackWidget } from './FeedbackWidget';
 
 /**
  * Error boundary that resets when the route changes (via key prop).
@@ -143,6 +144,7 @@ const AppLayoutInner: React.FC = () => {
       {showTourPrompt && (
         <ProductTour onComplete={handleTourComplete} onTourStart={handleTourStart} />
       )}
+      <FeedbackWidget />
     </TourModeProvider>
   );
 };
