@@ -293,7 +293,8 @@ CRITICAL RULES:
 
             const userMessage = `Task Description: ${task_description}\n\nInput Data Description: ${input_data_description || 'Not specified'}`;
 
-            const openRouterModel = model.startsWith('google/') ? model : `google/${model}`;
+            // design-agent needs the reliable pro model (fast model builds this large response incorrectly) — keep in sync with functions/src/index.ts
+            const openRouterModel = 'google/gemini-2.5-pro';
             const geminiResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -1151,7 +1152,7 @@ Only include levels that are "full" or "fast-track". Omit "awareness" and "skip"
 }
 
 function dashboardDesignProxyPlugin(apiKey: string, model: string, textModel?: string): Plugin {
-  const htmlModel = textModel || 'google/gemini-2.0-flash-001';
+  const htmlModel = textModel || 'google/gemini-2.5-flash';
   // System prompt for Gemini HTML fallback (used when Imagen is unavailable)
   const htmlFallbackPrompt = `You are an elite UI designer creating stunning, modern dashboard mockups. Generate a complete HTML dashboard.
 
@@ -2477,7 +2478,7 @@ Severity: ${severity}
 User's argument: ${disputeText}
 Workflow context: ${JSON.stringify(nodeContext || {})}`;
 
-            const openRouterModel = 'google/gemini-2.0-flash-001';
+            const openRouterModel = 'google/gemini-2.5-flash';
             const openRouterResponse = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -3323,7 +3324,7 @@ Return ONLY valid JSON, no markdown fences.`;
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
               body: JSON.stringify({
-                model: 'google/gemini-2.0-flash-001',
+                model: 'google/gemini-2.5-flash',
                 messages: [
                   { role: 'system', content: systemPrompt },
                   { role: 'user', content: userMessage },
@@ -3656,7 +3657,7 @@ function reviewProjectProxyPlugin(apiKey: string, model: string): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.0-flash-001';
+  const geminiModel = env.GEMINI_MODEL || 'google/gemini-2.5-flash';
   const dashboardModel = env.DASHBOARD_MODEL || 'google/gemini-3.1-flash-image-preview';
 
   return {

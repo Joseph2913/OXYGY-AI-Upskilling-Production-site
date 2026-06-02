@@ -21,7 +21,7 @@ const googleServiceAccount = defineSecret("GOOGLE_SERVICE_ACCOUNT");
 
 function getEnv() {
   const apiKey = openRouterApiKey.value();
-  const model = process.env.GEMINI_MODEL || "google/gemini-2.0-flash-001";
+  const model = process.env.GEMINI_MODEL || "google/gemini-2.5-flash";
   return { apiKey, model };
 }
 
@@ -255,7 +255,10 @@ export const designagent = onRequest({ secrets: [openRouterApiKey] }, async (req
     const { task_description, input_data_description } = req.body;
     const userMessage = `Task Description: ${task_description}\n\nInput Data Description: ${input_data_description || "Not specified"}`;
 
-    const result = await callGemini({ apiKey, model, systemPrompt: DESIGN_AGENT_SYSTEM, userMessage, label: "design-agent" });
+    // design-agent requests a large, deeply-nested structured response that the fast model (gemini-2.5-flash)
+    // builds incorrectly (closes the JSON early then keeps writing). Use the more reliable pro model here only.
+    const agentModel = process.env.DESIGN_AGENT_MODEL || "google/gemini-2.5-pro";
+    const result = await callGemini({ apiKey, model: agentModel, systemPrompt: DESIGN_AGENT_SYSTEM, userMessage, label: "design-agent" });
     if (!result.ok) { res.status(result.status).json({ error: result.message, retryable: result.retryable }); return; }
     res.status(200).json(result.data);
   } catch (err) {
@@ -4450,7 +4453,7 @@ export const generateartefacttitle = onRequest(
     try {
       const result = await callOpenRouter({
         apiKey: openRouterApiKey.value(),
-        model: "google/gemini-2.0-flash-001",
+        model: "google/gemini-2.5-flash",
         systemPrompt: `You generate short, descriptive titles for AI artefacts saved by consultants on a learning platform.
 
 Rules:
@@ -4616,7 +4619,7 @@ export const backfillartefacttitles = onRequest(
           // Generate a new title
           const genResult = await callOpenRouter({
             apiKey: openRouterApiKey.value(),
-            model: "google/gemini-2.0-flash-001",
+            model: "google/gemini-2.5-flash",
             systemPrompt: `You generate short, descriptive titles for AI artefacts saved by consultants on a learning platform.
 
 Rules:
