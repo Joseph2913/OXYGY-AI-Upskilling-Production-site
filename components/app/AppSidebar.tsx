@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Map, Wrench, Folder, Users, Settings, Shield, GraduationCap, LayoutDashboard } from 'lucide-react';
+import { Home, Map, Wrench, Folder, Users, Settings, Shield, GraduationCap, LayoutDashboard, Sparkles } from 'lucide-react';
 import { useOrg } from '../../context/OrgContext';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { label: 'My Journey',     icon: Map,             path: '/app/journey' },
   { label: 'Workspace',      icon: LayoutDashboard, path: '/app/workspace' },
   { label: 'My Cohort',      icon: Users,           path: '/app/cohort' },
+  { label: 'My Plan',        icon: Sparkles,        path: '/app/my-plan' },
 ];
 
 export const SIDEBAR_COLLAPSED_WIDTH = 60;

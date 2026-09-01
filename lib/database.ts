@@ -101,6 +101,7 @@ export async function getLatestLearningPlan(userId: string): Promise<{
     return {
       plan: {
         pathwaySummary: (data.pathway_summary as string) || '',
+        whyThisPlan: (data.why_this_plan as string) || undefined,
         totalEstimatedWeeks: (data.total_estimated_weeks as number) || 0,
         levels: (data.levels_data as PathwayApiResponse['levels']) || {},
       },
@@ -120,6 +121,7 @@ export async function saveLearningPlan(
       .insert({
         user_id: userId,
         pathway_summary: data.pathwaySummary,
+        why_this_plan: data.whyThisPlan || null,
         total_estimated_weeks: data.totalEstimatedWeeks,
         levels_data: data.levels,
         level_depths: levelDepths,

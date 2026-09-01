@@ -520,4 +520,51 @@ create table if not exists feature_flags (
 );
 alter table feature_flags enable row level security;
 
+-- 25. LEARNING PLANS — org-scoped + admin read access (see migration-016-learning-plans-admin-read.sql)
+alter table learning_plans add column if not exists why_this_plan text;
+
+create policy "Org members can read org learning plans" on learning_plans
+  for select using (
+    user_id in (
+      select id from profiles
+      where org_id is not null
+        and org_id = (select org_id from profiles where id = auth.uid())
+    )
+  );
+
+create policy "Oxygy admins can read all learning plans" on learning_plans
+  for select using (is_oxygy_admin());
+
+-- 26. ADMIN WRITE ACCESS — editing another user's onboarding answers +
+-- regenerating their plan (see migration-017-admin-edit-onboarding.sql)
+create policy "Oxygy admins can update any profile" on profiles
+  for update using (is_oxygy_admin());
+
+create policy "Client admins can update org profiles" on profiles
+  for update using (
+    exists (
+      select 1
+      from user_org_memberships admin_m
+      join user_org_memberships user_m on user_m.org_id = admin_m.org_id
+      where admin_m.user_id = auth.uid()
+        and admin_m.role = 'admin'
+        and user_m.user_id = profiles.id
+    )
+  );
+
+create policy "Oxygy admins can insert any learning plan" on learning_plans
+  for insert with check (is_oxygy_admin());
+
+create policy "Client admins can insert org learning plans" on learning_plans
+  for insert with check (
+    exists (
+      select 1
+      from user_org_memberships admin_m
+      join user_org_memberships user_m on user_m.org_id = admin_m.org_id
+      where admin_m.user_id = auth.uid()
+        and admin_m.role = 'admin'
+        and user_m.user_id = learning_plans.user_id
+    )
+  );
+
 -- 24. PRD-10 RLS POLICIES (see migration-010-auth-multitenancy.sql for full idempotent version)

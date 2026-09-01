@@ -9,9 +9,10 @@ import { usePathwayApi } from '../../../hooks/usePathwayApi';
 import { useAuth } from '../../../context/AuthContext';
 import { useAppContext } from '../../../context/AppContext';
 import { saveLearningPlan, upsertProfile } from '../../../lib/database';
-import type { PathwayFormData, PathwayApiResponse, LevelDepth } from '../../../types';
+import type { PathwayFormData, PathwayApiResponse } from '../../../types';
 import SurveyProcessing from './SurveyProcessing';
 import { LEVEL_META } from '../../../data/levelTopics';
+import { classifyLevels, derivePersona } from '../../../lib/levelClassification';
 
 // ---- Demo Sample Profiles ----
 const DEMO_PROFILES: { label: string; emoji: string; data: PathwayFormData }[] = [
@@ -64,51 +65,6 @@ const DEMO_PROFILES: { label: string; emoji: string; data: PathwayFormData }[] =
     },
   },
 ];
-
-// ---- Depth Matrix ----
-type DepthMatrix = Record<string, Record<string, [LevelDepth, LevelDepth, LevelDepth, LevelDepth, LevelDepth]>>;
-const DEPTH_MATRIX: DepthMatrix = {
-  'beginner': {
-    'confident-daily-use': ['full', 'full', 'skip', 'skip', 'skip'],
-    'build-reusable-tools': ['full', 'full', 'awareness', 'skip', 'skip'],
-    'own-ai-processes': ['full', 'full', 'full', 'awareness', 'skip'],
-    'build-full-apps': ['full', 'full', 'full', 'full', 'full'],
-    'lead-ai-strategy': ['full', 'full', 'full', 'full', 'full'],
-  },
-  'comfortable-user': {
-    'confident-daily-use': ['fast-track', 'full', 'skip', 'skip', 'skip'],
-    'build-reusable-tools': ['fast-track', 'full', 'full', 'skip', 'skip'],
-    'own-ai-processes': ['fast-track', 'full', 'full', 'full', 'skip'],
-    'build-full-apps': ['fast-track', 'full', 'full', 'full', 'full'],
-    'lead-ai-strategy': ['fast-track', 'full', 'full', 'full', 'full'],
-  },
-  'builder': {
-    'confident-daily-use': ['fast-track', 'fast-track', 'skip', 'skip', 'skip'],
-    'build-reusable-tools': ['fast-track', 'fast-track', 'full', 'skip', 'skip'],
-    'own-ai-processes': ['fast-track', 'fast-track', 'full', 'full', 'skip'],
-    'build-full-apps': ['fast-track', 'fast-track', 'full', 'full', 'full'],
-    'lead-ai-strategy': ['fast-track', 'fast-track', 'full', 'full', 'full'],
-  },
-  'integrator': {
-    'confident-daily-use': ['fast-track', 'fast-track', 'fast-track', 'skip', 'skip'],
-    'build-reusable-tools': ['fast-track', 'fast-track', 'fast-track', 'skip', 'skip'],
-    'own-ai-processes': ['fast-track', 'fast-track', 'fast-track', 'full', 'skip'],
-    'build-full-apps': ['fast-track', 'fast-track', 'fast-track', 'full', 'full'],
-    'lead-ai-strategy': ['fast-track', 'fast-track', 'fast-track', 'full', 'full'],
-  },
-};
-const AMBITION_RANK: Record<string, number> = {
-  'confident-daily-use': 1,
-  'build-reusable-tools': 2,
-  'own-ai-processes': 3,
-  'build-full-apps': 4,
-  'lead-ai-strategy': 5,
-};
-function classifyLevels(aiExperience: string, ambitions: string[]): Record<string, LevelDepth> {
-  const highest = [...ambitions].sort((a, b) => (AMBITION_RANK[b] || 0) - (AMBITION_RANK[a] || 0))[0] || 'confident-daily-use';
-  const depths = DEPTH_MATRIX[aiExperience]?.[highest] || ['full', 'full', 'full', 'full', 'full'];
-  return { L1: depths[0], L2: depths[1], L3: depths[2], L4: depths[3], L5: depths[4] };
-}
 
 // ---- Options ----
 const FUNCTION_OPTIONS = [
@@ -487,10 +443,7 @@ const OnboardingSurvey: React.FC<OnboardingSurveyProps> = ({ prefillData, onPlan
     clearError();
     try {
       const depths = classifyLevels(formData.aiExperience, formData.ambition);
-      const isStrategicLeader =
-        (formData.seniority?.includes('Senior') || formData.seniority?.includes('Director')) &&
-        formData.ambition.includes('lead-ai-strategy');
-      const persona: 'strategic-leader' | 'practitioner' = isStrategicLeader ? 'strategic-leader' : 'practitioner';
+      const persona = derivePersona(formData.seniority, formData.ambition);
       const result = await generatePathway(formData, depths, persona);
       if (!result) {
         // Read from ref (synchronously updated) since React state may not have flushed yet

@@ -37,6 +37,7 @@ const AppDashboard = lazyRetry(() => import('./pages/app/AppDashboard'));
 const AppJourney = lazyRetry(() => import('./pages/app/AppJourney'));
 const AppProjectProof = lazyRetry(() => import('./pages/app/AppProjectProof'));
 const AppCurrentLevel = lazyRetry(() => import('./pages/app/AppCurrentLevel'));
+const AppMyPlan = lazyRetry(() => import('./pages/app/AppMyPlan'));
 const AppToolkit = lazyRetry(() => import('./pages/app/AppToolkit'));
 const AppArtefacts = lazyRetry(() => import('./pages/app/AppArtefacts'));
 const AppWorkspace = lazyRetry(() => import('./pages/app/AppWorkspace'));
@@ -190,6 +191,7 @@ function App() {
           <Route path="journey" element={<AppSuspense><AppJourney /></AppSuspense>} />
           <Route path="journey/project/:level" element={<AppSuspense><AppProjectProof /></AppSuspense>} />
           <Route path="level" element={<AppSuspense><AppCurrentLevel /></AppSuspense>} />
+          <Route path="my-plan" element={<AppSuspense><AppMyPlan /></AppSuspense>} />
 
           {/* Workspace — combined Toolkit + Artefacts */}
           <Route path="workspace" element={<AppSuspense><AppWorkspace /></AppSuspense>} />
